@@ -1,0 +1,138 @@
+{
+  "scope": "Switching inner native guard one-use proof, automatic unsubmitted journal retirement and fresh replan",
+  "branch": "pr/johalley/catc-support",
+  "modelVersion": "0.5.0",
+  "upstreamRevision": "a435555fe828f03cf3311d52fe1ab6572a247916",
+  "fullModelComplete": false,
+  "resourceComplete": false,
+  "creatorOwnershipAdded": false,
+  "installedQualification": false,
+  "sourceFingerprints": {
+    "internal/controlleradapter/catalystcenter": "0b3bb35d0866d6f41e55bd807e25c9b990a30e7591c845cce99e735d39c5e504",
+    "internal/controlleradapter/catalystcenter/nacmodel": "1827e09b755df6480bf7d80a78e51ed4ccd8ef02a4bf923ac460e7262dd96b82",
+    "tools/cvk-netascode-migrate": "49e5e6ea5ef31b4c3204a5fec1714a6a2e410f36046031692dc0905e4e046ed4"
+  },
+  "gates": {
+    "temporaryAPI": {
+      "exitCode": 0,
+      "log": "switching-profile-no-dispatch-temporaryAPI.log",
+      "sha256": "a92df01f63e7e3a48934a83795cc9e6e17c275e6553abf99d162e7fe670f7fd2",
+      "passingTestEvents": 39
+    },
+    "native": {
+      "exitCode": 0,
+      "log": "switching-profile-no-dispatch-native.log",
+      "sha256": "89fb02a99a1a63a43493a47a4059357fc1efb6154f857e27723be8bb8b0f6c94",
+      "passingTestEvents": 1
+    },
+    "productionBuild": {
+      "exitCode": 0,
+      "log": "/private/tmp/cvk-switching-no-dispatch-build.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "focusedRace": {
+      "exitCode": 0,
+      "passingTestEvents": 705,
+      "log": "switching-profile-no-dispatch-focusedRace.log",
+      "sha256": "f936ad11a2baa70ebb81f902b769bba9301cfa39e0139b2e38af90e0f0ac410e"
+    },
+    "regression": {
+      "exitCode": 0,
+      "passingTestEvents": 19781,
+      "passingPackages": [
+        "github.com/cisco/virtual-kubelet-cisco/api/config/v1alpha1",
+        "github.com/cisco/virtual-kubelet-cisco/api/ops/v1alpha1",
+        "github.com/cisco/virtual-kubelet-cisco/api/v1alpha1",
+        "github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter",
+        "github.com/cisco/virtual-kubelet-cisco/internal/managedprotocol",
+        "github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/nexusdashboard",
+        "github.com/cisco/virtual-kubelet-cisco/internal/aggregator",
+        "github.com/cisco/virtual-kubelet-cisco/internal/softwarelifecycle",
+        "github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter/nacmodel",
+        "github.com/cisco/virtual-kubelet-cisco/internal/provider/maintenance",
+        "github.com/cisco/virtual-kubelet-cisco/internal/provider/softwareupgrade",
+        "github.com/cisco/virtual-kubelet-cisco/internal/controller",
+        "github.com/cisco/virtual-kubelet-cisco/internal/controllerconfiguration",
+        "github.com/cisco/virtual-kubelet-cisco/tools/cvk-netascode-migrate",
+        "github.com/cisco/virtual-kubelet-cisco/cmd/cisco-vk",
+        "github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter"
+      ],
+      "log": "/private/tmp/cvk-switching-no-dispatch-regression.jsonl",
+      "sha256": "ea2d47a8f85b49d80cbab145380a889c8c79027e743479117d1059aaf76ece0b"
+    },
+    "strictDocs": {
+      "exitCode": 0,
+      "log": "/private/tmp/cvk-switching-no-dispatch-docs.log",
+      "sha256": "24c65d3b719e61db82da005bc6b6fc2b53edbec2ddaf9807eb52bcf1f6724a2b"
+    },
+    "diffCheck": {
+      "exitCode": 0,
+      "log": "/private/tmp/cvk-switching-no-dispatch-diffcheck.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  },
+  "nativeCycle": {
+    "operations": [
+      {
+        "action": "Create",
+        "resource": "profiles/CVK-Q-Profile-20261019-133826",
+        "taskID": "01a15462-93c2-7b72-8f3d-a93bee9e3cf8",
+        "automaticPreflightReplanQualified": true,
+        "recoveredUnknown": true
+      },
+      {
+        "action": "Update",
+        "resource": "profiles/CVK-Q-Profile-20261019-133826",
+        "taskID": "01a15462-b71b-7e2e-b831-ead127d74c02",
+        "automaticPreflightReplanQualified": true,
+        "recoveredUnknown": true
+      },
+      {
+        "action": "Update",
+        "resource": "sites/profile-site-add:v1:a164ccce3bf9e0cb0aba44abd8e7d4818c3012b1f57c8c18f6dd8e7d074beeb4:ef35de5a054a7b534b9ee4b380587998a78937a58b06c3819d9a28bc3bfc5bbb",
+        "taskID": "01a15462-e711-7d76-b40a-c7069c3091df",
+        "automaticPreflightReplanQualified": false,
+        "recoveredUnknown": false
+      },
+      {
+        "action": "Update",
+        "resource": "profiles/CVK-Q-Profile-20261019-133826",
+        "taskID": "01a15463-143c-72dc-b56a-3ce3c39b35f4",
+        "automaticPreflightReplanQualified": true,
+        "recoveredUnknown": true
+      },
+      {
+        "action": "Update",
+        "resource": "profiles/CVK-Q-Profile-20261019-133826",
+        "taskID": "01a15463-435b-763f-98f0-5986a7979857",
+        "automaticPreflightReplanQualified": true,
+        "recoveredUnknown": true
+      }
+    ],
+    "automaticDefinitionPreflightReplans": 4,
+    "definitionMutations": 4,
+    "generatedArtifactsCleaned": true,
+    "nativeKubernetesPersistence": "simulated; separate real temporary-API qualification",
+    "realDeviceTargeted": false,
+    "templateDeploymentPerformed": false
+  },
+  "remaining": [
+    "Creator custody/adoption/prune/delete and authoritative native Create-result correlation",
+    "Installed source/worker mutation recovery",
+    "Broader onboarding/composite/multi-site, full native schema/default/catalogue coverage",
+    "Older uncertain taskless journals still require original evidence; no retroactive proof",
+    "Other outstanding execution/ownership/recovery and hardware gaps across all 93 pinned resource types",
+    "Partial PnP acquisition cancellation original-manager quiescence proof"
+  ],
+  "creatorBindingAudit": {
+    "readOnly": true,
+    "capturedCreateRootAndTreeOnly": true,
+    "shapeEvidence": "switching-profile-no-dispatch-create-result-shape.json",
+    "capturedUUIDOccursInFreeFormProgress": true,
+    "structuredCapturedUUIDFieldObserved": false,
+    "providerCreateIdentityMethod": "GET collection and select name after POST",
+    "providerSourceSHA256": "ac2d82dbf617e631a2a39af82f44bebb23c1cd570887e6f36aceb0e31f76fccf",
+    "creatorOwnershipQualified": false
+  },
+  "resourceChecklistDistinctRows": 93
+}

@@ -1,0 +1,22 @@
+=== RUN   TestLiveCatalystCenterNetworkSubmission
+    site_execution_live_test.go:111: isolated qualification hierarchy: Global/CVK-Q-20261017-024006-000000000
+    site_execution_live_test.go:452: submitted task=01a147bb-1e12-73ff-94db-dc3d887c8140 at=2026-10-17T02:40:07.587325Z
+    site_execution_live_test.go:470: verified Create area
+    site_execution_live_test.go:452: submitted task=01a147bb-24bd-72a5-929d-f14e380aad9a at=2026-10-17T02:40:09.283167Z
+    site_execution_live_test.go:470: verified Create building
+    site_execution_live_test.go:452: submitted task=01a147bb-276b-7eab-9d76-ae2a7462113f at=2026-10-17T02:40:09.913176Z
+    site_execution_live_test.go:470: verified Create floor
+    site_execution_live_test.go:452: submitted task=01a147bb-2e1c-7505-a86c-69fea0157f9b at=2026-10-17T02:40:11.634028Z
+    site_execution_live_test.go:470: verified Update floor
+    site_execution_live_test.go:479: three creates, one floor update, and full hierarchy read-back verified
+    site_execution_live_test.go:513: public isolated setting accepted ntp 01a147bb-4f00-7a4c-847f-6df02df29a67
+    site_execution_live_test.go:513: public isolated setting accepted dhcp 01a147bb-7a85-73e0-972a-509b4e2fec28
+    site_execution_live_test.go:513: public isolated setting accepted dns 01a147bb-a352-7232-9627-0d190ec50dc6
+    site_execution_live_test.go:513: public isolated setting accepted timezone 01a147bb-cc6f-78a1-ad43-f4527ad48161
+    site_execution_live_test.go:513: public isolated setting accepted banner 01a147bb-fc0b-7b62-8ff5-8a3a1a0d0244
+    site_execution_live_test.go:513: public isolated setting accepted telemetry 01a147bc-2238-7d29-96ab-69719a45cc33
+    site_execution_live_test.go:513: six public setting updates reached InSync after six original no-dispatch refusals and automatic retire/replan; six native tasks, no replay; simulated storage/actors only
+    site_execution_live_test.go:225: isolated hierarchy cleanup verified
+--- PASS: TestLiveCatalystCenterNetworkSubmission (81.68s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	84.082s

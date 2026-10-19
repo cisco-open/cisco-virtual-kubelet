@@ -1,0 +1,31 @@
+=== RUN   TestLiveCatalystCenterPublicHierarchyLifecycle
+    site_recreation_live_test.go:137: private generated-site recovery checkpoint: /private/tmp/cvk-site-lifecycle-3768613283
+    site_bulk_manifest_live_test.go:70: singular manifest create task 01a14ba8-0972-71bc-9a02-e8a5e95ee67f
+    site_bulk_manifest_live_test.go:70: retained acknowledged singular-site task as Unknown for restarted observation
+    site_bulk_manifest_live_test.go:70: singular manifest create task 01a14ba8-136b-7e30-81d6-9c8078ac95be
+    site_bulk_manifest_live_test.go:70: retained acknowledged singular-site task as Unknown for restarted observation
+    site_bulk_manifest_live_test.go:70: singular manifest create task 01a14ba8-227c-7db9-9db9-5430748f883f
+    site_bulk_manifest_live_test.go:70: retained acknowledged singular-site task as Unknown for restarted observation
+    site_recreation_live_test.go:137: original area creator verified 254f2a36-bbd9-4e92-90db-3d5dbdb049bc 01a14ba8-0972-71bc-9a02-e8a5e95ee67f
+    site_recreation_live_test.go:137: singular manifest create task 01a14ba8-6cb3-7928-977a-62007a63daee
+    site_recreation_live_test.go:137: retained acknowledged singular-site task as Unknown for restarted observation
+    site_recreation_live_test.go:137: singular manifest create task 01a14ba8-afe0-7437-8381-4515950aca73
+    site_recreation_live_test.go:137: retained acknowledged singular-site task as Unknown for restarted observation
+    site_recreation_live_test.go:137: singular manifest create task 01a14ba8-f305-7c74-878e-9696302e867a
+    site_recreation_live_test.go:137: retained acknowledged singular-site task as Unknown for restarted observation
+    site_recreation_live_test.go:137: singular manifest create task 01a14ba9-0358-7043-a0af-fdbd974b78e0
+    site_recreation_live_test.go:137: retained acknowledged singular-site task as Unknown for restarted observation
+    site_recreation_live_test.go:137: singular manifest create task 01a14ba9-1cab-7728-b2a5-f5f7e1be2de6
+    site_recreation_live_test.go:137: retained acknowledged singular-site task as Unknown for restarted observation
+    site_recreation_live_test.go:137: singular manifest create task 01a14ba9-2c19-77ae-8640-bad8f2d2101e
+    site_recreation_live_test.go:137: retained acknowledged singular-site task as Unknown for restarted observation
+    site_recreation_live_test.go:137: singular manifest create task 01a14ba9-770d-7901-8f32-6cfe217c139d
+    site_recreation_live_test.go:137: retained acknowledged singular-site task as Unknown for restarted observation
+    site_recreation_live_test.go:137: singular manifest create task 01a14ba9-ba36-70f1-be8c-e2ededb17ff7
+    site_recreation_live_test.go:137: retained acknowledged singular-site task as Unknown for restarted observation
+    site_recreation_live_test.go:137: singular manifest create task 01a14ba9-fd66-79e1-9b6d-ac9ca3c16287
+    site_recreation_live_test.go:137: retained acknowledged singular-site task as Unknown for restarted observation
+    site_recreation_live_test.go:421: native generated-site lifecycle passed: 6 Creates, 6 Deletes; original tasks, retained history and typed baseline verified; parent/child=true; simulated Kubernetes journal
+--- PASS: TestLiveCatalystCenterPublicHierarchyLifecycle (132.30s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	134.507s

@@ -1,0 +1,140 @@
+{
+  "scope": "Read-only endpoint availability on one existing site per type; no mutation or field values recorded",
+  "types": {
+    "area": {
+      "available": true,
+      "endpoints": {
+        "ntp": {
+          "http_status": 200,
+          "response_object": true,
+          "group_count": 1
+        },
+        "dns": {
+          "http_status": 200,
+          "response_object": true,
+          "group_count": 1
+        },
+        "dhcp": {
+          "http_status": 200,
+          "response_object": true,
+          "group_count": 1
+        },
+        "timeZone": {
+          "http_status": 200,
+          "response_object": true,
+          "group_count": 1
+        },
+        "banner": {
+          "http_status": 200,
+          "response_object": true,
+          "group_count": 1
+        },
+        "telemetry": {
+          "http_status": 200,
+          "response_object": true,
+          "group_count": 5
+        },
+        "aaa": {
+          "http_status": 200,
+          "response_object": true,
+          "group_count": 2
+        },
+        "deviceCredentials": {
+          "http_status": 200,
+          "response_object": true,
+          "group_count": 6
+        }
+      }
+    },
+    "building": {
+      "available": true,
+      "endpoints": {
+        "ntp": {
+          "http_status": 200,
+          "response_object": true,
+          "group_count": 1
+        },
+        "dns": {
+          "http_status": 200,
+          "response_object": true,
+          "group_count": 1
+        },
+        "dhcp": {
+          "http_status": 200,
+          "response_object": true,
+          "group_count": 1
+        },
+        "timeZone": {
+          "http_status": 200,
+          "response_object": true,
+          "group_count": 1
+        },
+        "banner": {
+          "http_status": 200,
+          "response_object": true,
+          "group_count": 1
+        },
+        "telemetry": {
+          "http_status": 200,
+          "response_object": true,
+          "group_count": 5
+        },
+        "aaa": {
+          "http_status": 200,
+          "response_object": true,
+          "group_count": 2
+        },
+        "deviceCredentials": {
+          "http_status": 200,
+          "response_object": true,
+          "group_count": 6
+        }
+      }
+    },
+    "floor": {
+      "available": true,
+      "endpoints": {
+        "ntp": {
+          "http_status": 200,
+          "response_object": true,
+          "group_count": 1
+        },
+        "dns": {
+          "http_status": 200,
+          "response_object": true,
+          "group_count": 1
+        },
+        "dhcp": {
+          "http_status": 200,
+          "response_object": true,
+          "group_count": 1
+        },
+        "timeZone": {
+          "http_status": 200,
+          "response_object": true,
+          "group_count": 1
+        },
+        "banner": {
+          "http_status": 200,
+          "response_object": true,
+          "group_count": 1
+        },
+        "telemetry": {
+          "http_status": 200,
+          "response_object": true,
+          "group_count": 5
+        },
+        "aaa": {
+          "http_status": 200,
+          "response_object": true,
+          "group_count": 2
+        },
+        "deviceCredentials": {
+          "http_status": 200,
+          "response_object": true,
+          "group_count": 6
+        }
+      }
+    }
+  }
+}

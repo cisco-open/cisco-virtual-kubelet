@@ -1,0 +1,12 @@
+=== RUN   TestLiveCatalystCenterCompositeTemplatePacing
+    template_pacing_live_test.go:192: public native task accepted CVK-Q-Pacing-20261016-120027 01a14495-de38-7232-bee1-29b170cb0a87
+    template_pacing_live_test.go:192: public native task accepted draft:CVK-Q-Pacing-20261016-120027#base 01a14496-02e9-7174-a738-31ea23f63a14
+    template_pacing_live_test.go:192: public native task accepted commit:CVK-Q-Pacing-20261016-120027#base 01a14496-418b-77a5-93da-e041c17c8bf5
+    template_pacing_live_test.go:192: public native task accepted draft:CVK-Q-Pacing-20261016-120027#combined 01a14496-aa69-76e5-b25b-839821cb7c73
+    template_pacing_live_test.go:192: public native task accepted commit:CVK-Q-Pacing-20261016-120027#combined 01a14497-2536-7bf7-b5b6-85948c069415
+    template_pacing_live_test.go:211: five public template preflight refusals retired with owners/history intact; two prepared composite refusals; exactly five native mutations after fresh replanning
+    template_pacing_live_test.go:234: public template model reached InSync with durable settling, simulated restarts and no-replay CVK-Q-Pacing-20261016-120027
+    template_pacing_live_test.go:154: isolated template/project cleanup verified CVK-Q-Pacing-20261016-120027
+--- PASS: TestLiveCatalystCenterCompositeTemplatePacing (112.97s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	115.129s

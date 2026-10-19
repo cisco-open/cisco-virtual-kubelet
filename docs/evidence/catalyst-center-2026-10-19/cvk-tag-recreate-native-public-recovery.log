@@ -1,0 +1,21 @@
+=== RUN   TestLiveTagPrunePublicCycle
+    tag_prune_live_test.go:217: retained original task Create 01a15157-3621-71b5-a648-b2ec1a47db2a
+    tag_prune_live_test.go:294: durable immutable creator and current latest-state rows 1 0
+    tag_prune_live_test.go:295: recovered native manifest revision without replay 1 ca28aa9e-8d8d-4ceb-8f20-21f32709210c
+    tag_prune_live_test.go:217: retained original task Update 01a15157-3fc7-7bc9-83b3-f38d940ac855
+    tag_prune_live_test.go:294: durable immutable creator and current latest-state rows 1 1
+    tag_prune_live_test.go:295: recovered native manifest revision without replay 2 ca28aa9e-8d8d-4ceb-8f20-21f32709210c
+    tag_prune_live_test.go:322: retained original Delete task 01a15157-5afe-78f7-bd19-ab42961594a4 ca28aa9e-8d8d-4ceb-8f20-21f32709210c
+    tag_prune_live_test.go:361: manifest-driven prune and original-task recovery retained immutable creator, latest-state and absence tombstone ca28aa9e-8d8d-4ceb-8f20-21f32709210c
+    tag_prune_live_test.go:397: recovering original lifecycle task cycle-0-create Create 01a15157-6c42-7fec-ad8e-0bc7b59b9001
+    tag_prune_live_test.go:397: recovering original lifecycle task cycle-0-update Update 01a15157-76b3-73b5-86f0-b6b85341846f
+    tag_prune_live_test.go:397: recovering original lifecycle task cycle-0-delete Delete 01a15157-92d7-78a0-ad5f-aef4987869bb
+    tag_prune_live_test.go:482: complete native recreation/update/prune lifecycle 0 dd1942ba-3e18-4247-acd2-3431ccd5ddeb archivedCohorts 1
+    tag_prune_live_test.go:397: recovering original lifecycle task cycle-1-create Create 01a15157-a03b-746f-bc8f-96e737e32590
+    tag_prune_live_test.go:397: recovering original lifecycle task cycle-1-update Update 01a15157-ad46-7f90-8975-29f13f4fc72e
+    tag_prune_live_test.go:397: recovering original lifecycle task cycle-1-delete Delete 01a15157-c7fc-711d-84e4-85348aca05d9
+    tag_prune_live_test.go:482: complete native recreation/update/prune lifecycle 1 becaeb29-171e-47d1-8dcf-3a6e9b8205c2 archivedCohorts 2
+    tag_prune_live_test.go:488: exact native mutation counts 3 3 3 legacyBaseline false inventoryOnly true recreateCycles 2
+--- PASS: TestLiveTagPrunePublicCycle (46.78s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	49.168s

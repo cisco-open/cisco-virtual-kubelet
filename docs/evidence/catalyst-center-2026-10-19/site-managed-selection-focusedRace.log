@@ -1,0 +1,166 @@
+=== RUN   TestFloorImageOmissionWitnessFences
+=== RUN   TestFloorImageOmissionWitnessFences/valid
+=== RUN   TestFloorImageOmissionWitnessFences/valid-inline
+=== RUN   TestFloorImageOmissionWitnessFences/valid-source-rebind
+=== RUN   TestFloorImageOmissionWitnessFences/same-source
+=== RUN   TestFloorImageOmissionWitnessFences/old-source
+=== RUN   TestFloorImageOmissionWitnessFences/old-generation
+=== RUN   TestFloorImageOmissionWitnessFences/old-controller
+=== RUN   TestFloorImageOmissionWitnessFences/different-source-uid
+=== RUN   TestFloorImageOmissionWitnessFences/foreign-owner
+=== RUN   TestFloorImageOmissionWitnessFences/foreign-name
+=== RUN   TestFloorImageOmissionWitnessFences/unpaired-source
+=== RUN   TestFloorImageOmissionWitnessFences/reused-operation
+=== RUN   TestFloorImageOmissionWitnessFences/reused-task
+=== RUN   TestFloorImageOmissionWitnessFences/before-omission
+=== RUN   TestFloorImageOmissionWitnessFences/future-witness
+=== RUN   TestFloorImageOmissionWitnessFences/before-verification
+=== RUN   TestFloorImageOmissionWitnessFences/wrong-key
+=== RUN   TestFloorImageOmissionWitnessFences/unknown-version
+=== RUN   TestFloorImageOmissionWitnessFences/noncanonical
+=== RUN   TestFloorImageOmissionWitnessFences/missing-verification
+=== RUN   TestFloorImageOmissionWitnessFences/duplicate
+=== RUN   TestFloorImageOmissionWitnessFences/replaced-floor
+=== RUN   TestFloorImageOmissionWitnessFences/unverified
+=== RUN   TestFloorImageOmissionWitnessFences/created-resource
+=== RUN   TestFloorImageOmissionWitnessFences/effects
+=== RUN   TestFloorImageOmissionWitnessFences/prepared
+=== RUN   TestFloorImageOmissionWitnessFences/cancelled
+=== RUN   TestFloorImageOmissionWitnessFences/old-source-pair
+=== RUN   TestFloorImageOmissionWitnessFences/no-frame
+--- PASS: TestFloorImageOmissionWitnessFences (0.01s)
+    --- PASS: TestFloorImageOmissionWitnessFences/valid (0.00s)
+    --- PASS: TestFloorImageOmissionWitnessFences/valid-inline (0.00s)
+    --- PASS: TestFloorImageOmissionWitnessFences/valid-source-rebind (0.00s)
+    --- PASS: TestFloorImageOmissionWitnessFences/same-source (0.00s)
+    --- PASS: TestFloorImageOmissionWitnessFences/old-source (0.00s)
+    --- PASS: TestFloorImageOmissionWitnessFences/old-generation (0.00s)
+    --- PASS: TestFloorImageOmissionWitnessFences/old-controller (0.00s)
+    --- PASS: TestFloorImageOmissionWitnessFences/different-source-uid (0.00s)
+    --- PASS: TestFloorImageOmissionWitnessFences/foreign-owner (0.00s)
+    --- PASS: TestFloorImageOmissionWitnessFences/foreign-name (0.00s)
+    --- PASS: TestFloorImageOmissionWitnessFences/unpaired-source (0.00s)
+    --- PASS: TestFloorImageOmissionWitnessFences/reused-operation (0.00s)
+    --- PASS: TestFloorImageOmissionWitnessFences/reused-task (0.00s)
+    --- PASS: TestFloorImageOmissionWitnessFences/before-omission (0.00s)
+    --- PASS: TestFloorImageOmissionWitnessFences/future-witness (0.00s)
+    --- PASS: TestFloorImageOmissionWitnessFences/before-verification (0.00s)
+    --- PASS: TestFloorImageOmissionWitnessFences/wrong-key (0.00s)
+    --- PASS: TestFloorImageOmissionWitnessFences/unknown-version (0.00s)
+    --- PASS: TestFloorImageOmissionWitnessFences/noncanonical (0.00s)
+    --- PASS: TestFloorImageOmissionWitnessFences/missing-verification (0.00s)
+    --- PASS: TestFloorImageOmissionWitnessFences/duplicate (0.00s)
+    --- PASS: TestFloorImageOmissionWitnessFences/replaced-floor (0.00s)
+    --- PASS: TestFloorImageOmissionWitnessFences/unverified (0.00s)
+    --- PASS: TestFloorImageOmissionWitnessFences/created-resource (0.00s)
+    --- PASS: TestFloorImageOmissionWitnessFences/effects (0.00s)
+    --- PASS: TestFloorImageOmissionWitnessFences/prepared (0.00s)
+    --- PASS: TestFloorImageOmissionWitnessFences/cancelled (0.00s)
+    --- PASS: TestFloorImageOmissionWitnessFences/old-source-pair (0.00s)
+    --- PASS: TestFloorImageOmissionWitnessFences/no-frame (0.00s)
+=== RUN   TestFloorImageOmissionReintroduction
+=== RUN   TestFloorImageOmissionReintroduction/omit
+    floor_image_omission_test.go:114: two source-only omit/reintroduce cycles retained original proof while omitted and replaced the same receipt slot with one new upload per declaration
+=== RUN   TestFloorImageOmissionReintroduction/null
+    floor_image_omission_test.go:114: two source-only omit/reintroduce cycles retained original proof while omitted and replaced the same receipt slot with one new upload per declaration
+=== RUN   TestFloorImageOmissionReintroduction/legacy
+    floor_image_omission_test.go:114: two source-only omit/reintroduce cycles retained original proof while omitted and replaced the same receipt slot with one new upload per declaration
+=== RUN   TestFloorImageOmissionReintroduction/selected-omit
+    floor_image_omission_test.go:114: two source-only omit/reintroduce cycles retained original proof while omitted and replaced the same receipt slot with one new upload per declaration
+--- PASS: TestFloorImageOmissionReintroduction (1.70s)
+    --- PASS: TestFloorImageOmissionReintroduction/omit (0.87s)
+    --- PASS: TestFloorImageOmissionReintroduction/null (0.26s)
+    --- PASS: TestFloorImageOmissionReintroduction/legacy (0.26s)
+    --- PASS: TestFloorImageOmissionReintroduction/selected-omit (0.31s)
+=== RUN   TestFloorImageOmissionFinalizationFences
+=== RUN   TestFloorImageOmissionFinalizationFences/pending-operation
+=== RUN   TestFloorImageOmissionFinalizationFences/foreign-owner
+=== RUN   TestFloorImageOmissionFinalizationFences/stale-source
+=== RUN   TestFloorImageOmissionFinalizationFences/replaced-floor
+=== RUN   TestFloorImageOmissionFinalizationFences/cas-conflict
+--- PASS: TestFloorImageOmissionFinalizationFences (0.37s)
+    --- PASS: TestFloorImageOmissionFinalizationFences/pending-operation (0.07s)
+    --- PASS: TestFloorImageOmissionFinalizationFences/foreign-owner (0.07s)
+    --- PASS: TestFloorImageOmissionFinalizationFences/stale-source (0.07s)
+    --- PASS: TestFloorImageOmissionFinalizationFences/replaced-floor (0.07s)
+    --- PASS: TestFloorImageOmissionFinalizationFences/cas-conflict (0.07s)
+=== RUN   TestSiteSelectionSourceModes
+=== RUN   TestSiteSelectionSourceModes/all
+=== RUN   TestSiteSelectionSourceModes/prefix
+=== RUN   TestSiteSelectionSourceModes/exact
+=== RUN   TestSiteSelectionSourceModes/floor
+=== RUN   TestSiteSelectionSourceModes/global-only
+--- PASS: TestSiteSelectionSourceModes (0.10s)
+    --- PASS: TestSiteSelectionSourceModes/all (0.02s)
+    --- PASS: TestSiteSelectionSourceModes/prefix (0.02s)
+    --- PASS: TestSiteSelectionSourceModes/exact (0.02s)
+    --- PASS: TestSiteSelectionSourceModes/floor (0.02s)
+    --- PASS: TestSiteSelectionSourceModes/global-only (0.02s)
+=== RUN   TestSiteSelectionPruneEligibility
+--- PASS: TestSiteSelectionPruneEligibility (0.00s)
+=== RUN   TestSiteSelectionManifestRetainsExcludedOwnership
+=== RUN   TestSiteSelectionManifestRetainsExcludedOwnership/cm-false
+=== RUN   TestSiteSelectionManifestRetainsExcludedOwnership/cm-true
+--- PASS: TestSiteSelectionManifestRetainsExcludedOwnership (2.01s)
+    --- PASS: TestSiteSelectionManifestRetainsExcludedOwnership/cm-false (0.99s)
+    --- PASS: TestSiteSelectionManifestRetainsExcludedOwnership/cm-true (1.03s)
+=== RUN   TestSiteSelectionFullLifecycle
+=== RUN   TestSiteSelectionFullLifecycle/cm-false
+=== RUN   TestSiteSelectionFullLifecycle/cm-true
+--- PASS: TestSiteSelectionFullLifecycle (8.21s)
+    --- PASS: TestSiteSelectionFullLifecycle/cm-false (4.02s)
+    --- PASS: TestSiteSelectionFullLifecycle/cm-true (4.19s)
+=== RUN   TestSiteSelectedExportRetainsFullSnapshot
+--- PASS: TestSiteSelectedExportRetainsFullSnapshot (0.05s)
+=== RUN   TestSiteSelectionSourceValidation
+=== RUN   TestSiteSelectionSourceValidation/unknown-site
+=== RUN   TestSiteSelectionSourceValidation/exact-empty
+=== RUN   TestSiteSelectionSourceValidation/null-options
+=== RUN   TestSiteSelectionSourceValidation/null-list
+=== RUN   TestSiteSelectionSourceValidation/unknown-option
+=== RUN   TestSiteSelectionSourceValidation/wrong-version
+=== RUN   TestSiteSelectionSourceValidation/bad-excluded-model
+=== RUN   TestSiteSelectionSourceValidation/duplicate-root
+--- PASS: TestSiteSelectionSourceValidation (0.02s)
+    --- PASS: TestSiteSelectionSourceValidation/unknown-site (0.00s)
+    --- PASS: TestSiteSelectionSourceValidation/exact-empty (0.00s)
+    --- PASS: TestSiteSelectionSourceValidation/null-options (0.00s)
+    --- PASS: TestSiteSelectionSourceValidation/null-list (0.00s)
+    --- PASS: TestSiteSelectionSourceValidation/unknown-option (0.00s)
+    --- PASS: TestSiteSelectionSourceValidation/wrong-version (0.00s)
+    --- PASS: TestSiteSelectionSourceValidation/bad-excluded-model (0.00s)
+    --- PASS: TestSiteSelectionSourceValidation/duplicate-root (0.00s)
+=== RUN   TestSiteSelectionDesignManifest
+=== RUN   TestSiteSelectionDesignManifest/selected-recover-private
+=== RUN   TestSiteSelectionDesignManifest/image-selected-keyed-recover-private
+--- PASS: TestSiteSelectionDesignManifest (2.09s)
+    --- PASS: TestSiteSelectionDesignManifest/selected-recover-private (0.55s)
+    --- PASS: TestSiteSelectionDesignManifest/image-selected-keyed-recover-private (1.54s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	16.807s
+=== RUN   TestControllerExportSitesConfigMapSnapshot
+--- PASS: TestControllerExportSitesConfigMapSnapshot (0.03s)
+=== RUN   TestControllerExportSitesSnapshotRefusal
+=== RUN   TestControllerExportSitesSnapshotRefusal/missing-key
+=== RUN   TestControllerExportSitesSnapshotRefusal/mixed-input
+=== RUN   TestControllerExportSitesSnapshotRefusal/key-without-snapshot
+=== RUN   TestControllerExportSitesSnapshotRefusal/wrong-kind
+=== RUN   TestControllerExportSitesSnapshotRefusal/unbound-image
+=== RUN   TestControllerExportSitesSnapshotRefusal/malformed
+--- PASS: TestControllerExportSitesSnapshotRefusal (0.00s)
+    --- PASS: TestControllerExportSitesSnapshotRefusal/missing-key (0.00s)
+    --- PASS: TestControllerExportSitesSnapshotRefusal/mixed-input (0.00s)
+    --- PASS: TestControllerExportSitesSnapshotRefusal/key-without-snapshot (0.00s)
+    --- PASS: TestControllerExportSitesSnapshotRefusal/wrong-kind (0.00s)
+    --- PASS: TestControllerExportSitesSnapshotRefusal/unbound-image (0.00s)
+    --- PASS: TestControllerExportSitesSnapshotRefusal/malformed (0.00s)
+=== RUN   TestControllerExportSitesSelectedArtifact
+--- PASS: TestControllerExportSitesSelectedArtifact (0.02s)
+=== RUN   TestControllerExportSitesSelectionRequiresBoundOutput
+--- PASS: TestControllerExportSitesSelectionRequiresBoundOutput (0.00s)
+=== RUN   TestControllerExportSitesPrivateArtifact
+--- PASS: TestControllerExportSitesPrivateArtifact (0.03s)
+=== RUN   TestControllerExportSitesRefusalAndBulkOption
+--- PASS: TestControllerExportSitesRefusalAndBulkOption (0.04s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/tools/cvk-netascode-migrate	1.933s

@@ -1,0 +1,14 @@
+--- FAIL: TestTagSubmissionRechecksPaginatedSelection (0.32s)
+    --- FAIL: TestTagSubmissionRechecksPaginatedSelection/protection (0.05s)
+        template_tag_pagination_guard_test.go:85: submission result: <nil>; writes=1
+    --- FAIL: TestTagSubmissionRechecksPaginatedSelection/replacement (0.04s)
+        template_tag_pagination_guard_test.go:85: submission result: <nil>; writes=1
+    --- FAIL: TestTagSubmissionRechecksPaginatedSelection/preserved-description (0.05s)
+        template_tag_pagination_guard_test.go:85: submission result: <nil>; writes=1
+    --- FAIL: TestTagSubmissionRechecksPaginatedSelection/later-selected (0.05s)
+        template_tag_pagination_guard_test.go:85: submission result: <nil>; writes=1
+    --- FAIL: TestTagSubmissionRechecksPaginatedSelection/create-race (0.04s)
+        template_tag_pagination_guard_test.go:85: submission result: <nil>; writes=1
+FAIL
+FAIL	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	1.420s
+FAIL

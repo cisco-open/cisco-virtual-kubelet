@@ -1,0 +1,40 @@
+=== RUN   TestEnvtestWirelessCleanAirBandUpdates
+--- PASS: TestEnvtestWirelessCleanAirBandUpdates (7.88s)
+=== RUN   TestEnvtestWirelessCleanAirRecovery
+=== RUN   TestEnvtestWirelessCleanAirRecovery/known
+=== RUN   TestEnvtestWirelessCleanAirRecovery/missing-task
+=== RUN   TestEnvtestWirelessCleanAirRecovery/create
+=== RUN   TestEnvtestWirelessCleanAirRecovery/source
+=== RUN   TestEnvtestWirelessCleanAirRecovery/foreign-owner
+--- PASS: TestEnvtestWirelessCleanAirRecovery (8.45s)
+    --- PASS: TestEnvtestWirelessCleanAirRecovery/known (3.41s)
+    --- PASS: TestEnvtestWirelessCleanAirRecovery/missing-task (0.35s)
+    --- PASS: TestEnvtestWirelessCleanAirRecovery/create (0.18s)
+    --- PASS: TestEnvtestWirelessCleanAirRecovery/source (0.36s)
+    --- PASS: TestEnvtestWirelessCleanAirRecovery/foreign-owner (0.35s)
+=== RUN   TestEnvtestWirelessFRAFieldTransitions
+--- PASS: TestEnvtestWirelessFRAFieldTransitions (7.22s)
+=== RUN   TestEnvtestWirelessFeatureUpdateRecovery
+=== RUN   TestEnvtestWirelessFeatureUpdateRecovery/fra-recovery-known
+=== RUN   TestEnvtestWirelessFeatureUpdateRecovery/fra-recovery-missing-task
+=== RUN   TestEnvtestWirelessFeatureUpdateRecovery/fra-recovery-create
+=== RUN   TestEnvtestWirelessFeatureUpdateRecovery/fra-recovery-source
+=== RUN   TestEnvtestWirelessFeatureUpdateRecovery/fra-recovery-foreign-owner
+=== RUN   TestEnvtestWirelessFeatureUpdateRecovery/mixed-fra-recovery-known
+=== RUN   TestEnvtestWirelessFeatureUpdateRecovery/mixed-fra-recovery-missing-task
+=== RUN   TestEnvtestWirelessFeatureUpdateRecovery/mixed-fra-recovery-create
+=== RUN   TestEnvtestWirelessFeatureUpdateRecovery/mixed-fra-recovery-source
+=== RUN   TestEnvtestWirelessFeatureUpdateRecovery/mixed-fra-recovery-foreign-owner
+--- PASS: TestEnvtestWirelessFeatureUpdateRecovery (10.06s)
+    --- PASS: TestEnvtestWirelessFeatureUpdateRecovery/fra-recovery-known (2.57s)
+    --- PASS: TestEnvtestWirelessFeatureUpdateRecovery/fra-recovery-missing-task (0.35s)
+    --- PASS: TestEnvtestWirelessFeatureUpdateRecovery/fra-recovery-create (0.17s)
+    --- PASS: TestEnvtestWirelessFeatureUpdateRecovery/fra-recovery-source (0.35s)
+    --- PASS: TestEnvtestWirelessFeatureUpdateRecovery/fra-recovery-foreign-owner (0.33s)
+    --- PASS: TestEnvtestWirelessFeatureUpdateRecovery/mixed-fra-recovery-known (0.93s)
+    --- PASS: TestEnvtestWirelessFeatureUpdateRecovery/mixed-fra-recovery-missing-task (0.48s)
+    --- PASS: TestEnvtestWirelessFeatureUpdateRecovery/mixed-fra-recovery-create (0.18s)
+    --- PASS: TestEnvtestWirelessFeatureUpdateRecovery/mixed-fra-recovery-source (0.49s)
+    --- PASS: TestEnvtestWirelessFeatureUpdateRecovery/mixed-fra-recovery-foreign-owner (0.48s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	35.535s

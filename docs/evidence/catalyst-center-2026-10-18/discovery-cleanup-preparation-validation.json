@@ -1,0 +1,57 @@
+{
+  "scope": "private deletion-bound discovery cleanup preparation; no public hook or native dispatch",
+  "sourceSHA256": {
+    "internal/controlleradapter/catalystcenter/config_report.go": "4a9d990598411ab9aacb9084a527ff32a0d1ed0a3899df2a1e989647cf065277",
+    "internal/controlleradapter/catalystcenter/config_journal.go": "ed75a72ff227b38fdaab7ab9af4c4bdf3e3f6558e0d6259b9e4f6960adfb3a05",
+    "internal/controlleradapter/catalystcenter/discovery_config_cleanup_preparation.go": "cac38203be483d50c6e715af449768cab65ce216476179953f8d9baaa3ed8864",
+    "internal/controlleradapter/catalystcenter/discovery_config_cleanup_preparation_test.go": "c329666bc677a87391394c401553ad7bbb0ebf2bd28dcb5007768927e7319c86",
+    "internal/controlleradapter/catalystcenter/discovery_config_cleanup_observation_envtest_test.go": "2a536d88f8bb2f3ab72e93572e3fbbb867e6d1bc42daaf65f74e125460b7303e",
+    "internal/controlleradapter/catalystcenter/discovery_config_cleanup_observation_live_test.go": "1ce6c15cee4fcf250df7a22b4a48600987a33090899cd6cedc6191d76398df76"
+  },
+  "native": {
+    "checkpoint": "/private/tmp/cvk-discovery-owned-438855892",
+    "preparation": {
+      "id": "573a2b66eb3dd8aac1b2fa88d04ed003",
+      "configName": "sites",
+      "configUID": "config",
+      "configGeneration": 1,
+      "controllerGeneration": 1,
+      "section": "inventory",
+      "resource": "discovery-finalize:v1:c40c093a81bceefa80461b2adb363557f926a409de5776c1ea98e3844f5251d6:f35940c735c22d828d3a8bc37109abdb13108c2dd0ce955f2de725e8d3738bbc:1c11d42e4582584641804ddcb5ec2e064f64ddb2a1f8458fdf9bbf6fe0ee6ef8:discovery-owned:14fd57dd85f9d455af1a8d6002accb21c50d47f335aa34fb80aaa60baa42a381:1f:94f78b1f1736dd68f0ee71355564819da74af70b65c9d2a402f3f8f661bce6ea:prune",
+      "targetID": "158",
+      "action": "Delete",
+      "phase": "Prepared"
+    },
+    "cleanup": {
+      "deleteTaskId": "01a14cb3-1f36-70a1-b1ca-24a9584b6fe5",
+      "deleted": true,
+      "id": "158",
+      "name": "CVK_DISC_27f02ffa8b5d1219"
+    },
+    "apiPersistence": "separate simulated API, not installed cluster",
+    "publicCRDeletion": false,
+    "preparationNativeMutations": 0
+  },
+  "pending": [
+    "deletion-bound dispatch authority",
+    "original-task recovery",
+    "canonical receipt publication and exact absence proof",
+    "manager enrollment/finalizer release",
+    "installed qualification",
+    "full NetAsCode parity"
+  ],
+  "productionBuild": {
+    "path": "/private/tmp/cvk-discovery-cleanup-preparation",
+    "sha256": "2602ad52e78e640d8f35235d6d250049c536c8c0808b2fbabda55d3a4d5caf61",
+    "installed": false
+  },
+  "raceFixtureCorrection": "The added metadata-update race triggered worker-generation fencing in real API qualification. Final race uses only status ownership change/restoration; production checks unchanged.",
+  "gates": {
+    "api": "passed; 18 observation modes plus preparation with 10 altered-request subcases and ownership revision race",
+    "finalLocal": "passed; corrected preparation fixture",
+    "regression": "passed; discovery/shared journal/wireless deletion",
+    "ndSoftwareUpgrades": "passed; complete packages",
+    "swim": "passed; all 47 non-live SWIM functions",
+    "native": "passed; job158 exact cleanup and baseline restored"
+  }
+}

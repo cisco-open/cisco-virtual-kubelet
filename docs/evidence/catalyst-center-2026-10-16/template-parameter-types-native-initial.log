@@ -1,0 +1,17 @@
+=== RUN   TestLiveCatalystCenterTemplateProject
+    template_projects_live_test.go:138: submitted Create CVK-Q-Project-20261016-175356 01a145d9-69e8-7b47-a9a1-471ffd7345b6
+    template_projects_live_test.go:138: submitted Update CVK-Q-Project-20261016-175356 01a145d9-7b6d-71b3-a965-06c5db527a86
+    template_projects_live_test.go:164: project create and description update verified
+    template_projects_live_test.go:166: native template operation Create draft:CVK-Q-Project-20261016-175356#CVK-Commit-Qualification 01a145d9-98d4-7b24-9e2f-291ba2cc227a
+    template_projects_live_test.go:166: native template operation Update commit:CVK-Q-Project-20261016-175356#CVK-Commit-Qualification 01a145d9-cdf4-74ae-9dea-9c65984c48ad
+    template_projects_live_test.go:166: native template operation Update draft:CVK-Q-Project-20261016-175356#CVK-Commit-Qualification 01a145da-1420-731d-b90f-8252d808d066
+    template_projects_live_test.go:166: native template operation Update commit:CVK-Q-Project-20261016-175356#CVK-Commit-Qualification 01a145da-5ae2-7019-ba2d-27113c347969
+    template_projects_live_test.go:166: native draft create/update and two committed versions verified be9f1313-8765-460d-92ef-0f864dae7880
+    template_projects_live_test.go:166: generated template metadata task all-types 01a145da-973a-7505-8746-a59e1a6a0025
+    template_projects_live_test.go:166: metadata result unverified all-types <nil>
+    template_commit_live_test.go:64: retained uncertain template fixture be9f1313-8765-460d-92ef-0f864dae7880
+    template_projects_live_test.go:54: retained uncertain project CVK-Q-Project-20261016-175356 d3d983ce-d67c-474c-87bd-3071e5609496
+--- FAIL: TestLiveCatalystCenterTemplateProject (83.80s)
+FAIL
+FAIL	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	85.161s
+FAIL

@@ -1,0 +1,16 @@
+=== RUN   TestLiveCatalystCenterSiteSingularManifest
+    site_execution_live_test.go:82: isolated qualification hierarchy: Global/CVK-Q-20261016-190424-000000000
+    site_execution_live_test.go:226: singular manifest create task 01a14619-f652-7bc3-b825-bb93730c023b
+    site_execution_live_test.go:226: singular manifest create task 01a1461a-05f1-78ba-907e-2fbfb26bcbe2
+    site_execution_live_test.go:226: singular manifest create task 01a1461a-15e1-7f1b-bc21-e40337a9832d
+    site_execution_live_test.go:249: three singular manifest creates and complete native hierarchy verified
+    site_execution_live_test.go:336: public manifest step=0 status=Waiting operation=none task= reasons=[AdapterAvailable NativePreflightRefused NativePreflightRefused]
+    site_execution_live_test.go:336: public manifest Update reached InSync across simulated worker restarts; journal cleared, owner retained, no-op verified
+    site_execution_live_test.go:343: submitted task=01a1461a-3340-75d9-a017-bbb2a38b911a at=2026-10-16T19:04:43Z
+    site_execution_live_test.go:361: verified Update floor
+    site_execution_live_test.go:370: three creates, one floor update, and full hierarchy read-back verified
+    site_execution_live_test.go:375: four injected preflight failures retired without native effects; fresh public plans converged with four exact mutations and retained owners/history
+    site_execution_live_test.go:193: isolated hierarchy cleanup verified
+--- PASS: TestLiveCatalystCenterSiteSingularManifest (35.02s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	37.396s

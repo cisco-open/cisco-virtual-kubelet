@@ -1,0 +1,14 @@
+=== RUN   TestEnvtestNetworkDefaultExport
+=== RUN   TestEnvtestNetworkDefaultExport/complete
+=== RUN   TestEnvtestNetworkDefaultExport/unknown
+=== RUN   TestEnvtestNetworkDefaultExport/replace
+=== RUN   TestEnvtestNetworkDefaultExport/target-replaced
+=== RUN   TestEnvtestNetworkDefaultExport/preflight-history
+--- PASS: TestEnvtestNetworkDefaultExport (8.01s)
+    --- PASS: TestEnvtestNetworkDefaultExport/complete (2.95s)
+    --- PASS: TestEnvtestNetworkDefaultExport/unknown (0.32s)
+    --- PASS: TestEnvtestNetworkDefaultExport/replace (0.58s)
+    --- PASS: TestEnvtestNetworkDefaultExport/target-replaced (0.50s)
+    --- PASS: TestEnvtestNetworkDefaultExport/preflight-history (0.16s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	10.197s

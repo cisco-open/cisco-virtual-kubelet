@@ -1,0 +1,5 @@
+# github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter [github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter.test]
+internal/controlleradapter/catalystcenter/discovery_owned.go:58:42: undefined: hash
+internal/controlleradapter/catalystcenter/discovery_owned.go:325:9: declared and not used: hash
+FAIL	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter [build failed]
+FAIL

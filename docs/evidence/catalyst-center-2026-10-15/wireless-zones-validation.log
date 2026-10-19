@@ -1,0 +1,5 @@
+=== RUN   TestLiveCustomZoneValidationDiagnostic
+    zz_zone_validation_live_test.go:65: isolated native validation REST POST /dna/intent/api/v1/wirelessProfiles failed with status 406 Not Acceptable: {"response":{"errorCode":"NCND00002","message":"NCND00002: The Network Profile request has validation errors","detail":"[\"NCND01310: Combination of SSID and RF Profile chosen must be unique in APZones: CVK_N_7338236f5b422b34_Z1\"]"},"version":"1.0"}
+--- PASS: TestLiveCustomZoneValidationDiagnostic (1.45s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	3.684s

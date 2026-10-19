@@ -1,0 +1,36 @@
+test_all_actions_are_commit_pinned (test_release_contract.ReleaseContractTests.test_all_actions_are_commit_pinned) ... ok
+test_chart_license_is_exact_project_license (test_release_contract.ReleaseContractTests.test_chart_license_is_exact_project_license) ... ok
+test_docker_context_excludes_local_build_and_secret_material (test_release_contract.ReleaseContractTests.test_docker_context_excludes_local_build_and_secret_material) ... ok
+test_docs_publish_only_from_immutable_release (test_release_contract.ReleaseContractTests.test_docs_publish_only_from_immutable_release) ... ok
+test_documentation_closures_are_locked_licensed_and_premerge_gated (test_release_contract.ReleaseContractTests.test_documentation_closures_are_locked_licensed_and_premerge_gated) ... FAIL
+test_github_release_notes_are_tag_pinned_without_changing_mkdocs (test_release_contract.ReleaseContractTests.test_github_release_notes_are_tag_pinned_without_changing_mkdocs) ... ok
+test_go_redistribution_files_match_go_1_26_7 (test_release_contract.ReleaseContractTests.test_go_redistribution_files_match_go_1_26_7) ... ok
+test_high_critical_image_scans_are_hard_gates (test_release_contract.ReleaseContractTests.test_high_critical_image_scans_are_hard_gates) ... ok
+test_installer_is_syntactically_valid_and_current (test_release_contract.ReleaseContractTests.test_installer_is_syntactically_valid_and_current) ... ok
+test_makefile_respects_the_callers_go_binary (test_release_contract.ReleaseContractTests.test_makefile_respects_the_callers_go_binary) ... ok
+test_mermaid_runtime_notice_fields_are_fail_closed (test_release_contract.ReleaseContractTests.test_mermaid_runtime_notice_fields_are_fail_closed) ... ok
+test_october_features_are_visible_on_all_overview_surfaces (test_release_contract.ReleaseContractTests.test_october_features_are_visible_on_all_overview_surfaces) ... ok
+test_october_release_metadata_and_upgrade_scope (test_release_contract.ReleaseContractTests.test_october_release_metadata_and_upgrade_scope) ... ok
+test_release_toolchain_and_provenance_are_pinned (test_release_contract.ReleaseContractTests.test_release_toolchain_and_provenance_are_pinned) ... ok
+test_runbook_requires_draft_before_tag_and_schema_provenance_checks (test_release_contract.ReleaseContractTests.test_runbook_requires_draft_before_tag_and_schema_provenance_checks) ... ok
+test_workflow_runtimes_are_current_and_do_not_use_mutable_binfmt (test_release_contract.ReleaseContractTests.test_workflow_runtimes_are_current_and_do_not_use_mutable_binfmt) ... ok
+
+======================================================================
+FAIL: test_documentation_closures_are_locked_licensed_and_premerge_gated (test_release_contract.ReleaseContractTests.test_documentation_closures_are_locked_licensed_and_premerge_gated)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/johalley/Git/cisco-virtual-kubelet/.github/scripts/test_release_contract.py", line 787, in test_documentation_closures_are_locked_licensed_and_premerge_gated
+    self.assertLess(
+    ~~~~~~~~~~~~~~~^
+        smoke.index("run: go test -race -count=1 ./..."),
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        smoke.index("Website lint, audit, build, and license gate"),
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+AssertionError: 30875 not less than 5312
+
+----------------------------------------------------------------------
+Ran 16 tests in 0.781s
+
+FAILED (failures=1)

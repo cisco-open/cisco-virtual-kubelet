@@ -1,0 +1,25 @@
+=== RUN   TestLiveCatalystCenterTags
+    template_tags_live_test.go:298: tag operation 0 Create 01a13f6b-eb77-71c1-9525-24bc023768c2
+    template_tags_live_test.go:321: native rule readback 0 1 nilList false
+    template_tags_live_test.go:357: evaluated dynamic membership 0 1
+    template_tags_live_test.go:298: tag operation 1 Update 01a13f6b-f745-74e2-9e6c-d3b1cb68a864
+    template_tags_live_test.go:321: native rule readback 1 1 nilList false
+    template_tags_live_test.go:357: evaluated dynamic membership 1 1
+    template_tags_live_test.go:298: tag operation 2 Update 01a13f6c-02bd-7f89-a23e-316817cfaa13
+    template_tags_live_test.go:321: native rule readback 2 0 nilList true
+    template_tags_live_test.go:357: evaluated dynamic membership 2 0
+    template_tags_live_test.go:298: tag operation 3 Update 01a13f6c-0e3c-774e-af5a-63348dd362ca
+    template_tags_live_test.go:321: native rule readback 3 1 nilList false
+    template_tags_live_test.go:357: evaluated dynamic membership 3 1
+    template_tags_live_test.go:298: tag operation 4 Update 01a13f6c-1a31-7188-b0fe-ff7d0ab2de3c
+    template_tags_live_test.go:321: native rule readback 4 1 nilList false
+    template_tags_live_test.go:357: evaluated dynamic membership 4 0
+    template_tags_live_test.go:298: tag operation 5 Update 01a13f6c-2db7-7ddc-8411-92313d4947a4
+    template_tags_live_test.go:321: native rule readback 5 0 nilList true
+    template_tags_live_test.go:357: evaluated dynamic membership 5 0
+    template_tags_live_test.go:391: combined inventory/template tag precedence verified against one live tag
+    template_tags_live_test.go:396: positive dynamic evaluation, provenance and cleanup preparation verified matchingRuleClearCycle true
+    template_tags_live_test.go:210: tag cleanup verified 7132581e-134d-4b85-aa12-ba8fa27028b9
+--- PASS: TestLiveCatalystCenterTags (24.02s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	26.198s

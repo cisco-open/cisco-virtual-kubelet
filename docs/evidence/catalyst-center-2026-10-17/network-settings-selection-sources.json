@@ -1,0 +1,27 @@
+{
+  "branch": "pr/johalley/catc-support",
+  "moduleVersion": "0.5.0",
+  "moduleCommit": "a435555fe828f03cf3311d52fe1ab6572a247916",
+  "upstream": [
+    {
+      "file": "cc_network_settings.tf",
+      "url": "https://github.com/netascode/terraform-catalystcenter-nac-catalystcenter/blob/a435555fe828f03cf3311d52fe1ab6572a247916/cc_network_settings.tf",
+      "sha256": "36082cfd33d097f5ae37dd7248ceb3fe704f101f59b7a77fb9f746387ed8a159"
+    }
+  ],
+  "sourceSha256": {
+    "internal/controlleradapter/catalystcenter/network_settings.go": "41b920e93af111797bc1660ac13ff7dd88a68d273ce3ccb1182d023093283942",
+    "internal/controlleradapter/catalystcenter/network_execution.go": "73a752fe09a55b73edc4e70b387c8f78561e73d478bde99358502547b4fc7fe7",
+    "internal/controlleradapter/catalystcenter/network_submission.go": "f2ef0dbe7a9982bafef551902f7771c5055d8dd7617da0ab625bf0b888f36c9b",
+    "internal/controlleradapter/catalystcenter/network_application.go": "27a020f0bf05990518d4632e1c90a63842059079c795e8771a3e6131d6f445b2",
+    "internal/controlleradapter/catalystcenter/config_report_plan.go": "b5f87adbfe2d53f539cd8c2bb384ba54bd63792842099d56288832a9e791e1b7",
+    "internal/controlleradapter/catalystcenter/network_selection_test.go": "832bc837d7169e353cc5bcf73591426f5913ad86cbc06019cd6bb48f327eb31b",
+    "internal/controlleradapter/catalystcenter/network_selection_envtest_test.go": "9331ed806f2588468c778df9989f5275e832ee2131ccd5540840b1dfb8022916",
+    "internal/controlleradapter/catalystcenter/network_selection_live_test.go": "ade5621ece2ff488e0d1c99fcd1e2ae70470aa67938a76b9e5a7562fc87712a9",
+    "internal/controlleradapter/catalystcenter/network_execution_live_test.go": "37e7ecbd92085e2f278438b2f9da54e9653e958510a2518c569034184c412058",
+    "internal/controlleradapter/catalystcenter/network_settings_test.go": "a96017a8fc8083bd90e502580d0b2beb2c3405744a899586548b1f8dd38cf7c2",
+    "internal/controlleradapter/catalystcenter/network_scalar_test.go": "47f07b6755a62071eef968f7dec0ebb7cce0784198df3b47cebfda6846975217",
+    "internal/controlleradapter/catalystcenter/global_credential_manifest_test.go": "37c5b69937236b06aca9e7d4d9d4a77a41ec6043c08887fb710024ef7aa0a2ce"
+  },
+  "scope": "Resolved scalar resource selection and zero-resource Retain lifecycle; complete current custody validation despite zero settings; Report/Apply resource counting; original-task fences and re-selection. Actual private API and native two-apply-revision plus all-null source cycle distinguish storage/actors from real native effects. No destruction, handoff, nullable telemetry/AAA, default expansion or full pinned-model parity claim."
+}

@@ -1,0 +1,76 @@
+{
+  "status": "Guard-bound PnP removal no-dispatch retirement qualified; public new dispatch incomplete",
+  "fullModelComplete": false,
+  "source": {
+    "files": 1687,
+    "sha256": "74885dd58a2c515043c2bb2644e50b1e761662a584e533d28c70ad3f4c34eede",
+    "productionSHA256": "da2ddb11a680a81bb9cee0b568de770b1fbf297db441de1e3b344fb9c353c87a"
+  },
+  "gates": {
+    "controlledAndRealAPI": {
+      "result": "PASS",
+      "passingEvents": 11,
+      "seconds": 10.495,
+      "log": "/private/tmp/cvk-pnp-removal-nodispatch-api.log"
+    },
+    "compatibility": {
+      "result": "PASS",
+      "passingEvents": 1020,
+      "seconds": 59.725,
+      "log": "/private/tmp/cvk-pnp-removal-nodispatch-compat.log"
+    },
+    "foundations": {
+      "result": "PASS",
+      "packages": [
+        "internal/controlleradapter",
+        "internal/controlleradapter/nexusdashboard",
+        "internal/provider/softwareupgrade",
+        "internal/provider/maintenance",
+        "internal/controller"
+      ],
+      "log": "/private/tmp/cvk-pnp-removal-nodispatch-foundation.log"
+    },
+    "mainBuild": {
+      "result": "PASS",
+      "binary": "/private/tmp/cvk-pnp-removal-nodispatch-cisco-vk",
+      "log": "/private/tmp/cvk-pnp-removal-nodispatch-build.log"
+    },
+    "strictDocumentation": {
+      "result": "PASS",
+      "seconds": 7.69,
+      "log": "/private/tmp/cvk-pnp-removal-nodispatch-docs.log"
+    },
+    "formatSourceAndLedger": {
+      "result": "PASS",
+      "sourceUnchanged": true,
+      "uniquePinnedResourceRows": 93
+    }
+  },
+  "native": {
+    "result": "PASS",
+    "seconds": 53.77068305015564,
+    "id": "6ad58bd50bc0186771cb118b",
+    "serial": "CVK70ADDB28",
+    "refusalInjectedBeforeHTTPDelete": true,
+    "zeroDeleteAtRetirement": true,
+    "freshPlanRequired": true,
+    "POST": 1,
+    "DELETE": 1,
+    "catalogAndNetworkRestored": true,
+    "physicalActions": 0,
+    "kubernetesPersistence": "simulated JSON; real API cases separate"
+  },
+  "proof": {
+    "mechanism": "existing guardConfigurationPreflight / configurationPreSubmitRefusal / retireProvenNoDispatch",
+    "newTransportLockSchema": false,
+    "guardBoundAndOneUse": true,
+    "changedOwnerRetainsFence": true,
+    "postSubmitErrorCannotAcquireProof": true
+  },
+  "remaining": [
+    "New public whole-cohort dispatch/preflight/order",
+    "Existing manager-owned bootstrap/physical reservation checks and actor access",
+    "Complete consumer census, CR/missing-source context and manager finalization",
+    "Installed actors, stacks and full pinned model scope"
+  ]
+}

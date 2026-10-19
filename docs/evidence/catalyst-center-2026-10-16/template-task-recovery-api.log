@@ -1,0 +1,144 @@
+=== RUN   TestEnvtestTemplateKnownTaskRecovery
+=== RUN   TestEnvtestTemplateKnownTaskRecovery/project-create/known
+=== RUN   TestEnvtestTemplateKnownTaskRecovery/project-create/missing-task
+=== RUN   TestEnvtestTemplateKnownTaskRecovery/project-create/source-changed
+=== RUN   TestEnvtestTemplateKnownTaskRecovery/project-create/owner-changed
+=== RUN   TestEnvtestTemplateKnownTaskRecovery/project-create/parent-changed
+=== RUN   TestEnvtestTemplateKnownTaskRecovery/project-create/missing-native
+=== RUN   TestEnvtestTemplateKnownTaskRecovery/project-create/failed-child
+=== RUN   TestEnvtestTemplateKnownTaskRecovery/project-create/pending-child
+=== RUN   TestEnvtestTemplateKnownTaskRecovery/project-create/foreign-child
+=== RUN   TestEnvtestTemplateKnownTaskRecovery/project-create/missing-tree
+=== RUN   TestEnvtestTemplateKnownTaskRecovery/project-update/known
+=== RUN   TestEnvtestTemplateKnownTaskRecovery/project-update/missing-task
+=== RUN   TestEnvtestTemplateKnownTaskRecovery/project-update/source-changed
+=== RUN   TestEnvtestTemplateKnownTaskRecovery/project-update/owner-changed
+=== RUN   TestEnvtestTemplateKnownTaskRecovery/project-update/parent-changed
+=== RUN   TestEnvtestTemplateKnownTaskRecovery/project-update/missing-native
+=== RUN   TestEnvtestTemplateKnownTaskRecovery/project-update/failed-child
+=== RUN   TestEnvtestTemplateKnownTaskRecovery/project-update/pending-child
+=== RUN   TestEnvtestTemplateKnownTaskRecovery/project-update/foreign-child
+=== RUN   TestEnvtestTemplateKnownTaskRecovery/project-update/missing-tree
+=== RUN   TestEnvtestTemplateKnownTaskRecovery/draft-create/known
+=== RUN   TestEnvtestTemplateKnownTaskRecovery/draft-create/missing-task
+=== RUN   TestEnvtestTemplateKnownTaskRecovery/draft-create/source-changed
+=== RUN   TestEnvtestTemplateKnownTaskRecovery/draft-create/owner-changed
+=== RUN   TestEnvtestTemplateKnownTaskRecovery/draft-create/parent-changed
+=== RUN   TestEnvtestTemplateKnownTaskRecovery/draft-create/missing-native
+=== RUN   TestEnvtestTemplateKnownTaskRecovery/draft-create/failed-child
+=== RUN   TestEnvtestTemplateKnownTaskRecovery/draft-create/pending-child
+=== RUN   TestEnvtestTemplateKnownTaskRecovery/draft-create/foreign-child
+=== RUN   TestEnvtestTemplateKnownTaskRecovery/draft-create/missing-tree
+=== RUN   TestEnvtestTemplateKnownTaskRecovery/draft-update/known
+=== RUN   TestEnvtestTemplateKnownTaskRecovery/draft-update/missing-task
+=== RUN   TestEnvtestTemplateKnownTaskRecovery/draft-update/source-changed
+=== RUN   TestEnvtestTemplateKnownTaskRecovery/draft-update/owner-changed
+=== RUN   TestEnvtestTemplateKnownTaskRecovery/draft-update/parent-changed
+=== RUN   TestEnvtestTemplateKnownTaskRecovery/draft-update/missing-native
+=== RUN   TestEnvtestTemplateKnownTaskRecovery/draft-update/failed-child
+=== RUN   TestEnvtestTemplateKnownTaskRecovery/draft-update/pending-child
+=== RUN   TestEnvtestTemplateKnownTaskRecovery/draft-update/foreign-child
+=== RUN   TestEnvtestTemplateKnownTaskRecovery/draft-update/missing-tree
+=== RUN   TestEnvtestTemplateKnownTaskRecovery/commit/known
+=== RUN   TestEnvtestTemplateKnownTaskRecovery/commit/missing-task
+=== RUN   TestEnvtestTemplateKnownTaskRecovery/commit/source-changed
+=== RUN   TestEnvtestTemplateKnownTaskRecovery/commit/owner-changed
+=== RUN   TestEnvtestTemplateKnownTaskRecovery/commit/parent-changed
+=== RUN   TestEnvtestTemplateKnownTaskRecovery/commit/missing-native
+=== RUN   TestEnvtestTemplateKnownTaskRecovery/commit/failed-child
+=== RUN   TestEnvtestTemplateKnownTaskRecovery/commit/pending-child
+=== RUN   TestEnvtestTemplateKnownTaskRecovery/commit/foreign-child
+=== RUN   TestEnvtestTemplateKnownTaskRecovery/commit/missing-tree
+=== RUN   TestEnvtestTemplateKnownTaskRecovery/composite-draft/known
+=== RUN   TestEnvtestTemplateKnownTaskRecovery/composite-draft/missing-task
+=== RUN   TestEnvtestTemplateKnownTaskRecovery/composite-draft/source-changed
+=== RUN   TestEnvtestTemplateKnownTaskRecovery/composite-draft/owner-changed
+=== RUN   TestEnvtestTemplateKnownTaskRecovery/composite-draft/parent-changed
+=== RUN   TestEnvtestTemplateKnownTaskRecovery/composite-draft/missing-native
+=== RUN   TestEnvtestTemplateKnownTaskRecovery/composite-draft/failed-child
+=== RUN   TestEnvtestTemplateKnownTaskRecovery/composite-draft/pending-child
+=== RUN   TestEnvtestTemplateKnownTaskRecovery/composite-draft/foreign-child
+=== RUN   TestEnvtestTemplateKnownTaskRecovery/composite-draft/missing-tree
+=== RUN   TestEnvtestTemplateKnownTaskRecovery/composite-commit/known
+=== RUN   TestEnvtestTemplateKnownTaskRecovery/composite-commit/missing-task
+=== RUN   TestEnvtestTemplateKnownTaskRecovery/composite-commit/source-changed
+=== RUN   TestEnvtestTemplateKnownTaskRecovery/composite-commit/owner-changed
+=== RUN   TestEnvtestTemplateKnownTaskRecovery/composite-commit/parent-changed
+=== RUN   TestEnvtestTemplateKnownTaskRecovery/composite-commit/missing-native
+=== RUN   TestEnvtestTemplateKnownTaskRecovery/composite-commit/failed-child
+=== RUN   TestEnvtestTemplateKnownTaskRecovery/composite-commit/pending-child
+=== RUN   TestEnvtestTemplateKnownTaskRecovery/composite-commit/foreign-child
+=== RUN   TestEnvtestTemplateKnownTaskRecovery/composite-commit/missing-tree
+--- PASS: TestEnvtestTemplateKnownTaskRecovery (28.14s)
+    --- PASS: TestEnvtestTemplateKnownTaskRecovery/project-create/known (2.86s)
+    --- PASS: TestEnvtestTemplateKnownTaskRecovery/project-create/missing-task (0.24s)
+    --- PASS: TestEnvtestTemplateKnownTaskRecovery/project-create/source-changed (0.26s)
+    --- PASS: TestEnvtestTemplateKnownTaskRecovery/project-create/owner-changed (0.24s)
+    --- PASS: TestEnvtestTemplateKnownTaskRecovery/project-create/parent-changed (0.25s)
+    --- PASS: TestEnvtestTemplateKnownTaskRecovery/project-create/missing-native (0.26s)
+    --- PASS: TestEnvtestTemplateKnownTaskRecovery/project-create/failed-child (0.26s)
+    --- PASS: TestEnvtestTemplateKnownTaskRecovery/project-create/pending-child (0.27s)
+    --- PASS: TestEnvtestTemplateKnownTaskRecovery/project-create/foreign-child (0.25s)
+    --- PASS: TestEnvtestTemplateKnownTaskRecovery/project-create/missing-tree (0.25s)
+    --- PASS: TestEnvtestTemplateKnownTaskRecovery/project-update/known (0.24s)
+    --- PASS: TestEnvtestTemplateKnownTaskRecovery/project-update/missing-task (0.26s)
+    --- PASS: TestEnvtestTemplateKnownTaskRecovery/project-update/source-changed (0.26s)
+    --- PASS: TestEnvtestTemplateKnownTaskRecovery/project-update/owner-changed (0.24s)
+    --- PASS: TestEnvtestTemplateKnownTaskRecovery/project-update/parent-changed (0.26s)
+    --- PASS: TestEnvtestTemplateKnownTaskRecovery/project-update/missing-native (0.27s)
+    --- PASS: TestEnvtestTemplateKnownTaskRecovery/project-update/failed-child (0.24s)
+    --- PASS: TestEnvtestTemplateKnownTaskRecovery/project-update/pending-child (0.27s)
+    --- PASS: TestEnvtestTemplateKnownTaskRecovery/project-update/foreign-child (0.25s)
+    --- PASS: TestEnvtestTemplateKnownTaskRecovery/project-update/missing-tree (0.26s)
+    --- PASS: TestEnvtestTemplateKnownTaskRecovery/draft-create/known (0.48s)
+    --- PASS: TestEnvtestTemplateKnownTaskRecovery/draft-create/missing-task (0.26s)
+    --- PASS: TestEnvtestTemplateKnownTaskRecovery/draft-create/source-changed (0.39s)
+    --- PASS: TestEnvtestTemplateKnownTaskRecovery/draft-create/owner-changed (0.24s)
+    --- PASS: TestEnvtestTemplateKnownTaskRecovery/draft-create/parent-changed (0.29s)
+    --- PASS: TestEnvtestTemplateKnownTaskRecovery/draft-create/missing-native (0.30s)
+    --- PASS: TestEnvtestTemplateKnownTaskRecovery/draft-create/failed-child (0.26s)
+    --- PASS: TestEnvtestTemplateKnownTaskRecovery/draft-create/pending-child (0.26s)
+    --- PASS: TestEnvtestTemplateKnownTaskRecovery/draft-create/foreign-child (0.27s)
+    --- PASS: TestEnvtestTemplateKnownTaskRecovery/draft-create/missing-tree (0.26s)
+    --- PASS: TestEnvtestTemplateKnownTaskRecovery/draft-update/known (0.49s)
+    --- PASS: TestEnvtestTemplateKnownTaskRecovery/draft-update/missing-task (0.27s)
+    --- PASS: TestEnvtestTemplateKnownTaskRecovery/draft-update/source-changed (0.26s)
+    --- PASS: TestEnvtestTemplateKnownTaskRecovery/draft-update/owner-changed (0.26s)
+    --- PASS: TestEnvtestTemplateKnownTaskRecovery/draft-update/parent-changed (0.33s)
+    --- PASS: TestEnvtestTemplateKnownTaskRecovery/draft-update/missing-native (0.30s)
+    --- PASS: TestEnvtestTemplateKnownTaskRecovery/draft-update/failed-child (0.27s)
+    --- PASS: TestEnvtestTemplateKnownTaskRecovery/draft-update/pending-child (0.26s)
+    --- PASS: TestEnvtestTemplateKnownTaskRecovery/draft-update/foreign-child (0.28s)
+    --- PASS: TestEnvtestTemplateKnownTaskRecovery/draft-update/missing-tree (0.26s)
+    --- PASS: TestEnvtestTemplateKnownTaskRecovery/commit/known (0.30s)
+    --- PASS: TestEnvtestTemplateKnownTaskRecovery/commit/missing-task (0.29s)
+    --- PASS: TestEnvtestTemplateKnownTaskRecovery/commit/source-changed (0.28s)
+    --- PASS: TestEnvtestTemplateKnownTaskRecovery/commit/owner-changed (0.27s)
+    --- PASS: TestEnvtestTemplateKnownTaskRecovery/commit/parent-changed (0.34s)
+    --- PASS: TestEnvtestTemplateKnownTaskRecovery/commit/missing-native (0.30s)
+    --- PASS: TestEnvtestTemplateKnownTaskRecovery/commit/failed-child (0.28s)
+    --- PASS: TestEnvtestTemplateKnownTaskRecovery/commit/pending-child (0.37s)
+    --- PASS: TestEnvtestTemplateKnownTaskRecovery/commit/foreign-child (0.26s)
+    --- PASS: TestEnvtestTemplateKnownTaskRecovery/commit/missing-tree (0.25s)
+    --- PASS: TestEnvtestTemplateKnownTaskRecovery/composite-draft/known (0.64s)
+    --- PASS: TestEnvtestTemplateKnownTaskRecovery/composite-draft/missing-task (0.34s)
+    --- PASS: TestEnvtestTemplateKnownTaskRecovery/composite-draft/source-changed (0.33s)
+    --- PASS: TestEnvtestTemplateKnownTaskRecovery/composite-draft/owner-changed (0.33s)
+    --- PASS: TestEnvtestTemplateKnownTaskRecovery/composite-draft/parent-changed (0.40s)
+    --- PASS: TestEnvtestTemplateKnownTaskRecovery/composite-draft/missing-native (0.39s)
+    --- PASS: TestEnvtestTemplateKnownTaskRecovery/composite-draft/failed-child (0.33s)
+    --- PASS: TestEnvtestTemplateKnownTaskRecovery/composite-draft/pending-child (0.34s)
+    --- PASS: TestEnvtestTemplateKnownTaskRecovery/composite-draft/foreign-child (0.34s)
+    --- PASS: TestEnvtestTemplateKnownTaskRecovery/composite-draft/missing-tree (0.33s)
+    --- PASS: TestEnvtestTemplateKnownTaskRecovery/composite-commit/known (0.41s)
+    --- PASS: TestEnvtestTemplateKnownTaskRecovery/composite-commit/missing-task (0.34s)
+    --- PASS: TestEnvtestTemplateKnownTaskRecovery/composite-commit/source-changed (0.35s)
+    --- PASS: TestEnvtestTemplateKnownTaskRecovery/composite-commit/owner-changed (0.34s)
+    --- PASS: TestEnvtestTemplateKnownTaskRecovery/composite-commit/parent-changed (0.48s)
+    --- PASS: TestEnvtestTemplateKnownTaskRecovery/composite-commit/missing-native (0.40s)
+    --- PASS: TestEnvtestTemplateKnownTaskRecovery/composite-commit/failed-child (0.35s)
+    --- PASS: TestEnvtestTemplateKnownTaskRecovery/composite-commit/pending-child (0.36s)
+    --- PASS: TestEnvtestTemplateKnownTaskRecovery/composite-commit/foreign-child (0.35s)
+    --- PASS: TestEnvtestTemplateKnownTaskRecovery/composite-commit/missing-tree (0.35s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	30.330s

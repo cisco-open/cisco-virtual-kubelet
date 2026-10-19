@@ -1,0 +1,218 @@
+=== RUN   TestSwitchingProfileSubmissionGuards
+=== RUN   TestSwitchingProfileSubmissionGuards/stable
+=== RUN   TestSwitchingProfileSubmissionGuards/project-replaced
+=== RUN   TestSwitchingProfileSubmissionGuards/late-project-replaced
+=== RUN   TestSwitchingProfileSubmissionGuards/profile-replaced
+=== RUN   TestSwitchingProfileSubmissionGuards/later-profile-replaced
+=== RUN   TestSwitchingProfileSubmissionGuards/template-replaced
+=== RUN   TestSwitchingProfileSubmissionGuards/inherited-changed
+=== RUN   TestSwitchingProfileSubmissionGuards/inherited-precision-changed
+=== RUN   TestSwitchingProfileSubmissionGuards/inherited-reordered
+=== RUN   TestSwitchingProfileSubmissionGuards/attribute-order
+=== RUN   TestSwitchingProfileSubmissionGuards/opaque-value-order
+=== RUN   TestSwitchingProfileSubmissionGuards/caller-mutated
+=== RUN   TestSwitchingProfileSubmissionGuards/unrelated
+=== RUN   TestSwitchingProfileSubmissionGuards/lost-ack
+--- PASS: TestSwitchingProfileSubmissionGuards (0.22s)
+    --- PASS: TestSwitchingProfileSubmissionGuards/stable (0.02s)
+    --- PASS: TestSwitchingProfileSubmissionGuards/project-replaced (0.01s)
+    --- PASS: TestSwitchingProfileSubmissionGuards/late-project-replaced (0.02s)
+    --- PASS: TestSwitchingProfileSubmissionGuards/profile-replaced (0.01s)
+    --- PASS: TestSwitchingProfileSubmissionGuards/later-profile-replaced (0.02s)
+    --- PASS: TestSwitchingProfileSubmissionGuards/template-replaced (0.01s)
+    --- PASS: TestSwitchingProfileSubmissionGuards/inherited-changed (0.01s)
+    --- PASS: TestSwitchingProfileSubmissionGuards/inherited-precision-changed (0.01s)
+    --- PASS: TestSwitchingProfileSubmissionGuards/inherited-reordered (0.02s)
+    --- PASS: TestSwitchingProfileSubmissionGuards/attribute-order (0.02s)
+    --- PASS: TestSwitchingProfileSubmissionGuards/opaque-value-order (0.01s)
+    --- PASS: TestSwitchingProfileSubmissionGuards/caller-mutated (0.02s)
+    --- PASS: TestSwitchingProfileSubmissionGuards/unrelated (0.02s)
+    --- PASS: TestSwitchingProfileSubmissionGuards/lost-ack (0.02s)
+=== RUN   TestSwitchingProfileProjectBindingSurvivesRestart
+=== RUN   TestSwitchingProfileProjectBindingSurvivesRestart/stable
+=== RUN   TestSwitchingProfileProjectBindingSurvivesRestart/project-replaced
+=== RUN   TestSwitchingProfileProjectBindingSurvivesRestart/legacy
+=== RUN   TestSwitchingProfileProjectBindingSurvivesRestart/legacy-empty
+--- PASS: TestSwitchingProfileProjectBindingSurvivesRestart (0.73s)
+    --- PASS: TestSwitchingProfileProjectBindingSurvivesRestart/stable (0.64s)
+    --- PASS: TestSwitchingProfileProjectBindingSurvivesRestart/project-replaced (0.03s)
+    --- PASS: TestSwitchingProfileProjectBindingSurvivesRestart/legacy (0.03s)
+    --- PASS: TestSwitchingProfileProjectBindingSurvivesRestart/legacy-empty (0.03s)
+=== RUN   TestSwitchingProfileLegacyVerifiedBoundary
+=== RUN   TestSwitchingProfileLegacyVerifiedBoundary/empty=false
+=== RUN   TestSwitchingProfileLegacyVerifiedBoundary/empty=true
+--- PASS: TestSwitchingProfileLegacyVerifiedBoundary (0.04s)
+    --- PASS: TestSwitchingProfileLegacyVerifiedBoundary/empty=false (0.02s)
+    --- PASS: TestSwitchingProfileLegacyVerifiedBoundary/empty=true (0.02s)
+=== RUN   TestSwitchingProfilePublicTaskRecovery
+=== RUN   TestSwitchingProfilePublicTaskRecovery/update-false-preflight-read-error
+=== RUN   TestSwitchingProfilePublicTaskRecovery/update-false-known
+=== RUN   TestSwitchingProfilePublicTaskRecovery/update-false-slash-name
+=== RUN   TestSwitchingProfilePublicTaskRecovery/update-false-legacy-empty
+=== RUN   TestSwitchingProfilePublicTaskRecovery/update-false-legacy-unbound
+=== RUN   TestSwitchingProfilePublicTaskRecovery/update-false-project-replaced
+=== RUN   TestSwitchingProfilePublicTaskRecovery/update-false-template-replaced
+=== RUN   TestSwitchingProfilePublicTaskRecovery/update-false-taskless
+=== RUN   TestSwitchingProfilePublicTaskRecovery/update-false-source
+=== RUN   TestSwitchingProfilePublicTaskRecovery/update-false-owner
+=== RUN   TestSwitchingProfilePublicTaskRecovery/update-false-child-failed
+=== RUN   TestSwitchingProfilePublicTaskRecovery/update-false-child-pending
+=== RUN   TestSwitchingProfilePublicTaskRecovery/update-false-tree-missing
+=== RUN   TestSwitchingProfilePublicTaskRecovery/update-false-foreign-root
+=== RUN   TestSwitchingProfilePublicTaskRecovery/update-false-mid-tree-inherited
+=== RUN   TestSwitchingProfilePublicTaskRecovery/update-false-inherited-reordered
+=== RUN   TestSwitchingProfilePublicTaskRecovery/update-false-accepted-child-failed
+=== RUN   TestSwitchingProfilePublicTaskRecovery/update-false-accepted-child-pending
+=== RUN   TestSwitchingProfilePublicTaskRecovery/update-true-preflight-read-error
+=== RUN   TestSwitchingProfilePublicTaskRecovery/update-true-known
+=== RUN   TestSwitchingProfilePublicTaskRecovery/update-true-slash-name
+=== RUN   TestSwitchingProfilePublicTaskRecovery/update-true-legacy-empty
+=== RUN   TestSwitchingProfilePublicTaskRecovery/update-true-legacy-unbound
+=== RUN   TestSwitchingProfilePublicTaskRecovery/update-true-project-replaced
+=== RUN   TestSwitchingProfilePublicTaskRecovery/update-true-template-replaced
+=== RUN   TestSwitchingProfilePublicTaskRecovery/update-true-taskless
+=== RUN   TestSwitchingProfilePublicTaskRecovery/update-true-source
+=== RUN   TestSwitchingProfilePublicTaskRecovery/update-true-owner
+=== RUN   TestSwitchingProfilePublicTaskRecovery/update-true-child-failed
+=== RUN   TestSwitchingProfilePublicTaskRecovery/update-true-child-pending
+=== RUN   TestSwitchingProfilePublicTaskRecovery/update-true-tree-missing
+=== RUN   TestSwitchingProfilePublicTaskRecovery/update-true-foreign-root
+=== RUN   TestSwitchingProfilePublicTaskRecovery/update-true-mid-tree-inherited
+=== RUN   TestSwitchingProfilePublicTaskRecovery/update-true-inherited-reordered
+=== RUN   TestSwitchingProfilePublicTaskRecovery/update-true-accepted-child-failed
+=== RUN   TestSwitchingProfilePublicTaskRecovery/update-true-accepted-child-pending
+=== RUN   TestSwitchingProfilePublicTaskRecovery/profile-replaced
+=== RUN   TestSwitchingProfilePublicTaskRecovery/mid-tree-profile
+--- PASS: TestSwitchingProfilePublicTaskRecovery (9.10s)
+    --- PASS: TestSwitchingProfilePublicTaskRecovery/update-false-preflight-read-error (0.24s)
+    --- PASS: TestSwitchingProfilePublicTaskRecovery/update-false-known (0.24s)
+    --- PASS: TestSwitchingProfilePublicTaskRecovery/update-false-slash-name (0.23s)
+    --- PASS: TestSwitchingProfilePublicTaskRecovery/update-false-legacy-empty (0.21s)
+    --- PASS: TestSwitchingProfilePublicTaskRecovery/update-false-legacy-unbound (0.19s)
+    --- PASS: TestSwitchingProfilePublicTaskRecovery/update-false-project-replaced (0.24s)
+    --- PASS: TestSwitchingProfilePublicTaskRecovery/update-false-template-replaced (0.24s)
+    --- PASS: TestSwitchingProfilePublicTaskRecovery/update-false-taskless (0.18s)
+    --- PASS: TestSwitchingProfilePublicTaskRecovery/update-false-source (0.19s)
+    --- PASS: TestSwitchingProfilePublicTaskRecovery/update-false-owner (0.18s)
+    --- PASS: TestSwitchingProfilePublicTaskRecovery/update-false-child-failed (0.26s)
+    --- PASS: TestSwitchingProfilePublicTaskRecovery/update-false-child-pending (0.27s)
+    --- PASS: TestSwitchingProfilePublicTaskRecovery/update-false-tree-missing (0.26s)
+    --- PASS: TestSwitchingProfilePublicTaskRecovery/update-false-foreign-root (0.25s)
+    --- PASS: TestSwitchingProfilePublicTaskRecovery/update-false-mid-tree-inherited (0.31s)
+    --- PASS: TestSwitchingProfilePublicTaskRecovery/update-false-inherited-reordered (0.23s)
+    --- PASS: TestSwitchingProfilePublicTaskRecovery/update-false-accepted-child-failed (0.22s)
+    --- PASS: TestSwitchingProfilePublicTaskRecovery/update-false-accepted-child-pending (0.22s)
+    --- PASS: TestSwitchingProfilePublicTaskRecovery/update-true-preflight-read-error (0.24s)
+    --- PASS: TestSwitchingProfilePublicTaskRecovery/update-true-known (0.23s)
+    --- PASS: TestSwitchingProfilePublicTaskRecovery/update-true-slash-name (0.23s)
+    --- PASS: TestSwitchingProfilePublicTaskRecovery/update-true-legacy-empty (0.21s)
+    --- PASS: TestSwitchingProfilePublicTaskRecovery/update-true-legacy-unbound (0.19s)
+    --- PASS: TestSwitchingProfilePublicTaskRecovery/update-true-project-replaced (0.25s)
+    --- PASS: TestSwitchingProfilePublicTaskRecovery/update-true-template-replaced (0.25s)
+    --- PASS: TestSwitchingProfilePublicTaskRecovery/update-true-taskless (0.19s)
+    --- PASS: TestSwitchingProfilePublicTaskRecovery/update-true-source (0.19s)
+    --- PASS: TestSwitchingProfilePublicTaskRecovery/update-true-owner (0.18s)
+    --- PASS: TestSwitchingProfilePublicTaskRecovery/update-true-child-failed (0.27s)
+    --- PASS: TestSwitchingProfilePublicTaskRecovery/update-true-child-pending (0.27s)
+    --- PASS: TestSwitchingProfilePublicTaskRecovery/update-true-tree-missing (0.27s)
+    --- PASS: TestSwitchingProfilePublicTaskRecovery/update-true-foreign-root (0.27s)
+    --- PASS: TestSwitchingProfilePublicTaskRecovery/update-true-mid-tree-inherited (0.32s)
+    --- PASS: TestSwitchingProfilePublicTaskRecovery/update-true-inherited-reordered (0.24s)
+    --- PASS: TestSwitchingProfilePublicTaskRecovery/update-true-accepted-child-failed (0.23s)
+    --- PASS: TestSwitchingProfilePublicTaskRecovery/update-true-accepted-child-pending (0.23s)
+    --- PASS: TestSwitchingProfilePublicTaskRecovery/profile-replaced (0.26s)
+    --- PASS: TestSwitchingProfilePublicTaskRecovery/mid-tree-profile (0.40s)
+=== RUN   TestSwitchingProfileCreateResultGrammar
+=== RUN   TestSwitchingProfileCreateResultGrammar/known
+=== RUN   TestSwitchingProfileCreateResultGrammar/wrong-service
+=== RUN   TestSwitchingProfileCreateResultGrammar/wrong-task
+=== RUN   TestSwitchingProfileCreateResultGrammar/wrong-action
+=== RUN   TestSwitchingProfileCreateResultGrammar/leading
+=== RUN   TestSwitchingProfileCreateResultGrammar/trailing
+=== RUN   TestSwitchingProfileCreateResultGrammar/newline
+=== RUN   TestSwitchingProfileCreateResultGrammar/upper-uuid
+=== RUN   TestSwitchingProfileCreateResultGrammar/nil-uuid
+=== RUN   TestSwitchingProfileCreateResultGrammar/braced-uuid
+=== RUN   TestSwitchingProfileCreateResultGrammar/extra-uuid
+=== RUN   TestSwitchingProfileCreateResultGrammar/json-progress
+=== RUN   TestSwitchingProfileCreateResultGrammar/object-progress
+=== RUN   TestSwitchingProfileCreateResultGrammar/missing-progress
+=== RUN   TestSwitchingProfileCreateResultGrammar/missing-start
+=== RUN   TestSwitchingProfileCreateResultGrammar/missing-error
+=== RUN   TestSwitchingProfileCreateResultGrammar/stale
+=== RUN   TestSwitchingProfileCreateResultGrammar/future-end
+=== RUN   TestSwitchingProfileCreateResultGrammar/pending
+=== RUN   TestSwitchingProfileCreateResultGrammar/failed
+=== RUN   TestSwitchingProfileCreateResultGrammar/invalid-task
+=== RUN   TestSwitchingProfileCreateResultGrammar/future-submission
+--- PASS: TestSwitchingProfileCreateResultGrammar (0.00s)
+    --- PASS: TestSwitchingProfileCreateResultGrammar/known (0.00s)
+    --- PASS: TestSwitchingProfileCreateResultGrammar/wrong-service (0.00s)
+    --- PASS: TestSwitchingProfileCreateResultGrammar/wrong-task (0.00s)
+    --- PASS: TestSwitchingProfileCreateResultGrammar/wrong-action (0.00s)
+    --- PASS: TestSwitchingProfileCreateResultGrammar/leading (0.00s)
+    --- PASS: TestSwitchingProfileCreateResultGrammar/trailing (0.00s)
+    --- PASS: TestSwitchingProfileCreateResultGrammar/newline (0.00s)
+    --- PASS: TestSwitchingProfileCreateResultGrammar/upper-uuid (0.00s)
+    --- PASS: TestSwitchingProfileCreateResultGrammar/nil-uuid (0.00s)
+    --- PASS: TestSwitchingProfileCreateResultGrammar/braced-uuid (0.00s)
+    --- PASS: TestSwitchingProfileCreateResultGrammar/extra-uuid (0.00s)
+    --- PASS: TestSwitchingProfileCreateResultGrammar/json-progress (0.00s)
+    --- PASS: TestSwitchingProfileCreateResultGrammar/object-progress (0.00s)
+    --- PASS: TestSwitchingProfileCreateResultGrammar/missing-progress (0.00s)
+    --- PASS: TestSwitchingProfileCreateResultGrammar/missing-start (0.00s)
+    --- PASS: TestSwitchingProfileCreateResultGrammar/missing-error (0.00s)
+    --- PASS: TestSwitchingProfileCreateResultGrammar/stale (0.00s)
+    --- PASS: TestSwitchingProfileCreateResultGrammar/future-end (0.00s)
+    --- PASS: TestSwitchingProfileCreateResultGrammar/pending (0.00s)
+    --- PASS: TestSwitchingProfileCreateResultGrammar/failed (0.00s)
+    --- PASS: TestSwitchingProfileCreateResultGrammar/invalid-task (0.00s)
+    --- PASS: TestSwitchingProfileCreateResultGrammar/future-submission (0.00s)
+=== RUN   TestSwitchingProfileCreatedResultNativeBinding
+=== RUN   TestSwitchingProfileCreatedResultNativeBinding/known
+=== RUN   TestSwitchingProfileCreatedResultNativeBinding/missing
+=== RUN   TestSwitchingProfileCreatedResultNativeBinding/replacement
+=== RUN   TestSwitchingProfileCreatedResultNativeBinding/wrong-name
+=== RUN   TestSwitchingProfileCreatedResultNativeBinding/wrong-namespace
+=== RUN   TestSwitchingProfileCreatedResultNativeBinding/drift
+=== RUN   TestSwitchingProfileCreatedResultNativeBinding/project-replaced
+=== RUN   TestSwitchingProfileCreatedResultNativeBinding/template-replaced
+=== RUN   TestSwitchingProfileCreatedResultNativeBinding/child-failed
+=== RUN   TestSwitchingProfileCreatedResultNativeBinding/child-pending
+=== RUN   TestSwitchingProfileCreatedResultNativeBinding/tree-missing
+=== RUN   TestSwitchingProfileCreatedResultNativeBinding/task-changed
+=== RUN   TestSwitchingProfileCreatedResultNativeBinding/native-replaced-between
+=== RUN   TestSwitchingProfileCreatedResultNativeBinding/inherited-changed
+=== RUN   TestSwitchingProfileCreatedResultNativeBinding/inherited-reordered
+=== RUN   TestSwitchingProfileCreatedResultNativeBinding/update
+=== RUN   TestSwitchingProfileCreatedResultNativeBinding/target
+=== RUN   TestSwitchingProfileCreatedResultNativeBinding/credentials
+=== RUN   TestSwitchingProfileCreatedResultNativeBinding/physical
+=== RUN   TestSwitchingProfileCreatedResultNativeBinding/taskless
+=== RUN   TestSwitchingProfileCreatedResultNativeBinding/undeclared
+=== RUN   TestSwitchingProfileCreatedResultNativeBinding/wrong-owner-envelope
+--- PASS: TestSwitchingProfileCreatedResultNativeBinding (0.22s)
+    --- PASS: TestSwitchingProfileCreatedResultNativeBinding/known (0.02s)
+    --- PASS: TestSwitchingProfileCreatedResultNativeBinding/missing (0.01s)
+    --- PASS: TestSwitchingProfileCreatedResultNativeBinding/replacement (0.01s)
+    --- PASS: TestSwitchingProfileCreatedResultNativeBinding/wrong-name (0.01s)
+    --- PASS: TestSwitchingProfileCreatedResultNativeBinding/wrong-namespace (0.01s)
+    --- PASS: TestSwitchingProfileCreatedResultNativeBinding/drift (0.02s)
+    --- PASS: TestSwitchingProfileCreatedResultNativeBinding/project-replaced (0.01s)
+    --- PASS: TestSwitchingProfileCreatedResultNativeBinding/template-replaced (0.01s)
+    --- PASS: TestSwitchingProfileCreatedResultNativeBinding/child-failed (0.01s)
+    --- PASS: TestSwitchingProfileCreatedResultNativeBinding/child-pending (0.01s)
+    --- PASS: TestSwitchingProfileCreatedResultNativeBinding/tree-missing (0.01s)
+    --- PASS: TestSwitchingProfileCreatedResultNativeBinding/task-changed (0.01s)
+    --- PASS: TestSwitchingProfileCreatedResultNativeBinding/native-replaced-between (0.01s)
+    --- PASS: TestSwitchingProfileCreatedResultNativeBinding/inherited-changed (0.01s)
+    --- PASS: TestSwitchingProfileCreatedResultNativeBinding/inherited-reordered (0.02s)
+    --- PASS: TestSwitchingProfileCreatedResultNativeBinding/update (0.00s)
+    --- PASS: TestSwitchingProfileCreatedResultNativeBinding/target (0.00s)
+    --- PASS: TestSwitchingProfileCreatedResultNativeBinding/credentials (0.00s)
+    --- PASS: TestSwitchingProfileCreatedResultNativeBinding/physical (0.00s)
+    --- PASS: TestSwitchingProfileCreatedResultNativeBinding/taskless (0.00s)
+    --- PASS: TestSwitchingProfileCreatedResultNativeBinding/undeclared (0.00s)
+    --- PASS: TestSwitchingProfileCreatedResultNativeBinding/wrong-owner-envelope (0.00s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	12.760s

@@ -1,0 +1,6 @@
+=== RUN   TestEnvtestMergedSiteDesign
+--- PASS: TestEnvtestMergedSiteDesign (7.18s)
+=== RUN   TestEnvtestYAMLSourceSiteDesign
+--- PASS: TestEnvtestYAMLSourceSiteDesign (6.20s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	14.275s

@@ -1,0 +1,45 @@
+{
+  "branch": "pr/johalley/catc-support",
+  "moduleVersion": "0.5.0",
+  "moduleRevision": "a435555fe828f03cf3311d52fe1ab6572a247916",
+  "upstream": [
+    {
+      "path": "main.tf",
+      "url": "https://github.com/netascode/terraform-catalystcenter-nac-catalystcenter/blob/a435555fe828f03cf3311d52fe1ab6572a247916/main.tf",
+      "sha256": "c1805f966e06057e417f43211caf17268183812007368b181035f16414ea072b"
+    },
+    {
+      "path": "variables.tf",
+      "url": "https://github.com/netascode/terraform-catalystcenter-nac-catalystcenter/blob/a435555fe828f03cf3311d52fe1ab6572a247916/variables.tf",
+      "sha256": "120ef11439c33262823527298237b9829d607d84c6d34727197fd440c77e2138"
+    },
+    {
+      "path": "cc_network_settings.tf",
+      "url": "https://github.com/netascode/terraform-catalystcenter-nac-catalystcenter/blob/a435555fe828f03cf3311d52fe1ab6572a247916/cc_network_settings.tf",
+      "sha256": "36082cfd33d097f5ae37dd7248ceb3fe704f101f59b7a77fb9f746387ed8a159"
+    }
+  ],
+  "sourceSha256": {
+    "internal/controlleradapter/catalystcenter/nacmodel/site_selection.go": "858c31a378f49d3ab5f9d908cb24577aea8071560ad3b95eb51b710604b1fdb2",
+    "internal/controlleradapter/catalystcenter/nacmodel/site_selection_test.go": "bcedbe44b5945d14394166afe5b75f9a055e8a82b68133e3425360a3360d9003",
+    "internal/controlleradapter/catalystcenter/nacmodel/network_defaults.go": "df37ea2f219b6d3ecc8bc5a8c401364ceacce8f829405897eda643ba3813059d",
+    "internal/controlleradapter/catalystcenter/nacmodel/network_defaults_test.go": "50f5665410fae5d3cf6cf4b6e9268ec332c96b4425579683f34fca3b89bd696c",
+    "internal/controlleradapter/catalystcenter/network_export_selection.go": "f65aa8f8db9cdf9602ce597af348a6bcbf2477a4118e41c7531e9f8efdc193dd",
+    "internal/controlleradapter/catalystcenter/network_export_selection_test.go": "17fb88813812d9d036f5537dbc636dd747887a7f4a285c576dae3ccfe32e0271",
+    "internal/controlleradapter/catalystcenter/network_export_selection_envtest_test.go": "6a22c7e963bbe45c70740ac601038d77c4387fadfaa1cfa9662514f6eb4e8d38",
+    "internal/controlleradapter/catalystcenter/network_export_selection_live_test.go": "b6c7b48da81f9660733244f5bbf5e6ca859f2d144b320a1a16bcd20713cbecbc",
+    "internal/controlleradapter/catalystcenter/network_settings.go": "ae5ec59136bef339504a55cc26bb3abdffa52036013e7bb38bcecc655a6c7842",
+    "internal/controlleradapter/catalystcenter/network_source_validation.go": "c496482bbac40b6e48038a66d2f235ef00cf7932c061025215128c81ff518d21",
+    "internal/controlleradapter/catalystcenter/network_selection_test.go": "f1dffa30e50c94498c062f367e5bc181749397749723078ed652606905a65f81",
+    "internal/controlleradapter/catalystcenter/network_selection_live_test.go": "dee170479621d9bf98d337576e2505c9fbf5caf71222401938c2886a43b45acf",
+    "internal/controlleradapter/catalystcenter/network_execution_live_test.go": "ada6ee0111dd782286d7c5051910afe04687f463a2281b8f9c9c1826ab17a823",
+    "internal/controlleradapter/catalystcenter/site_execution_live_test.go": "9668050836ddd835be506c195ce7af95be9dfe0cabec8dc84fff78ad825de20a",
+    "tools/cvk-netascode-migrate/controller_export_network.go": "313cc4b3c0059bd1aef677750f5f77011e9a8ff906cf47ac47648279d595bb7d",
+    "tools/cvk-netascode-migrate/controller_export_network_test.go": "7acee0295478bd1b19f4addf5607a5aeaad2947af34667692fd246838a79fccc",
+    "tools/cvk-netascode-migrate/main.go": "86c118dbf8c02aae5ab3fd91b333c9f89e68372aaaa9540c91d150ebf48e53d6",
+    "examples/configs/catalyst-center/network-site-selection-source.yaml": "990a69cb4e8520e56932649dbf53afeaf30e70b6e235356f5656cfd12aeb2ab9"
+  },
+  "exporter": "cvk-network-selected-v1:policy-sha256:48cd63c3069219396ee6ad563cf1ef7e9d70a60caa6fcaa0cb5ffab98d99ceb1",
+  "policySHA256": "48cd63c3069219396ee6ad563cf1ef7e9d70a60caa6fcaa0cb5ffab98d99ceb1",
+  "scope": "Offline network/telemetry binding selection and existing runtime empty-cohort support. Final unit/CLI, 36 actual API lifecycle cases; twelve actual native tasks and zero-request scope exclusion with simulated Kubernetes actors/storage. Native run preceded final duplicate-membership/idempotent empty-input extensions, which were separately tested locally and against the Kubernetes API. No full-model scope/schema, other-resource selection, native multi-target ordering, Global writes, ownership/prune/handoff or installed-actor qualification claim."
+}

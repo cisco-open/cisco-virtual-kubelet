@@ -1,0 +1,6 @@
+{
+  "scope": "Read-only LAN session endpoint availability; first page only, not a complete inventory qualification",
+  "http_status": 200,
+  "array_response": true,
+  "page_count": 0
+}

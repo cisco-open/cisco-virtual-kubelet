@@ -1,0 +1,193 @@
+{
+  "finalJournal": {
+    "actionApplications": [
+      {
+        "section": "inventory",
+        "resource": "discovery-record:70a64c41b9d8d386ca0f40f42d56b1561badbf910706693979fe3a020d51a296:228",
+        "operation": {
+          "id": "187f3cd960d27dbb332e2b66ec05cad0",
+          "configName": "cvk-inst-handoff-ef995cfc9ffa87f9",
+          "configUID": "35802105-7452-4e64-9e67-b0c71dbc49b2",
+          "configGeneration": 2,
+          "controllerGeneration": 2,
+          "sourceUID": "412fb432-c806-4e08-aa6e-897fe7267723",
+          "sourceVersion": "84463",
+          "section": "inventory",
+          "resource": "discovery-finalize:v1:63c70a7fe646294bfb9d591b2560f7c23df89a6ea8f40822b147eaa64d88cb0f:e38d182233e2d44af317155e3e62d8e6a62aa3df5ff50005d3ad03ea542d36da:becbda0be5211d1c6b2c1966f936f70d9b73febd408c423cc0f0ca2610342768:discovery-owned:70a64c41b9d8d386ca0f40f42d56b1561badbf910706693979fe3a020d51a296:1f:b5acdbcbe49021435587d1020e887b9bc08e1b3776b02744e3a5e148b7aa5c7f:prune",
+          "targetID": "228",
+          "action": "Delete",
+          "phase": "Verified",
+          "submittedAt": "2026-10-18T04:13:21Z",
+          "taskID": "01a14d36-d753-7fa9-89c5-102f1b94bfd2"
+        },
+        "verifiedAt": "2026-10-18T04:13:38Z"
+      },
+      {
+        "section": "inventory",
+        "resource": "discovery-record:70a64c41b9d8d386ca0f40f42d56b1561badbf910706693979fe3a020d51a296:233",
+        "operation": {
+          "id": "02c22bf4e4919e903bbbf3e5fa7b221b",
+          "configName": "cvk-inst-handoff-ef995cfc9ffa87f9",
+          "configUID": "6b3b4c3c-000b-4b71-b267-9d3196c2054f",
+          "configGeneration": 2,
+          "controllerGeneration": 2,
+          "sourceUID": "2b92c3ed-fb12-42e4-bef7-e344ff36c163",
+          "sourceVersion": "84634",
+          "section": "inventory",
+          "resource": "discovery-finalize:v1:15b0a8ed27859e350119a57223518a671caab1c3a2662129c32f20199feead8b:e38d182233e2d44af317155e3e62d8e6a62aa3df5ff50005d3ad03ea542d36da:efb5e90d01ddc5004a922ab50534c6abdc8e5f0c6d62d31bfbd8c0ad586cbd94:discovery-owned:70a64c41b9d8d386ca0f40f42d56b1561badbf910706693979fe3a020d51a296:1f:b5acdbcbe49021435587d1020e887b9bc08e1b3776b02744e3a5e148b7aa5c7f:prune",
+          "targetID": "233",
+          "action": "Delete",
+          "phase": "Verified",
+          "submittedAt": "2026-10-18T04:14:47Z",
+          "taskID": "01a14d38-24eb-7e9a-b5d3-24a3cf8515b9"
+        },
+        "verifiedAt": "2026-10-18T04:15:03Z"
+      }
+    ],
+    "owners": [
+      {
+        "section": "inventory",
+        "configName": "cvk-inst-handoff-ef995cfc9ffa87f9",
+        "configUID": "6b3b4c3c-000b-4b71-b267-9d3196c2054f"
+      }
+    ]
+  },
+  "incarnations": 2,
+  "installedActors": true,
+  "inventoryIdentityPreserved": true,
+  "managerReleasedBothCycles": true,
+  "nativeBaselineRestored": true,
+  "naturalCreateUnknownBothCycles": true,
+  "originalTasksRetained": true,
+  "predecessorReceiptsPreserved": true,
+  "retirementAttestationValid": true,
+  "sameConfigAndJobNames": true,
+  "sourceLossBothCycles": true,
+  "statusInjected": false,
+  "workerRestartBothCycles": true,
+  "sourceBoundary": {
+    "branch": "pr/johalley/catc-support",
+    "productionSHA256": "5d36bf0dfde744b2b1e5894f6f736213134f628629a50abf4be784086b357ce2",
+    "fullSuiteCommand": "go test -race -json ./internal/controlleradapter/catalystcenter -count=1 -timeout=40m",
+    "fullSuiteLog": "/private/tmp/cvk-discovery-handoff-full-final.jsonl",
+    "image": "cvk-catc-worker-qualification:20261018-discovery-handoff-5d36bf0dfde7"
+  },
+  "bootstrap": {
+    "namespace": "cvk-catc-handoff-20261018",
+    "namespaceUID": "59b068d8-003e-410c-b5cd-18a4bb778af4",
+    "controller": "catc-handoff",
+    "controllerUID": "0bae4191-35bb-44ec-8379-32f103d1df7b",
+    "credentialSecret": "catc-api",
+    "credentialSource": "user-supplied local API credential file",
+    "secretsSavedInEvidence": false
+  },
+  "workerPermissions": {
+    "patch config": {
+      "allowed": false,
+      "exit": 1
+    },
+    "update config": {
+      "allowed": false,
+      "exit": 1
+    },
+    "update config/status": {
+      "allowed": true,
+      "exit": 0
+    }
+  },
+  "testElapsedSeconds": 164.33,
+  "checkpoint": "/private/tmp/cvk-installed-discovery-handoff-2530688223",
+  "originalJournalUnchanged": true,
+  "originalConfigsInSync": true,
+  "helmValuesUpdated": false,
+  "qualificationOnlyDeploymentOverride": true,
+  "cycles": [
+    {
+      "stage": 1,
+      "configUID": "35802105-7452-4e64-9e67-b0c71dbc49b2",
+      "sourceUID": "412fb432-c806-4e08-aa6e-897fe7267723",
+      "nativeUUID": "228",
+      "createTask": "01a14d36-2814-7db6-9ef2-c6c3dc6c1f73",
+      "deleteTask": "01a14d36-d753-7fa9-89c5-102f1b94bfd2",
+      "deleteReceipt": {
+        "section": "inventory",
+        "resource": "discovery-record:70a64c41b9d8d386ca0f40f42d56b1561badbf910706693979fe3a020d51a296:228",
+        "operation": {
+          "id": "187f3cd960d27dbb332e2b66ec05cad0",
+          "configName": "cvk-inst-handoff-ef995cfc9ffa87f9",
+          "configUID": "35802105-7452-4e64-9e67-b0c71dbc49b2",
+          "configGeneration": 2,
+          "controllerGeneration": 2,
+          "sourceUID": "412fb432-c806-4e08-aa6e-897fe7267723",
+          "sourceVersion": "84463",
+          "section": "inventory",
+          "resource": "discovery-finalize:v1:63c70a7fe646294bfb9d591b2560f7c23df89a6ea8f40822b147eaa64d88cb0f:e38d182233e2d44af317155e3e62d8e6a62aa3df5ff50005d3ad03ea542d36da:becbda0be5211d1c6b2c1966f936f70d9b73febd408c423cc0f0ca2610342768:discovery-owned:70a64c41b9d8d386ca0f40f42d56b1561badbf910706693979fe3a020d51a296:1f:b5acdbcbe49021435587d1020e887b9bc08e1b3776b02744e3a5e148b7aa5c7f:prune",
+          "targetID": "228",
+          "action": "Delete",
+          "phase": "Verified",
+          "submittedAt": "2026-10-18T04:13:21Z",
+          "taskID": "01a14d36-d753-7fa9-89c5-102f1b94bfd2"
+        },
+        "verifiedAt": "2026-10-18T04:13:38Z"
+      },
+      "managerReleased": true,
+      "finalizersBeforeKeeperRelease": [
+        "test.cisco.vk/installed-handoff-qualification"
+      ]
+    },
+    {
+      "stage": 2,
+      "configUID": "6b3b4c3c-000b-4b71-b267-9d3196c2054f",
+      "sourceUID": "2b92c3ed-fb12-42e4-bef7-e344ff36c163",
+      "nativeUUID": "233",
+      "createTask": "01a14d37-7460-7fd8-a7b0-0da5217f3bba",
+      "deleteTask": "01a14d38-24eb-7e9a-b5d3-24a3cf8515b9",
+      "deleteReceipt": {
+        "section": "inventory",
+        "resource": "discovery-record:70a64c41b9d8d386ca0f40f42d56b1561badbf910706693979fe3a020d51a296:233",
+        "operation": {
+          "id": "02c22bf4e4919e903bbbf3e5fa7b221b",
+          "configName": "cvk-inst-handoff-ef995cfc9ffa87f9",
+          "configUID": "6b3b4c3c-000b-4b71-b267-9d3196c2054f",
+          "configGeneration": 2,
+          "controllerGeneration": 2,
+          "sourceUID": "2b92c3ed-fb12-42e4-bef7-e344ff36c163",
+          "sourceVersion": "84634",
+          "section": "inventory",
+          "resource": "discovery-finalize:v1:15b0a8ed27859e350119a57223518a671caab1c3a2662129c32f20199feead8b:e38d182233e2d44af317155e3e62d8e6a62aa3df5ff50005d3ad03ea542d36da:efb5e90d01ddc5004a922ab50534c6abdc8e5f0c6d62d31bfbd8c0ad586cbd94:discovery-owned:70a64c41b9d8d386ca0f40f42d56b1561badbf910706693979fe3a020d51a296:1f:b5acdbcbe49021435587d1020e887b9bc08e1b3776b02744e3a5e148b7aa5c7f:prune",
+          "targetID": "233",
+          "action": "Delete",
+          "phase": "Verified",
+          "submittedAt": "2026-10-18T04:14:47Z",
+          "taskID": "01a14d38-24eb-7e9a-b5d3-24a3cf8515b9"
+        },
+        "verifiedAt": "2026-10-18T04:15:03Z"
+      },
+      "managerReleased": true,
+      "finalizersBeforeKeeperRelease": [
+        "test.cisco.vk/installed-handoff-qualification"
+      ]
+    }
+  ],
+  "imageIdentity": {
+    "exportedConfigDigest": "sha256:bce19742db02206e88e58f8aa1376128a3c9291ddfba0085cb1fb5f66851fc0b",
+    "exportedIndexDigest": "sha256:6b800a8feb9fd2955548faadf6b5ea117a5c685d41b10195aac03f2b0039b479",
+    "installedRuntimeImageIDs": [
+      "sha256:bce19742db02206e88e58f8aa1376128a3c9291ddfba0085cb1fb5f66851fc0b"
+    ],
+    "runtimeMatchesBuiltConfig": true
+  },
+  "sha256": {
+    "internal/controlleradapter/catalystcenter/installed_discovery_handoff_live_test.go": "bfc3b07d15f2ffa1ad2c5db81d8f04f27498d8c0373c9c4cd622c16a3ff27897",
+    "/private/tmp/cvk-installed-discovery-handoff-qualification-20261018/build/cisco-vk": "448acd518661a1bbd4c2d4b2e3337f42e9aa7bf283aa1183f36b77df7dd69b7a",
+    "/private/tmp/cvk-installed-discovery-handoff-qualification-20261018/build/Dockerfile": "7188ed2f3ecdc59af92b0f6b9e6afb147eedb06c7416cb297852a59f49e1a0bb",
+    "/private/tmp/cvk-installed-discovery-handoff-qualification-20261018/manager-image-patch.json": "2c7dd7505564147d4b32d6f1443cee16f1e5bb764b33b25a874ec9992d931285",
+    "/private/tmp/cvk-installed-discovery-handoff-qualification-20261018/before-original-controller.json": "d4b88b1c6cbe2c3a83b588489bcf34722350937661f745c88ab7f2fe9ba8dd5f",
+    "/private/tmp/cvk-installed-discovery-handoff-2530688223/stage-1-completed.json": "6dc721351c4cf157898b95c87b4648c911a422115115bbe86d48d945e6c434d8",
+    "/private/tmp/cvk-installed-discovery-handoff-2530688223/stage-2-completed.json": "8eda6da356458a8f73955f1d3526a6325efbd6de6520ed99079cd97c34e21605",
+    "/private/tmp/cvk-installed-discovery-handoff-2530688223/stage-1-interrupted-pod.json": "f9fea3e48a387c73c8ca640921b48148061cc691f425005aa01e5417c3944408",
+    "/private/tmp/cvk-installed-discovery-handoff-2530688223/stage-2-interrupted-pod.json": "3c4160a0f645d2f1762b80d95c5d40034c1dec03611a01b136ea16c8b3f5e1c1",
+    "/private/tmp/cvk-installed-discovery-handoff-2530688223/stage-1-recovered-pod.json": "3c4160a0f645d2f1762b80d95c5d40034c1dec03611a01b136ea16c8b3f5e1c1",
+    "/private/tmp/cvk-installed-discovery-handoff-2530688223/stage-2-recovered-pod.json": "255c6e41252fc74a9cd45af2870f7673c8f2ff4802b7999b91fc360d0b03a63f"
+  }
+}

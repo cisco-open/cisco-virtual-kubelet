@@ -1,0 +1,19 @@
+{
+  "image": "cvk-catc-worker-qualification:20261017-v5-4f576991afb0",
+  "binarySha256": "4f576991afb08ecb94108e002be47770c19cd850128ed337097c5df777aa003e",
+  "base": "gcr.io/distroless/static-debian12@sha256:d75cdd72874d4790092fcb1b058493ecf6bb5bf2b2b897045b00ff01d91843f2",
+  "branch": "pr/johalley/catc-support",
+  "rbacFixSha256": {
+    "internal/controller/networkcontroller_controller.go": "46c8b7bc2417acdaf061d88a928bf72a442b83033df2730c00096d9243ea640e",
+    "internal/controller/chart_rbac_test.go": "6c30c0e6209fdfae63af9ce294f4c2ffb7f23661f188e98725cc512b285fd462",
+    "charts/cisco-virtual-kubelet/templates/role.yaml": "4bb7a46eed0d5ca13a90fd0011caf89e321d589e9620aecf280adc558b5cc16a"
+  },
+  "qualificationCluster": {
+    "name": "cvk-catc-qualification-20261017",
+    "kubernetes": "1.35.0",
+    "nodeImage": "kindest/node:v1.35.0@sha256:cf1d8a817f85226f8b256fca15fb0eebcb82ebc8598f496b9f9290f6cffb4688",
+    "separateKubeconfig": true,
+    "existingClustersChanged": false
+  },
+  "boundary": "Binary compiled before comment/marker-only source edit; runtime code is unchanged. Role is regenerated separately. Installed startup/restart/native mutation proof pending."
+}

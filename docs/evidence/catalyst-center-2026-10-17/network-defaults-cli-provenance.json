@@ -1,0 +1,20 @@
+{
+  "exporter": "cvk-network-defaults-v1:policy-sha256:f654e9b3ddf48e8fec07cfce98ee16ad43b858f0218d0f40cc4b8c8a23ffe002",
+  "executionSyntaxValidated": true,
+  "leafSchemaValidated": false,
+  "format": "netascode-catalyst-center",
+  "modelVersion": "0.5.0",
+  "upstreamRevision": "a435555fe828f03cf3311d52fe1ab6572a247916",
+  "policySHA256": "f654e9b3ddf48e8fec07cfce98ee16ad43b858f0218d0f40cc4b8c8a23ffe002",
+  "defaultsSHA256": "8efb7f12853af1f8d2b182fb2b9e323e30ddf2330e61286dbb959a84fd5a505f",
+  "inputSHA256": "aeee7639cd9edfa296667ac9804c603f6e8f064e1819abf3132ae0fe693f8318",
+  "overridesSHA256": "abbb407361d08d493bb763cb8edcb340f2b4cfabcd2dcdbb61fc609ba5851094",
+  "outputSHA256": "c5848e3d66ca7ff60c79a1e9bb455d568cf5ac54844e1475cfb8cde9511cd43d",
+  "resolutionScope": "network-settings-profiles-only",
+  "configurationParity": false,
+  "limitations": [
+    "Not full nested schema validation or complete model/default parity.",
+    "No multi-file merging, managed-site filtering, native identity resolution, ownership transfer or API execution.",
+    "Explicit null collector selection and null default overrides require upstream resolution."
+  ]
+}

@@ -1,0 +1,6 @@
+=== RUN   TestLiveInstalledDiscoveryHandoff
+    installed_discovery_handoff_live_test.go:154: private installed handoff checkpoint /private/tmp/cvk-installed-discovery-handoff-2530688223
+    installed_discovery_handoff_live_test.go:396: installed source-loss and same-name ownership handoff verified across two restarted worker incarnations /private/tmp/cvk-installed-discovery-handoff-2530688223
+--- PASS: TestLiveInstalledDiscoveryHandoff (164.33s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	166.678s

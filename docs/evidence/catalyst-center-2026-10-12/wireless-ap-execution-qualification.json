@@ -1,0 +1,22 @@
+{
+  "result": "PASS",
+  "scope": "Native isolated custom AP profile definition; no AP provisioning",
+  "fixture": "CVK_12214330",
+  "targetID": "mdeYq1zl-xZeY-mJe0-mZmW-qZbwmuSYxZmXndi1mJyXnZq4mZKZ",
+  "createTask": "01a13213-4940-7daa-b560-2f244a0c3cc5",
+  "updateTask": "01a13213-4edf-79c7-8dae-05c97e36260f",
+  "deleteTask": "01a13213-545b-7ef6-a4a8-cbb75460b0d1",
+  "clientLimitChange": [
+    0,
+    10
+  ],
+  "uuidPreserved": true,
+  "noOpVerified": true,
+  "baselineRestored": true,
+  "workerRollout": false,
+  "limits": [
+    "Native credential rotation is fixture-tested only; worker Secret binding and durable journal integration remain pending",
+    "Calendar date updates, power dependencies and optional settings were not live-mutated",
+    "No AP provisioning, authentication or device behavior was tested"
+  ]
+}

@@ -1,0 +1,80 @@
+{
+  "status": "Source-bound canonical PnP cleanup baseline qualified; public Delete lifecycle incomplete",
+  "fullModelComplete": false,
+  "source": {
+    "files": 1684,
+    "sha256": "c4e5422d6c52ccb74656d26551c570fe74611a860dc8d68b29222624a27592e0",
+    "productionSHA256": "88f2e916266350e16663ecafdb69bbc97e91c51e3d10156a2226c9b76fbc658f"
+  },
+  "gates": {
+    "controlledAndRealAPI": {
+      "result": "PASS",
+      "passingEvents": 38,
+      "seconds": 14.344,
+      "log": "/private/tmp/cvk-pnp-baseline-api-stored.log"
+    },
+    "compatibility": {
+      "result": "PASS",
+      "passingEvents": 526,
+      "seconds": 42.011,
+      "log": "/private/tmp/cvk-pnp-baseline-compat.log"
+    },
+    "foundations": {
+      "result": "PASS",
+      "packages": [
+        "internal/controlleradapter",
+        "internal/controlleradapter/nexusdashboard",
+        "internal/provider/softwareupgrade",
+        "internal/provider/maintenance",
+        "internal/controller"
+      ],
+      "log": "/private/tmp/cvk-pnp-baseline-foundation.log"
+    },
+    "mainBuild": {
+      "result": "PASS",
+      "binary": "/private/tmp/cvk-pnp-baseline-cisco-vk",
+      "log": "/private/tmp/cvk-pnp-baseline-build.log"
+    },
+    "strictDocumentation": {
+      "result": "PASS",
+      "seconds": 7.92,
+      "log": "/private/tmp/cvk-pnp-baseline-docs.log"
+    },
+    "formatSourceAndLedger": {
+      "result": "PASS",
+      "sourceUnchanged": true,
+      "uniqueResourceRows": 93
+    }
+  },
+  "native": {
+    "result": "PASS",
+    "seconds": 49.025049924850464,
+    "generatedNativeID": "6ad581c50bc0186771cb10a3",
+    "generatedSerial": "CVK742F5768",
+    "POST": 1,
+    "DELETE": 1,
+    "canonicalBaselinePersists": true,
+    "originalOperationAndVerifiedAtUnchanged": true,
+    "rowCount": 1,
+    "serializedRestartNoExtraRegistration": true,
+    "baselineAndNetworkRestored": true,
+    "physicalOperations": 0,
+    "kubernetesPersistence": "simulated JSON; actual API tests qualified separately"
+  },
+  "protocol": {
+    "marker": "pnp-record:<id>:removal:v1:<base64url-canonical-serial>:<canonical-registration-sha256>:<safe-native-snapshot-sha256>",
+    "maxResultBytes": 512,
+    "legacyV1RegistrationValid": true,
+    "legacyCleanupIdentityInferred": false,
+    "nativeMutationDuringCapture": false,
+    "immutableOriginalOperationAndTime": true,
+    "newRowSchemaPermissionTransport": false
+  },
+  "remaining": [
+    "Public durable Delete preparation, acknowledgement and absence receipts/recovery",
+    "Omitted-source routing and policy authorization using retained identity without guessing original payload",
+    "Complete consumer/private-content protection beyond the safe projection",
+    "Manager finalization and installed actor qualification",
+    "Stacks, contacted records, physical onboarding and remaining 93-resource pinned-model scope"
+  ]
+}

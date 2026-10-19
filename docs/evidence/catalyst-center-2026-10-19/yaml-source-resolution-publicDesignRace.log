@@ -1,0 +1,4 @@
+=== RUN   TestYAMLSourceSiteDesignManifest
+--- PASS: TestYAMLSourceSiteDesignManifest (1.57s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	3.779s

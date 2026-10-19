@@ -1,0 +1,18 @@
+{
+  "qualification": "read-only native extranet prerequisite inventory; no mutation",
+  "fabric_sites": {
+    "http_status": 200,
+    "rows": 0,
+    "isolated_fixture_selected": false
+  },
+  "virtual_networks": {
+    "http_status": 200,
+    "rows": 2,
+    "isolated_fixture_selected": false
+  },
+  "extranet_policies": {
+    "http_status": 200,
+    "rows": 0,
+    "isolated_fixture_selected": false
+  }
+}

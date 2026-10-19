@@ -4,3 +4,10 @@
 docs/MKDOCS_THIRD_PARTY_LICENSES.txt -whitespace
 docs/website/public/THIRD_PARTY_LICENSES.txt -whitespace
 third_party/mkdocs-material/*/MERMAID_RUNTIME_LICENSES.txt -whitespace
+
+# These three captured qualification logs contain terminal trailing spaces.
+# Preserve their original bytes so the published evidence hashes remain valid;
+# only end-of-line whitespace is exempt, not source or other evidence files.
+docs/evidence/catalyst-center-2026-10-15/aaa-missing-registration-native.log whitespace=-blank-at-eol
+docs/evidence/catalyst-center-2026-10-15/dynamic-tags-single-condition-failed.log whitespace=-blank-at-eol
+docs/evidence/catalyst-center-2026-10-17/installed-worker-kind-create.log whitespace=-blank-at-eol

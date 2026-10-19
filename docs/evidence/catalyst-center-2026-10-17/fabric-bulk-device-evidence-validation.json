@@ -1,0 +1,62 @@
+{
+  "scope": "Post-task bulk fabric-device read-only worker evidence and public retained-operation recovery; shared wired evidence runner; no semantic convergence or new public bulk dispatch",
+  "source_sha256": {
+    "internal/controlleradapter/catalystcenter/config_apply.go": "08c24292eeeb6bbfe419a7c42a2d825a516c15cd6661dccf324db758365d9411",
+    "internal/controlleradapter/catalystcenter/config_group_acknowledged_recovery.go": "4b5c24e7e9ddca0277a9180b8a62c5ee5f02f5c892f8a0d8b185869025602907",
+    "internal/controlleradapter/catalystcenter/config_group_device_evidence.go": "8aa96222f8cb531f0ef60f7c78b30044959568ccc60b2f6c89aa0aa2bd7cbe99",
+    "internal/controlleradapter/catalystcenter/config_group_device_evidence_batch.go": "35b6c0f03f639e322381f57aca8d875035c018c05b907704da564704117d0830",
+    "internal/controlleradapter/catalystcenter/config_group_device_evidence_envtest_test.go": "e82b77063b0f02bcbcca503f70ff0ecddb302d1119cf8622b6db01db66aabb6e",
+    "internal/controlleradapter/catalystcenter/fabric_devices_bulk_device_evidence.go": "ba2f9f97869a5c46ed9e36694166ca0618fd8aff99b765bb0909882345304f1c",
+    "internal/controlleradapter/catalystcenter/fabric_devices_bulk_device_evidence_test.go": "cac6054b9d3b518a9a5de301a5ef0f5ab3a9b10206816a37f022a4ca63a30370",
+    "internal/controlleradapter/catalystcenter/fabric_devices_bulk_recovery_test.go": "e492b22bfce020844bee8037010f00fe9f9f0a252a4eb5f011d89849aba53ac4",
+    "internal/controlleradapter/catalystcenter/fabric_sda_transit_device_evidence.go": "148dc2da9ba1ff8e0b1657b49de75b175613de734d300041eeed8c7eefa18470",
+    "internal/controlleradapter/catalystcenter/wired_bulk_device_evidence.go": "f8fb4eb26daa2ac08625e2d3f88863791757dc2e250472024365aa8041856edc"
+  },
+  "gates": {
+    "regression-final": {
+      "seconds": 65.373,
+      "exit_code": 0,
+      "log_sha256": "dcf8234ce580f47fb9cca822d09a4f91cb1019f69d4647210a52e79cb999dca5",
+      "families": 25,
+      "subcases": 230
+    },
+    "api-final": {
+      "seconds": 69.947,
+      "exit_code": 0,
+      "log_sha256": "a5b4e90e8030cc2b1675ebb3d9c36da7457ad46f53ac6d90b844e5e9676d339a",
+      "families": 7,
+      "subcases": 5
+    },
+    "nd-final": {
+      "seconds": 4.868,
+      "exit_code": 0,
+      "log_sha256": "d6754201b4a4c62a7e03be23d967909c0e1117f00d52012e9bbfb67650b5c4bd"
+    },
+    "upgrades-final": {
+      "seconds": 6.163,
+      "exit_code": 0,
+      "log_sha256": "c8b842ca781ff71a7b7a6dd13836a319156015e98a4ee7e269e7e85e0072c1cf"
+    }
+  },
+  "live_prerequisites": {
+    "fabricSites": 0,
+    "completePage": true,
+    "authenticationHTTP": 200,
+    "isolatedCiscoDevices": 0,
+    "isolatedContext": "kind-cvk-catc-qualification-20261017",
+    "liveFabricMutationQualified": false,
+    "installedDeviceEvidenceQualified": false
+  },
+  "remaining": {
+    "semanticConvergenceImplemented": false,
+    "newPublicFabricBulkDispatchEnabled": false,
+    "liveFabricMutationQualified": false,
+    "installedDeviceEvidenceQualified": false
+  },
+  "production_build": {
+    "binary_sha256": "ee0bcdcd81506cacb16e2bb0b5d42ec2d9869a6ade0b01e7e454f0f893788f6a",
+    "target": "darwin/arm64",
+    "exit_code": 0,
+    "installed": false
+  }
+}

@@ -1,0 +1,44 @@
+{
+  "status": "passed",
+  "test": "TestLiveInstalledPrivateSiteExecution",
+  "mode": "CATC_INSTALLED_ACCEPTED_RESTART=update",
+  "seconds": 71.99,
+  "goSeconds": 74.412,
+  "sourceSha256": {
+    "internal/controlleradapter/catalystcenter/installed_site_execution_live_test.go": "4a47ddeefc9b46fc390148f49545af956e1fae479edb9bfe9e1d3e06ecf86990"
+  },
+  "cluster": "cvk-catc-qualification-20261017",
+  "controllerUID": "7dc7489d-7ca0-4f86-bf33-8b11188a2a97",
+  "interruptedOriginalTaskID": "01a14a8f-ee4c-7acc-ad9d-449d12abedcc",
+  "sameOriginalTaskRecovered": true,
+  "pendingJournalAfterProcessStop": true,
+  "samePodUIDAndDifferentContainerWithIncreasedRestartCount": true,
+  "privateCreators": 2,
+  "latestAppliedRows": 1,
+  "distinctInstalledTasks": {
+    "01a14a8f-3d0d-75be-b128-f01ad69fe2ba": "Create",
+    "01a14a8f-93ce-7e9c-b640-616dfaf653a8": "Create",
+    "01a14a8f-ee4c-7acc-ad9d-449d12abedcc": "Update"
+  },
+  "independentSupervisedCleanupTasks": [
+    {
+      "type": "building",
+      "taskID": "01a14a90-44e9-7d9a-b67b-fd366e62c188"
+    },
+    {
+      "type": "area",
+      "taskID": "01a14a90-4b9f-7423-b36e-cf930bdb0fb3"
+    }
+  ],
+  "subsequentSettledPodReplacementPassed": true,
+  "retainConfigRemoved": true,
+  "baselinesRestored": true,
+  "physicalOperationSubmitted": false,
+  "limits": [
+    "No wire proxy counted requests; task identity/journal/receipt/native assertions are the recorded recovery evidence",
+    "Public site Delete, ownership retirement/handoff and key rotation/migration remain unqualified",
+    "The only runtime interruption targeted the exact observed controller-worker container on the private kind node"
+  ],
+  "identityInterruptionRefusalCases": 5,
+  "safetyGateEvidence": "installed-private-sites-safety-gates.json"
+}

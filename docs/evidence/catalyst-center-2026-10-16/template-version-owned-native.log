@@ -1,0 +1,36 @@
+=== RUN   TestLiveCatalystCenterCompositeTemplatePacing
+    template_pacing_live_test.go:326: public native task accepted template-create:v1:p:a19c02f9ab3b74ea9ac6e4d86d5aedfbd40aefb08d1e788325a0c7a453186b1e:c:private-v1:bc996bc0473b0abd6f2d9f177f17ee7a335efeb2aac1053f9b3d83800b438cdc 01a14526-e27a-7c2f-9700-dcf07ed8f39c
+    template_pacing_live_test.go:225: keyed native creation footprint verified against the original receipt before subsequent mutations 1
+    template_pacing_live_test.go:326: public native task accepted template-create:v1:r:ed2c72f61aeb410ea3de8716f951dd2306b8fd26329cf7aea7d3aac9c667b654:c:private-v1:bc996bc0473b0abd6f2d9f177f17ee7a335efeb2aac1053f9b3d83800b438cdc 01a14527-2fe4-742d-ab49-2be5056bf9c7
+    template_pacing_live_test.go:225: keyed native creation footprint verified against the original receipt before subsequent mutations 2
+    template_pacing_live_test.go:326: public native task accepted template-apply:v1:r:ed2c72f61aeb410ea3de8716f951dd2306b8fd26329cf7aea7d3aac9c667b654:c:private-v1:bc996bc0473b0abd6f2d9f177f17ee7a335efeb2aac1053f9b3d83800b438cdc:commit:version-v1 01a14527-b0f2-7276-af1b-5acac5457fc5
+    template_pacing_live_test.go:294: original nonce-bound version UUID/body and complete owned cohort verified 1
+    template_pacing_live_test.go:297: private latest-applied native state and version history verified 1
+    template_pacing_live_test.go:326: public native task accepted template-create:v1:c:2aef6bb58e5a8b16e9fe5939bd8a19043fb0bb7ba21a779c59cc90ff01e95ccd:c:private-v1:bc996bc0473b0abd6f2d9f177f17ee7a335efeb2aac1053f9b3d83800b438cdc 01a14528-9ca1-71c7-8184-dcee85bbaa02
+    template_pacing_live_test.go:225: keyed native creation footprint verified against the original receipt before subsequent mutations 3
+    template_pacing_live_test.go:326: public native task accepted template-apply:v1:c:2aef6bb58e5a8b16e9fe5939bd8a19043fb0bb7ba21a779c59cc90ff01e95ccd:c:private-v1:bc996bc0473b0abd6f2d9f177f17ee7a335efeb2aac1053f9b3d83800b438cdc:commit:version-v1 01a14529-cb55-7044-8465-ac771618f76f
+    template_pacing_live_test.go:294: original nonce-bound version UUID/body and complete owned cohort verified 2
+    template_pacing_live_test.go:297: private latest-applied native state and version history verified 2
+    template_pacing_live_test.go:363: original acknowledged metadata tasks recovered from Unknown without replay 5
+    template_pacing_live_test.go:369: public template preflight refusals retired with owners/history intact 5 prepared composite refusals 2 native mutations after fresh replanning 5
+    template_pacing_live_test.go:414: three task-bound project/regular/composite creator receipts verified; original receipts preserved across source revisions
+    template_pacing_live_test.go:449: public template model reached InSync with durable settling, simulated restarts and no-replay CVK-Q-Pacing-20261016-143850
+    template_pacing_live_test.go:473: isolated source revision updated; qualifying project/draft updates and member-version recommit
+    template_pacing_live_test.go:326: public native task accepted template-apply:v1:p:a19c02f9ab3b74ea9ac6e4d86d5aedfbd40aefb08d1e788325a0c7a453186b1e:c:private-v1:bc996bc0473b0abd6f2d9f177f17ee7a335efeb2aac1053f9b3d83800b438cdc:project 01a1452b-6e3a-77a6-bc83-f6b41303cac5
+    template_pacing_live_test.go:297: private latest-applied native state and version history verified 3
+    template_pacing_live_test.go:326: public native task accepted template-apply:v1:r:ed2c72f61aeb410ea3de8716f951dd2306b8fd26329cf7aea7d3aac9c667b654:c:private-v1:bc996bc0473b0abd6f2d9f177f17ee7a335efeb2aac1053f9b3d83800b438cdc:draft 01a1452c-052c-785e-9ed0-16d0aabdbc42
+    template_pacing_live_test.go:297: private latest-applied native state and version history verified 4
+    template_pacing_live_test.go:326: public native task accepted template-apply:v1:r:ed2c72f61aeb410ea3de8716f951dd2306b8fd26329cf7aea7d3aac9c667b654:c:private-v1:bc996bc0473b0abd6f2d9f177f17ee7a335efeb2aac1053f9b3d83800b438cdc:commit:version-v1 01a1452c-ce0d-7fb5-b140-fd8a167f3866
+    template_pacing_live_test.go:294: original nonce-bound version UUID/body and complete owned cohort verified 3
+    template_pacing_live_test.go:297: private latest-applied native state and version history verified 5
+    template_pacing_live_test.go:326: public native task accepted template-apply:v1:c:2aef6bb58e5a8b16e9fe5939bd8a19043fb0bb7ba21a779c59cc90ff01e95ccd:c:private-v1:bc996bc0473b0abd6f2d9f177f17ee7a335efeb2aac1053f9b3d83800b438cdc:commit:version-v1 01a1452e-09ab-7f02-b2c6-8a951304502b
+    template_pacing_live_test.go:294: original nonce-bound version UUID/body and complete owned cohort verified 4
+    template_pacing_live_test.go:297: private latest-applied native state and version history verified 6
+    template_pacing_live_test.go:363: original acknowledged metadata tasks recovered from Unknown without replay 9
+    template_pacing_live_test.go:369: public template preflight refusals retired with owners/history intact 9 prepared composite refusals 3 native mutations after fresh replanning 9
+    template_pacing_live_test.go:414: three task-bound project/regular/composite creator receipts verified; original receipts preserved across source revisions
+    template_pacing_live_test.go:449: public template model reached InSync with durable settling, simulated restarts and no-replay CVK-Q-Pacing-20261016-143850
+    template_pacing_live_test.go:162: isolated template/project cleanup verified CVK-Q-Pacing-20261016-143850
+--- PASS: TestLiveCatalystCenterCompositeTemplatePacing (568.41s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	570.536s

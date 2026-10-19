@@ -1,0 +1,5 @@
+--- FAIL: TestEnvtestDiscoveryConfigCleanupPreparation (5.84s)
+    discovery_config_cleanup_observation_envtest_test.go:58: Catalyst Center worker no longer matches the active controller
+FAIL
+FAIL	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	14.857s
+FAIL

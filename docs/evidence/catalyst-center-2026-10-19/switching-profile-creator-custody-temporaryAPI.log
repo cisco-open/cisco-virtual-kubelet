@@ -1,0 +1,154 @@
+=== RUN   TestEnvtestSwitchingCreatorCustody
+=== RUN   TestEnvtestSwitchingCreatorCustody/two-creates
+=== RUN   TestEnvtestSwitchingCreatorCustody/created
+=== RUN   TestEnvtestSwitchingCreatorCustody/capacity
+=== RUN   TestEnvtestSwitchingCreatorCustody/cohort-capacity
+=== RUN   TestEnvtestSwitchingCreatorCustody/last-slot
+=== RUN   TestEnvtestSwitchingCreatorCustody/missing-receipt
+=== RUN   TestEnvtestSwitchingCreatorCustody/corrupt-receipt
+=== RUN   TestEnvtestSwitchingCreatorCustody/duplicate-receipt
+    switching_profile_ownership_envtest_test.go:13: API schema refused duplicate receipt key and preserved original custody
+=== RUN   TestEnvtestSwitchingCreatorCustody/foreign-receipt
+=== RUN   TestEnvtestSwitchingCreatorCustody/foreign-config-name
+=== RUN   TestEnvtestSwitchingCreatorCustody/replacement
+=== RUN   TestEnvtestSwitchingCreatorCustody/renamed-owned
+=== RUN   TestEnvtestSwitchingCreatorCustody/missing-native
+=== RUN   TestEnvtestSwitchingCreatorCustody/retain-reselect
+=== RUN   TestEnvtestSwitchingCreatorCustody/owned-update
+=== RUN   TestEnvtestSwitchingCreatorCustody/import
+=== RUN   TestEnvtestSwitchingCreatorCustody/wrong-result-uuid
+=== RUN   TestEnvtestSwitchingCreatorCustody/wrong-service
+=== RUN   TestEnvtestSwitchingCreatorCustody/taskless
+=== RUN   TestEnvtestSwitchingCreatorCustody/source-before-publication
+=== RUN   TestEnvtestSwitchingCreatorCustody/owner-before-publication
+=== RUN   TestEnvtestSwitchingCreatorCustody/publish-conflict
+=== RUN   TestEnvtestSwitchingCreatorCustody/publish-lost-response
+=== RUN   TestEnvtestSwitchingCreatorCustody/publish-pruned
+--- PASS: TestEnvtestSwitchingCreatorCustody (28.09s)
+    --- PASS: TestEnvtestSwitchingCreatorCustody/two-creates (2.53s)
+    --- PASS: TestEnvtestSwitchingCreatorCustody/created (0.40s)
+    --- PASS: TestEnvtestSwitchingCreatorCustody/capacity (3.26s)
+    --- PASS: TestEnvtestSwitchingCreatorCustody/cohort-capacity (3.20s)
+    --- PASS: TestEnvtestSwitchingCreatorCustody/last-slot (4.69s)
+    --- PASS: TestEnvtestSwitchingCreatorCustody/missing-receipt (0.35s)
+    --- PASS: TestEnvtestSwitchingCreatorCustody/corrupt-receipt (0.27s)
+    --- PASS: TestEnvtestSwitchingCreatorCustody/duplicate-receipt (0.08s)
+    --- PASS: TestEnvtestSwitchingCreatorCustody/foreign-receipt (0.28s)
+    --- PASS: TestEnvtestSwitchingCreatorCustody/foreign-config-name (0.29s)
+    --- PASS: TestEnvtestSwitchingCreatorCustody/replacement (0.48s)
+    --- PASS: TestEnvtestSwitchingCreatorCustody/renamed-owned (0.68s)
+    --- PASS: TestEnvtestSwitchingCreatorCustody/missing-native (0.62s)
+    --- PASS: TestEnvtestSwitchingCreatorCustody/retain-reselect (1.00s)
+    --- PASS: TestEnvtestSwitchingCreatorCustody/owned-update (1.02s)
+    --- PASS: TestEnvtestSwitchingCreatorCustody/import (1.05s)
+    --- PASS: TestEnvtestSwitchingCreatorCustody/wrong-result-uuid (0.62s)
+    --- PASS: TestEnvtestSwitchingCreatorCustody/wrong-service (0.65s)
+    --- PASS: TestEnvtestSwitchingCreatorCustody/taskless (0.52s)
+    --- PASS: TestEnvtestSwitchingCreatorCustody/source-before-publication (0.47s)
+    --- PASS: TestEnvtestSwitchingCreatorCustody/owner-before-publication (0.46s)
+    --- PASS: TestEnvtestSwitchingCreatorCustody/publish-conflict (0.62s)
+    --- PASS: TestEnvtestSwitchingCreatorCustody/publish-lost-response (0.67s)
+    --- PASS: TestEnvtestSwitchingCreatorCustody/publish-pruned (0.53s)
+=== RUN   TestEnvtestSwitchingProfileTaskRecovery
+[controller-runtime] log.SetLogger(...) was never called; logs will not be displayed.
+Detected at:
+	>  goroutine 9332 [running]:
+	>  runtime/debug.Stack()
+	>  	/Users/johalley/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.9.darwin-arm64/src/runtime/debug/stack.go:26 +0x64
+	>  sigs.k8s.io/controller-runtime/pkg/log.eventuallyFulfillRoot()
+	>  	/Users/johalley/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.23.3/pkg/log/log.go:60 +0xe8
+	>  sigs.k8s.io/controller-runtime/pkg/log.(*delegatingLogSink).Enabled(0x45b1c7c8c780, 0x1)
+	>  	/Users/johalley/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.23.3/pkg/log/deleg.go:111 +0x30
+	>  github.com/go-logr/logr.Logger.Info({{0x106a97528?, 0x45b1c7c8c780?}, 0x5?}, {0x10454c2ba, 0xf}, {0x0, 0x0, 0x0})
+	>  	/Users/johalley/go/pkg/mod/github.com/go-logr/logr@v1.4.4/logr.go:276 +0x5c
+	>  sigs.k8s.io/controller-runtime/pkg/envtest.(*Environment).Start(0x45b1c781edc8)
+	>  	/Users/johalley/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.23.3/pkg/envtest/server.go:348 +0x844
+	>  github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter.qualificationAPIServerClientEnvironment(0x45b1c8025b08, 0x45b1c781edc8)
+	>  	/Users/johalley/Git/cisco-virtual-kubelet/internal/controlleradapter/catalystcenter/configuration_envtest_test.go:29 +0x34
+	>  github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter.qualificationAPIServerClient(0x45b1c8025b08, {0x45b1c8c86ef8, 0x1, 0x104e902d7?})
+	>  	/Users/johalley/Git/cisco-virtual-kubelet/internal/controlleradapter/catalystcenter/configuration_envtest_test.go:24 +0x10c
+	>  github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter.TestEnvtestSwitchingProfileTaskRecovery(0x45b1c8025b08)
+	>  	/Users/johalley/Git/cisco-virtual-kubelet/internal/controlleradapter/catalystcenter/switching_profile_recovery_envtest_test.go:13 +0x44
+	>  testing.tRunner(0x45b1c8025b08, 0x106a37d00)
+	>  	/Users/johalley/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.9.darwin-arm64/src/testing/testing.go:2036 +0xc4
+	>  created by testing.(*T).Run in goroutine 1
+	>  	/Users/johalley/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.9.darwin-arm64/src/testing/testing.go:2101 +0x3a8
+=== RUN   TestEnvtestSwitchingProfileTaskRecovery/sp-false-preflight-read-error
+=== RUN   TestEnvtestSwitchingProfileTaskRecovery/sp-false-known
+=== RUN   TestEnvtestSwitchingProfileTaskRecovery/sp-false-slash-name
+=== RUN   TestEnvtestSwitchingProfileTaskRecovery/sp-false-legacy-empty
+=== RUN   TestEnvtestSwitchingProfileTaskRecovery/sp-false-legacy-unbound
+=== RUN   TestEnvtestSwitchingProfileTaskRecovery/sp-false-project-replaced
+=== RUN   TestEnvtestSwitchingProfileTaskRecovery/sp-false-template-replaced
+=== RUN   TestEnvtestSwitchingProfileTaskRecovery/sp-false-taskless
+=== RUN   TestEnvtestSwitchingProfileTaskRecovery/sp-false-source
+=== RUN   TestEnvtestSwitchingProfileTaskRecovery/sp-false-owner
+=== RUN   TestEnvtestSwitchingProfileTaskRecovery/sp-false-child-failed
+=== RUN   TestEnvtestSwitchingProfileTaskRecovery/sp-false-child-pending
+=== RUN   TestEnvtestSwitchingProfileTaskRecovery/sp-false-tree-missing
+=== RUN   TestEnvtestSwitchingProfileTaskRecovery/sp-false-foreign-root
+=== RUN   TestEnvtestSwitchingProfileTaskRecovery/sp-false-mid-tree-inherited
+=== RUN   TestEnvtestSwitchingProfileTaskRecovery/sp-false-inherited-reordered
+=== RUN   TestEnvtestSwitchingProfileTaskRecovery/sp-false-accepted-child-failed
+=== RUN   TestEnvtestSwitchingProfileTaskRecovery/sp-false-accepted-child-pending
+=== RUN   TestEnvtestSwitchingProfileTaskRecovery/sp-true-preflight-read-error
+=== RUN   TestEnvtestSwitchingProfileTaskRecovery/sp-true-known
+=== RUN   TestEnvtestSwitchingProfileTaskRecovery/sp-true-slash-name
+=== RUN   TestEnvtestSwitchingProfileTaskRecovery/sp-true-legacy-empty
+=== RUN   TestEnvtestSwitchingProfileTaskRecovery/sp-true-legacy-unbound
+=== RUN   TestEnvtestSwitchingProfileTaskRecovery/sp-true-project-replaced
+=== RUN   TestEnvtestSwitchingProfileTaskRecovery/sp-true-template-replaced
+=== RUN   TestEnvtestSwitchingProfileTaskRecovery/sp-true-taskless
+=== RUN   TestEnvtestSwitchingProfileTaskRecovery/sp-true-source
+=== RUN   TestEnvtestSwitchingProfileTaskRecovery/sp-true-owner
+=== RUN   TestEnvtestSwitchingProfileTaskRecovery/sp-true-child-failed
+=== RUN   TestEnvtestSwitchingProfileTaskRecovery/sp-true-child-pending
+=== RUN   TestEnvtestSwitchingProfileTaskRecovery/sp-true-tree-missing
+=== RUN   TestEnvtestSwitchingProfileTaskRecovery/sp-true-foreign-root
+=== RUN   TestEnvtestSwitchingProfileTaskRecovery/sp-true-mid-tree-inherited
+=== RUN   TestEnvtestSwitchingProfileTaskRecovery/sp-true-inherited-reordered
+=== RUN   TestEnvtestSwitchingProfileTaskRecovery/sp-true-accepted-child-failed
+=== RUN   TestEnvtestSwitchingProfileTaskRecovery/sp-true-accepted-child-pending
+=== RUN   TestEnvtestSwitchingProfileTaskRecovery/profile-replaced
+=== RUN   TestEnvtestSwitchingProfileTaskRecovery/mid-tree-profile
+--- PASS: TestEnvtestSwitchingProfileTaskRecovery (30.96s)
+    --- PASS: TestEnvtestSwitchingProfileTaskRecovery/sp-false-preflight-read-error (2.88s)
+    --- PASS: TestEnvtestSwitchingProfileTaskRecovery/sp-false-known (1.06s)
+    --- PASS: TestEnvtestSwitchingProfileTaskRecovery/sp-false-slash-name (0.79s)
+    --- PASS: TestEnvtestSwitchingProfileTaskRecovery/sp-false-legacy-empty (0.60s)
+    --- PASS: TestEnvtestSwitchingProfileTaskRecovery/sp-false-legacy-unbound (0.61s)
+    --- PASS: TestEnvtestSwitchingProfileTaskRecovery/sp-false-project-replaced (0.61s)
+    --- PASS: TestEnvtestSwitchingProfileTaskRecovery/sp-false-template-replaced (0.71s)
+    --- PASS: TestEnvtestSwitchingProfileTaskRecovery/sp-false-taskless (0.62s)
+    --- PASS: TestEnvtestSwitchingProfileTaskRecovery/sp-false-source (0.57s)
+    --- PASS: TestEnvtestSwitchingProfileTaskRecovery/sp-false-owner (0.53s)
+    --- PASS: TestEnvtestSwitchingProfileTaskRecovery/sp-false-child-failed (0.57s)
+    --- PASS: TestEnvtestSwitchingProfileTaskRecovery/sp-false-child-pending (0.66s)
+    --- PASS: TestEnvtestSwitchingProfileTaskRecovery/sp-false-tree-missing (0.75s)
+    --- PASS: TestEnvtestSwitchingProfileTaskRecovery/sp-false-foreign-root (0.72s)
+    --- PASS: TestEnvtestSwitchingProfileTaskRecovery/sp-false-mid-tree-inherited (0.71s)
+    --- PASS: TestEnvtestSwitchingProfileTaskRecovery/sp-false-inherited-reordered (0.73s)
+    --- PASS: TestEnvtestSwitchingProfileTaskRecovery/sp-false-accepted-child-failed (0.92s)
+    --- PASS: TestEnvtestSwitchingProfileTaskRecovery/sp-false-accepted-child-pending (0.72s)
+    --- PASS: TestEnvtestSwitchingProfileTaskRecovery/sp-true-preflight-read-error (0.89s)
+    --- PASS: TestEnvtestSwitchingProfileTaskRecovery/sp-true-known (0.48s)
+    --- PASS: TestEnvtestSwitchingProfileTaskRecovery/sp-true-slash-name (0.47s)
+    --- PASS: TestEnvtestSwitchingProfileTaskRecovery/sp-true-legacy-empty (0.47s)
+    --- PASS: TestEnvtestSwitchingProfileTaskRecovery/sp-true-legacy-unbound (0.55s)
+    --- PASS: TestEnvtestSwitchingProfileTaskRecovery/sp-true-project-replaced (0.55s)
+    --- PASS: TestEnvtestSwitchingProfileTaskRecovery/sp-true-template-replaced (0.56s)
+    --- PASS: TestEnvtestSwitchingProfileTaskRecovery/sp-true-taskless (0.48s)
+    --- PASS: TestEnvtestSwitchingProfileTaskRecovery/sp-true-source (0.47s)
+    --- PASS: TestEnvtestSwitchingProfileTaskRecovery/sp-true-owner (0.58s)
+    --- PASS: TestEnvtestSwitchingProfileTaskRecovery/sp-true-child-failed (0.65s)
+    --- PASS: TestEnvtestSwitchingProfileTaskRecovery/sp-true-child-pending (0.66s)
+    --- PASS: TestEnvtestSwitchingProfileTaskRecovery/sp-true-tree-missing (0.71s)
+    --- PASS: TestEnvtestSwitchingProfileTaskRecovery/sp-true-foreign-root (0.66s)
+    --- PASS: TestEnvtestSwitchingProfileTaskRecovery/sp-true-mid-tree-inherited (0.60s)
+    --- PASS: TestEnvtestSwitchingProfileTaskRecovery/sp-true-inherited-reordered (0.50s)
+    --- PASS: TestEnvtestSwitchingProfileTaskRecovery/sp-true-accepted-child-failed (0.51s)
+    --- PASS: TestEnvtestSwitchingProfileTaskRecovery/sp-true-accepted-child-pending (0.53s)
+    --- PASS: TestEnvtestSwitchingProfileTaskRecovery/profile-replaced (0.54s)
+    --- PASS: TestEnvtestSwitchingProfileTaskRecovery/mid-tree-profile (0.61s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	60.275s

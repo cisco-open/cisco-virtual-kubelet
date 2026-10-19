@@ -1,0 +1,8 @@
+=== RUN   TestLiveWirelessTagRepeatedRecreationPublicRecovery
+    wireless_tag_repeated_recreation_live_test.go:16: requires explicit isolated repeated tag recreation qualification
+--- SKIP: TestLiveWirelessTagRepeatedRecreationPublicRecovery (0.00s)
+=== RUN   TestLiveWirelessTagCohortRepeatedRecreationPublicRecovery
+    wireless_tag_repeated_recreation_live_test.go:23: requires explicit isolated repeated tag recreation qualification
+--- SKIP: TestLiveWirelessTagCohortRepeatedRecreationPublicRecovery (0.00s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	1.139s

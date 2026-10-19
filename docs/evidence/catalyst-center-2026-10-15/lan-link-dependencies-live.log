@@ -1,0 +1,6 @@
+=== RUN   TestLiveCatalystCenterLANLinkAdjacency
+    lan_link_adjacency_live_test.go:62: native topology nodes=3 links=2; qualified existing lab adjacencies=2; no link/session/pool writes
+    lan_link_adjacency_live_test.go:66: LAN session records=0; empty discovery history holds pool eligibility; mutation admission and accepted execution remain unqualified
+--- PASS: TestLiveCatalystCenterLANLinkAdjacency (2.81s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	3.470s

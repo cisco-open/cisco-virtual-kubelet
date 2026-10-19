@@ -1,0 +1,170 @@
+{
+  "scope": "versioned full-source site selection with retained ownership and bounded prune",
+  "branch": "pr/johalley/catc-support",
+  "modelVersion": "0.5.0",
+  "upstreamRevision": "a435555fe828f03cf3311d52fe1ab6572a247916",
+  "fullModelComplete": false,
+  "installedSelectionQualified": false,
+  "nativePersistence": "simulated Kubernetes; temporary real API qualification separate",
+  "sourceFingerprints": {
+    "internal/controlleradapter/catalystcenter": "8bf48daef512e657a2e143d28fae0235d135858acd2fc14139976828668786ff",
+    "internal/controlleradapter/catalystcenter/nacmodel": "64c0051a113acd605d7f38f71a1bf9ebcbd7fe806cba2e104be9e7d1db5913f5",
+    "tools/cvk-netascode-migrate": "f6647d897813aa191e8d142bd5ad71886d8898bfedde87a2bbc4c9f8354ca50e"
+  },
+  "native": {
+    "activeOperation": false,
+    "baselineRestored": true,
+    "generatedPath": "Global/CVK-Q-20261019-113014-000000000",
+    "installed": false,
+    "managedSiteSelection": true,
+    "modelAndAssetSnapshot": true,
+    "originalTaskRecoveries": 8,
+    "retainedActionRows": 6,
+    "sourceDefaultsExport": true
+  },
+  "nativeDesignMutations": 6,
+  "synchronousImageUploads": 2,
+  "siteSetupMutations": 4,
+  "remainingGeneratedFixtures": [],
+  "gates": {
+    "focusedRace": {
+      "exitCode": 0,
+      "passingTestEvents": 79,
+      "log": "site-managed-selection-focusedRace.log",
+      "sha256": "121621199945fa0da1aae13405259f37fcf8750796cb0d32c5fce545e36920d2"
+    },
+    "temporaryAPI": {
+      "exitCode": 0,
+      "passingTestEvents": 14,
+      "log": "site-managed-selection-temporaryAPI.log",
+      "sha256": "60144a3f4e78fd142c75b63f3e894aebbaa7294b10f76c06bf7c328d60e7a453"
+    },
+    "native": {
+      "exitCode": 0,
+      "passingTestEvents": 1,
+      "log": "site-managed-selection-native.log",
+      "sha256": "dd8132c67617fdfe2ede44cf3d6100b8e28d6f61f7cb95eff8d413d694977de4"
+    },
+    "productionBuild": {
+      "exitCode": 0,
+      "artifact": "/private/tmp/cvk-site-selection-cisco-vk"
+    },
+    "exporterBuildAndExample": {
+      "exitCode": 0,
+      "artifact": "/private/tmp/cvk-site-selection-final-example.json"
+    },
+    "strictDocs": {
+      "exitCode": 0,
+      "log": "/private/tmp/cvk-site-selection-docs-final.log"
+    },
+    "broadInvocation": {
+      "exitCode": 1,
+      "passingTestEvents": 18452,
+      "passedPackages": [
+        "github.com/cisco/virtual-kubelet-cisco/api/config/v1alpha1",
+        "github.com/cisco/virtual-kubelet-cisco/api/v1alpha1",
+        "github.com/cisco/virtual-kubelet-cisco/api/ops/v1alpha1",
+        "github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter",
+        "github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter/nacmodel",
+        "github.com/cisco/virtual-kubelet-cisco/internal/softwarelifecycle",
+        "github.com/cisco/virtual-kubelet-cisco/internal/managedprotocol",
+        "github.com/cisco/virtual-kubelet-cisco/internal/aggregator",
+        "github.com/cisco/virtual-kubelet-cisco/tools/cvk-netascode-migrate",
+        "github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/nexusdashboard",
+        "github.com/cisco/virtual-kubelet-cisco/cmd/cisco-vk",
+        "github.com/cisco/virtual-kubelet-cisco/internal/controller",
+        "github.com/cisco/virtual-kubelet-cisco/internal/controllerconfiguration",
+        "github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter"
+      ],
+      "failures": [
+        {
+          "package": "./internal/maintenance",
+          "test": null
+        },
+        {
+          "package": "./internal/softwareupgrade",
+          "test": null
+        }
+      ],
+      "log": "/private/tmp/cvk-site-selection-regression-final.log",
+      "sha256": "027f0e43b60eb92df75ded6e722337078ce6c7ee80a056dd5ef45ea1bee02f01"
+    },
+    "correctedProviderPackages": {
+      "exitCode": 0,
+      "passingTestEvents": 1023,
+      "passedPackages": [
+        "github.com/cisco/virtual-kubelet-cisco/internal/provider/maintenance",
+        "github.com/cisco/virtual-kubelet-cisco/internal/provider/softwareupgrade"
+      ],
+      "failures": [],
+      "log": "/private/tmp/cvk-site-selection-provider-regression.log",
+      "sha256": "254ca7be63d5ff90255ed1ef8e7a91dcaff4258d04d5d5e1931c7e9d9da965ea"
+    },
+    "combinedRegression": {
+      "distinctPassingPackages": 16,
+      "passingTestEvents": 19475,
+      "failedTests": 0,
+      "qualification": "14 valid packages passed in the broad invocation; its exit 1 is exclusively two invalid paths. Both missing provider packages passed separately at corrected paths. Final focused/API gates include the subsequent provenance wording and selected-omission test addition; no native mutation logic changed after the broad/native builds."
+    }
+  },
+  "exampleProvenance": {
+    "siteSelection": {
+      "optionsSHA256": "77727b96514ab203d775d7ba78ecd42be8a2562ea39b525b131bb6eb31bb4c76",
+      "selectedSiteCount": 1
+    },
+    "exporter": "cvk-site-selected-v1:policy-sha256:829b459c1643cb2a39bf76f435ad17022728d5a8f13fa7ba6a87cc20f12188da",
+    "executionSyntaxValidated": true,
+    "leafSchemaValidated": false,
+    "format": "netascode-catalyst-center",
+    "modelVersion": "0.5.0",
+    "upstreamRevision": "a435555fe828f03cf3311d52fe1ab6572a247916",
+    "policySHA256": "829b459c1643cb2a39bf76f435ad17022728d5a8f13fa7ba6a87cc20f12188da",
+    "defaultsSHA256": "8efb7f12853af1f8d2b182fb2b9e323e30ddf2330e61286dbb959a84fd5a505f",
+    "inputSHA256": "375d98081cc71bb092d0a2cc214a3dcbd09146ea0a1b241114da7eed4169cb21",
+    "outputSHA256": "9c8bcb3749e43c2931ef419645c304f57edeac5f87052b417060bf17070c389b",
+    "resolutionScope": "sites-defaults-and-managed-selection",
+    "configurationParity": false,
+    "limitations": [
+      "One complete sites-only model with explicit managed-site selection; no file merging or other sections. Images require an explicit same-ConfigMap model/index/BinaryData snapshot; no model path is opened.",
+      "Pinned site defaults and supported overrides only; numeric null fallback follows upstream try expressions, while unsupported unresolved values refuse.",
+      "Singular area parents stay explicit; bulk omitted parent uses literal Global, matching the pinned resource map.",
+      "No nested schema/parity attestation, native AP/antenna catalogue validation, API request, ownership transfer or change to runtime defaulting. Runtime revalidates source assets and native state independently.",
+      "Selection changes execution scope only; the complete source remains bound to one revision. Native ownership, task recovery, retained effects and destructive lifecycle checks remain independent. Older workers refuse versioned selected envelopes."
+    ],
+    "siteExpressionsSHA256": "8d7f003049677a761a8206e1c1a8fa49f5871886fef61c5e46316c433b88cba9",
+    "useBulkAPI": false,
+    "resources": 3,
+    "defaultedFields": 4,
+    "plannedAccessPoints": 1,
+    "floorImages": 1,
+    "assetsValidated": true,
+    "imageAssets": 1,
+    "assetSnapshotSHA256": "1a29d87e0cdf7efd5b0bdf47d702dd78dfb6f24f8cda02444fc4c39a151b14e3",
+    "sourceSnapshotSHA256": "9457b2fa511eb6246e157af83733075efe0a93f997379e0ddffbd46288c1f2e6",
+    "artifactFormat": "v1/ConfigMap",
+    "modelOutputSHA256": "d4918e3ea7e1b9494ca20a33f16b551d8d2e16029dd9deae919fd35e77f327dc",
+    "fullSourceRetained": true,
+    "selectedPlannedAccessPoints": 1,
+    "selectedFloorImages": 1
+  },
+  "remaining": [
+    "multi-file source composition",
+    "installed selection/source/projection/task recovery",
+    "native bulk and physical workflows across the complete resource inventory",
+    "complete native schema/catalogue and remote image byte-readback coverage",
+    "destructive AP/image lifecycle and other resource-specific execution/recovery gaps",
+    "partial PnP acquisition cancellation original-manager quiescence proof"
+  ],
+  "history": [
+    "Initial native scope exclusion produced no extra writes but incorrectly retagged a floor-image receipt as omitted; both failed fixtures cleaned and site baseline restored. Fixed finalizeFloorImageOmissions to check selected hierarchy before omission bookkeeping.",
+    "Race/API link initially failed from disk exhaustion; only rebuildable Go cache entries older 48h were removed, then gates rerun.",
+    "First broad command exited 1 solely for two nonexistent package paths. Its 14 valid packages passed; separately corrected maintenance/softwareupgrade provider tests passed, yielding 16 distinct passing packages and no failed tests.",
+    "Final provenance limitation text and genuine selected-omission test were added after successful native qualification; no subsequent native mutation-path changes."
+  ],
+  "resourceCoverage": {
+    "inventoryRows": 93,
+    "uniqueRows": 93,
+    "selectionEvidenceRows": 8,
+    "completeModelClaim": false
+  }
+}

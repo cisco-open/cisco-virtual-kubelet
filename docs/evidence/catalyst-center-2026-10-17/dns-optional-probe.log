@@ -1,0 +1,19 @@
+=== RUN   TestLiveCatalystCenterDNSOptional
+    site_execution_live_test.go:111: isolated qualification hierarchy: Global/CVK-Q-20261017-034335-000000000
+    site_execution_live_test.go:452: submitted task=01a147f5-3a57-770c-9169-01b0673840b2 at=2026-10-17T03:43:35.918802Z
+    site_execution_live_test.go:470: verified Create area
+    site_execution_live_test.go:452: submitted task=01a147f5-3cd5-73c4-92c6-05c5cbff341a at=2026-10-17T03:43:36.550167Z
+    site_execution_live_test.go:470: verified Create building
+    site_execution_live_test.go:452: submitted task=01a147f5-3f7b-732c-8949-df4d32330ea6 at=2026-10-17T03:43:37.163783Z
+    site_execution_live_test.go:470: verified Create floor
+    site_execution_live_test.go:452: submitted task=01a147f5-464c-79e7-9fcf-e141f7607ff9 at=2026-10-17T03:43:38.91461Z
+    site_execution_live_test.go:470: verified Update floor
+    site_execution_live_test.go:479: three creates, one floor update, and full hierarchy read-back verified
+    site_execution_live_test.go:513: isolated DNS step=0 task=01a147f5-4d53-7b7e-b4f4-d93acef99fc6 resolvers=2 expected-domain=true
+    site_execution_live_test.go:513: isolated DNS step=1 task=01a147f5-52f5-7131-b911-262759d1a5ed resolvers=0 expected-domain=true
+    site_execution_live_test.go:513: REST PUT /dna/intent/api/v1/sites/f867831e-51ae-4bd9-bcc3-7e61539bf8ea/dnsSettings failed with status Bad Request
+    site_execution_live_test.go:158: retained uncertain hierarchy for inspection: Global/CVK-Q-20261017-034335-000000000
+--- FAIL: TestLiveCatalystCenterDNSOptional (8.35s)
+FAIL
+FAIL	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	9.741s
+FAIL

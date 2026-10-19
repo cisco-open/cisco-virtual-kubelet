@@ -1,0 +1,26 @@
+=== RUN   TestEnvtestProfileSiteTagDependencies
+=== RUN   TestEnvtestProfileSiteTagDependencies/cohort-false/membership-compose-unselected-tag
+=== RUN   TestEnvtestProfileSiteTagDependencies/cohort-true/membership-compose-unselected-tag
+--- PASS: TestEnvtestProfileSiteTagDependencies (20.80s)
+    --- PASS: TestEnvtestProfileSiteTagDependencies/cohort-false/membership-compose-unselected-tag (9.20s)
+    --- PASS: TestEnvtestProfileSiteTagDependencies/cohort-true/membership-compose-unselected-tag (8.02s)
+=== RUN   TestProfileSiteTagDependencies
+=== RUN   TestProfileSiteTagDependencies/cohort-false/membership-compose-unselected-tag
+=== RUN   TestProfileSiteTagDependencies/cohort-true/membership-compose-unselected-tag
+--- PASS: TestProfileSiteTagDependencies (5.99s)
+    --- PASS: TestProfileSiteTagDependencies/cohort-false/membership-compose-unselected-tag (2.61s)
+    --- PASS: TestProfileSiteTagDependencies/cohort-true/membership-compose-unselected-tag (3.38s)
+=== RUN   TestEnvtestWirelessTagPrune
+=== RUN   TestEnvtestWirelessTagPrune/cohort-false/membership-prune-unknown-peer
+=== RUN   TestEnvtestWirelessTagPrune/cohort-true/membership-prune-unknown-peer
+--- PASS: TestEnvtestWirelessTagPrune (15.88s)
+    --- PASS: TestEnvtestWirelessTagPrune/cohort-false/membership-prune-unknown-peer (6.52s)
+    --- PASS: TestEnvtestWirelessTagPrune/cohort-true/membership-prune-unknown-peer (5.35s)
+=== RUN   TestWirelessTagPrune
+=== RUN   TestWirelessTagPrune/cohort-false/membership-prune-unknown-peer
+=== RUN   TestWirelessTagPrune/cohort-true/membership-prune-unknown-peer
+--- PASS: TestWirelessTagPrune (3.77s)
+    --- PASS: TestWirelessTagPrune/cohort-false/membership-prune-unknown-peer (1.65s)
+    --- PASS: TestWirelessTagPrune/cohort-true/membership-prune-unknown-peer (2.11s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	48.774s

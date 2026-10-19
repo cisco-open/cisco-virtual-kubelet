@@ -1,0 +1,40 @@
+=== RUN   TestLiveCatalystCenterTemplateProject
+    template_projects_live_test.go:138: submitted Create CVK-Q-Project-20261016-171401 01a145b4-dfa5-7a68-a844-46d5ed00e160
+    template_projects_live_test.go:138: submitted Update CVK-Q-Project-20261016-171401 01a145b4-f124-7c2f-ada1-f71d5c5c056b
+    template_projects_live_test.go:164: project create and description update verified
+    template_projects_live_test.go:166: native template operation Create draft:CVK-Q-Project-20261016-171401#CVK-Commit-Qualification 01a145b5-0eae-7fb5-804c-7cc744872f7d
+    template_projects_live_test.go:166: native template operation Update commit:CVK-Q-Project-20261016-171401#CVK-Commit-Qualification 01a145b5-480b-7944-a06e-a548e39d83a8
+    template_projects_live_test.go:166: native template operation Update draft:CVK-Q-Project-20261016-171401#CVK-Commit-Qualification 01a145b5-921d-72c5-bf1a-1053715b699e
+    template_projects_live_test.go:166: native template operation Update commit:CVK-Q-Project-20261016-171401#CVK-Commit-Qualification 01a145b5-d11f-715e-a6fd-f813e05df674
+    template_projects_live_test.go:166: native draft create/update and two committed versions verified a4c96b8e-9b48-49b9-950e-0fe435235635
+    template_projects_live_test.go:166: generated template metadata task inherited 01a145b6-0d66-764a-8ade-6ea4f4595653
+    template_projects_live_test.go:166: generated template metadata task inherited 01a145b6-3519-7f8b-86bf-db7f015e6b54
+    template_projects_live_test.go:166: native software-version fallback/readback/no-op verified inherited
+    template_projects_live_test.go:166: generated template metadata task override 01a145b6-6f8e-7c0b-a256-fe15d5cedac7
+    template_projects_live_test.go:166: generated template metadata task override 01a145b6-9725-758a-9a16-0b8988b2545c
+    template_projects_live_test.go:166: native software-version fallback/readback/no-op verified override
+    template_projects_live_test.go:166: generated template metadata task null-override-with-content-update 01a145b6-cd89-7f48-aedb-2ebd3cb6cbce
+    template_projects_live_test.go:166: generated template metadata task null-override-with-content-update 01a145b6-f541-7bab-b4fe-6253e2051724
+    template_projects_live_test.go:166: native software-version fallback/readback/no-op verified null-override-with-content-update
+    template_projects_live_test.go:166: generated template metadata task return-to-inherited 01a145b7-2b8e-739a-bb04-f2a0105fcd2f
+    template_projects_live_test.go:166: generated template metadata task return-to-inherited 01a145b7-5337-77dc-b5a4-7f2b3ee35ced
+    template_projects_live_test.go:166: native software-version fallback/readback/no-op verified return-to-inherited
+    template_projects_live_test.go:166: generated template metadata task explicit-clear 01a145b7-93f9-7355-89fe-e652a750b391
+    template_projects_live_test.go:166: generated template metadata task explicit-clear 01a145b7-bb91-759c-90c7-874ae3bccaf1
+    template_projects_live_test.go:166: native software-version fallback/readback/no-op verified explicit-clear
+    template_projects_live_test.go:166: native software-version fallback/readback/no-op verified empty-fallback
+    template_projects_live_test.go:166: native software-version fallback/readback/no-op verified null-fallback
+    template_projects_live_test.go:166: native software-version fallback/readback/no-op verified omitted
+    template_projects_live_test.go:166: generated template metadata task typed-defaults 01a145b8-33c9-73c6-8123-96d89a40dc3a
+    template_projects_live_test.go:166: generated template metadata task typed-defaults 01a145b8-5ba8-7838-a003-7ebe275d68b2
+    template_projects_live_test.go:166: native variable metadata, scalar coercion and no-op verified typed-defaults
+    template_projects_live_test.go:166: generated template metadata task updated-defaults 01a145b8-9b12-7e19-bc00-b687ff78ea4b
+    template_projects_live_test.go:166: generated template metadata task updated-defaults 01a145b8-beac-7a82-93bb-1367fcc370dc
+    template_projects_live_test.go:166: native variable metadata, scalar coercion and no-op verified updated-defaults
+    template_projects_live_test.go:166: native variable metadata, scalar coercion and no-op verified equivalent-string-inputs
+    template_commit_live_test.go:84: template mutation receipt DELETE 01a145b8-ff2b-7b4b-b5f7-9cb58a2033c6
+    template_commit_live_test.go:95: template fixture cleanup verified a4c96b8e-9b48-49b9-950e-0fe435235635
+    template_projects_live_test.go:112: isolated project cleanup verified 85f67ad3-3cef-4aa6-afdc-d38b95f3be9b
+--- PASS: TestLiveCatalystCenterTemplateProject (276.25s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	278.392s

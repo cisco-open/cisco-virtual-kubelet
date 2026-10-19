@@ -1,0 +1,647 @@
+=== RUN   TestEnvtestWirelessTagMembershipRemoval
+=== RUN   TestEnvtestWirelessTagMembershipRemoval/cohort-false/membership-complete
+=== RUN   TestEnvtestWirelessTagMembershipRemoval/cohort-false/membership-retain
+=== RUN   TestEnvtestWirelessTagMembershipRemoval/cohort-false/membership-missing-proof
+=== RUN   TestEnvtestWirelessTagMembershipRemoval/cohort-false/membership-device
+=== RUN   TestEnvtestWirelessTagMembershipRemoval/cohort-false/membership-child-device
+=== RUN   TestEnvtestWirelessTagMembershipRemoval/cohort-false/membership-device-error
+=== RUN   TestEnvtestWirelessTagMembershipRemoval/cohort-false/membership-pnp
+=== RUN   TestEnvtestWirelessTagMembershipRemoval/cohort-false/membership-pnp-error
+=== RUN   TestEnvtestWirelessTagMembershipRemoval/cohort-false/membership-preflight-consumer
+=== RUN   TestEnvtestWirelessTagMembershipRemoval/cohort-false/membership-post-task-consumer
+=== RUN   TestEnvtestWirelessTagMembershipRemoval/cohort-false/membership-lost-ack
+=== RUN   TestEnvtestWirelessTagMembershipRemoval/cohort-false/membership-child-failed
+=== RUN   TestEnvtestWirelessTagMembershipRemoval/cohort-false/membership-tree-missing
+=== RUN   TestEnvtestWirelessTagMembershipRemoval/cohort-false/membership-source
+=== RUN   TestEnvtestWirelessTagMembershipRemoval/cohort-false/membership-owner
+=== RUN   TestEnvtestWirelessTagMembershipRemoval/cohort-false/membership-zone-complete
+=== RUN   TestEnvtestWirelessTagMembershipRemoval/cohort-false/membership-zone-device
+=== RUN   TestEnvtestWirelessTagMembershipRemoval/cohort-true/membership-complete
+=== RUN   TestEnvtestWirelessTagMembershipRemoval/cohort-true/membership-retain
+=== RUN   TestEnvtestWirelessTagMembershipRemoval/cohort-true/membership-missing-proof
+=== RUN   TestEnvtestWirelessTagMembershipRemoval/cohort-true/membership-device
+=== RUN   TestEnvtestWirelessTagMembershipRemoval/cohort-true/membership-child-device
+=== RUN   TestEnvtestWirelessTagMembershipRemoval/cohort-true/membership-device-error
+=== RUN   TestEnvtestWirelessTagMembershipRemoval/cohort-true/membership-pnp
+=== RUN   TestEnvtestWirelessTagMembershipRemoval/cohort-true/membership-pnp-error
+=== RUN   TestEnvtestWirelessTagMembershipRemoval/cohort-true/membership-preflight-consumer
+=== RUN   TestEnvtestWirelessTagMembershipRemoval/cohort-true/membership-post-task-consumer
+=== RUN   TestEnvtestWirelessTagMembershipRemoval/cohort-true/membership-lost-ack
+=== RUN   TestEnvtestWirelessTagMembershipRemoval/cohort-true/membership-child-failed
+=== RUN   TestEnvtestWirelessTagMembershipRemoval/cohort-true/membership-tree-missing
+=== RUN   TestEnvtestWirelessTagMembershipRemoval/cohort-true/membership-source
+=== RUN   TestEnvtestWirelessTagMembershipRemoval/cohort-true/membership-owner
+=== RUN   TestEnvtestWirelessTagMembershipRemoval/cohort-true/membership-zone-complete
+=== RUN   TestEnvtestWirelessTagMembershipRemoval/cohort-true/membership-zone-device
+--- PASS: TestEnvtestWirelessTagMembershipRemoval (176.13s)
+    --- PASS: TestEnvtestWirelessTagMembershipRemoval/cohort-false/membership-complete (8.15s)
+    --- PASS: TestEnvtestWirelessTagMembershipRemoval/cohort-false/membership-retain (4.10s)
+    --- PASS: TestEnvtestWirelessTagMembershipRemoval/cohort-false/membership-missing-proof (3.85s)
+    --- PASS: TestEnvtestWirelessTagMembershipRemoval/cohort-false/membership-device (4.44s)
+    --- PASS: TestEnvtestWirelessTagMembershipRemoval/cohort-false/membership-child-device (4.41s)
+    --- PASS: TestEnvtestWirelessTagMembershipRemoval/cohort-false/membership-device-error (4.41s)
+    --- PASS: TestEnvtestWirelessTagMembershipRemoval/cohort-false/membership-pnp (4.43s)
+    --- PASS: TestEnvtestWirelessTagMembershipRemoval/cohort-false/membership-pnp-error (4.42s)
+    --- PASS: TestEnvtestWirelessTagMembershipRemoval/cohort-false/membership-preflight-consumer (4.80s)
+    --- PASS: TestEnvtestWirelessTagMembershipRemoval/cohort-false/membership-post-task-consumer (4.70s)
+    --- PASS: TestEnvtestWirelessTagMembershipRemoval/cohort-false/membership-lost-ack (4.03s)
+    --- PASS: TestEnvtestWirelessTagMembershipRemoval/cohort-false/membership-child-failed (4.12s)
+    --- PASS: TestEnvtestWirelessTagMembershipRemoval/cohort-false/membership-tree-missing (4.15s)
+    --- PASS: TestEnvtestWirelessTagMembershipRemoval/cohort-false/membership-source (3.98s)
+    --- PASS: TestEnvtestWirelessTagMembershipRemoval/cohort-false/membership-owner (3.90s)
+    --- PASS: TestEnvtestWirelessTagMembershipRemoval/cohort-false/membership-zone-complete (5.50s)
+    --- PASS: TestEnvtestWirelessTagMembershipRemoval/cohort-false/membership-zone-device (4.72s)
+    --- PASS: TestEnvtestWirelessTagMembershipRemoval/cohort-true/membership-complete (7.37s)
+    --- PASS: TestEnvtestWirelessTagMembershipRemoval/cohort-true/membership-retain (4.92s)
+    --- PASS: TestEnvtestWirelessTagMembershipRemoval/cohort-true/membership-missing-proof (4.55s)
+    --- PASS: TestEnvtestWirelessTagMembershipRemoval/cohort-true/membership-device (5.38s)
+    --- PASS: TestEnvtestWirelessTagMembershipRemoval/cohort-true/membership-child-device (5.48s)
+    --- PASS: TestEnvtestWirelessTagMembershipRemoval/cohort-true/membership-device-error (5.45s)
+    --- PASS: TestEnvtestWirelessTagMembershipRemoval/cohort-true/membership-pnp (5.44s)
+    --- PASS: TestEnvtestWirelessTagMembershipRemoval/cohort-true/membership-pnp-error (5.47s)
+    --- PASS: TestEnvtestWirelessTagMembershipRemoval/cohort-true/membership-preflight-consumer (5.93s)
+    --- PASS: TestEnvtestWirelessTagMembershipRemoval/cohort-true/membership-post-task-consumer (5.90s)
+    --- PASS: TestEnvtestWirelessTagMembershipRemoval/cohort-true/membership-lost-ack (5.02s)
+    --- PASS: TestEnvtestWirelessTagMembershipRemoval/cohort-true/membership-child-failed (5.14s)
+    --- PASS: TestEnvtestWirelessTagMembershipRemoval/cohort-true/membership-tree-missing (5.08s)
+    --- PASS: TestEnvtestWirelessTagMembershipRemoval/cohort-true/membership-source (4.89s)
+    --- PASS: TestEnvtestWirelessTagMembershipRemoval/cohort-true/membership-owner (4.82s)
+    --- PASS: TestEnvtestWirelessTagMembershipRemoval/cohort-true/membership-zone-complete (7.47s)
+    --- PASS: TestEnvtestWirelessTagMembershipRemoval/cohort-true/membership-zone-device (5.64s)
+=== RUN   TestEnvtestWirelessTagPrune
+[controller-runtime] log.SetLogger(...) was never called; logs will not be displayed.
+Detected at:
+	>  goroutine 77896 [running]:
+	>  runtime/debug.Stack()
+	>  	/Users/johalley/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.9.darwin-arm64/src/runtime/debug/stack.go:26 +0x6c
+	>  sigs.k8s.io/controller-runtime/pkg/log.eventuallyFulfillRoot()
+	>  	/Users/johalley/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.23.3/pkg/log/log.go:60 +0xc4
+	>  sigs.k8s.io/controller-runtime/pkg/log.(*delegatingLogSink).Enabled(0xc00082b2c0, 0x1)
+	>  	/Users/johalley/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.23.3/pkg/log/deleg.go:111 +0x30
+	>  github.com/go-logr/logr.Logger.Info({{0x1068d76c8?, 0xc00082b2c0?}, 0xc000b8e000?}, {0x103fcd7c8, 0x16}, {0x0, 0x0, 0x0})
+	>  	/Users/johalley/go/pkg/mod/github.com/go-logr/logr@v1.4.4/logr.go:276 +0x60
+	>  sigs.k8s.io/controller-runtime/pkg/envtest.(*Environment).Start(0xc000c8d8c8)
+	>  	/Users/johalley/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.23.3/pkg/envtest/server.go:303 +0x934
+	>  github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter.qualificationAPIServerClientEnvironment(0xc00051f448, 0xc000c8d8c8)
+	>  	/Users/johalley/Git/cisco-virtual-kubelet/internal/controlleradapter/catalystcenter/configuration_envtest_test.go:27 +0x44
+	>  github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter.qualificationAPIServerClient(0xc00051f448, {0xc000205e60, 0x1, 0x0?})
+	>  	/Users/johalley/Git/cisco-virtual-kubelet/internal/controlleradapter/catalystcenter/configuration_envtest_test.go:22 +0x1ac
+	>  github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter.TestEnvtestWirelessTagPrune(0xc00051f448)
+	>  	/Users/johalley/Git/cisco-virtual-kubelet/internal/controlleradapter/catalystcenter/wireless_tag_prune_envtest_test.go:13 +0x58
+	>  testing.tRunner(0xc00051f448, 0x10687b850)
+	>  	/Users/johalley/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.9.darwin-arm64/src/testing/testing.go:2036 +0x168
+	>  created by testing.(*T).Run in goroutine 1
+	>  	/Users/johalley/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.9.darwin-arm64/src/testing/testing.go:2101 +0x7c0
+=== RUN   TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete
+=== RUN   TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/wireless-site-tags/complete
+=== RUN   TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/wireless-site-tags/reordered
+=== RUN   TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/wireless-site-tags/missing-creator
+=== RUN   TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/wireless-site-tags/missing-deletion
+=== RUN   TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/wireless-site-tags/partial-producer
+=== RUN   TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/wireless-site-tags/extra-member
+=== RUN   TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/wireless-site-tags/duplicate-key
+=== RUN   TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/wireless-site-tags/malformed-key
+=== RUN   TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/wireless-site-tags/foreign-owner
+=== RUN   TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/wireless-site-tags/foreign-name
+=== RUN   TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/wireless-site-tags/foreign-parent
+=== RUN   TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/wireless-site-tags/controller-regression
+=== RUN   TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/wireless-site-tags/unchanged-input
+=== RUN   TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/wireless-site-tags/backward-generation-new-source
+=== RUN   TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/wireless-site-tags/before-deletion
+=== RUN   TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/wireless-site-tags/key-change
+=== RUN   TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/wireless-site-tags/legacy-deletion
+=== RUN   TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/wireless-site-tags/native-uuid-change
+=== RUN   TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/wireless-site-tags/unrelated-history
+=== RUN   TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/wireless-site-tags/digest-history
+=== RUN   TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/wireless-site-tags/independent-copies
+=== RUN   TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/wireless-policy-tags/complete
+=== RUN   TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/wireless-policy-tags/reordered
+=== RUN   TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/wireless-policy-tags/missing-creator
+=== RUN   TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/wireless-policy-tags/missing-deletion
+=== RUN   TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/wireless-policy-tags/partial-producer
+=== RUN   TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/wireless-policy-tags/extra-member
+=== RUN   TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/wireless-policy-tags/duplicate-key
+=== RUN   TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/wireless-policy-tags/malformed-key
+=== RUN   TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/wireless-policy-tags/foreign-owner
+=== RUN   TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/wireless-policy-tags/foreign-name
+=== RUN   TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/wireless-policy-tags/foreign-parent
+=== RUN   TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/wireless-policy-tags/controller-regression
+=== RUN   TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/wireless-policy-tags/unchanged-input
+=== RUN   TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/wireless-policy-tags/backward-generation-new-source
+=== RUN   TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/wireless-policy-tags/before-deletion
+=== RUN   TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/wireless-policy-tags/key-change
+=== RUN   TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/wireless-policy-tags/legacy-deletion
+=== RUN   TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/wireless-policy-tags/native-uuid-change
+=== RUN   TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/wireless-policy-tags/unrelated-history
+=== RUN   TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/wireless-policy-tags/digest-history
+=== RUN   TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/wireless-policy-tags/independent-copies
+=== RUN   TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/retired/wireless-site-tags/valid
+=== RUN   TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/retired/wireless-site-tags/two-generations
+=== RUN   TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/retired/wireless-site-tags/reordered
+=== RUN   TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/retired/wireless-site-tags/missing-creator
+=== RUN   TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/retired/wireless-site-tags/missing-tombstone
+=== RUN   TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/retired/wireless-site-tags/orphan
+=== RUN   TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/retired/wireless-site-tags/changed-parent-digest
+=== RUN   TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/retired/wireless-site-tags/changed-history
+=== RUN   TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/retired/wireless-site-tags/owner
+=== RUN   TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/retired/wireless-site-tags/parent
+=== RUN   TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/retired/wireless-site-tags/key
+=== RUN   TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/retired/wireless-site-tags/generation
+=== RUN   TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/retired/wireless-site-tags/unchanged-input
+=== RUN   TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/retired/wireless-site-tags/uuid-reuse
+=== RUN   TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/retired/wireless-site-tags/nonce-reuse
+=== RUN   TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/retired/wireless-site-tags/unarchived-predecessor
+=== RUN   TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/retired/wireless-site-tags/truncated-chain
+=== RUN   TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/retired/wireless-site-tags/future-archive
+=== RUN   TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/retired/wireless-site-tags/oversized-archive
+=== RUN   TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/retired/wireless-site-tags/dropped-latest-lineage
+=== RUN   TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/retired/wireless-site-tags/changed-latest-lineage
+=== RUN   TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/retired/wireless-policy-tags/valid
+=== RUN   TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/retired/wireless-policy-tags/two-generations
+=== RUN   TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/retired/wireless-policy-tags/reordered
+=== RUN   TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/retired/wireless-policy-tags/missing-creator
+=== RUN   TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/retired/wireless-policy-tags/missing-tombstone
+=== RUN   TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/retired/wireless-policy-tags/orphan
+=== RUN   TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/retired/wireless-policy-tags/changed-parent-digest
+=== RUN   TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/retired/wireless-policy-tags/changed-history
+=== RUN   TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/retired/wireless-policy-tags/owner
+=== RUN   TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/retired/wireless-policy-tags/parent
+=== RUN   TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/retired/wireless-policy-tags/key
+=== RUN   TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/retired/wireless-policy-tags/generation
+=== RUN   TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/retired/wireless-policy-tags/unchanged-input
+=== RUN   TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/retired/wireless-policy-tags/uuid-reuse
+=== RUN   TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/retired/wireless-policy-tags/nonce-reuse
+=== RUN   TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/retired/wireless-policy-tags/unarchived-predecessor
+=== RUN   TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/retired/wireless-policy-tags/truncated-chain
+=== RUN   TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/retired/wireless-policy-tags/future-archive
+=== RUN   TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/retired/wireless-policy-tags/oversized-archive
+=== RUN   TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/retired/wireless-policy-tags/dropped-latest-lineage
+=== RUN   TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/retired/wireless-policy-tags/changed-latest-lineage
+=== RUN   TestEnvtestWirelessTagPrune/cohort-false/membership-prune-retain
+=== RUN   TestEnvtestWirelessTagPrune/cohort-false/membership-prune-unowned
+=== RUN   TestEnvtestWirelessTagPrune/cohort-false/membership-prune-native-edit
+=== RUN   TestEnvtestWirelessTagPrune/cohort-false/membership-prune-uuid
+=== RUN   TestEnvtestWirelessTagPrune/cohort-false/membership-prune-key
+=== RUN   TestEnvtestWirelessTagPrune/cohort-false/membership-prune-absent-before
+=== RUN   TestEnvtestWirelessTagPrune/cohort-false/membership-prune-device
+=== RUN   TestEnvtestWirelessTagPrune/cohort-false/membership-prune-pnp
+=== RUN   TestEnvtestWirelessTagPrune/cohort-false/membership-prune-read-error
+=== RUN   TestEnvtestWirelessTagPrune/cohort-false/membership-prune-preflight-device
+=== RUN   TestEnvtestWirelessTagPrune/cohort-false/membership-prune-preflight-peer
+=== RUN   TestEnvtestWirelessTagPrune/cohort-false/membership-prune-post-task-device
+=== RUN   TestEnvtestWirelessTagPrune/cohort-false/membership-prune-post-task-reappear
+=== RUN   TestEnvtestWirelessTagPrune/cohort-false/membership-prune-settled-reappear
+=== RUN   TestEnvtestWirelessTagPrune/cohort-false/membership-prune-recreate
+=== RUN   TestEnvtestWirelessTagPrune/cohort-false/membership-prune-at-capacity
+=== RUN   TestEnvtestWirelessTagPrune/cohort-false/membership-prune-created-only
+=== RUN   TestEnvtestWirelessTagPrune/cohort-false/membership-prune-capacity
+=== RUN   TestEnvtestWirelessTagPrune/cohort-false/membership-prune-lost-ack
+=== RUN   TestEnvtestWirelessTagPrune/cohort-false/membership-prune-child-failed
+=== RUN   TestEnvtestWirelessTagPrune/cohort-false/membership-prune-tree-missing
+=== RUN   TestEnvtestWirelessTagPrune/cohort-false/membership-prune-source
+=== RUN   TestEnvtestWirelessTagPrune/cohort-false/membership-prune-owner
+=== RUN   TestEnvtestWirelessTagPrune/cohort-false/membership-prune-tombstone-tamper
+=== RUN   TestEnvtestWirelessTagPrune/cohort-false/membership-prune-settled-device
+=== RUN   TestEnvtestWirelessTagPrune/cohort-false/membership-prune-unknown-peer
+=== RUN   TestEnvtestWirelessTagPrune/cohort-false/membership-prune-empty-members
+=== RUN   TestEnvtestWirelessTagPrune/cohort-false/membership-prune-combined
+=== RUN   TestEnvtestWirelessTagPrune/cohort-false/membership-prune-empty-kind
+=== RUN   TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete
+=== RUN   TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/wireless-site-tags/complete
+=== RUN   TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/wireless-site-tags/reordered
+=== RUN   TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/wireless-site-tags/missing-creator
+=== RUN   TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/wireless-site-tags/missing-deletion
+=== RUN   TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/wireless-site-tags/partial-producer
+=== RUN   TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/wireless-site-tags/extra-member
+=== RUN   TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/wireless-site-tags/duplicate-key
+=== RUN   TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/wireless-site-tags/malformed-key
+=== RUN   TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/wireless-site-tags/foreign-owner
+=== RUN   TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/wireless-site-tags/foreign-name
+=== RUN   TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/wireless-site-tags/foreign-parent
+=== RUN   TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/wireless-site-tags/controller-regression
+=== RUN   TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/wireless-site-tags/unchanged-input
+=== RUN   TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/wireless-site-tags/backward-generation-new-source
+=== RUN   TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/wireless-site-tags/before-deletion
+=== RUN   TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/wireless-site-tags/key-change
+=== RUN   TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/wireless-site-tags/legacy-deletion
+=== RUN   TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/wireless-site-tags/native-uuid-change
+=== RUN   TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/wireless-site-tags/unrelated-history
+=== RUN   TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/wireless-site-tags/digest-history
+=== RUN   TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/wireless-site-tags/independent-copies
+=== RUN   TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/wireless-policy-tags/complete
+=== RUN   TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/wireless-policy-tags/reordered
+=== RUN   TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/wireless-policy-tags/missing-creator
+=== RUN   TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/wireless-policy-tags/missing-deletion
+=== RUN   TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/wireless-policy-tags/partial-producer
+=== RUN   TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/wireless-policy-tags/extra-member
+=== RUN   TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/wireless-policy-tags/duplicate-key
+=== RUN   TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/wireless-policy-tags/malformed-key
+=== RUN   TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/wireless-policy-tags/foreign-owner
+=== RUN   TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/wireless-policy-tags/foreign-name
+=== RUN   TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/wireless-policy-tags/foreign-parent
+=== RUN   TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/wireless-policy-tags/controller-regression
+=== RUN   TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/wireless-policy-tags/unchanged-input
+=== RUN   TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/wireless-policy-tags/backward-generation-new-source
+=== RUN   TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/wireless-policy-tags/before-deletion
+=== RUN   TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/wireless-policy-tags/key-change
+=== RUN   TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/wireless-policy-tags/legacy-deletion
+=== RUN   TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/wireless-policy-tags/native-uuid-change
+=== RUN   TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/wireless-policy-tags/unrelated-history
+=== RUN   TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/wireless-policy-tags/digest-history
+=== RUN   TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/wireless-policy-tags/independent-copies
+=== RUN   TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/retired/wireless-site-tags/valid
+=== RUN   TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/retired/wireless-site-tags/two-generations
+=== RUN   TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/retired/wireless-site-tags/reordered
+=== RUN   TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/retired/wireless-site-tags/missing-creator
+=== RUN   TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/retired/wireless-site-tags/missing-tombstone
+=== RUN   TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/retired/wireless-site-tags/orphan
+=== RUN   TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/retired/wireless-site-tags/changed-parent-digest
+=== RUN   TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/retired/wireless-site-tags/changed-history
+=== RUN   TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/retired/wireless-site-tags/owner
+=== RUN   TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/retired/wireless-site-tags/parent
+=== RUN   TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/retired/wireless-site-tags/key
+=== RUN   TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/retired/wireless-site-tags/generation
+=== RUN   TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/retired/wireless-site-tags/unchanged-input
+=== RUN   TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/retired/wireless-site-tags/uuid-reuse
+=== RUN   TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/retired/wireless-site-tags/nonce-reuse
+=== RUN   TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/retired/wireless-site-tags/unarchived-predecessor
+=== RUN   TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/retired/wireless-site-tags/truncated-chain
+=== RUN   TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/retired/wireless-site-tags/future-archive
+=== RUN   TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/retired/wireless-site-tags/oversized-archive
+=== RUN   TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/retired/wireless-site-tags/dropped-latest-lineage
+=== RUN   TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/retired/wireless-site-tags/changed-latest-lineage
+=== RUN   TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/retired/wireless-policy-tags/valid
+=== RUN   TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/retired/wireless-policy-tags/two-generations
+=== RUN   TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/retired/wireless-policy-tags/reordered
+=== RUN   TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/retired/wireless-policy-tags/missing-creator
+=== RUN   TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/retired/wireless-policy-tags/missing-tombstone
+=== RUN   TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/retired/wireless-policy-tags/orphan
+=== RUN   TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/retired/wireless-policy-tags/changed-parent-digest
+=== RUN   TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/retired/wireless-policy-tags/changed-history
+=== RUN   TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/retired/wireless-policy-tags/owner
+=== RUN   TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/retired/wireless-policy-tags/parent
+=== RUN   TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/retired/wireless-policy-tags/key
+=== RUN   TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/retired/wireless-policy-tags/generation
+=== RUN   TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/retired/wireless-policy-tags/unchanged-input
+=== RUN   TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/retired/wireless-policy-tags/uuid-reuse
+=== RUN   TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/retired/wireless-policy-tags/nonce-reuse
+=== RUN   TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/retired/wireless-policy-tags/unarchived-predecessor
+=== RUN   TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/retired/wireless-policy-tags/truncated-chain
+=== RUN   TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/retired/wireless-policy-tags/future-archive
+=== RUN   TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/retired/wireless-policy-tags/oversized-archive
+=== RUN   TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/retired/wireless-policy-tags/dropped-latest-lineage
+=== RUN   TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/retired/wireless-policy-tags/changed-latest-lineage
+=== RUN   TestEnvtestWirelessTagPrune/cohort-true/membership-prune-retain
+=== RUN   TestEnvtestWirelessTagPrune/cohort-true/membership-prune-unowned
+=== RUN   TestEnvtestWirelessTagPrune/cohort-true/membership-prune-native-edit
+=== RUN   TestEnvtestWirelessTagPrune/cohort-true/membership-prune-uuid
+=== RUN   TestEnvtestWirelessTagPrune/cohort-true/membership-prune-key
+=== RUN   TestEnvtestWirelessTagPrune/cohort-true/membership-prune-absent-before
+=== RUN   TestEnvtestWirelessTagPrune/cohort-true/membership-prune-device
+=== RUN   TestEnvtestWirelessTagPrune/cohort-true/membership-prune-pnp
+=== RUN   TestEnvtestWirelessTagPrune/cohort-true/membership-prune-read-error
+=== RUN   TestEnvtestWirelessTagPrune/cohort-true/membership-prune-preflight-device
+=== RUN   TestEnvtestWirelessTagPrune/cohort-true/membership-prune-preflight-peer
+=== RUN   TestEnvtestWirelessTagPrune/cohort-true/membership-prune-post-task-device
+=== RUN   TestEnvtestWirelessTagPrune/cohort-true/membership-prune-post-task-reappear
+=== RUN   TestEnvtestWirelessTagPrune/cohort-true/membership-prune-settled-reappear
+=== RUN   TestEnvtestWirelessTagPrune/cohort-true/membership-prune-recreate
+=== RUN   TestEnvtestWirelessTagPrune/cohort-true/membership-prune-at-capacity
+=== RUN   TestEnvtestWirelessTagPrune/cohort-true/membership-prune-created-only
+=== RUN   TestEnvtestWirelessTagPrune/cohort-true/membership-prune-capacity
+=== RUN   TestEnvtestWirelessTagPrune/cohort-true/membership-prune-lost-ack
+=== RUN   TestEnvtestWirelessTagPrune/cohort-true/membership-prune-child-failed
+=== RUN   TestEnvtestWirelessTagPrune/cohort-true/membership-prune-tree-missing
+=== RUN   TestEnvtestWirelessTagPrune/cohort-true/membership-prune-source
+=== RUN   TestEnvtestWirelessTagPrune/cohort-true/membership-prune-owner
+=== RUN   TestEnvtestWirelessTagPrune/cohort-true/membership-prune-tombstone-tamper
+=== RUN   TestEnvtestWirelessTagPrune/cohort-true/membership-prune-settled-device
+=== RUN   TestEnvtestWirelessTagPrune/cohort-true/membership-prune-unknown-peer
+=== RUN   TestEnvtestWirelessTagPrune/cohort-true/membership-prune-empty-members
+=== RUN   TestEnvtestWirelessTagPrune/cohort-true/membership-prune-combined
+=== RUN   TestEnvtestWirelessTagPrune/cohort-true/membership-prune-empty-kind
+--- PASS: TestEnvtestWirelessTagPrune (400.00s)
+    --- PASS: TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete (8.09s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/wireless-site-tags/complete (0.00s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/wireless-site-tags/reordered (0.00s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/wireless-site-tags/missing-creator (0.00s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/wireless-site-tags/missing-deletion (0.00s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/wireless-site-tags/partial-producer (0.00s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/wireless-site-tags/extra-member (0.00s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/wireless-site-tags/duplicate-key (0.00s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/wireless-site-tags/malformed-key (0.00s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/wireless-site-tags/foreign-owner (0.00s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/wireless-site-tags/foreign-name (0.00s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/wireless-site-tags/foreign-parent (0.00s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/wireless-site-tags/controller-regression (0.00s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/wireless-site-tags/unchanged-input (0.00s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/wireless-site-tags/backward-generation-new-source (0.00s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/wireless-site-tags/before-deletion (0.00s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/wireless-site-tags/key-change (0.00s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/wireless-site-tags/legacy-deletion (0.00s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/wireless-site-tags/native-uuid-change (0.00s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/wireless-site-tags/unrelated-history (0.00s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/wireless-site-tags/digest-history (0.00s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/wireless-site-tags/independent-copies (0.00s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/wireless-policy-tags/complete (0.00s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/wireless-policy-tags/reordered (0.00s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/wireless-policy-tags/missing-creator (0.00s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/wireless-policy-tags/missing-deletion (0.00s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/wireless-policy-tags/partial-producer (0.00s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/wireless-policy-tags/extra-member (0.00s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/wireless-policy-tags/duplicate-key (0.00s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/wireless-policy-tags/malformed-key (0.00s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/wireless-policy-tags/foreign-owner (0.00s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/wireless-policy-tags/foreign-name (0.00s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/wireless-policy-tags/foreign-parent (0.00s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/wireless-policy-tags/controller-regression (0.00s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/wireless-policy-tags/unchanged-input (0.00s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/wireless-policy-tags/backward-generation-new-source (0.00s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/wireless-policy-tags/before-deletion (0.00s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/wireless-policy-tags/key-change (0.00s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/wireless-policy-tags/legacy-deletion (0.00s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/wireless-policy-tags/native-uuid-change (0.00s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/wireless-policy-tags/unrelated-history (0.00s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/wireless-policy-tags/digest-history (0.00s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/wireless-policy-tags/independent-copies (0.00s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/retired/wireless-site-tags/valid (0.04s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/retired/wireless-site-tags/two-generations (0.06s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/retired/wireless-site-tags/reordered (0.01s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/retired/wireless-site-tags/missing-creator (0.01s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/retired/wireless-site-tags/missing-tombstone (0.01s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/retired/wireless-site-tags/orphan (0.01s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/retired/wireless-site-tags/changed-parent-digest (0.01s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/retired/wireless-site-tags/changed-history (0.01s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/retired/wireless-site-tags/owner (0.01s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/retired/wireless-site-tags/parent (0.01s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/retired/wireless-site-tags/key (0.01s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/retired/wireless-site-tags/generation (0.00s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/retired/wireless-site-tags/unchanged-input (0.01s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/retired/wireless-site-tags/uuid-reuse (0.01s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/retired/wireless-site-tags/nonce-reuse (0.00s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/retired/wireless-site-tags/unarchived-predecessor (0.00s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/retired/wireless-site-tags/truncated-chain (0.01s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/retired/wireless-site-tags/future-archive (0.00s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/retired/wireless-site-tags/oversized-archive (0.00s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/retired/wireless-site-tags/dropped-latest-lineage (0.01s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/retired/wireless-site-tags/changed-latest-lineage (0.01s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/retired/wireless-policy-tags/valid (0.05s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/retired/wireless-policy-tags/two-generations (0.06s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/retired/wireless-policy-tags/reordered (0.01s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/retired/wireless-policy-tags/missing-creator (0.01s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/retired/wireless-policy-tags/missing-tombstone (0.01s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/retired/wireless-policy-tags/orphan (0.01s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/retired/wireless-policy-tags/changed-parent-digest (0.00s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/retired/wireless-policy-tags/changed-history (0.01s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/retired/wireless-policy-tags/owner (0.00s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/retired/wireless-policy-tags/parent (0.01s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/retired/wireless-policy-tags/key (0.01s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/retired/wireless-policy-tags/generation (0.00s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/retired/wireless-policy-tags/unchanged-input (0.01s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/retired/wireless-policy-tags/uuid-reuse (0.01s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/retired/wireless-policy-tags/nonce-reuse (0.00s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/retired/wireless-policy-tags/unarchived-predecessor (0.00s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/retired/wireless-policy-tags/truncated-chain (0.02s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/retired/wireless-policy-tags/future-archive (0.00s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/retired/wireless-policy-tags/oversized-archive (0.00s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/retired/wireless-policy-tags/dropped-latest-lineage (0.01s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-false/membership-prune-complete/retired/wireless-policy-tags/changed-latest-lineage (0.01s)
+    --- PASS: TestEnvtestWirelessTagPrune/cohort-false/membership-prune-retain (3.38s)
+    --- PASS: TestEnvtestWirelessTagPrune/cohort-false/membership-prune-unowned (3.38s)
+    --- PASS: TestEnvtestWirelessTagPrune/cohort-false/membership-prune-native-edit (4.48s)
+    --- PASS: TestEnvtestWirelessTagPrune/cohort-false/membership-prune-uuid (4.38s)
+    --- PASS: TestEnvtestWirelessTagPrune/cohort-false/membership-prune-key (3.94s)
+    --- PASS: TestEnvtestWirelessTagPrune/cohort-false/membership-prune-absent-before (4.41s)
+    --- PASS: TestEnvtestWirelessTagPrune/cohort-false/membership-prune-device (4.42s)
+    --- PASS: TestEnvtestWirelessTagPrune/cohort-false/membership-prune-pnp (4.40s)
+    --- PASS: TestEnvtestWirelessTagPrune/cohort-false/membership-prune-read-error (4.43s)
+    --- PASS: TestEnvtestWirelessTagPrune/cohort-false/membership-prune-preflight-device (4.85s)
+    --- PASS: TestEnvtestWirelessTagPrune/cohort-false/membership-prune-preflight-peer (6.28s)
+    --- PASS: TestEnvtestWirelessTagPrune/cohort-false/membership-prune-post-task-device (5.17s)
+    --- PASS: TestEnvtestWirelessTagPrune/cohort-false/membership-prune-post-task-reappear (5.32s)
+    --- PASS: TestEnvtestWirelessTagPrune/cohort-false/membership-prune-settled-reappear (5.31s)
+    --- PASS: TestEnvtestWirelessTagPrune/cohort-false/membership-prune-recreate (5.25s)
+    --- PASS: TestEnvtestWirelessTagPrune/cohort-false/membership-prune-at-capacity (26.44s)
+    --- PASS: TestEnvtestWirelessTagPrune/cohort-false/membership-prune-created-only (3.25s)
+    --- PASS: TestEnvtestWirelessTagPrune/cohort-false/membership-prune-capacity (13.30s)
+    --- PASS: TestEnvtestWirelessTagPrune/cohort-false/membership-prune-lost-ack (3.93s)
+    --- PASS: TestEnvtestWirelessTagPrune/cohort-false/membership-prune-child-failed (4.16s)
+    --- PASS: TestEnvtestWirelessTagPrune/cohort-false/membership-prune-tree-missing (4.15s)
+    --- PASS: TestEnvtestWirelessTagPrune/cohort-false/membership-prune-source (3.97s)
+    --- PASS: TestEnvtestWirelessTagPrune/cohort-false/membership-prune-owner (3.90s)
+    --- PASS: TestEnvtestWirelessTagPrune/cohort-false/membership-prune-tombstone-tamper (5.35s)
+    --- PASS: TestEnvtestWirelessTagPrune/cohort-false/membership-prune-settled-device (5.58s)
+    --- PASS: TestEnvtestWirelessTagPrune/cohort-false/membership-prune-unknown-peer (4.41s)
+    --- PASS: TestEnvtestWirelessTagPrune/cohort-false/membership-prune-empty-members (5.47s)
+    --- PASS: TestEnvtestWirelessTagPrune/cohort-false/membership-prune-combined (6.97s)
+    --- PASS: TestEnvtestWirelessTagPrune/cohort-false/membership-prune-empty-kind (7.03s)
+    --- PASS: TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete (8.26s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/wireless-site-tags/complete (0.00s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/wireless-site-tags/reordered (0.00s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/wireless-site-tags/missing-creator (0.00s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/wireless-site-tags/missing-deletion (0.00s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/wireless-site-tags/partial-producer (0.00s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/wireless-site-tags/extra-member (0.00s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/wireless-site-tags/duplicate-key (0.00s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/wireless-site-tags/malformed-key (0.00s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/wireless-site-tags/foreign-owner (0.00s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/wireless-site-tags/foreign-name (0.00s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/wireless-site-tags/foreign-parent (0.00s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/wireless-site-tags/controller-regression (0.00s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/wireless-site-tags/unchanged-input (0.00s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/wireless-site-tags/backward-generation-new-source (0.00s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/wireless-site-tags/before-deletion (0.00s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/wireless-site-tags/key-change (0.00s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/wireless-site-tags/legacy-deletion (0.00s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/wireless-site-tags/native-uuid-change (0.00s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/wireless-site-tags/unrelated-history (0.00s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/wireless-site-tags/digest-history (0.00s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/wireless-site-tags/independent-copies (0.00s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/wireless-policy-tags/complete (0.00s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/wireless-policy-tags/reordered (0.00s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/wireless-policy-tags/missing-creator (0.00s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/wireless-policy-tags/missing-deletion (0.00s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/wireless-policy-tags/partial-producer (0.00s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/wireless-policy-tags/extra-member (0.00s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/wireless-policy-tags/duplicate-key (0.00s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/wireless-policy-tags/malformed-key (0.00s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/wireless-policy-tags/foreign-owner (0.00s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/wireless-policy-tags/foreign-name (0.00s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/wireless-policy-tags/foreign-parent (0.00s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/wireless-policy-tags/controller-regression (0.00s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/wireless-policy-tags/unchanged-input (0.00s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/wireless-policy-tags/backward-generation-new-source (0.00s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/wireless-policy-tags/before-deletion (0.00s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/wireless-policy-tags/key-change (0.00s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/wireless-policy-tags/legacy-deletion (0.00s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/wireless-policy-tags/native-uuid-change (0.00s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/wireless-policy-tags/unrelated-history (0.00s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/wireless-policy-tags/digest-history (0.00s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/wireless-policy-tags/independent-copies (0.00s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/retired/wireless-site-tags/valid (0.05s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/retired/wireless-site-tags/two-generations (0.07s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/retired/wireless-site-tags/reordered (0.01s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/retired/wireless-site-tags/missing-creator (0.01s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/retired/wireless-site-tags/missing-tombstone (0.01s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/retired/wireless-site-tags/orphan (0.01s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/retired/wireless-site-tags/changed-parent-digest (0.01s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/retired/wireless-site-tags/changed-history (0.01s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/retired/wireless-site-tags/owner (0.01s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/retired/wireless-site-tags/parent (0.01s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/retired/wireless-site-tags/key (0.01s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/retired/wireless-site-tags/generation (0.01s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/retired/wireless-site-tags/unchanged-input (0.01s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/retired/wireless-site-tags/uuid-reuse (0.01s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/retired/wireless-site-tags/nonce-reuse (0.01s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/retired/wireless-site-tags/unarchived-predecessor (0.01s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/retired/wireless-site-tags/truncated-chain (0.02s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/retired/wireless-site-tags/future-archive (0.01s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/retired/wireless-site-tags/oversized-archive (0.01s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/retired/wireless-site-tags/dropped-latest-lineage (0.01s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/retired/wireless-site-tags/changed-latest-lineage (0.01s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/retired/wireless-policy-tags/valid (0.05s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/retired/wireless-policy-tags/two-generations (0.08s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/retired/wireless-policy-tags/reordered (0.01s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/retired/wireless-policy-tags/missing-creator (0.01s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/retired/wireless-policy-tags/missing-tombstone (0.01s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/retired/wireless-policy-tags/orphan (0.01s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/retired/wireless-policy-tags/changed-parent-digest (0.01s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/retired/wireless-policy-tags/changed-history (0.01s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/retired/wireless-policy-tags/owner (0.01s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/retired/wireless-policy-tags/parent (0.01s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/retired/wireless-policy-tags/key (0.01s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/retired/wireless-policy-tags/generation (0.01s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/retired/wireless-policy-tags/unchanged-input (0.01s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/retired/wireless-policy-tags/uuid-reuse (0.01s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/retired/wireless-policy-tags/nonce-reuse (0.01s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/retired/wireless-policy-tags/unarchived-predecessor (0.01s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/retired/wireless-policy-tags/truncated-chain (0.02s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/retired/wireless-policy-tags/future-archive (0.01s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/retired/wireless-policy-tags/oversized-archive (0.01s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/retired/wireless-policy-tags/dropped-latest-lineage (0.01s)
+        --- PASS: TestEnvtestWirelessTagPrune/cohort-true/membership-prune-complete/retired/wireless-policy-tags/changed-latest-lineage (0.01s)
+    --- PASS: TestEnvtestWirelessTagPrune/cohort-true/membership-prune-retain (4.18s)
+    --- PASS: TestEnvtestWirelessTagPrune/cohort-true/membership-prune-unowned (4.14s)
+    --- PASS: TestEnvtestWirelessTagPrune/cohort-true/membership-prune-native-edit (5.44s)
+    --- PASS: TestEnvtestWirelessTagPrune/cohort-true/membership-prune-uuid (5.46s)
+    --- PASS: TestEnvtestWirelessTagPrune/cohort-true/membership-prune-key (4.78s)
+    --- PASS: TestEnvtestWirelessTagPrune/cohort-true/membership-prune-absent-before (5.33s)
+    --- PASS: TestEnvtestWirelessTagPrune/cohort-true/membership-prune-device (5.46s)
+    --- PASS: TestEnvtestWirelessTagPrune/cohort-true/membership-prune-pnp (5.34s)
+    --- PASS: TestEnvtestWirelessTagPrune/cohort-true/membership-prune-read-error (5.32s)
+    --- PASS: TestEnvtestWirelessTagPrune/cohort-true/membership-prune-preflight-device (6.10s)
+    --- PASS: TestEnvtestWirelessTagPrune/cohort-true/membership-prune-preflight-peer (8.55s)
+    --- PASS: TestEnvtestWirelessTagPrune/cohort-true/membership-prune-post-task-device (6.30s)
+    --- PASS: TestEnvtestWirelessTagPrune/cohort-true/membership-prune-post-task-reappear (6.35s)
+    --- PASS: TestEnvtestWirelessTagPrune/cohort-true/membership-prune-settled-reappear (7.31s)
+    --- PASS: TestEnvtestWirelessTagPrune/cohort-true/membership-prune-recreate (7.25s)
+    --- PASS: TestEnvtestWirelessTagPrune/cohort-true/membership-prune-at-capacity (35.95s)
+    --- PASS: TestEnvtestWirelessTagPrune/cohort-true/membership-prune-created-only (4.24s)
+    --- PASS: TestEnvtestWirelessTagPrune/cohort-true/membership-prune-capacity (13.45s)
+    --- PASS: TestEnvtestWirelessTagPrune/cohort-true/membership-prune-lost-ack (4.85s)
+    --- PASS: TestEnvtestWirelessTagPrune/cohort-true/membership-prune-child-failed (5.09s)
+    --- PASS: TestEnvtestWirelessTagPrune/cohort-true/membership-prune-tree-missing (5.05s)
+    --- PASS: TestEnvtestWirelessTagPrune/cohort-true/membership-prune-source (4.88s)
+    --- PASS: TestEnvtestWirelessTagPrune/cohort-true/membership-prune-owner (4.78s)
+    --- PASS: TestEnvtestWirelessTagPrune/cohort-true/membership-prune-tombstone-tamper (7.36s)
+    --- PASS: TestEnvtestWirelessTagPrune/cohort-true/membership-prune-settled-device (7.56s)
+    --- PASS: TestEnvtestWirelessTagPrune/cohort-true/membership-prune-unknown-peer (5.35s)
+    --- PASS: TestEnvtestWirelessTagPrune/cohort-true/membership-prune-empty-members (7.58s)
+    --- PASS: TestEnvtestWirelessTagPrune/cohort-true/membership-prune-combined (9.35s)
+    --- PASS: TestEnvtestWirelessTagPrune/cohort-true/membership-prune-empty-kind (9.31s)
+=== RUN   TestEnvtestWirelessTagReceipts
+=== RUN   TestEnvtestWirelessTagReceipts/cohort-false/complete
+=== RUN   TestEnvtestWirelessTagReceipts/cohort-false/import
+=== RUN   TestEnvtestWirelessTagReceipts/cohort-false/capacity
+=== RUN   TestEnvtestWirelessTagReceipts/cohort-false/legacy
+=== RUN   TestEnvtestWirelessTagReceipts/cohort-false/legacy-private
+=== RUN   TestEnvtestWirelessTagReceipts/cohort-false/drop-verified
+=== RUN   TestEnvtestWirelessTagReceipts/cohort-false/edit-verified
+=== RUN   TestEnvtestWirelessTagReceipts/cohort-false/drop-effect
+=== RUN   TestEnvtestWirelessTagReceipts/cohort-false/history-race
+=== RUN   TestEnvtestWirelessTagReceipts/cohort-false/producer-changed
+=== RUN   TestEnvtestWirelessTagReceipts/cohort-false/key-removed
+=== RUN   TestEnvtestWirelessTagReceipts/cohort-false/key-rotated
+=== RUN   TestEnvtestWirelessTagReceipts/cohort-false/native-edit
+=== RUN   TestEnvtestWirelessTagReceipts/cohort-false/uuid-replaced
+=== RUN   TestEnvtestWirelessTagReceipts/cohort-false/alias
+=== RUN   TestEnvtestWirelessTagReceipts/cohort-false/receipt-edited
+=== RUN   TestEnvtestWirelessTagReceipts/cohort-false/replace-at-capacity
+=== RUN   TestEnvtestWirelessTagReceipts/cohort-false/child-failed
+=== RUN   TestEnvtestWirelessTagReceipts/cohort-false/tree-missing
+=== RUN   TestEnvtestWirelessTagReceipts/cohort-false/lost-ack
+=== RUN   TestEnvtestWirelessTagReceipts/cohort-false/managed-drift
+=== RUN   TestEnvtestWirelessTagReceipts/cohort-false/source
+=== RUN   TestEnvtestWirelessTagReceipts/cohort-false/owner
+=== RUN   TestEnvtestWirelessTagReceipts/cohort-true/complete
+=== RUN   TestEnvtestWirelessTagReceipts/cohort-true/import
+=== RUN   TestEnvtestWirelessTagReceipts/cohort-true/capacity
+=== RUN   TestEnvtestWirelessTagReceipts/cohort-true/legacy
+=== RUN   TestEnvtestWirelessTagReceipts/cohort-true/legacy-private
+=== RUN   TestEnvtestWirelessTagReceipts/cohort-true/drop-verified
+=== RUN   TestEnvtestWirelessTagReceipts/cohort-true/edit-verified
+=== RUN   TestEnvtestWirelessTagReceipts/cohort-true/drop-effect
+=== RUN   TestEnvtestWirelessTagReceipts/cohort-true/history-race
+=== RUN   TestEnvtestWirelessTagReceipts/cohort-true/producer-changed
+=== RUN   TestEnvtestWirelessTagReceipts/cohort-true/key-removed
+=== RUN   TestEnvtestWirelessTagReceipts/cohort-true/key-rotated
+=== RUN   TestEnvtestWirelessTagReceipts/cohort-true/native-edit
+=== RUN   TestEnvtestWirelessTagReceipts/cohort-true/uuid-replaced
+=== RUN   TestEnvtestWirelessTagReceipts/cohort-true/alias
+=== RUN   TestEnvtestWirelessTagReceipts/cohort-true/receipt-edited
+=== RUN   TestEnvtestWirelessTagReceipts/cohort-true/replace-at-capacity
+=== RUN   TestEnvtestWirelessTagReceipts/cohort-true/child-failed
+=== RUN   TestEnvtestWirelessTagReceipts/cohort-true/tree-missing
+=== RUN   TestEnvtestWirelessTagReceipts/cohort-true/lost-ack
+=== RUN   TestEnvtestWirelessTagReceipts/cohort-true/managed-drift
+=== RUN   TestEnvtestWirelessTagReceipts/cohort-true/source
+=== RUN   TestEnvtestWirelessTagReceipts/cohort-true/owner
+--- PASS: TestEnvtestWirelessTagReceipts (129.39s)
+    --- PASS: TestEnvtestWirelessTagReceipts/cohort-false/complete (5.69s)
+    --- PASS: TestEnvtestWirelessTagReceipts/cohort-false/import (0.58s)
+    --- PASS: TestEnvtestWirelessTagReceipts/cohort-false/capacity (17.46s)
+    --- PASS: TestEnvtestWirelessTagReceipts/cohort-false/legacy (1.18s)
+    --- PASS: TestEnvtestWirelessTagReceipts/cohort-false/legacy-private (3.67s)
+    --- PASS: TestEnvtestWirelessTagReceipts/cohort-false/drop-verified (0.93s)
+    --- PASS: TestEnvtestWirelessTagReceipts/cohort-false/edit-verified (0.93s)
+    --- PASS: TestEnvtestWirelessTagReceipts/cohort-false/drop-effect (0.96s)
+    --- PASS: TestEnvtestWirelessTagReceipts/cohort-false/history-race (0.92s)
+    --- PASS: TestEnvtestWirelessTagReceipts/cohort-false/producer-changed (0.92s)
+    --- PASS: TestEnvtestWirelessTagReceipts/cohort-false/key-removed (1.46s)
+    --- PASS: TestEnvtestWirelessTagReceipts/cohort-false/key-rotated (1.46s)
+    --- PASS: TestEnvtestWirelessTagReceipts/cohort-false/native-edit (1.62s)
+    --- PASS: TestEnvtestWirelessTagReceipts/cohort-false/uuid-replaced (1.66s)
+    --- PASS: TestEnvtestWirelessTagReceipts/cohort-false/alias (1.63s)
+    --- PASS: TestEnvtestWirelessTagReceipts/cohort-false/receipt-edited (1.46s)
+    --- PASS: TestEnvtestWirelessTagReceipts/cohort-false/replace-at-capacity (14.06s)
+    --- PASS: TestEnvtestWirelessTagReceipts/cohort-false/child-failed (0.90s)
+    --- PASS: TestEnvtestWirelessTagReceipts/cohort-false/tree-missing (1.15s)
+    --- PASS: TestEnvtestWirelessTagReceipts/cohort-false/lost-ack (0.85s)
+    --- PASS: TestEnvtestWirelessTagReceipts/cohort-false/managed-drift (0.90s)
+    --- PASS: TestEnvtestWirelessTagReceipts/cohort-false/source (0.84s)
+    --- PASS: TestEnvtestWirelessTagReceipts/cohort-false/owner (0.80s)
+    --- PASS: TestEnvtestWirelessTagReceipts/cohort-true/complete (4.62s)
+    --- PASS: TestEnvtestWirelessTagReceipts/cohort-true/import (0.61s)
+    --- PASS: TestEnvtestWirelessTagReceipts/cohort-true/capacity (17.79s)
+    --- PASS: TestEnvtestWirelessTagReceipts/cohort-true/legacy (1.20s)
+    --- PASS: TestEnvtestWirelessTagReceipts/cohort-true/legacy-private (4.55s)
+    --- PASS: TestEnvtestWirelessTagReceipts/cohort-true/drop-verified (0.98s)
+    --- PASS: TestEnvtestWirelessTagReceipts/cohort-true/edit-verified (0.98s)
+    --- PASS: TestEnvtestWirelessTagReceipts/cohort-true/drop-effect (1.01s)
+    --- PASS: TestEnvtestWirelessTagReceipts/cohort-true/history-race (0.96s)
+    --- PASS: TestEnvtestWirelessTagReceipts/cohort-true/producer-changed (0.96s)
+    --- PASS: TestEnvtestWirelessTagReceipts/cohort-true/key-removed (1.54s)
+    --- PASS: TestEnvtestWirelessTagReceipts/cohort-true/key-rotated (1.54s)
+    --- PASS: TestEnvtestWirelessTagReceipts/cohort-true/native-edit (1.79s)
+    --- PASS: TestEnvtestWirelessTagReceipts/cohort-true/uuid-replaced (1.75s)
+    --- PASS: TestEnvtestWirelessTagReceipts/cohort-true/alias (1.73s)
+    --- PASS: TestEnvtestWirelessTagReceipts/cohort-true/receipt-edited (1.54s)
+    --- PASS: TestEnvtestWirelessTagReceipts/cohort-true/replace-at-capacity (15.01s)
+    --- PASS: TestEnvtestWirelessTagReceipts/cohort-true/child-failed (0.91s)
+    --- PASS: TestEnvtestWirelessTagReceipts/cohort-true/tree-missing (0.91s)
+    --- PASS: TestEnvtestWirelessTagReceipts/cohort-true/lost-ack (0.83s)
+    --- PASS: TestEnvtestWirelessTagReceipts/cohort-true/managed-drift (0.91s)
+    --- PASS: TestEnvtestWirelessTagReceipts/cohort-true/source (0.82s)
+    --- PASS: TestEnvtestWirelessTagReceipts/cohort-true/owner (0.78s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	707.580s

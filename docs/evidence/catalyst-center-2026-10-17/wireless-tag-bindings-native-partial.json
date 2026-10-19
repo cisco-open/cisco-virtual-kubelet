@@ -1,0 +1,21 @@
+{
+  "status": "pending",
+  "test": "TestLiveWirelessPolicyCohortPublicRecovery",
+  "completedWorkflows": [
+    {
+      "test": "TestLiveWirelessProfilePublicRecovery",
+      "seconds": 869.44,
+      "verifiedOriginalTasks": 14,
+      "membershipUpdates": 2,
+      "tagDeletes": 2,
+      "associationDeletes": 2,
+      "orderingVerified": true,
+      "producerGroupsVerified": true,
+      "affectedSiteIDsVerified": true,
+      "retainedPrivateRows": 4,
+      "retainedPrivateMemberProofs": 4,
+      "baselinesRestored": true
+    }
+  ],
+  "distinctOriginalTasksSoFar": 14
+}

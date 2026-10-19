@@ -1,0 +1,11 @@
+{
+  "authenticated": true,
+  "readOnly": true,
+  "capturedAt": "2026-10-18T20:38:34.183538+00:00",
+  "counts": {
+    "devices": 3,
+    "discoveryJobs": 1,
+    "swimImages": 2
+  },
+  "onlyMutationWasAuthentication": true
+}

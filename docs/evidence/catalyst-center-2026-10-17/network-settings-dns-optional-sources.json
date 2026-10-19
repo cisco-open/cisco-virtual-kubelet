@@ -1,0 +1,38 @@
+{
+  "branch": "pr/johalley/catc-support",
+  "moduleVersion": "0.5.0",
+  "moduleCommit": "a435555fe828f03cf3311d52fe1ab6572a247916",
+  "providerVersion": "0.6.1",
+  "providerCommit": "01058637dd5ed4fca93e1b2a96dd7032aec2d3a1",
+  "upstream": [
+    {
+      "file": "cc_network_settings.tf",
+      "url": "https://github.com/netascode/terraform-catalystcenter-nac-catalystcenter/blob/a435555fe828f03cf3311d52fe1ab6572a247916/cc_network_settings.tf",
+      "sha256": "36082cfd33d097f5ae37dd7248ceb3fe704f101f59b7a77fb9f746387ed8a159"
+    },
+    {
+      "file": "model_catalystcenter_dns_settings.go",
+      "url": "https://github.com/CiscoDevNet/terraform-provider-catalystcenter/blob/01058637dd5ed4fca93e1b2a96dd7032aec2d3a1/internal/provider/model_catalystcenter_dns_settings.go",
+      "sha256": "6941e8be4e984ac010bbe1d4f65e30354c9790548bea57273d3b4ded80b836cb"
+    },
+    {
+      "file": "resource_catalystcenter_dns_settings.go",
+      "url": "https://github.com/CiscoDevNet/terraform-provider-catalystcenter/blob/01058637dd5ed4fca93e1b2a96dd7032aec2d3a1/internal/provider/resource_catalystcenter_dns_settings.go",
+      "sha256": "6fc13bf57eb0ed36264e3892e29978d6cee9a5cb4da065d0403fcaa2accfcb8e"
+    }
+  ],
+  "sourceSha256": {
+    "internal/controlleradapter/catalystcenter/network_settings.go": "1f101ddb60c8262e365e620e89ecb451b56d610e2c32fc45d985beea41867435",
+    "internal/controlleradapter/catalystcenter/network_execution.go": "8c11c08015a3834b4c2748c86777bd24019e8e514128e034f9d845eb2df2471d",
+    "internal/controlleradapter/catalystcenter/network_submission.go": "e2fcc1925d8a982dd3b76d5abb043058511587a09c7d1b54652836ab698a8f58",
+    "internal/controlleradapter/catalystcenter/network_task_recovery.go": "564c4423114172dce9b6589c176845ddd43fc242f6843ea1b34f14a3bcdcf39b",
+    "internal/controlleradapter/catalystcenter/network_application.go": "53d52330b415670967583309cc7d7ab335b25e203646ec5f3af9438b7c45019c",
+    "internal/controlleradapter/catalystcenter/network_settings_test.go": "c0bbbf2c32bf956bc0da97d5530ccf038a71e444eb31521c3aa13c46a167ab72",
+    "internal/controlleradapter/catalystcenter/network_dns_optional_test.go": "a71e646c1f36fe3d053ef8392bdae795fbbde725b3dead2be1e071b3241bb6f6",
+    "internal/controlleradapter/catalystcenter/network_application_envtest_test.go": "e71f5fb894d9945b9352b01fa092d11708374d8a6e05705067fd3a838b0c9da0",
+    "internal/controlleradapter/catalystcenter/network_dns_optional_live_test.go": "8a79c01417b37ecfc07d0a2da1c9ab36c97677e2bffc73b4bc00e9bd7d90551a",
+    "internal/controlleradapter/catalystcenter/network_application_cleanup_live_test.go": "c9f2f73a935fbfe655e45cba2b2dbf303fb9025ad1985d179dbb358e3dadff03",
+    "internal/controlleradapter/catalystcenter/site_execution_live_test.go": "c74955638d5fa03a350d646b4ad6d86c66fc77f14b0ddabf8704e5d82e121ba4"
+  },
+  "scope": "Optional DNS model intent, preservation of omitted native resolvers from frozen observations, explicit empty reset via omission, inherited/current list handling and existing public task/source/owner/application recovery. Real API/native tests distinguish fixture actors and storage from native effects. No permanent per-field baseline/inheritance, group deletion, installed actors or complete model parity claim."
+}

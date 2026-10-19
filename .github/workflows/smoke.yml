@@ -42,16 +42,16 @@ on:
   push:
     branches: [main]
   pull_request:
-    branches: [main]
+    branches: [main, pr/moskrive/nd-support]
   workflow_dispatch: {}
 
 jobs:
   build-and-smoke:
     runs-on: ubuntu-24.04
-    # Native admission matrices and both architecture builds can leave too
-    # little time for the final device-call probes under the former 35m cap.
-    # Retain all checks and their individual deadlines; allow cold-cache runs.
-    timeout-minutes: 45
+    # The expanded alpha race suite now exceeds 35 minutes locally.
+    # Keep every test and native admission/build check; allow its explicit
+    # 60m package budget plus cold-cache setup and the remaining smoke matrix.
+    timeout-minutes: 105
     env:
       KIND_NODE_IMAGE: kindest/node:v1.35.0@sha256:4613778f3cfcd10e615029370f5786704559103cf27bef934597ba562b269661
     permissions:
@@ -118,7 +118,7 @@ jobs:
       # Run the recursive Go package pattern before npm ci creates nested
       # node_modules directories that can themselves contain Go packages.
       - name: Unit tests
-        run: go test -race -count=1 ./...
+        run: go test -race -count=1 -timeout=60m ./...
 
       - name: gNOI lab runner and acceptance evidence safety tests (offline)
         run: |

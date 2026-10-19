@@ -1,0 +1,70 @@
+{
+  "scope": "Private strict original switching Create task UUID and stable native/dependency correlation",
+  "branch": "pr/johalley/catc-support",
+  "modelVersion": "0.5.0",
+  "upstreamRevision": "a435555fe828f03cf3311d52fe1ab6572a247916",
+  "fullModelComplete": false,
+  "resourceComplete": false,
+  "publicReceiptPublicationImplemented": false,
+  "creatorOwnershipAdded": false,
+  "installedQualification": false,
+  "runtimeRetainCompletionChanged": false,
+  "sourceFingerprints": {
+    "internal/controlleradapter/catalystcenter": "292a893e4980d144ed449ce625ffb6813ceeb19280ed672b2e13995922a9a139",
+    "internal/controlleradapter/catalystcenter/nacmodel": "1827e09b755df6480bf7d80a78e51ed4ccd8ef02a4bf923ac460e7262dd96b82",
+    "tools/cvk-netascode-migrate": "49e5e6ea5ef31b4c3204a5fec1714a6a2e410f36046031692dc0905e4e046ed4"
+  },
+  "gates": {
+    "focusedRace": {
+      "exitCode": 0,
+      "log": "switching-profile-create-result-focusedRace.log",
+      "sha256": "59b69b9f28e003c7b1869acca16edde78cad159c635e2d0b481a6bf2f52499b0",
+      "passingTestEvents": 108
+    },
+    "native": {
+      "exitCode": 0,
+      "log": "switching-profile-create-result-native.log",
+      "sha256": "77612ebea2726e7834565a89c60626d9644e426940e4a88cbe78bcb1829b86f0",
+      "passingTestEvents": 1
+    },
+    "productionBuild": {
+      "exitCode": 0,
+      "log": "/private/tmp/cvk-switching-create-result-build.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "strictDocs": {
+      "exitCode": 0,
+      "log": "/private/tmp/cvk-switching-create-result-docs.log",
+      "sha256": "d5326a2eac498ded32d050fce21741c8731a5fb6ed2b14916e8bf4d76677ce97"
+    },
+    "diffCheck": {
+      "exitCode": 0,
+      "log": "/private/tmp/cvk-switching-create-result-diffcheck.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  },
+  "nativeCycle": {
+    "createdProfileID": "5e2c83d9-428a-4292-96af-34735477b2de",
+    "originalCreateTaskID": "01a15470-1e29-7d23-af13-6dd4ee0ec0aa",
+    "createdWithTemplateProjectDependency": true,
+    "strictCorrelationQualified": true,
+    "publicCreatorReceiptPublished": false,
+    "definitionTasksRecoveredUnknown": 3,
+    "generatedArtifactsCleaned": true,
+    "nativeKubernetesPersistence": "simulated; no new status schema or persistence path in this verifier",
+    "realDeviceTargeted": false,
+    "templateDeploymentPerformed": false
+  },
+  "verificationScope": "New production code is a private read-only helper with no public reconciler/receipt integration. Focused race fixtures, native correlation/cleanup, production compile and strict docs qualify this prerequisite; no fresh full-model or installed-actor regression claim is made.",
+  "remaining": [
+    "Versioned original Create operation identity that distinguishes new creator-custody attempts from legacy Retain operations",
+    "Whole-missing-cohort receipt capacity preflight before mutation",
+    "Atomic original owner/source/operation/task/result UUID creator receipt publication through existing action ledger",
+    "Mandatory matching creator receipt before releasing a new custody journal",
+    "Receipt identity enforcement across subsequent Updates, omission/reselection and native replacement/loss",
+    "Legacy/in-flight compatibility without retroactive ownership; no-op imports must remain unowned",
+    "Public/API-server/native qualification of those receipt and actor flows",
+    "Adoption/prune/deletion, installed actors and other outstanding 93-resource model gaps"
+  ],
+  "resourceChecklistDistinctRows": 93
+}

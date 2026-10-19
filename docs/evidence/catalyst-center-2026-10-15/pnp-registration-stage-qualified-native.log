@@ -1,0 +1,7 @@
+=== RUN   TestLivePnPRegistrationStageExecution
+    pnp_registration_stage_live_test.go:127: private registration recovery directory /private/tmp/cvk-pnp-registration-3206831953
+    pnp_registration_stage_live_test.go:175: owned native registration 6ad114c20bc0186771caae64 CVKD8A0DE90
+    pnp_registration_stage_live_test.go:191: registration, serialized journal stages, owned no-op and exact UUID cleanup verified; no claim/reset/device action submitted
+--- PASS: TestLivePnPRegistrationStageExecution (4.99s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	7.099s

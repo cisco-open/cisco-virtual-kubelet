@@ -1,0 +1,218 @@
+=== RUN   TestWirelessTagMembershipRemoval
+=== RUN   TestWirelessTagMembershipRemoval/cohort-false/membership-complete
+=== RUN   TestWirelessTagMembershipRemoval/cohort-false/membership-retain
+=== RUN   TestWirelessTagMembershipRemoval/cohort-false/membership-missing-proof
+=== RUN   TestWirelessTagMembershipRemoval/cohort-false/membership-device
+=== RUN   TestWirelessTagMembershipRemoval/cohort-false/membership-child-device
+=== RUN   TestWirelessTagMembershipRemoval/cohort-false/membership-device-error
+=== RUN   TestWirelessTagMembershipRemoval/cohort-false/membership-pnp
+=== RUN   TestWirelessTagMembershipRemoval/cohort-false/membership-pnp-error
+=== RUN   TestWirelessTagMembershipRemoval/cohort-false/membership-preflight-consumer
+=== RUN   TestWirelessTagMembershipRemoval/cohort-false/membership-post-task-consumer
+=== RUN   TestWirelessTagMembershipRemoval/cohort-false/membership-lost-ack
+=== RUN   TestWirelessTagMembershipRemoval/cohort-false/membership-child-failed
+=== RUN   TestWirelessTagMembershipRemoval/cohort-false/membership-tree-missing
+=== RUN   TestWirelessTagMembershipRemoval/cohort-false/membership-source
+=== RUN   TestWirelessTagMembershipRemoval/cohort-false/membership-owner
+=== RUN   TestWirelessTagMembershipRemoval/cohort-false/membership-zone-complete
+=== RUN   TestWirelessTagMembershipRemoval/cohort-false/membership-zone-device
+=== RUN   TestWirelessTagMembershipRemoval/cohort-true/membership-complete
+=== RUN   TestWirelessTagMembershipRemoval/cohort-true/membership-retain
+=== RUN   TestWirelessTagMembershipRemoval/cohort-true/membership-missing-proof
+=== RUN   TestWirelessTagMembershipRemoval/cohort-true/membership-device
+=== RUN   TestWirelessTagMembershipRemoval/cohort-true/membership-child-device
+=== RUN   TestWirelessTagMembershipRemoval/cohort-true/membership-device-error
+=== RUN   TestWirelessTagMembershipRemoval/cohort-true/membership-pnp
+=== RUN   TestWirelessTagMembershipRemoval/cohort-true/membership-pnp-error
+=== RUN   TestWirelessTagMembershipRemoval/cohort-true/membership-preflight-consumer
+=== RUN   TestWirelessTagMembershipRemoval/cohort-true/membership-post-task-consumer
+=== RUN   TestWirelessTagMembershipRemoval/cohort-true/membership-lost-ack
+=== RUN   TestWirelessTagMembershipRemoval/cohort-true/membership-child-failed
+=== RUN   TestWirelessTagMembershipRemoval/cohort-true/membership-tree-missing
+=== RUN   TestWirelessTagMembershipRemoval/cohort-true/membership-source
+=== RUN   TestWirelessTagMembershipRemoval/cohort-true/membership-owner
+=== RUN   TestWirelessTagMembershipRemoval/cohort-true/membership-zone-complete
+=== RUN   TestWirelessTagMembershipRemoval/cohort-true/membership-zone-device
+--- PASS: TestWirelessTagMembershipRemoval (65.22s)
+    --- PASS: TestWirelessTagMembershipRemoval/cohort-false/membership-complete (2.68s)
+    --- PASS: TestWirelessTagMembershipRemoval/cohort-false/membership-retain (1.52s)
+    --- PASS: TestWirelessTagMembershipRemoval/cohort-false/membership-missing-proof (1.40s)
+    --- PASS: TestWirelessTagMembershipRemoval/cohort-false/membership-device (1.62s)
+    --- PASS: TestWirelessTagMembershipRemoval/cohort-false/membership-child-device (1.62s)
+    --- PASS: TestWirelessTagMembershipRemoval/cohort-false/membership-device-error (1.61s)
+    --- PASS: TestWirelessTagMembershipRemoval/cohort-false/membership-pnp (1.63s)
+    --- PASS: TestWirelessTagMembershipRemoval/cohort-false/membership-pnp-error (1.62s)
+    --- PASS: TestWirelessTagMembershipRemoval/cohort-false/membership-preflight-consumer (1.74s)
+    --- PASS: TestWirelessTagMembershipRemoval/cohort-false/membership-post-task-consumer (1.70s)
+    --- PASS: TestWirelessTagMembershipRemoval/cohort-false/membership-lost-ack (1.49s)
+    --- PASS: TestWirelessTagMembershipRemoval/cohort-false/membership-child-failed (1.57s)
+    --- PASS: TestWirelessTagMembershipRemoval/cohort-false/membership-tree-missing (1.55s)
+    --- PASS: TestWirelessTagMembershipRemoval/cohort-false/membership-source (1.50s)
+    --- PASS: TestWirelessTagMembershipRemoval/cohort-false/membership-owner (1.46s)
+    --- PASS: TestWirelessTagMembershipRemoval/cohort-false/membership-zone-complete (2.11s)
+    --- PASS: TestWirelessTagMembershipRemoval/cohort-false/membership-zone-device (1.76s)
+    --- PASS: TestWirelessTagMembershipRemoval/cohort-true/membership-complete (2.99s)
+    --- PASS: TestWirelessTagMembershipRemoval/cohort-true/membership-retain (1.96s)
+    --- PASS: TestWirelessTagMembershipRemoval/cohort-true/membership-missing-proof (1.80s)
+    --- PASS: TestWirelessTagMembershipRemoval/cohort-true/membership-device (2.03s)
+    --- PASS: TestWirelessTagMembershipRemoval/cohort-true/membership-child-device (2.03s)
+    --- PASS: TestWirelessTagMembershipRemoval/cohort-true/membership-device-error (2.04s)
+    --- PASS: TestWirelessTagMembershipRemoval/cohort-true/membership-pnp (2.02s)
+    --- PASS: TestWirelessTagMembershipRemoval/cohort-true/membership-pnp-error (2.04s)
+    --- PASS: TestWirelessTagMembershipRemoval/cohort-true/membership-preflight-consumer (2.23s)
+    --- PASS: TestWirelessTagMembershipRemoval/cohort-true/membership-post-task-consumer (2.17s)
+    --- PASS: TestWirelessTagMembershipRemoval/cohort-true/membership-lost-ack (1.94s)
+    --- PASS: TestWirelessTagMembershipRemoval/cohort-true/membership-child-failed (2.01s)
+    --- PASS: TestWirelessTagMembershipRemoval/cohort-true/membership-tree-missing (1.99s)
+    --- PASS: TestWirelessTagMembershipRemoval/cohort-true/membership-source (1.92s)
+    --- PASS: TestWirelessTagMembershipRemoval/cohort-true/membership-owner (1.89s)
+    --- PASS: TestWirelessTagMembershipRemoval/cohort-true/membership-zone-complete (2.99s)
+    --- PASS: TestWirelessTagMembershipRemoval/cohort-true/membership-zone-device (2.56s)
+=== RUN   TestWirelessTagPrune
+=== RUN   TestWirelessTagPrune/cohort-false/membership-prune-complete
+=== RUN   TestWirelessTagPrune/cohort-false/membership-prune-retain
+=== RUN   TestWirelessTagPrune/cohort-false/membership-prune-unowned
+=== RUN   TestWirelessTagPrune/cohort-false/membership-prune-native-edit
+=== RUN   TestWirelessTagPrune/cohort-false/membership-prune-uuid
+=== RUN   TestWirelessTagPrune/cohort-false/membership-prune-key
+=== RUN   TestWirelessTagPrune/cohort-false/membership-prune-absent-before
+=== RUN   TestWirelessTagPrune/cohort-false/membership-prune-device
+=== RUN   TestWirelessTagPrune/cohort-false/membership-prune-pnp
+=== RUN   TestWirelessTagPrune/cohort-false/membership-prune-read-error
+=== RUN   TestWirelessTagPrune/cohort-false/membership-prune-preflight-device
+=== RUN   TestWirelessTagPrune/cohort-false/membership-prune-preflight-peer
+=== RUN   TestWirelessTagPrune/cohort-false/membership-prune-post-task-device
+=== RUN   TestWirelessTagPrune/cohort-false/membership-prune-post-task-reappear
+=== RUN   TestWirelessTagPrune/cohort-false/membership-prune-settled-reappear
+=== RUN   TestWirelessTagPrune/cohort-false/membership-prune-recreate
+=== RUN   TestWirelessTagPrune/cohort-false/membership-prune-at-capacity
+=== RUN   TestWirelessTagPrune/cohort-false/membership-prune-created-only
+=== RUN   TestWirelessTagPrune/cohort-false/membership-prune-capacity
+=== RUN   TestWirelessTagPrune/cohort-false/membership-prune-lost-ack
+=== RUN   TestWirelessTagPrune/cohort-false/membership-prune-child-failed
+=== RUN   TestWirelessTagPrune/cohort-false/membership-prune-tree-missing
+=== RUN   TestWirelessTagPrune/cohort-false/membership-prune-source
+=== RUN   TestWirelessTagPrune/cohort-false/membership-prune-owner
+=== RUN   TestWirelessTagPrune/cohort-false/membership-prune-tombstone-tamper
+=== RUN   TestWirelessTagPrune/cohort-false/membership-prune-settled-device
+=== RUN   TestWirelessTagPrune/cohort-false/membership-prune-unknown-peer
+=== RUN   TestWirelessTagPrune/cohort-false/membership-prune-empty-members
+=== RUN   TestWirelessTagPrune/cohort-false/membership-prune-combined
+=== RUN   TestWirelessTagPrune/cohort-false/membership-prune-empty-kind
+=== RUN   TestWirelessTagPrune/cohort-true/membership-prune-complete
+=== RUN   TestWirelessTagPrune/cohort-true/membership-prune-retain
+=== RUN   TestWirelessTagPrune/cohort-true/membership-prune-unowned
+=== RUN   TestWirelessTagPrune/cohort-true/membership-prune-native-edit
+=== RUN   TestWirelessTagPrune/cohort-true/membership-prune-uuid
+=== RUN   TestWirelessTagPrune/cohort-true/membership-prune-key
+=== RUN   TestWirelessTagPrune/cohort-true/membership-prune-absent-before
+=== RUN   TestWirelessTagPrune/cohort-true/membership-prune-device
+=== RUN   TestWirelessTagPrune/cohort-true/membership-prune-pnp
+=== RUN   TestWirelessTagPrune/cohort-true/membership-prune-read-error
+=== RUN   TestWirelessTagPrune/cohort-true/membership-prune-preflight-device
+=== RUN   TestWirelessTagPrune/cohort-true/membership-prune-preflight-peer
+=== RUN   TestWirelessTagPrune/cohort-true/membership-prune-post-task-device
+=== RUN   TestWirelessTagPrune/cohort-true/membership-prune-post-task-reappear
+=== RUN   TestWirelessTagPrune/cohort-true/membership-prune-settled-reappear
+=== RUN   TestWirelessTagPrune/cohort-true/membership-prune-recreate
+=== RUN   TestWirelessTagPrune/cohort-true/membership-prune-at-capacity
+=== RUN   TestWirelessTagPrune/cohort-true/membership-prune-created-only
+=== RUN   TestWirelessTagPrune/cohort-true/membership-prune-capacity
+=== RUN   TestWirelessTagPrune/cohort-true/membership-prune-lost-ack
+=== RUN   TestWirelessTagPrune/cohort-true/membership-prune-child-failed
+=== RUN   TestWirelessTagPrune/cohort-true/membership-prune-tree-missing
+=== RUN   TestWirelessTagPrune/cohort-true/membership-prune-source
+=== RUN   TestWirelessTagPrune/cohort-true/membership-prune-owner
+=== RUN   TestWirelessTagPrune/cohort-true/membership-prune-tombstone-tamper
+=== RUN   TestWirelessTagPrune/cohort-true/membership-prune-settled-device
+=== RUN   TestWirelessTagPrune/cohort-true/membership-prune-unknown-peer
+=== RUN   TestWirelessTagPrune/cohort-true/membership-prune-empty-members
+=== RUN   TestWirelessTagPrune/cohort-true/membership-prune-combined
+=== RUN   TestWirelessTagPrune/cohort-true/membership-prune-empty-kind
+--- PASS: TestWirelessTagPrune (152.90s)
+    --- PASS: TestWirelessTagPrune/cohort-false/membership-prune-complete (2.15s)
+    --- PASS: TestWirelessTagPrune/cohort-false/membership-prune-retain (1.52s)
+    --- PASS: TestWirelessTagPrune/cohort-false/membership-prune-unowned (1.43s)
+    --- PASS: TestWirelessTagPrune/cohort-false/membership-prune-native-edit (1.74s)
+    --- PASS: TestWirelessTagPrune/cohort-false/membership-prune-uuid (1.76s)
+    --- PASS: TestWirelessTagPrune/cohort-false/membership-prune-key (1.49s)
+    --- PASS: TestWirelessTagPrune/cohort-false/membership-prune-absent-before (1.69s)
+    --- PASS: TestWirelessTagPrune/cohort-false/membership-prune-device (1.61s)
+    --- PASS: TestWirelessTagPrune/cohort-false/membership-prune-pnp (1.74s)
+    --- PASS: TestWirelessTagPrune/cohort-false/membership-prune-read-error (1.63s)
+    --- PASS: TestWirelessTagPrune/cohort-false/membership-prune-preflight-device (1.92s)
+    --- PASS: TestWirelessTagPrune/cohort-false/membership-prune-preflight-peer (2.12s)
+    --- PASS: TestWirelessTagPrune/cohort-false/membership-prune-post-task-device (1.99s)
+    --- PASS: TestWirelessTagPrune/cohort-false/membership-prune-post-task-reappear (1.97s)
+    --- PASS: TestWirelessTagPrune/cohort-false/membership-prune-settled-reappear (2.03s)
+    --- PASS: TestWirelessTagPrune/cohort-false/membership-prune-recreate (2.14s)
+    --- PASS: TestWirelessTagPrune/cohort-false/membership-prune-at-capacity (10.26s)
+    --- PASS: TestWirelessTagPrune/cohort-false/membership-prune-created-only (1.21s)
+    --- PASS: TestWirelessTagPrune/cohort-false/membership-prune-capacity (4.78s)
+    --- PASS: TestWirelessTagPrune/cohort-false/membership-prune-lost-ack (1.51s)
+    --- PASS: TestWirelessTagPrune/cohort-false/membership-prune-child-failed (1.63s)
+    --- PASS: TestWirelessTagPrune/cohort-false/membership-prune-tree-missing (1.59s)
+    --- PASS: TestWirelessTagPrune/cohort-false/membership-prune-source (1.51s)
+    --- PASS: TestWirelessTagPrune/cohort-false/membership-prune-owner (1.49s)
+    --- PASS: TestWirelessTagPrune/cohort-false/membership-prune-tombstone-tamper (2.03s)
+    --- PASS: TestWirelessTagPrune/cohort-false/membership-prune-settled-device (2.13s)
+    --- PASS: TestWirelessTagPrune/cohort-false/membership-prune-unknown-peer (1.65s)
+    --- PASS: TestWirelessTagPrune/cohort-false/membership-prune-empty-members (2.11s)
+    --- PASS: TestWirelessTagPrune/cohort-false/membership-prune-combined (2.67s)
+    --- PASS: TestWirelessTagPrune/cohort-false/membership-prune-empty-kind (2.68s)
+    --- PASS: TestWirelessTagPrune/cohort-true/membership-prune-complete (3.05s)
+    --- PASS: TestWirelessTagPrune/cohort-true/membership-prune-retain (1.68s)
+    --- PASS: TestWirelessTagPrune/cohort-true/membership-prune-unowned (1.68s)
+    --- PASS: TestWirelessTagPrune/cohort-true/membership-prune-native-edit (2.21s)
+    --- PASS: TestWirelessTagPrune/cohort-true/membership-prune-uuid (2.18s)
+    --- PASS: TestWirelessTagPrune/cohort-true/membership-prune-key (1.87s)
+    --- PASS: TestWirelessTagPrune/cohort-true/membership-prune-absent-before (2.02s)
+    --- PASS: TestWirelessTagPrune/cohort-true/membership-prune-device (2.05s)
+    --- PASS: TestWirelessTagPrune/cohort-true/membership-prune-pnp (2.07s)
+    --- PASS: TestWirelessTagPrune/cohort-true/membership-prune-read-error (2.07s)
+    --- PASS: TestWirelessTagPrune/cohort-true/membership-prune-preflight-device (2.29s)
+    --- PASS: TestWirelessTagPrune/cohort-true/membership-prune-preflight-peer (3.00s)
+    --- PASS: TestWirelessTagPrune/cohort-true/membership-prune-post-task-device (2.37s)
+    --- PASS: TestWirelessTagPrune/cohort-true/membership-prune-post-task-reappear (2.47s)
+    --- PASS: TestWirelessTagPrune/cohort-true/membership-prune-settled-reappear (2.92s)
+    --- PASS: TestWirelessTagPrune/cohort-true/membership-prune-recreate (2.89s)
+    --- PASS: TestWirelessTagPrune/cohort-true/membership-prune-at-capacity (14.01s)
+    --- PASS: TestWirelessTagPrune/cohort-true/membership-prune-created-only (1.73s)
+    --- PASS: TestWirelessTagPrune/cohort-true/membership-prune-capacity (4.93s)
+    --- PASS: TestWirelessTagPrune/cohort-true/membership-prune-lost-ack (1.96s)
+    --- PASS: TestWirelessTagPrune/cohort-true/membership-prune-child-failed (2.06s)
+    --- PASS: TestWirelessTagPrune/cohort-true/membership-prune-tree-missing (2.26s)
+    --- PASS: TestWirelessTagPrune/cohort-true/membership-prune-source (2.19s)
+    --- PASS: TestWirelessTagPrune/cohort-true/membership-prune-owner (1.99s)
+    --- PASS: TestWirelessTagPrune/cohort-true/membership-prune-tombstone-tamper (2.95s)
+    --- PASS: TestWirelessTagPrune/cohort-true/membership-prune-settled-device (3.07s)
+    --- PASS: TestWirelessTagPrune/cohort-true/membership-prune-unknown-peer (2.09s)
+    --- PASS: TestWirelessTagPrune/cohort-true/membership-prune-empty-members (3.08s)
+    --- PASS: TestWirelessTagPrune/cohort-true/membership-prune-combined (3.83s)
+    --- PASS: TestWirelessTagPrune/cohort-true/membership-prune-empty-kind (3.76s)
+=== RUN   TestWirelessTagReceipts
+=== RUN   TestWirelessTagReceipts/cohort-false/complete
+=== RUN   TestWirelessTagReceipts/cohort-false/import
+=== RUN   TestWirelessTagReceipts/cohort-false/capacity
+=== RUN   TestWirelessTagReceipts/cohort-false/legacy
+=== RUN   TestWirelessTagReceipts/cohort-false/legacy-private
+=== RUN   TestWirelessTagReceipts/cohort-false/drop-verified
+=== RUN   TestWirelessTagReceipts/cohort-false/edit-verified
+=== RUN   TestWirelessTagReceipts/cohort-false/drop-effect
+=== RUN   TestWirelessTagReceipts/cohort-false/history-race
+=== RUN   TestWirelessTagReceipts/cohort-false/producer-changed
+    wireless_profile_configuration_test.go:314: private tag qualification never settled [{AdapterAvailable True 1 2026-10-17 13:59:11 +0200 CEST AdapterAvailable Catalyst Center configuration adapter is available} {IntentValid True 1 2026-10-17 13:59:11 +0200 CEST TaskObservationFailed Task could not be correlated or completed successfully; operation remains fenced} {Ready False 1 2026-10-17 13:59:11 +0200 CEST TaskObservationFailed Task could not be correlated or completed successfully; operation remains fenced}]
+--- FAIL: TestWirelessTagReceipts (13.46s)
+    --- PASS: TestWirelessTagReceipts/cohort-false/complete (1.40s)
+    --- PASS: TestWirelessTagReceipts/cohort-false/import (0.21s)
+    --- PASS: TestWirelessTagReceipts/cohort-false/capacity (6.87s)
+    --- PASS: TestWirelessTagReceipts/cohort-false/legacy (0.46s)
+    --- PASS: TestWirelessTagReceipts/cohort-false/legacy-private (1.42s)
+    --- PASS: TestWirelessTagReceipts/cohort-false/drop-verified (0.34s)
+    --- PASS: TestWirelessTagReceipts/cohort-false/edit-verified (0.34s)
+    --- PASS: TestWirelessTagReceipts/cohort-false/drop-effect (0.35s)
+    --- PASS: TestWirelessTagReceipts/cohort-false/history-race (0.32s)
+    --- FAIL: TestWirelessTagReceipts/cohort-false/producer-changed (1.76s)
+FAIL
+FAIL	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	232.614s
+FAIL

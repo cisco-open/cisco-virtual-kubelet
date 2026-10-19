@@ -1,0 +1,22 @@
+{
+  "branch": "pr/johalley/catc-support",
+  "moduleVersion": "0.5.0",
+  "moduleCommit": "a435555fe828f03cf3311d52fe1ab6572a247916",
+  "providerVersion": "0.6.1",
+  "providerCommit": "01058637dd5ed4fca93e1b2a96dd7032aec2d3a1",
+  "scope": "Singular site pre-dispatch fencing and certified no-dispatch retirement; live creator-result check is qualification only, not production ownership",
+  "sourceSha256": {
+    "internal/controlleradapter/catalystcenter/site_dispatch.go": "f478bcc60c3789c2931455a2460490490a9af3d15b7a254e953657bfbba227cc",
+    "internal/controlleradapter/catalystcenter/site_dispatch_binding.go": "89dfced10c0b8fce3c4fe73d617d9a651ac9a837e8604b7408a32d3be9dd6825",
+    "internal/controlleradapter/catalystcenter/config_executor.go": "83de5805fa4ec18ba9563dcf780c5c1d1227ba7afc509bf2de0b169cfb981cdd",
+    "internal/controlleradapter/catalystcenter/floor_image_apply.go": "7cc0eb2f721d656011ec028b87042ada5fd89ae5ea18d85022441187776d9075",
+    "internal/controlleradapter/catalystcenter/config_no_dispatch.go": "b56086a9c30d7f21d08ad380db270ab4511ffdc8ec871c4da7bcf4c1c4ee62b9",
+    "internal/controlleradapter/catalystcenter/site_dispatch_test.go": "cb25421a3bf5cbba66ca79a5fc0b50dd0e4d4aa7679885609dd9792f4edf156b",
+    "internal/controlleradapter/catalystcenter/site_dispatch_public_test.go": "2f1089b637ff5906d7631d3863999fd7ace2297a662082f544d8f197c60c8f50",
+    "internal/controlleradapter/catalystcenter/site_dispatch_envtest_test.go": "f495529d1bfd9e3f9537c5ff8bc89aa00086645e985cab28a511a597ffd0ee17",
+    "internal/controlleradapter/catalystcenter/site_no_dispatch_test.go": "b012f5c45517232cbc870514ea47232dc30188e353a533637dba7fee7de10fd0",
+    "internal/controlleradapter/catalystcenter/site_execution_live_test.go": "d801cfa24dac780fb5ee2c2d8fe68a64b40ab16d90a19a2abf4e8bec4b4833c6",
+    "internal/controlleradapter/catalystcenter/site_bulk_manifest_live_test.go": "ad812fe56a82fbcc7ef023d301792370fa5ce0713d4c5a767b1c832bf7ad0b7e",
+    "internal/controlleradapter/catalystcenter/template_no_dispatch_live_test.go": "18d717fca13b92f3656b5e15dd6c562a48c560148f3529c870eacd3006886ecd"
+  }
+}

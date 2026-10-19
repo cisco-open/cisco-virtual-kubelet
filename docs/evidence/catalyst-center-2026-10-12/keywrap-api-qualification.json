@@ -1,0 +1,18 @@
+{
+  "qualification": "isolated AAA executor API test; not a worker rollout",
+  "result": "not-qualified",
+  "fixtureAddress": "192.0.2.43",
+  "fixtureID": "ed7e0aaa-2e26-4d62-a344-607ccbf3a8eb",
+  "registrationTask": "01a13156-7e18-76b0-adfb-03cc90ff19f8",
+  "sharedSecretRotationTask": "01a13156-8417-70e3-be72-da2b9cfa81ce",
+  "keywrapAdditionTask": "01a13156-88a7-781e-87bc-5b09b0596732",
+  "keywrapTaskCompleted": true,
+  "keywrapTaskIsError": false,
+  "requestedEncryptionScheme": "KEYWRAP",
+  "observedEncryptionScheme": "",
+  "verification": "refused convergence; independent key rotation not reached",
+  "cleanupTask": "01a13157-ad31-70fd-97ff-2dd2b1e512e8",
+  "cleanup": "completed; empty policy-server baseline restored",
+  "externalAuthenticationEnabled": false,
+  "workerImageChanged": false
+}

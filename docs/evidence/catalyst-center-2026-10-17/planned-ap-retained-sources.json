@@ -1,0 +1,15 @@
+{
+  "branch": "pr/johalley/catc-support",
+  "moduleVersion": "0.5.0",
+  "moduleCommit": "a435555fe828f03cf3311d52fe1ab6572a247916",
+  "scope": "Retained keyed AP observations and pre-dispatch private-state boundary, including source removal. Geometry handoff remains fenced; no installed actor or destructive lifecycle support claimed.",
+  "sourceSha256": {
+    "internal/controlleradapter/catalystcenter/planned_ap_retained.go": "ab05c4934341e3c08cd71bd7f666e61ab4aa33f0b5ee5734f66714dae71fe9c0",
+    "internal/controlleradapter/catalystcenter/planned_ap_retained_test.go": "9dfbfdc05fab8fc840e031976c1bf32a285d1ea132b538609fe12319189fc200",
+    "internal/controlleradapter/catalystcenter/site_planned_ap_execution.go": "318d5cd460cbac81efc855b7cb649b2ada4eaaa8ab860c292dd7b496d96e40ca",
+    "internal/controlleradapter/catalystcenter/floor_image_apply.go": "b1f804e566007483851c05a43bac820fe893ca1a4771c38854a2a72569cd2af4",
+    "internal/controlleradapter/catalystcenter/planned_ap_manifest_test.go": "2c74c86a2f02d42871dfa6d9a97f7b230345f8d481cf2cdfc166506bf10e0c9c",
+    "internal/controlleradapter/catalystcenter/site_design_envtest_test.go": "f21cbc7ba35f3945b4c0f2b25188c2fa11d8b3842c91c106a5e42ebdac11b9ad",
+    "internal/controlleradapter/catalystcenter/site_design_live_test.go": "06a8e97346461900bd5ab5f4afb35c3d28b5a90f7706d91d91a326855409d2b4"
+  }
+}

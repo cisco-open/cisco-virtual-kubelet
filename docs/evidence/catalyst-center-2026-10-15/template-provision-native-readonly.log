@@ -1,0 +1,36 @@
+{
+  "qualification": "read-only native prerequisite observation; no template or provisioning mutation",
+  "devices": [
+    {
+      "id": "62248887-38a3-4b64-b061-44ee12f8f523",
+      "hostname": "C9K-1",
+      "managementIpAddress": "198.51.100.100",
+      "serialNumber": "FOC2520L6E8",
+      "reachabilityStatus": "Reachable",
+      "softwareVersion": "17.18.3",
+      "family": "Switches and Hubs",
+      "provisioning_records": []
+    },
+    {
+      "id": "70601ab8-5104-46bc-a061-1ffbaf108c16",
+      "hostname": "C9K-2",
+      "managementIpAddress": "198.51.100.101",
+      "serialNumber": "FOC2520L6H1",
+      "reachabilityStatus": "Reachable",
+      "softwareVersion": "26.02.1",
+      "family": "Switches and Hubs",
+      "provisioning_records": []
+    },
+    {
+      "id": "b6817e2f-e7d8-41be-92e8-2201d99f855f",
+      "hostname": "C9K-4.dmz.cisco.com",
+      "managementIpAddress": "198.51.100.103",
+      "serialNumber": "FOC2416U0MV",
+      "reachabilityStatus": "Reachable",
+      "softwareVersion": "17.18.3",
+      "family": "Switches and Hubs",
+      "provisioning_records": []
+    }
+  ],
+  "missing_targets": []
+}

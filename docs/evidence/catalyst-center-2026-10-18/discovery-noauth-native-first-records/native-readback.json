@@ -1,0 +1,11 @@
+{
+  "condition": "Complete",
+  "createdTaskID": "01a150f5-50da-7498-b161-b558628b16b2",
+  "name": "CVK-NoAuth-Q-1792359609697758000",
+  "nativeID": "243",
+  "present": true,
+  "snmpModePresent": true,
+  "snmpUserNamePresent": true,
+  "snmpVersionPresent": false,
+  "status": "Inactive"
+}

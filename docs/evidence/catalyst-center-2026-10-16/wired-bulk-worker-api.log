@@ -1,0 +1,5 @@
+=== RUN   TestEnvtestConfigurationDeviceEvidence
+    config_group_device_evidence_envtest_test.go:99: private API retained one pending request, assigned real UID/timestamps/generation, separated worker status, and refused redaction/spec replacement; actor writes simulated
+--- PASS: TestEnvtestConfigurationDeviceEvidence (5.67s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	7.819s

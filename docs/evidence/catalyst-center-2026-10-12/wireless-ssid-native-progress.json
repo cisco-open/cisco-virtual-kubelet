@@ -1,0 +1,25 @@
+{
+  "scope": "Native isolated disabled OPEN SSID definition; no wireless provisioning",
+  "siteId": "8995b7da-5b82-40fd-a706-82150affe92d",
+  "fixture": "CVK_12224801",
+  "fixtureId": "mdeYq1zl-xZeY-mJi0-odaX-qZbwmuSYxZmXndi1mJyYnZq4odKW",
+  "createTask": "01a1324e-5b7e-7c83-a9ed-ea39f9b33159",
+  "createReadback": "passed",
+  "createNoOp": "passed",
+  "update": "passed: clientExclusionTimeout 180 to 240",
+  "compatibilityFix": "Empty ACL placeholders and disabled load-balancing placeholders accepted; aliases validated. Active unsupported fields still fence mutation.",
+  "resume": "same fixture identity resumed after two preflight refusals; no refused request was submitted",
+  "cleanup": "passed: empty baseline restored",
+  "workerDeployment": "not performed",
+  "credentialRotation": "fixture-tested only",
+  "updateTask": "01a1325a-48c6-7ffb-876e-ac52014196f9",
+  "updateNoOp": "passed",
+  "deleteTask": "01a1325a-539b-7e69-8e57-1d567e37a8de",
+  "credentialQualification": {
+    "status": "pending",
+    "attempts": 3,
+    "outcome": "latest initial authentication returned HTTP 401 Unauthorized before any mutation",
+    "diagnostic": "user asked to verify account/unlock or refresh cvk-live/catc-credentials; authentication retries stopped",
+    "fixtureCreated": false
+  }
+}

@@ -1,0 +1,71 @@
+{
+  "branch": "pr/johalley/catc-support",
+  "installedReadOnlyWorker": "passed",
+  "cluster": "cvk-catc-qualification-20261017",
+  "existingClustersChanged": false,
+  "startupBug": "Default-off manager could not list retained configuration reservations; generated base role omitted mandatory startup read.",
+  "fix": {
+    "added": [
+      [
+        "ops.cisco.vk",
+        "controllerconfigurationreservations",
+        "get",
+        []
+      ],
+      [
+        "ops.cisco.vk",
+        "controllerconfigurationreservations",
+        "list",
+        []
+      ]
+    ],
+    "removed": []
+  },
+  "regressionGoSeconds": 4.386,
+  "regressionTopLevelTests": 19,
+  "restart": {
+    "beforePodUID": "2374cbda-4e7e-414a-9346-eb9b11be5da4",
+    "afterPodUID": "6d1f0a06-7aaa-4faa-ad50-d9d759ded417",
+    "beforeIdentityEvidence": "retained Kubernetes pod events for independently observed original pod name",
+    "podReady": true,
+    "sameConfigUID": true,
+    "unchangedIntentAndDrift": true,
+    "beforeCheck": "2026-10-17T15:19:06Z",
+    "afterCheck": "2026-10-17T15:19:56Z",
+    "imageID": "sha256:1b8a21b2eaafdd7a0b9a5a1bf0ed190801446ae969402f63a5acc2f8ecd7bf0e"
+  },
+  "sourceWatch": {
+    "sameConfigUID": true,
+    "phase": "Drifted",
+    "drift": [
+      "Global/CVK_Installed_Report_20261017",
+      "Global/CVK_Installed_Report_20261017_B"
+    ],
+    "lastControllerCheck": "2026-10-17T15:20:59Z",
+    "configurationMode": "report"
+  },
+  "effectiveAuthorizationChecks": 10,
+  "projectedCredentialMount": "/var/run/secrets/cisco-vk/controller/credentials",
+  "readOnlyCredentialVolume": true,
+  "nativeMutationSubmittedByQualification": false,
+  "remaining": [
+    "Installed Apply/ownership/task-recovery lifecycle",
+    "Private comparison-key projection and rotation qualification",
+    "Actor-separated physical admission/recovery and real device evidence",
+    "ND/direct-device/SWIM full installed regression",
+    "Remaining pinned-model resource gaps"
+  ],
+  "privateKeyPreparation": {
+    "preparedIntentMode": "report",
+    "observedPhase": "Failed",
+    "reason": "UnsupportedConfiguration",
+    "projectionPresent": true,
+    "privateReferenceCount": 1,
+    "mount": {
+      "path": "/var/run/secrets/cisco-vk/controller-intent",
+      "readOnly": true
+    },
+    "nativeMutationSubmitted": false,
+    "boundary": "The attempted pre-Apply Report probe was refused by the existing private-site contract. It does not qualify private ownership. Retained intent has not been switched to Apply."
+  }
+}

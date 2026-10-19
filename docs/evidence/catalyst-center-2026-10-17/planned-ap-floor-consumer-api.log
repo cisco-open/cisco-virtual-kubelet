@@ -1,0 +1,111 @@
+=== RUN   TestEnvtestPlannedAPFloorConsumers
+=== RUN   TestEnvtestPlannedAPFloorConsumers/keyed-floor-consumer-private
+=== RUN   TestEnvtestPlannedAPFloorConsumers/keyed-floor-consumer-recover-private
+=== RUN   TestEnvtestPlannedAPFloorConsumers/keyed-floor-consumer-drift-private
+=== RUN   TestEnvtestPlannedAPFloorConsumers/keyed-floor-consumer-missing-private
+=== RUN   TestEnvtestPlannedAPFloorConsumers/keyed-floor-consumer-keyed-result-drift-private
+--- PASS: TestEnvtestPlannedAPFloorConsumers (15.30s)
+    --- PASS: TestEnvtestPlannedAPFloorConsumers/keyed-floor-consumer-private (5.55s)
+    --- PASS: TestEnvtestPlannedAPFloorConsumers/keyed-floor-consumer-recover-private (2.96s)
+    --- PASS: TestEnvtestPlannedAPFloorConsumers/keyed-floor-consumer-drift-private (0.96s)
+    --- PASS: TestEnvtestPlannedAPFloorConsumers/keyed-floor-consumer-missing-private (0.83s)
+    --- PASS: TestEnvtestPlannedAPFloorConsumers/keyed-floor-consumer-keyed-result-drift-private (1.47s)
+=== RUN   TestEnvtestPlannedAPKeyedBaselines
+=== RUN   TestEnvtestPlannedAPKeyedBaselines/keyed-private
+=== RUN   TestEnvtestPlannedAPKeyedBaselines/keyed-recover-private
+=== RUN   TestEnvtestPlannedAPKeyedBaselines/keyed-recover-refuse-private
+=== RUN   TestEnvtestPlannedAPKeyedBaselines/image-keyed-private
+=== RUN   TestEnvtestPlannedAPKeyedBaselines/keyed-native-sensor-private
+=== RUN   TestEnvtestPlannedAPKeyedBaselines/keyed-native-late-private
+=== RUN   TestEnvtestPlannedAPKeyedBaselines/keyed-drift-private
+=== RUN   TestEnvtestPlannedAPKeyedBaselines/keyed-geometry-private
+=== RUN   TestEnvtestPlannedAPKeyedBaselines/keyed-geometry-removed-private
+=== RUN   TestEnvtestPlannedAPKeyedBaselines/keyed-disable-private
+=== RUN   TestEnvtestPlannedAPKeyedBaselines/keyed-pruned-private
+=== RUN   TestEnvtestPlannedAPKeyedBaselines/keyed-result-drift-private
+--- PASS: TestEnvtestPlannedAPKeyedBaselines (25.71s)
+    --- PASS: TestEnvtestPlannedAPKeyedBaselines/keyed-private (4.27s)
+    --- PASS: TestEnvtestPlannedAPKeyedBaselines/keyed-recover-private (2.25s)
+    --- PASS: TestEnvtestPlannedAPKeyedBaselines/keyed-recover-refuse-private (2.41s)
+    --- PASS: TestEnvtestPlannedAPKeyedBaselines/image-keyed-private (3.67s)
+    --- PASS: TestEnvtestPlannedAPKeyedBaselines/keyed-native-sensor-private (2.34s)
+    --- PASS: TestEnvtestPlannedAPKeyedBaselines/keyed-native-late-private (1.12s)
+    --- PASS: TestEnvtestPlannedAPKeyedBaselines/keyed-drift-private (0.90s)
+    --- PASS: TestEnvtestPlannedAPKeyedBaselines/keyed-geometry-private (0.97s)
+    --- PASS: TestEnvtestPlannedAPKeyedBaselines/keyed-geometry-removed-private (0.90s)
+    --- PASS: TestEnvtestPlannedAPKeyedBaselines/keyed-disable-private (0.77s)
+    --- PASS: TestEnvtestPlannedAPKeyedBaselines/keyed-pruned-private (0.77s)
+    --- PASS: TestEnvtestPlannedAPKeyedBaselines/keyed-result-drift-private (1.25s)
+=== RUN   TestEnvtestPlannedAPTypeUpdates
+[controller-runtime] log.SetLogger(...) was never called; logs will not be displayed.
+Detected at:
+	>  goroutine 12325 [running]:
+	>  runtime/debug.Stack()
+	>  	/Users/johalley/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.9.darwin-arm64/src/runtime/debug/stack.go:26 +0x6c
+	>  sigs.k8s.io/controller-runtime/pkg/log.eventuallyFulfillRoot()
+	>  	/Users/johalley/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.23.3/pkg/log/log.go:60 +0xc4
+	>  sigs.k8s.io/controller-runtime/pkg/log.(*delegatingLogSink).Enabled(0xc0008078c0, 0x1)
+	>  	/Users/johalley/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.23.3/pkg/log/deleg.go:111 +0x30
+	>  github.com/go-logr/logr.Logger.Info({{0x10a840568?, 0xc0008078c0?}, 0xc0012735c8?}, {0x107ff3e73, 0x16}, {0x0, 0x0, 0x0})
+	>  	/Users/johalley/go/pkg/mod/github.com/go-logr/logr@v1.4.4/logr.go:276 +0x60
+	>  sigs.k8s.io/controller-runtime/pkg/envtest.(*Environment).Start(0xc000979348)
+	>  	/Users/johalley/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.23.3/pkg/envtest/server.go:303 +0x934
+	>  github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter.qualificationAPIServerClientEnvironment(0xc0009b1b08, 0xc000979348)
+	>  	/Users/johalley/Git/cisco-virtual-kubelet/internal/controlleradapter/catalystcenter/configuration_envtest_test.go:27 +0x44
+	>  github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter.qualificationAPIServerClient(0xc0009b1b08, {0xc000154e08, 0x1, 0x104e7c7f8?})
+	>  	/Users/johalley/Git/cisco-virtual-kubelet/internal/controlleradapter/catalystcenter/configuration_envtest_test.go:22 +0x1ac
+	>  github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter.TestEnvtestPlannedAPTypeUpdates(0xc0009b1b08)
+	>  	/Users/johalley/Git/cisco-virtual-kubelet/internal/controlleradapter/catalystcenter/site_design_envtest_test.go:46 +0x5c
+	>  testing.tRunner(0xc0009b1b08, 0x10a7e6e00)
+	>  	/Users/johalley/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.9.darwin-arm64/src/testing/testing.go:2036 +0x168
+	>  created by testing.(*T).Run in goroutine 1
+	>  	/Users/johalley/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.9.darwin-arm64/src/testing/testing.go:2101 +0x7c0
+=== RUN   TestEnvtestPlannedAPTypeUpdates/model-type
+=== RUN   TestEnvtestPlannedAPTypeUpdates/model-type-recover
+=== RUN   TestEnvtestPlannedAPTypeUpdates/model-type-omitted
+=== RUN   TestEnvtestPlannedAPTypeUpdates/model-type-ignored
+=== RUN   TestEnvtestPlannedAPTypeUpdates/model-type-incompatible
+=== RUN   TestEnvtestPlannedAPTypeUpdates/model-type-keyed-private
+=== RUN   TestEnvtestPlannedAPTypeUpdates/model-type-keyed-recover-private
+=== RUN   TestEnvtestPlannedAPTypeUpdates/image-model-type-keyed-private
+=== RUN   TestEnvtestPlannedAPTypeUpdates/model-type-keyed-ignored-private
+--- PASS: TestEnvtestPlannedAPTypeUpdates (18.86s)
+    --- PASS: TestEnvtestPlannedAPTypeUpdates/model-type (2.74s)
+    --- PASS: TestEnvtestPlannedAPTypeUpdates/model-type-recover (0.71s)
+    --- PASS: TestEnvtestPlannedAPTypeUpdates/model-type-omitted (0.70s)
+    --- PASS: TestEnvtestPlannedAPTypeUpdates/model-type-ignored (0.62s)
+    --- PASS: TestEnvtestPlannedAPTypeUpdates/model-type-incompatible (0.58s)
+    --- PASS: TestEnvtestPlannedAPTypeUpdates/model-type-keyed-private (2.22s)
+    --- PASS: TestEnvtestPlannedAPTypeUpdates/model-type-keyed-recover-private (2.25s)
+    --- PASS: TestEnvtestPlannedAPTypeUpdates/image-model-type-keyed-private (3.65s)
+    --- PASS: TestEnvtestPlannedAPTypeUpdates/model-type-keyed-ignored-private (1.21s)
+=== RUN   TestEnvtestSiteFloorEffectReceipts
+=== RUN   TestEnvtestSiteFloorEffectReceipts/complete
+=== RUN   TestEnvtestSiteFloorEffectReceipts/multiple
+=== RUN   TestEnvtestSiteFloorEffectReceipts/reordered
+=== RUN   TestEnvtestSiteFloorEffectReceipts/missing-member
+=== RUN   TestEnvtestSiteFloorEffectReceipts/missing
+=== RUN   TestEnvtestSiteFloorEffectReceipts/changed
+=== RUN   TestEnvtestSiteFloorEffectReceipts/pruned-result
+=== RUN   TestEnvtestSiteFloorEffectReceipts/pruned-producer
+=== RUN   TestEnvtestSiteFloorEffectReceipts/schema-empty
+=== RUN   TestEnvtestSiteFloorEffectReceipts/schema-long
+=== RUN   TestEnvtestSiteFloorEffectReceipts/schema-count
+=== RUN   TestEnvtestSiteFloorEffectReceipts/schema-duplicate
+--- PASS: TestEnvtestSiteFloorEffectReceipts (6.12s)
+    --- PASS: TestEnvtestSiteFloorEffectReceipts/complete (2.09s)
+    --- PASS: TestEnvtestSiteFloorEffectReceipts/multiple (0.06s)
+    --- PASS: TestEnvtestSiteFloorEffectReceipts/reordered (0.06s)
+    --- PASS: TestEnvtestSiteFloorEffectReceipts/missing-member (0.06s)
+    --- PASS: TestEnvtestSiteFloorEffectReceipts/missing (0.05s)
+    --- PASS: TestEnvtestSiteFloorEffectReceipts/changed (0.05s)
+    --- PASS: TestEnvtestSiteFloorEffectReceipts/pruned-result (0.05s)
+    --- PASS: TestEnvtestSiteFloorEffectReceipts/pruned-producer (0.05s)
+    --- PASS: TestEnvtestSiteFloorEffectReceipts/schema-empty (0.04s)
+    --- PASS: TestEnvtestSiteFloorEffectReceipts/schema-long (0.04s)
+    --- PASS: TestEnvtestSiteFloorEffectReceipts/schema-count (0.04s)
+    --- PASS: TestEnvtestSiteFloorEffectReceipts/schema-duplicate (0.04s)
+=== RUN   TestEnvtestSiteFloorEffectOldSchemaRefusesPublication
+--- PASS: TestEnvtestSiteFloorEffectOldSchemaRefusesPublication (5.89s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	74.060s

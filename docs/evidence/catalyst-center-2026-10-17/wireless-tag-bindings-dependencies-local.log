@@ -1,0 +1,80 @@
+=== RUN   TestProfileSiteTagDependencies
+=== RUN   TestProfileSiteTagDependencies/cohort-false/membership-compose-complete
+=== RUN   TestProfileSiteTagDependencies/cohort-false/membership-compose-retain
+=== RUN   TestProfileSiteTagDependencies/cohort-false/membership-compose-foreign-tag
+=== RUN   TestProfileSiteTagDependencies/cohort-false/membership-compose-unselected-tag
+=== RUN   TestProfileSiteTagDependencies/cohort-false/membership-compose-device
+=== RUN   TestProfileSiteTagDependencies/cohort-false/membership-compose-read-error
+=== RUN   TestProfileSiteTagDependencies/cohort-false/membership-compose-preflight-consumer
+=== RUN   TestProfileSiteTagDependencies/cohort-false/membership-compose-late-foreign
+=== RUN   TestProfileSiteTagDependencies/cohort-false/membership-compose-post-task-foreign
+=== RUN   TestProfileSiteTagDependencies/cohort-false/membership-compose-lost-ack
+=== RUN   TestProfileSiteTagDependencies/cohort-false/membership-compose-child-failed
+=== RUN   TestProfileSiteTagDependencies/cohort-false/membership-compose-source
+=== RUN   TestProfileSiteTagDependencies/cohort-false/membership-compose-owner
+=== RUN   TestProfileSiteTagDependencies/cohort-false/membership-compose-parent-change
+=== RUN   TestProfileSiteTagDependencies/cohort-true/membership-compose-complete
+=== RUN   TestProfileSiteTagDependencies/cohort-true/membership-compose-retain
+=== RUN   TestProfileSiteTagDependencies/cohort-true/membership-compose-foreign-tag
+=== RUN   TestProfileSiteTagDependencies/cohort-true/membership-compose-unselected-tag
+=== RUN   TestProfileSiteTagDependencies/cohort-true/membership-compose-device
+=== RUN   TestProfileSiteTagDependencies/cohort-true/membership-compose-read-error
+=== RUN   TestProfileSiteTagDependencies/cohort-true/membership-compose-preflight-consumer
+=== RUN   TestProfileSiteTagDependencies/cohort-true/membership-compose-late-foreign
+=== RUN   TestProfileSiteTagDependencies/cohort-true/membership-compose-post-task-foreign
+=== RUN   TestProfileSiteTagDependencies/cohort-true/membership-compose-lost-ack
+=== RUN   TestProfileSiteTagDependencies/cohort-true/membership-compose-child-failed
+=== RUN   TestProfileSiteTagDependencies/cohort-true/membership-compose-source
+=== RUN   TestProfileSiteTagDependencies/cohort-true/membership-compose-owner
+=== RUN   TestProfileSiteTagDependencies/cohort-true/membership-compose-parent-change
+--- PASS: TestProfileSiteTagDependencies (66.90s)
+    --- PASS: TestProfileSiteTagDependencies/cohort-false/membership-compose-complete (3.13s)
+    --- PASS: TestProfileSiteTagDependencies/cohort-false/membership-compose-retain (1.51s)
+    --- PASS: TestProfileSiteTagDependencies/cohort-false/membership-compose-foreign-tag (2.83s)
+    --- PASS: TestProfileSiteTagDependencies/cohort-false/membership-compose-unselected-tag (2.65s)
+    --- PASS: TestProfileSiteTagDependencies/cohort-false/membership-compose-device (1.65s)
+    --- PASS: TestProfileSiteTagDependencies/cohort-false/membership-compose-read-error (1.66s)
+    --- PASS: TestProfileSiteTagDependencies/cohort-false/membership-compose-preflight-consumer (1.97s)
+    --- PASS: TestProfileSiteTagDependencies/cohort-false/membership-compose-late-foreign (3.03s)
+    --- PASS: TestProfileSiteTagDependencies/cohort-false/membership-compose-post-task-foreign (2.61s)
+    --- PASS: TestProfileSiteTagDependencies/cohort-false/membership-compose-lost-ack (1.59s)
+    --- PASS: TestProfileSiteTagDependencies/cohort-false/membership-compose-child-failed (1.65s)
+    --- PASS: TestProfileSiteTagDependencies/cohort-false/membership-compose-source (1.60s)
+    --- PASS: TestProfileSiteTagDependencies/cohort-false/membership-compose-owner (1.54s)
+    --- PASS: TestProfileSiteTagDependencies/cohort-false/membership-compose-parent-change (1.89s)
+    --- PASS: TestProfileSiteTagDependencies/cohort-true/membership-compose-complete (3.60s)
+    --- PASS: TestProfileSiteTagDependencies/cohort-true/membership-compose-retain (1.96s)
+    --- PASS: TestProfileSiteTagDependencies/cohort-true/membership-compose-foreign-tag (3.67s)
+    --- PASS: TestProfileSiteTagDependencies/cohort-true/membership-compose-unselected-tag (3.40s)
+    --- PASS: TestProfileSiteTagDependencies/cohort-true/membership-compose-device (2.10s)
+    --- PASS: TestProfileSiteTagDependencies/cohort-true/membership-compose-read-error (2.10s)
+    --- PASS: TestProfileSiteTagDependencies/cohort-true/membership-compose-preflight-consumer (2.33s)
+    --- PASS: TestProfileSiteTagDependencies/cohort-true/membership-compose-late-foreign (4.02s)
+    --- PASS: TestProfileSiteTagDependencies/cohort-true/membership-compose-post-task-foreign (3.48s)
+    --- PASS: TestProfileSiteTagDependencies/cohort-true/membership-compose-lost-ack (2.21s)
+    --- PASS: TestProfileSiteTagDependencies/cohort-true/membership-compose-child-failed (2.14s)
+    --- PASS: TestProfileSiteTagDependencies/cohort-true/membership-compose-source (2.08s)
+    --- PASS: TestProfileSiteTagDependencies/cohort-true/membership-compose-owner (2.04s)
+    --- PASS: TestProfileSiteTagDependencies/cohort-true/membership-compose-parent-change (2.48s)
+=== RUN   TestProfileSiteTagProjectionScope
+=== RUN   TestProfileSiteTagProjectionScope/complete
+=== RUN   TestProfileSiteTagProjectionScope/other-candidate-device
+=== RUN   TestProfileSiteTagProjectionScope/other-candidate-pnp
+=== RUN   TestProfileSiteTagProjectionScope/other-candidate-error
+=== RUN   TestProfileSiteTagProjectionScope/foreign-tag
+=== RUN   TestProfileSiteTagProjectionScope/changed-projected-fields
+=== RUN   TestProfileSiteTagProjectionScope/replaced-tag
+=== RUN   TestProfileSiteTagProjectionScope/ancestor-reference
+=== RUN   TestProfileSiteTagProjectionScope/unknown-projection
+--- PASS: TestProfileSiteTagProjectionScope (0.12s)
+    --- PASS: TestProfileSiteTagProjectionScope/complete (0.02s)
+    --- PASS: TestProfileSiteTagProjectionScope/other-candidate-device (0.01s)
+    --- PASS: TestProfileSiteTagProjectionScope/other-candidate-pnp (0.01s)
+    --- PASS: TestProfileSiteTagProjectionScope/other-candidate-error (0.01s)
+    --- PASS: TestProfileSiteTagProjectionScope/foreign-tag (0.01s)
+    --- PASS: TestProfileSiteTagProjectionScope/changed-projected-fields (0.01s)
+    --- PASS: TestProfileSiteTagProjectionScope/replaced-tag (0.01s)
+    --- PASS: TestProfileSiteTagProjectionScope/ancestor-reference (0.01s)
+    --- PASS: TestProfileSiteTagProjectionScope/unknown-projection (0.01s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	69.415s

@@ -1,0 +1,40 @@
+=== RUN   TestLiveCatalystCenterPrivateSiteDesign
+    site_execution_live_test.go:107: isolated qualification hierarchy: Global/CVK-Q-20261016-222611-000000000
+    site_execution_live_test.go:260: singular manifest create task 01a146d2-b19f-70f0-92a3-0d54374a7703
+    site_execution_live_test.go:260: retained acknowledged singular-site task as Unknown for restarted observation
+    site_execution_live_test.go:260: singular manifest create task 01a146d2-d4c6-7b40-b1ee-10ccf25a0c95
+    site_execution_live_test.go:260: retained acknowledged singular-site task as Unknown for restarted observation
+    site_execution_live_test.go:260: singular manifest create task 01a146d2-f81b-72af-b077-639bed1f5f2e
+    site_execution_live_test.go:260: retained acknowledged singular-site task as Unknown for restarted observation
+    site_execution_live_test.go:316: three original create-task result UUIDs bind exact native kind, path and parent; creator receipt identity independently verified
+    site_execution_live_test.go:328: three durable original-task site creator receipts retained through restarted reconciliation
+    site_execution_live_test.go:330: three singular manifest creates and complete native hierarchy verified
+    site_execution_live_test.go:441: retained acknowledged singular-site task as Unknown for restarted observation
+    site_execution_live_test.go:441: public manifest step=0 status=Waiting operation=Accepted task=01a146d3-2f5f-781e-8673-11781805af17 reasons=[AdapterAvailable TaskAccepted TaskAccepted]
+    site_execution_live_test.go:441: public manifest Update reached InSync across simulated worker restarts; journal cleared, owner retained, no-op verified
+    site_execution_live_test.go:448: submitted task=01a146d3-2f5f-781e-8673-11781805af17 at=2026-10-16T22:26:45Z
+    site_execution_live_test.go:466: verified Update floor
+    site_execution_live_test.go:475: three creates, one floor update, and full hierarchy read-back verified
+    site_execution_live_test.go:485: 4 acknowledged Unknown tasks recovered through restarted public reconciliation without resubmission
+    site_execution_live_test.go:494: design stage 1 Update plannedAP false
+    planned_ap_live_test.go:40: planned AP native response POST HTTP 202 transportError false
+    site_execution_live_test.go:494: design stage 2 Create plannedAP true
+    site_execution_live_test.go:494: design task 01a146d3-afed-7a2b-b619-d2b7cf5110e9
+    site_execution_live_test.go:494: retained acknowledged singular-site task as Unknown for restarted observation
+    site_execution_live_test.go:494: isolated AP UUID 8fdde144-afa5-4d01-a241-7d8cf496a71c floor UUID 1c6c29fd-6bf4-45c3-b651-bddb45827038
+    site_execution_live_test.go:494: design stage 1 Update plannedAP false
+    planned_ap_live_test.go:40: planned AP native response POST HTTP 202 transportError false
+    site_execution_live_test.go:494: design stage 1 Update plannedAP true
+    site_execution_live_test.go:494: design task 01a146d4-443c-778f-b1b9-e167caa6578c
+    site_execution_live_test.go:494: retained acknowledged singular-site task as Unknown for restarted observation
+    planned_ap_live_test.go:40: planned AP native response POST HTTP 202 transportError false
+    site_execution_live_test.go:494: design stage 1 Update plannedAP true
+    site_execution_live_test.go:494: design task 01a146d4-c32a-7f62-89d7-7e8343a80bc8
+    site_execution_live_test.go:494: retained acknowledged singular-site task as Unknown for restarted observation
+    site_execution_live_test.go:494: native AP type-only forward/reverse transition preserved AP/radio UUIDs, coordinates, MAC and complete unselected native state
+    site_execution_live_test.go:494: opt-in keyed AP observation and two original-task Updates verified; five design mutations, seven acknowledged task recoveries, immutable anchor, one bounded latest row; geometry handoff refused with zero native effects
+    site_design_live_test.go:197: exact private planned-AP UUID removed before hierarchy cleanup
+    site_execution_live_test.go:221: isolated hierarchy cleanup verified
+--- PASS: TestLiveCatalystCenterPrivateSiteDesign (169.52s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	171.712s

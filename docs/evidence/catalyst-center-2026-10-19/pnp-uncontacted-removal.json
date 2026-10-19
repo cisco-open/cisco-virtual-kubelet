@@ -1,0 +1,106 @@
+{
+  "status": "Private single-device uncontacted PnP removal native-qualified; public prune/Delete incomplete",
+  "fullModelComplete": false,
+  "source": {
+    "files": 1681,
+    "sha256": "ef094f0bc5721ee665613891baca02cbe9517497aac21f571ebeee287cd2c6ac",
+    "productionSHA256": "d2096bceea37c698882e3c3c0d3a88a478a730f4bdf41ec725b7817ef9fd7549"
+  },
+  "gates": {
+    "unitAndProjection": {
+      "result": "PASS",
+      "passingEvents": 54,
+      "seconds": 3.137,
+      "log": "/private/tmp/cvk-pnp-removal-projection-unit.log"
+    },
+    "compatibility": {
+      "result": "PASS",
+      "passingEvents": 507,
+      "seconds": 40.811,
+      "log": "/private/tmp/cvk-pnp-removal-isolated-compat.log"
+    },
+    "foundations": {
+      "result": "PASS",
+      "packages": [
+        "internal/controlleradapter",
+        "internal/controlleradapter/nexusdashboard",
+        "internal/provider/softwareupgrade",
+        "internal/provider/maintenance",
+        "internal/controller"
+      ],
+      "log": "/private/tmp/cvk-pnp-removal-isolated-foundation.log"
+    },
+    "mainBuild": {
+      "result": "PASS",
+      "binary": "/private/tmp/cvk-pnp-removal-isolated-cisco-vk",
+      "log": "/private/tmp/cvk-pnp-removal-isolated-build.log"
+    },
+    "strictDocumentation": {
+      "result": "PASS",
+      "seconds": 8.1,
+      "log": "/private/tmp/cvk-pnp-removal-docs.log"
+    },
+    "formatSourceAndLedger": {
+      "result": "PASS",
+      "sourceUnchanged": true,
+      "uniquePinnedResourceRows": 93
+    }
+  },
+  "native": {
+    "result": "PASS",
+    "seconds": 16.444495916366577,
+    "id": "6ad57e410bc0186771cb1053",
+    "generatedNonexistentSerial": "CVK06AF2898",
+    "POST": 1,
+    "DELETE": 1,
+    "replayRefused": true,
+    "emptyPnPBaselineRestored": true,
+    "networkInventoryPreserved": true,
+    "acknowledgement": {
+      "status": 200,
+      "rootIDMatches": true,
+      "hasDeviceInfo": true,
+      "auditCount": 2
+    },
+    "physicalOperations": 0,
+    "kubernetesPersistence": "simulated JSON recovery, not installed/API-server actor qualification"
+  },
+  "retainedFailures": [
+    {
+      "phase": "initial",
+      "beforeDeleteRefusal": true,
+      "id": "6ad57acd0bc0186771cb1007",
+      "log": "pnp-removal-native-records/initial-refusal.log"
+    },
+    {
+      "phase": "retained",
+      "exactDeleteIssued": 1,
+      "acknowledgement": "UNCERTAIN; not retroactively completed",
+      "subsequentReadOnlyObservation": "exact UUID HTTP404, PnP catalog empty",
+      "DeleteReplayed": false,
+      "log": "pnp-removal-native-records/uncertain-acknowledgement.log",
+      "rawDeleteResponse": "not retained; exact earlier response shape not claimed"
+    }
+  ],
+  "implementation": [
+    "Original Verified Create and exact registration hash/UUID",
+    "Mandatory caller authority around current native/managed reads",
+    "Safe contact/history projection discards free-form details/output",
+    "Shared existing one-use write guard and transport; no new journal/schema",
+    "Synchronous acknowledgement distinct from separate repeated absence",
+    "No public mutation route or claim/reset/device admission added",
+    "Private metadata overlay round-trips through shared safe paging; original claim/reference/recovery projection and digests proven unchanged"
+  ],
+  "remaining": [
+    "Durable public Delete preparation/acknowledgement/absence receipt and recovery",
+    "Owned whole-model source pruning/CR finalization, including original identity retention when source disappears",
+    "Actor/installed qualification and physical claiming/onboarding",
+    "Stacks, contacted records, mixed-state composition and full pinned model execution",
+    "ID-only acknowledgement and post-delete-state variants are fixture-qualified; the lab returned a full deleted object with two audit entries"
+  ],
+  "commands": {
+    "unit": "go test -race -tags live ./internal/controlleradapter/catalystcenter -run ^(TestPnPRegistrationRemoval|TestPnPDeviceInventory|TestPnPRemovalProjectionPreservesSharedEvidence)$ -count=1",
+    "compatibility": "go test -race ./internal/controlleradapter/catalystcenter -run Test(PnP|Template.*PnP|SWIM|ModernSWIM|StandardReload|NormalReload|XFSU) -count=1",
+    "native": "go test -race -tags live ./internal/controlleradapter/catalystcenter -run ^TestLivePnPRegistrationGuardedRemoval$ -count=1; requires CATC_PNP_REMOVAL_PRIMITIVE=verified-uncontacted-record plus existing lab auth environment"
+  }
+}

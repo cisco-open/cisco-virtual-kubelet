@@ -1,0 +1,140 @@
+{
+  "scope": "private read-only discovery config-deletion ownership prerequisite; public cleanup remains disabled",
+  "sourceSHA256": {
+    "internal/controlleradapter/catalystcenter/discovery_config_cleanup_observation.go": "1a89d08e210fd421d3b6ff146abd830225f26fc59139ee4975f0583bc8e2295c",
+    "internal/controlleradapter/catalystcenter/discovery_config_cleanup_observation_live_test.go": "ba37dd81b2dc47d9211de9ed41796df7f2955bac80b91aed205b1ddb695e3efa",
+    "internal/controlleradapter/catalystcenter/discovery_config_cleanup_observation_envtest_test.go": "ce52981c04e8002819e24e928a33da8ea64a1ba6e0a3a2791a323545515c1d0a",
+    "internal/controlleradapter/catalystcenter/discovery_config_cleanup_observation_test.go": "ee951cb97adc3ea9f738a1dc7ff6c06204912b9e3ecf794b0745ac7c080e7634",
+    "internal/controlleradapter/catalystcenter/discovery_owned_live_test.go": "2128105af807065e2b642de144ee1a24a8f7d7d22e6e24b697dbff6908c9e99b",
+    "internal/controlleradapter/catalystcenter/discovery_prune.go": "56832eb3e1d90fa0dc7226ff4a14afacf91d93eed6ba0ea7d68bc528e9d44b8b",
+    "internal/controlleradapter/catalystcenter/discovery_owned.go": "6b0b9f22c4c98a7c4e2cd62303351a9e51163f75fdea2a97c7f1a858f27a71eb",
+    "internal/controlleradapter/catalystcenter/discovery_ownership_binding.go": "e9dcffb47325429e075a2fef1739a6cfc5c378705dd0b41b7622fdcf1283613c",
+    "internal/controlleradapter/catalystcenter/wireless_feature_ownership.go": "fb1516b84d7a2faa2aa50a229abf0bd26acd4b644e80abea106d12616acddb06",
+    "internal/controlleradapter/catalystcenter/discovery_owned_recovery_live_test.go": "79fee0d68bc46db4cc4c4f2a647759da4ffd17e15e50ffc0879de587395b8edb"
+  },
+  "gates": {
+    "regression": {
+      "families": 47,
+      "subcases": 391,
+      "seconds": 19.799
+    },
+    "api": {
+      "cases": 18,
+      "seconds": 9.14
+    },
+    "nativeRetained": {
+      "seconds": 5.446,
+      "testSeconds": 2.94
+    },
+    "nd": {
+      "seconds": 4.747
+    },
+    "providerUpgrades": {
+      "seconds": 14.324
+    },
+    "controllerUpgrades": {
+      "seconds": 6.232
+    }
+  },
+  "native": {
+    "checkpoint": "/private/tmp/cvk-discovery-owned-2474368005",
+    "originalCreateAndNoop": "real native; first harness stopped on stale simulated input before cleanup",
+    "fixtureCorrection": "reload the simulated deleting config from its API to bind the stored representation; production checks unchanged",
+    "retainedUUID": "153",
+    "observation": {
+      "ControllerVersion": "1001",
+      "ConfigUID": "config",
+      "ConfigVersion": "1001",
+      "SpecDigest": "4bf67fcf1e46fd925ad55700dfead90f01445f77d91974e89c478b67e2e409b3",
+      "DeletionDigest": "995d5161b6b634300acee5c5b63cb767a3da20e9f512e6e2416303fee4b62ab0",
+      "SourceUID": "",
+      "SourceVersion": "",
+      "ControllerUID": "controller",
+      "ConfigGeneration": 1,
+      "ControllerGeneration": 1,
+      "EvidenceDigest": "b6c1b254130596b7b627b987923bbc0a7346da7792ebd96b5dcd8ecf03f50097",
+      "Candidates": [
+        {
+          "Resource": "discovery-owned:803e89291a6b9a1b8d9b2425e48a043bbda6ba94b9206dac3792978c2095efb4:1f:007e496ba6814c0e62d9a652c8fe3306506794e9c4207224aebda554c5b15015:prune",
+          "ID": "153"
+        }
+      ]
+    },
+    "observationNativeMutations": 0,
+    "observationJournalMutations": 0,
+    "cleanup": {
+      "name": "CVK_DISC_8bf34412ea21a234",
+      "id": "153",
+      "updateTaskId": "01a14ca4-4f9e-7b6d-8d55-719e34af415f",
+      "deleteTaskId": "01a14ca8-1caa-7057-8466-036c92518edb",
+      "submittedAt": "2026-10-18T03:37:28.071214+02:00",
+      "deleteAttempted": true,
+      "deleted": true
+    },
+    "cleanupPath": "existing supervised exact retained-discovery cleanup",
+    "discoveryBaselineRestored": true,
+    "deletionObject": "separate simulated API only",
+    "installedClusterMutated": false,
+    "publicCRDeletion": false
+  },
+  "productionBuild": {
+    "path": "/private/tmp/cvk-discovery-cleanup-observation",
+    "sha256": "4a060e823ffae4c1ce632a8e6a27eb6d8cc694f5252039f637fcb71bce67bb2e",
+    "installed": false
+  },
+  "logs": {
+    "regression": {
+      "file": "discovery-cleanup-observation-regression.log",
+      "sha256": "185d1bebec8547d1b875456390617f22bf488c11485702cc770a7deb75e0f9ba"
+    },
+    "api": {
+      "file": "discovery-cleanup-observation-api.log",
+      "sha256": "ae61a84c5674f39311e7e459174ea2677cc5218176c32e39dcd96735606cdabd"
+    },
+    "native-initial": {
+      "file": "discovery-cleanup-observation-native-initial.log",
+      "sha256": "8667ea711dde1d60a76db1e1c53645c4b0b9c061bb060299a293a757af170299"
+    },
+    "native-retained": {
+      "file": "discovery-cleanup-observation-native-retained.log",
+      "sha256": "4f7a04b1679711c628c526a4bcdea528e2e41e54724c85c9bf31b021b1115ece"
+    },
+    "optout": {
+      "file": "discovery-cleanup-observation-optout.log",
+      "sha256": "ff80c027c2dfa14b233cd95468f3a0799ea7731f9071ff044b600622b44449cf"
+    },
+    "nd": {
+      "file": "discovery-cleanup-observation-nd.log",
+      "sha256": "4355e64de6b66e72c734644c82c5126d09600d84e06e9a48d4250d54bb0181b2"
+    },
+    "provider-upgrades": {
+      "file": "discovery-cleanup-observation-provider-upgrades.log",
+      "sha256": "2ab052072099663716af4535d686f2f4865a42fa136b8f5027e84bf83f9d48ff"
+    },
+    "controller-upgrades": {
+      "file": "discovery-cleanup-observation-controller-upgrades.log",
+      "sha256": "80cb928124c2051cffb7e8a511efeebe726a2130809a1d69f9c5097562691768"
+    },
+    "build": {
+      "file": "discovery-cleanup-observation-build.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  },
+  "limits": [
+    "The new observer is an internal prerequisite only. It exposes no native writer, status publication, dispatch grant, finalizer enrollment or finalizer release.",
+    "It requires an idle journal, current readable pure-discovery source and exact owner/receipt evidence. Retained-task draining, unavailable source, empty-unowned enrollment and broader mixed scopes remain pending.",
+    "Native qualification uses a separately simulated deleting config and real discovery reads; cleanup is supervised by the existing exact-UUID helper, not manifest-driven CR deletion. API tests use real terminating objects with simulated native responses.",
+    "Deletion-token-bound preparation/submission, original-task/absence receipt completion, manager finalizer release, installed qualification and full pinned-model parity remain incomplete."
+  ],
+  "initialQualificationSourceSHA256": {
+    "internal/controlleradapter/catalystcenter/discovery_config_cleanup_observation.go": "1a89d08e210fd421d3b6ff146abd830225f26fc59139ee4975f0583bc8e2295c",
+    "internal/controlleradapter/catalystcenter/discovery_config_cleanup_observation_live_test.go": "f65ef0a33176bc87ae2acd0331537fe79ca1c6617226b9bc8d4f2574c923c631",
+    "internal/controlleradapter/catalystcenter/discovery_config_cleanup_observation_envtest_test.go": "ce52981c04e8002819e24e928a33da8ea64a1ba6e0a3a2791a323545515c1d0a",
+    "internal/controlleradapter/catalystcenter/discovery_config_cleanup_observation_test.go": "ee951cb97adc3ea9f738a1dc7ff6c06204912b9e3ecf794b0745ac7c080e7634",
+    "internal/controlleradapter/catalystcenter/discovery_owned_live_test.go": "2128105af807065e2b642de144ee1a24a8f7d7d22e6e24b697dbff6908c9e99b",
+    "internal/controlleradapter/catalystcenter/discovery_prune.go": "56832eb3e1d90fa0dc7226ff4a14afacf91d93eed6ba0ea7d68bc528e9d44b8b",
+    "internal/controlleradapter/catalystcenter/discovery_owned.go": "6b0b9f22c4c98a7c4e2cd62303351a9e51163f75fdea2a97c7f1a858f27a71eb",
+    "internal/controlleradapter/catalystcenter/discovery_ownership_binding.go": "e9dcffb47325429e075a2fef1739a6cfc5c378705dd0b41b7622fdcf1283613c",
+    "internal/controlleradapter/catalystcenter/wireless_feature_ownership.go": "fb1516b84d7a2faa2aa50a229abf0bd26acd4b644e80abea106d12616acddb06"
+  }
+}

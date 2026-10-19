@@ -1,0 +1,24 @@
+{
+  "checkedAtUTC": "2026-10-16T21:26:51.443618+00:00",
+  "scope": "Schema-only inspection of exact isolated planned-AP create task; native response bodies and progress values are excluded.",
+  "taskID": "01a14692-29cb-7790-9e95-a118217e09ef",
+  "observedAPID": "7a86abb7-b512-4580-8d4b-7978bdae4b15",
+  "rootResponseFields": [
+    "endTime",
+    "id",
+    "instanceTenantId",
+    "isError",
+    "progress",
+    "serviceType",
+    "startTime",
+    "version"
+  ],
+  "rootDataPresent": false,
+  "exactAPIdentityPathsInRoot": [],
+  "exactAPIdentityPathsInTaskTree": [],
+  "progressJSONTypesOrText": [
+    "int",
+    "unstructured text"
+  ],
+  "limitation": "No native created-AP UUID result was observed; the new CVK receipt records post-task observed identity and grants no exclusive-creator or delete authority."
+}

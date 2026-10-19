@@ -1,0 +1,5 @@
+=== RUN   TestEnvtestSDATransitEvidenceEnvelope
+    fabric_sda_transit_device_evidence_envtest_test.go:97: fresh API UID/generation, one stable SDA request, separate simulated manager metadata and worker status, chassis identity, truncation and query-spec rejection verified; no semantic convergence or installed worker claim
+--- PASS: TestEnvtestSDATransitEvidenceEnvelope (5.87s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	8.284s

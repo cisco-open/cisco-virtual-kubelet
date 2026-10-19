@@ -1,0 +1,5 @@
+=== RUN   TestLiveAccessPointSequenceRefusesWiredInventory
+    access_point_sequence_live_test.go:53: AP sequence rejected 3 real wired identities before authority; no native writes or device operations
+--- PASS: TestLiveAccessPointSequenceRefusesWiredInventory (1.60s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	3.824s

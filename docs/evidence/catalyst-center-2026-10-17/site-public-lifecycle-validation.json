@@ -1,0 +1,76 @@
+{
+  "scope": "Public private-keyed sites-only manifest lifecycle; real appliance with simulated Kubernetes persistence; separate real API-server fixtures; not installed worker qualification",
+  "source_sha256": {
+    "internal/controlleradapter/catalystcenter/site_prune_apply.go": "07a476cf124320cd028bb3f817170aeec8d868e36a1eae86bf082d86f72ada50",
+    "internal/controlleradapter/catalystcenter/site_prune_apply_test.go": "2d30884fede782153431db8a90516481ff01682bc9fc798b43b1cd6bf11de1a1",
+    "internal/controlleradapter/catalystcenter/site_prune_apply_envtest_test.go": "0aab67261e5c2dd7aa0a92be12c12f42d7aaca868551b509dde7ba3d04548fb1",
+    "internal/controlleradapter/catalystcenter/config_apply.go": "7f87632c25c9d8d4dc94d145d2abeb6950ec67c45e91e1604f962962b97f7e6c",
+    "internal/controlleradapter/catalystcenter/floor_image_apply.go": "adee2d560987cfb643db699cf4602673f94451135c24127391a2da20110b20cc",
+    "internal/controlleradapter/catalystcenter/site_retirement_binding.go": "395ed8f6d6e88c314ceeed7d59681fe71e123657c3a6c632c0aa376fbee4c540",
+    "internal/controlleradapter/catalystcenter/site_retirement_binding_test.go": "59a648957fc8fd9be6cde2752f19b053154f495decc6a724d8b11d8919c82e21",
+    "internal/controlleradapter/catalystcenter/site_retirement_dispatch.go": "637802ee2d112e15d38905e138ddfafe25c657ae49a5ccf3d19831771994d92f",
+    "internal/controlleradapter/catalystcenter/site_recreation_execution.go": "8399959e90cd73a7a878da3766aa1e85b1aa390271bf56d3ae86b24ceadda8cd",
+    "internal/controlleradapter/catalystcenter/site_bulk_manifest_live_test.go": "64fb41d658e59a5e3ca346584affc4ee486b5fb59a022e5bf815c801f60b6dc5",
+    "internal/controlleradapter/catalystcenter/site_recreation_live_test.go": "b56af7fbf38a842cdc1fa2de5ad57ef221c51e6d91a42aa7474deb65b3475997",
+    "examples/configs/catalyst-center/sites-private-lifecycle.yaml": "d3992798b0dd8fd106ed5043ee93ce356111909baf9d6e3d6306a388fd9eb582"
+  },
+  "gates": {
+    "regression": {
+      "families": 69,
+      "subcases": 1028,
+      "seconds": 94.492,
+      "log_sha256": "31869ce8a19f2c23ce67f7f25618b27900075312d061bc5907905743519e1664",
+      "exit_code": 0
+    },
+    "api": {
+      "families": 9,
+      "subcases": 122,
+      "seconds": 93.412,
+      "log_sha256": "345a0a9aacdc71513cbbe37e09c41bb2538cfd9f5b2c8804b52e43fa71e9992e",
+      "exit_code": 0
+    },
+    "common-regression": {
+      "families": 44,
+      "subcases": 376,
+      "seconds": 13.531,
+      "log_sha256": "bab8ccdf3ed15f49c18b3d1ee0003b500bfac544a7f8767f42b0123f220df807",
+      "exit_code": 0
+    },
+    "native": {
+      "families": 1,
+      "subcases": 0,
+      "seconds": 89.403,
+      "log_sha256": "38a4ecbd7cb3b4a396c983dfc7ce6cdec59b5d0f6aad05aa5c6a804c612215f8",
+      "exit_code": 0
+    }
+  },
+  "native": {
+    "outcome": {
+      "archivedCohorts": 2,
+      "baselineRestored": true,
+      "deletes": 4,
+      "firstID": "10eaa931-7382-4964-82fd-e9444fa4770b",
+      "installed": false,
+      "parentChild": true,
+      "parentHandoff": true,
+      "posts": 4,
+      "publicRetirementRouting": true,
+      "secondID": "89fd99a1-8b5e-42b9-a698-89b09e987f66"
+    },
+    "task_ids": [
+      "01a14b9c-d07b-79ca-a884-73ee937a20fa",
+      "01a14b9c-da2a-7b89-b35e-6b507642265d",
+      "01a14b9d-1eb1-7059-98b6-584f196f52f1",
+      "01a14b9d-61d3-7bd7-8ef3-a3c4cc8ef758",
+      "01a14b9d-7221-7028-9549-8562433d50ea",
+      "01a14b9d-84e5-75bb-a542-67b086eb4aff",
+      "01a14b9d-cec7-7755-a6eb-5f00ef4f3523",
+      "01a14b9e-11fe-7ee5-aa32-f5e4b28adbae"
+    ],
+    "receipt_count": 8,
+    "archived_rows": 4,
+    "retained_owners": 1,
+    "active_operation": false,
+    "private_checkpoint": "/private/tmp/cvk-site-lifecycle-3374653296"
+  }
+}

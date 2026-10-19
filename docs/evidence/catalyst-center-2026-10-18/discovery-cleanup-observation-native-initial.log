@@ -1,0 +1,8 @@
+=== RUN   TestLiveDiscoveryConfigCleanupObservation
+    discovery_owned_live_test.go:247: isolated discovery name and private recovery evidence CVK_DISC_8bf34412ea21a234 /private/tmp/cvk-discovery-owned-2474368005
+    discovery_owned_live_test.go:704: public manifest task/UUID receipt, JSON restart and no-op verified CVK_DISC_8bf34412ea21a234 153 01a14ca4-4f9e-7b6d-8d55-719e34af415f
+    discovery_owned_live_test.go:710: native cleanup prerequisite failed controller configuration input has changed
+--- FAIL: TestLiveDiscoveryConfigCleanupObservation (23.22s)
+FAIL
+FAIL	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	24.567s
+FAIL

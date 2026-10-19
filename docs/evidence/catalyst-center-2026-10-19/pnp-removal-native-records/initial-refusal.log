@@ -1,0 +1,8 @@
+=== RUN   TestLivePnPRegistrationGuardedRemoval
+    pnp_registration_stage_live_test.go:100: private registration recovery directory /private/tmp/cvk-pnp-registration-3644279603
+    pnp_registration_stage_live_test.go:100: owned native registration 6ad57acd0bc0186771cb1007 CVK206714E0
+    pnp_registration_stage_live_test.go:100: guarded removal preparation controller section is owned by another config identity
+--- FAIL: TestLivePnPRegistrationGuardedRemoval (5.16s)
+FAIL
+FAIL	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	6.314s
+FAIL

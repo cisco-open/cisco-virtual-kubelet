@@ -1,0 +1,14 @@
+=== RUN   TestRenderedManagedAdmissionContract
+=== RUN   TestRenderedManagedAdmissionContract/runtime-current
+=== RUN   TestRenderedManagedAdmissionContract/runtime-missing_binding
+=== RUN   TestRenderedManagedAdmissionContract/runtime-modified_CEL
+=== RUN   TestRenderedManagedAdmissionContract/runtime-unobserved_policy
+=== RUN   TestRenderedManagedAdmissionContract/runtime-wrong_manager
+--- PASS: TestRenderedManagedAdmissionContract (0.68s)
+    --- PASS: TestRenderedManagedAdmissionContract/runtime-current (0.02s)
+    --- PASS: TestRenderedManagedAdmissionContract/runtime-missing_binding (0.01s)
+    --- PASS: TestRenderedManagedAdmissionContract/runtime-modified_CEL (0.01s)
+    --- PASS: TestRenderedManagedAdmissionContract/runtime-unobserved_policy (0.01s)
+    --- PASS: TestRenderedManagedAdmissionContract/runtime-wrong_manager (0.00s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/cmd/cisco-vk	3.559s

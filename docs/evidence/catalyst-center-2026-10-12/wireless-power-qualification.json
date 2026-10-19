@@ -1,0 +1,23 @@
+{
+  "result": "PASS",
+  "scope": "Native isolated global power-profile definition; no AP deployment",
+  "fixture": "CVK_12204949",
+  "targetID": "mdeYq1zl-xZeY-mJa0-otq5-qZbwmuSYxZmXndi1mJyWnZq4otK0",
+  "createTask": "01a131e2-229c-7597-9c85-c40e512bfe18",
+  "updateTask": "01a131e2-2782-7393-ab65-5e748e21289e",
+  "deleteTask": "01a131e2-2c72-7a97-bede-f1bc628c970b",
+  "rule": "ETHERNET/GIGABITETHERNET0/SPEED",
+  "valueChange": [
+    "100MBPS",
+    "1000MBPS"
+  ],
+  "uuidPreserved": true,
+  "noOpVerified": true,
+  "baselineRestored": true,
+  "workerRollout": false,
+  "limits": [
+    "Other interface and parameter combinations not live-qualified",
+    "Description preserve/clear and multi-rule ordering fixture-tested, not live-qualified",
+    "No AP hardware behavior tested"
+  ]
+}

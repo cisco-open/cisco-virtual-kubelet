@@ -1,0 +1,102 @@
+=== RUN   TestTemplateVariableMetadata
+=== RUN   TestTemplateVariableMetadata/nullable
+=== RUN   TestTemplateVariableMetadata/integer-default
+=== RUN   TestTemplateVariableMetadata/boolean-default
+=== RUN   TestTemplateVariableMetadata/float-default
+=== RUN   TestTemplateVariableMetadata/scalar-selections
+=== RUN   TestTemplateVariableMetadata/empty-default
+=== RUN   TestTemplateVariableMetadata/empty-selections
+=== RUN   TestTemplateVariableMetadata/missing-type
+=== RUN   TestTemplateVariableMetadata/null-type
+=== RUN   TestTemplateVariableMetadata/unknown-type
+=== RUN   TestTemplateVariableMetadata/unknown-selection
+=== RUN   TestTemplateVariableMetadata/null-name
+=== RUN   TestTemplateVariableMetadata/null-selection-value
+=== RUN   TestTemplateVariableMetadata/nested-default
+=== RUN   TestTemplateVariableMetadata/nested-selection
+=== RUN   TestTemplateVariableMetadata/unknown-null
+=== RUN   TestTemplateVariableMetadata/string-flag
+--- PASS: TestTemplateVariableMetadata (0.00s)
+    --- PASS: TestTemplateVariableMetadata/nullable (0.00s)
+    --- PASS: TestTemplateVariableMetadata/integer-default (0.00s)
+    --- PASS: TestTemplateVariableMetadata/boolean-default (0.00s)
+    --- PASS: TestTemplateVariableMetadata/float-default (0.00s)
+    --- PASS: TestTemplateVariableMetadata/scalar-selections (0.00s)
+    --- PASS: TestTemplateVariableMetadata/empty-default (0.00s)
+    --- PASS: TestTemplateVariableMetadata/empty-selections (0.00s)
+    --- PASS: TestTemplateVariableMetadata/missing-type (0.00s)
+    --- PASS: TestTemplateVariableMetadata/null-type (0.00s)
+    --- PASS: TestTemplateVariableMetadata/unknown-type (0.00s)
+    --- PASS: TestTemplateVariableMetadata/unknown-selection (0.00s)
+    --- PASS: TestTemplateVariableMetadata/null-name (0.00s)
+    --- PASS: TestTemplateVariableMetadata/null-selection-value (0.00s)
+    --- PASS: TestTemplateVariableMetadata/nested-default (0.00s)
+    --- PASS: TestTemplateVariableMetadata/nested-selection (0.00s)
+    --- PASS: TestTemplateVariableMetadata/unknown-null (0.00s)
+    --- PASS: TestTemplateVariableMetadata/string-flag (0.00s)
+=== RUN   TestTemplateVariableMetadataPublic
+=== RUN   TestTemplateVariableMetadataPublic/nullable-definition
+=== RUN   TestTemplateVariableMetadataPublic/nullable-variable
+=== RUN   TestTemplateVariableMetadataPublic/scalar-default
+=== RUN   TestTemplateVariableMetadataPublic/cleared-variable
+=== RUN   TestTemplateVariableMetadataPublic/invalid-variable
+=== RUN   TestTemplateVariableMetadataPublic/invalid-selection
+--- PASS: TestTemplateVariableMetadataPublic (0.86s)
+    --- PASS: TestTemplateVariableMetadataPublic/nullable-definition (0.65s)
+    --- PASS: TestTemplateVariableMetadataPublic/nullable-variable (0.05s)
+    --- PASS: TestTemplateVariableMetadataPublic/scalar-default (0.05s)
+    --- PASS: TestTemplateVariableMetadataPublic/cleared-variable (0.05s)
+    --- PASS: TestTemplateVariableMetadataPublic/invalid-variable (0.03s)
+    --- PASS: TestTemplateVariableMetadataPublic/invalid-selection (0.03s)
+=== RUN   TestTemplateVariableDatatypeContract
+=== RUN   TestTemplateVariableDatatypeContract/STRING
+=== RUN   TestTemplateVariableDatatypeContract/INTEGER
+=== RUN   TestTemplateVariableDatatypeContract/IPADDRESS
+=== RUN   TestTemplateVariableDatatypeContract/MACADDRESS
+=== RUN   TestTemplateVariableDatatypeContract/SECTIONDIVIDER
+--- PASS: TestTemplateVariableDatatypeContract (0.00s)
+    --- PASS: TestTemplateVariableDatatypeContract/STRING (0.00s)
+    --- PASS: TestTemplateVariableDatatypeContract/INTEGER (0.00s)
+    --- PASS: TestTemplateVariableDatatypeContract/IPADDRESS (0.00s)
+    --- PASS: TestTemplateVariableDatatypeContract/MACADDRESS (0.00s)
+    --- PASS: TestTemplateVariableDatatypeContract/SECTIONDIVIDER (0.00s)
+=== RUN   TestTemplateVariableChoiceResetComparison
+=== RUN   TestTemplateVariableChoiceResetComparison/equal
+=== RUN   TestTemplateVariableChoiceResetComparison/empty
+=== RUN   TestTemplateVariableChoiceResetComparison/clear-retained
+=== RUN   TestTemplateVariableChoiceResetComparison/remove-choice
+=== RUN   TestTemplateVariableChoiceResetComparison/missing-choice
+=== RUN   TestTemplateVariableChoiceResetComparison/changed-value
+=== RUN   TestTemplateVariableChoiceResetComparison/native-metadata
+=== RUN   TestTemplateVariableChoiceResetComparison/unmanaged-choices
+=== RUN   TestTemplateVariableChoiceResetComparison/default-changed
+=== RUN   TestTemplateVariableChoiceResetComparison/default-cleared
+=== RUN   TestTemplateVariableChoiceResetComparison/default-retained
+--- PASS: TestTemplateVariableChoiceResetComparison (0.00s)
+    --- PASS: TestTemplateVariableChoiceResetComparison/equal (0.00s)
+    --- PASS: TestTemplateVariableChoiceResetComparison/empty (0.00s)
+    --- PASS: TestTemplateVariableChoiceResetComparison/clear-retained (0.00s)
+    --- PASS: TestTemplateVariableChoiceResetComparison/remove-choice (0.00s)
+    --- PASS: TestTemplateVariableChoiceResetComparison/missing-choice (0.00s)
+    --- PASS: TestTemplateVariableChoiceResetComparison/changed-value (0.00s)
+    --- PASS: TestTemplateVariableChoiceResetComparison/native-metadata (0.00s)
+    --- PASS: TestTemplateVariableChoiceResetComparison/unmanaged-choices (0.00s)
+    --- PASS: TestTemplateVariableChoiceResetComparison/default-changed (0.00s)
+    --- PASS: TestTemplateVariableChoiceResetComparison/default-cleared (0.00s)
+    --- PASS: TestTemplateVariableChoiceResetComparison/default-retained (0.00s)
+=== RUN   TestTemplateVariableResetReportPlanAndVerify
+=== RUN   TestTemplateVariableResetReportPlanAndVerify/cleared
+=== RUN   TestTemplateVariableResetReportPlanAndVerify/choices-retained
+=== RUN   TestTemplateVariableResetReportPlanAndVerify/default-retained
+=== RUN   TestTemplateVariableResetReportPlanAndVerify/choice-removed
+=== RUN   TestTemplateVariableResetReportPlanAndVerify/choice-value-changed
+=== RUN   TestTemplateVariableResetReportPlanAndVerify/committed-choices-retained
+--- PASS: TestTemplateVariableResetReportPlanAndVerify (0.11s)
+    --- PASS: TestTemplateVariableResetReportPlanAndVerify/cleared (0.02s)
+    --- PASS: TestTemplateVariableResetReportPlanAndVerify/choices-retained (0.02s)
+    --- PASS: TestTemplateVariableResetReportPlanAndVerify/default-retained (0.02s)
+    --- PASS: TestTemplateVariableResetReportPlanAndVerify/choice-removed (0.02s)
+    --- PASS: TestTemplateVariableResetReportPlanAndVerify/choice-value-changed (0.02s)
+    --- PASS: TestTemplateVariableResetReportPlanAndVerify/committed-choices-retained (0.02s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	3.536s

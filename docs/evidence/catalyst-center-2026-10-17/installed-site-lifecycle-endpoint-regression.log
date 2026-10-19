@@ -1,0 +1,10 @@
+=== RUN   TestNetworkControllerDuplicateEndpointFencesAndPromotesLoser
+--- PASS: TestNetworkControllerDuplicateEndpointFencesAndPromotesLoser (0.68s)
+=== RUN   TestNetworkControllerEndpointPeerRequestsIncludeExactPeers
+--- PASS: TestNetworkControllerEndpointPeerRequestsIncludeExactPeers (0.02s)
+=== RUN   TestNetworkControllerEndpointFenceIsExactAndNamespaceScoped
+--- PASS: TestNetworkControllerEndpointFenceIsExactAndNamespaceScoped (0.05s)
+=== RUN   TestNetworkControllerEndpointWinnerTieBreaksByNameThenUID
+--- PASS: TestNetworkControllerEndpointWinnerTieBreaksByNameThenUID (0.00s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controller	2.882s

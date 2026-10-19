@@ -1,0 +1,11 @@
+=== RUN   TestLiveDiscoverySelectedOwnershipLifecycle
+    discovery_owned_live_test.go:232: isolated discovery name and private recovery evidence CVK_DISC_671fcbaebb93b0ef /private/tmp/cvk-discovery-owned-3064262718
+    discovery_owned_live_test.go:486: retained known task restored as uncertain without resubmission Create 01a14bc6-7746-7933-a14f-47bc906032c4
+    discovery_owned_live_test.go:486: retained known task restored as uncertain without resubmission Delete 01a14bc6-e99c-71de-9c1b-581c9af33d9e
+    discovery_owned_live_test.go:570: public discovery source removal verified with task/UUID absence and retained tombstone 01a14bc6-e99c-71de-9c1b-581c9af33d9e
+    discovery_owned_live_test.go:486: retained known task restored as uncertain without resubmission Create 01a14bc6-ffcf-7327-b288-b04558b65cb3
+    discovery_owned_live_test.go:486: retained known task restored as uncertain without resubmission Delete 01a14bc7-695a-72e7-b720-55843690c247
+    discovery_owned_live_test.go:607: owned discovery prune/reintroduction/prune passed four Unknown task recoveries without replay; original native job baseline restored
+--- PASS: TestLiveDiscoverySelectedOwnershipLifecycle (69.76s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	71.916s

@@ -1,0 +1,2 @@
+Selected all 47 non-live SWIM test functions.
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	3.871s

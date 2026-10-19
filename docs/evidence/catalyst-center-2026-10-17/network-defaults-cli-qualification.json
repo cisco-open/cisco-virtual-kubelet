@@ -1,0 +1,13 @@
+{
+  "output": "/private/tmp/cvk-network-default-export-20261017/example-resolved.json",
+  "provenance": "/private/tmp/cvk-network-default-export-20261017/example-provenance.json",
+  "policySourceMatches": true,
+  "outputDigestMatches": true,
+  "artifactMode": "0600",
+  "selectionUnchanged": true,
+  "explicitFalsePreserved": true,
+  "DNSFallbackApplied": true,
+  "executionSyntaxValidated": true,
+  "leafSchemaValidated": false,
+  "configurationParity": false
+}

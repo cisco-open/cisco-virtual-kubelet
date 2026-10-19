@@ -1,0 +1,45 @@
+{
+  "branch": "pr/johalley/catc-support",
+  "moduleVersion": "0.5.0",
+  "moduleRevision": "a435555fe828f03cf3311d52fe1ab6572a247916",
+  "sourceSha256": {
+    "internal/controlleradapter/catalystcenter/wireless_profile_recovery.go": "30f19708363423ad0862242ec93ce34d018cdcf16987017b0ede94b584ec4189",
+    "internal/controlleradapter/catalystcenter/wireless_profile_execution.go": "5f1b08163577b8be70468fcbcb1d745287736fc5ef2e66039fa94f9844188088",
+    "internal/controlleradapter/catalystcenter/wireless_profile_tag_execution.go": "9e73a7ea9cb7d0384b31dc51ca1ceea52434cbdd39c2a20e4bc4b26be68431d4",
+    "internal/controlleradapter/catalystcenter/wireless_policy_cohort.go": "c1c14ee6692ce992fe8f947375e25dd300738302c5df5b1ef5fc00eac510dbfc",
+    "internal/controlleradapter/catalystcenter/network_profile_configuration.go": "3e2884f176f470bf8cb76c4d951dfe69db17ffb39035e2ff575985148a26c10b",
+    "internal/controlleradapter/catalystcenter/config_no_dispatch.go": "06c28e3e97b170949108d7fb0b13b2cc34f4265b9354494ef5217948ee72739f",
+    "internal/controlleradapter/catalystcenter/config_apply.go": "2974c99bc222c0d28177f3e219ae5f10a01c7079bc709eaa7e18c1a91df0391f",
+    "internal/controlleradapter/catalystcenter/template_deployment_adapter_recovery.go": "58e80cce12f933658ad0f8b081aef4c42abaf4312e28633f45462e2ca99decff",
+    "internal/controlleradapter/catalystcenter/wireless_profile_recovery_test.go": "50a85522e51e10fee807ac71742da839a0f69cc96c5857b6b99201e9333675bd",
+    "internal/controlleradapter/catalystcenter/wireless_profile_recovery_envtest_test.go": "f5a8d9c08feca27cd9ce2739b69e3a1539d35bc5ec3c29b597851ef057f73caa",
+    "internal/controlleradapter/catalystcenter/wireless_profile_recovery_live_test.go": "35383c87df6eb505bc2aae6b35a384ed66a5852adcb9a040a7c0d88e4d9896ce",
+    "internal/controlleradapter/catalystcenter/wireless_profile_configuration_test.go": "bc112ccfb95a196793dd7a64ee306fb96fb2a6ae3f931c33817ab6151aeea90e",
+    "internal/controlleradapter/catalystcenter/wireless_profile_execution_live_test.go": "32d2b8b01fdd5578b4b81cbc80d14622874dcbbbc2f29888c80ba14aeabe404d",
+    "internal/controlleradapter/catalystcenter/template_no_dispatch_live_test.go": "18d717fca13b92f3656b5e15dd6c562a48c560148f3529c870eacd3006886ecd",
+    "examples/configs/catalyst-center/wireless-profile-apply.yaml": "8b8828ff150fb4096a919a467c03734bf3716fc3a7c30cb85842aadf65d9b94e",
+    "examples/configs/catalyst-center/wireless-profile-tags-apply.yaml": "d1670365b1d94a5cac593d4ddf51fdb998cf46a33dea38188ab7bcb476a7a136",
+    "examples/configs/catalyst-center/wireless-policy-cohort-apply.yaml": "347cdc6f8d5c5a758f50e479c1ea20b954952750d4235b754ebd4bd50fbc3c16"
+  },
+  "upstream": [
+    {
+      "path": "cc_wireless.tf",
+      "url": "https://github.com/netascode/terraform-catalystcenter-nac-catalystcenter/blob/a435555fe828f03cf3311d52fe1ab6572a247916/cc_wireless.tf",
+      "sha256": "55956a619e460b28e3a57a797b981ed5d3601513e2968793e3b565afa12f3322"
+    }
+  ],
+  "scope": "Existing metadata-only profile and site/policy tag/cohort Create/Update resource families: shared one-use preflight proof retirement and source/owner/journal-bracketed original-task recovery. No new creator/application receipt, per-object adoption, removal/prune, assignment recovery, switching contract or physical admission. API/native qualification uses separately stated boundaries; source fingerprints are not installed-binary attestations.",
+  "qualification": {
+    "publicLifecycleCases": 32,
+    "journalEnvelopeCases": 16,
+    "actualKubernetesAPICases": 32,
+    "nativePublicMetadataTasks": 13,
+    "nativeProofRetirements": 13,
+    "nativeFinalInSyncWorkflows": 2,
+    "nativeBaselineRestorations": 2,
+    "nativeKubernetesActorsAndStorage": "simulated",
+    "creatorOwnership": false,
+    "physicalDeviceActions": false,
+    "installedQualification": false
+  }
+}

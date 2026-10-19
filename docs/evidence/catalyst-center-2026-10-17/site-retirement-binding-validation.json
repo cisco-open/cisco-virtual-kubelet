@@ -1,0 +1,43 @@
+{
+  "status": "staged-binding-qualified; public retirement incomplete",
+  "scope": "Read-only candidate binding and exact Submitting permit validation; no configurationWrite or native Delete implementation exposed",
+  "sources": {
+    "internal/controlleradapter/catalystcenter/site_retirement_binding.go": "ff390913f594e5da5336aaa1cf59b9ea0ad6abfa68a6a7ba20ec495615031912",
+    "internal/controlleradapter/catalystcenter/site_retirement_binding_test.go": "0f27b5811c1e2b092c429684ad3b6bab3d5934231213a717bd570de1b8f98511",
+    "internal/controlleradapter/catalystcenter/site_retirement_binding_envtest_test.go": "fb381c0ed69fe3de27956b4b165583d07a5754d98373e8d63c0204291fcc0c3f"
+  },
+  "gates": [
+    {
+      "log": "site-retirement-binding-local.log",
+      "result": "ok  \tgithub.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter\t5.629s",
+      "topLevelPassingTests": 1,
+      "passingSubcases": 62,
+      "sha256": "ab1e3fe0fdfac9c4b7091390727782392444ddb849775469a069a9ca3cd97511"
+    },
+    {
+      "log": "site-retirement-binding-api.log",
+      "result": "ok  \tgithub.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter\t10.120s",
+      "topLevelPassingTests": 1,
+      "passingSubcases": 14,
+      "sha256": "38d441d428ca1bff6b8305cd8639ba477c35eddc1bc3cc6120ef6ac70cc504ac"
+    },
+    {
+      "log": "site-retirement-binding-regression.log",
+      "result": "ok  \tgithub.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter\t34.584s",
+      "topLevelPassingTests": 39,
+      "passingSubcases": 358,
+      "sha256": "47063dc483e89f3d305f978bd7dca5428bbbd8951fbbc2721717d04e7445c686"
+    }
+  ],
+  "liveQualification": "No new live device or site mutation in this stage. The earlier dependency-reader lab evidence is separate and is not promoted to public retirement qualification.",
+  "publicDeleteEnabled": false,
+  "publicPruneEnabled": false,
+  "remaining": [
+    "public policy/compiler integration",
+    "complete operational/settings consumer ownership checks",
+    "Delete submission and original-task recovery through shared journal",
+    "independent absence verification and atomic retirement receipt publication",
+    "bounded recreation lineage and source/config deletion qualification",
+    "installed full-cycle native qualification"
+  ]
+}

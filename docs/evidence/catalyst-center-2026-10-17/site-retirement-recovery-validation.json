@@ -1,0 +1,47 @@
+{
+  "status": "staged-v2-task-and-absence-observer-qualified; public retirement incomplete",
+  "selector": "site-retire:v2",
+  "sources": {
+    "internal/controlleradapter/catalystcenter/site_retirement_binding.go": "d0a4e2faea35619e23ffe4444bd27978f90dbf3a0be2e39164b7557403d57320",
+    "internal/controlleradapter/catalystcenter/site_retirement_binding_test.go": "ac58d569b1f668dcbe5f6ef5e0e56eaa20c54b308985d6dd96d913ecac78d5d2",
+    "internal/controlleradapter/catalystcenter/site_retirement_binding_envtest_test.go": "fb381c0ed69fe3de27956b4b165583d07a5754d98373e8d63c0204291fcc0c3f",
+    "internal/controlleradapter/catalystcenter/site_retirement_recovery.go": "a7f22cf8c15dd51263725a3af4abb7ec1b5901be4e57516a28de12e8fb29c576",
+    "internal/controlleradapter/catalystcenter/site_retirement_recovery_test.go": "af67498f3a75bc53233e641f82cba367594747047de68ee01fd969f9199035ba",
+    "internal/controlleradapter/catalystcenter/site_retirement_recovery_envtest_test.go": "c28997651486ae1a973df6479ffc4ce46e78196e9792c3023dd4ac940bc35262"
+  },
+  "gates": [
+    {
+      "log": "site-retirement-recovery-local-v2.log",
+      "result": "ok  \tgithub.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter\t10.704s",
+      "topLevelPassingTests": 6,
+      "passingSubcases": 195,
+      "sha256": "ec317140fbd1eecc2275185d3eccce0f763d12707d5aba6d0a86125c51cb3ab8"
+    },
+    {
+      "log": "site-retirement-recovery-api-v2.log",
+      "result": "ok  \tgithub.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter\t19.595s",
+      "topLevelPassingTests": 2,
+      "passingSubcases": 33,
+      "sha256": "fba9567110661f35912157f7bcc20415df5c47a222aff0344b4a89fd80452cf6"
+    }
+  ],
+  "contracts": {
+    "originalCompleteTaskTreeRequired": true,
+    "noTasklessRecovery": true,
+    "twoIndependentAbsenceObservations": true,
+    "sameOriginalTaskTreeRecheckedAfterReadback": true,
+    "stateMACAuthenticatedByRecoverableAncestryProof": true,
+    "ancestryIdentityRequired": true,
+    "parentSettingsEqualityClaimed": false,
+    "oldV1SelectorsAccepted": false,
+    "retiresCustodyOrPublishesCompletion": false,
+    "nativeMutationPerformedByObserver": false
+  },
+  "liveQualification": "Not run for this stage; no new lab mutation. Earlier generated-floor dependency qualification remains separate.",
+  "remaining": [
+    "public compiler/policy and submission integration",
+    "remaining operational/settings consumer lifecycle protection",
+    "atomic retirement receipts and bounded recreation lineage",
+    "config deletion and installed full-cycle qualification"
+  ]
+}

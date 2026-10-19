@@ -1,0 +1,32 @@
+=== RUN   TestEnvtestWirelessAPDispatchRecovery
+=== RUN   TestEnvtestWirelessAPDispatchRecovery/dispatch-field-edit
+=== RUN   TestEnvtestWirelessAPDispatchRecovery/dispatch-read-error
+=== RUN   TestEnvtestWirelessAPDispatchRecovery/dispatch-lost-ack
+=== RUN   TestEnvtestWirelessAPDispatchRecovery/recovery-known
+=== RUN   TestEnvtestWirelessAPDispatchRecovery/recovery-unknown-create
+=== RUN   TestEnvtestWirelessAPDispatchRecovery/recovery-child-failed
+=== RUN   TestEnvtestWirelessAPDispatchRecovery/recovery-tree-unavailable
+=== RUN   TestEnvtestWirelessAPDispatchRecovery/recovery-changed-source
+=== RUN   TestEnvtestWirelessAPDispatchRecovery/recovery-replaced-target
+=== RUN   TestEnvtestWirelessAPDispatchRecovery/recovery-create-child-pending
+=== RUN   TestEnvtestWirelessAPDispatchRecovery/recovery-create-taskless
+--- PASS: TestEnvtestWirelessAPDispatchRecovery (6.86s)
+    --- PASS: TestEnvtestWirelessAPDispatchRecovery/dispatch-field-edit (2.19s)
+    --- PASS: TestEnvtestWirelessAPDispatchRecovery/dispatch-read-error (0.12s)
+    --- PASS: TestEnvtestWirelessAPDispatchRecovery/dispatch-lost-ack (0.06s)
+    --- PASS: TestEnvtestWirelessAPDispatchRecovery/recovery-known (0.18s)
+    --- PASS: TestEnvtestWirelessAPDispatchRecovery/recovery-unknown-create (0.10s)
+    --- PASS: TestEnvtestWirelessAPDispatchRecovery/recovery-child-failed (0.16s)
+    --- PASS: TestEnvtestWirelessAPDispatchRecovery/recovery-tree-unavailable (0.15s)
+    --- PASS: TestEnvtestWirelessAPDispatchRecovery/recovery-changed-source (0.14s)
+    --- PASS: TestEnvtestWirelessAPDispatchRecovery/recovery-replaced-target (0.15s)
+    --- PASS: TestEnvtestWirelessAPDispatchRecovery/recovery-create-child-pending (0.07s)
+    --- PASS: TestEnvtestWirelessAPDispatchRecovery/recovery-create-taskless (0.07s)
+=== RUN   TestEnvtestWirelessMetadataOnlyManifests
+=== RUN   TestEnvtestWirelessMetadataOnlyManifests/ap-calendar
+=== RUN   TestEnvtestWirelessMetadataOnlyManifests/open-ssid
+--- PASS: TestEnvtestWirelessMetadataOnlyManifests (5.82s)
+    --- PASS: TestEnvtestWirelessMetadataOnlyManifests/ap-calendar (2.33s)
+    --- PASS: TestEnvtestWirelessMetadataOnlyManifests/open-ssid (0.17s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	13.625s

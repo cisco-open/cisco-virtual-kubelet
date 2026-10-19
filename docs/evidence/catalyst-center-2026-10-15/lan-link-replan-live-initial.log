@@ -1,0 +1,9 @@
+=== RUN   TestLiveCatalystCenterLANActiveSessions
+    lan_active_sessions_live_test.go:20: native active-session observation context deadline exceeded
+--- FAIL: TestLiveCatalystCenterLANActiveSessions (20.00s)
+=== RUN   TestLiveCatalystCenterLANLinkAdjacency
+    lan_link_adjacency_live_test.go:23: physical topology read context deadline exceeded
+--- FAIL: TestLiveCatalystCenterLANLinkAdjacency (20.00s)
+FAIL
+FAIL	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	40.986s
+FAIL

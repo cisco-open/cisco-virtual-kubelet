@@ -1,0 +1,448 @@
+=== RUN   TestRegularTemplateDependencies
+=== RUN   TestRegularTemplateDependencies/stable
+=== RUN   TestRegularTemplateDependencies/empty-selection-single
+=== RUN   TestRegularTemplateDependencies/empty-selection-multi
+=== RUN   TestRegularTemplateDependencies/unprovisioned
+=== RUN   TestRegularTemplateDependencies/unassigned
+=== RUN   TestRegularTemplateDependencies/unreachable
+=== RUN   TestRegularTemplateDependencies/missing-project
+=== RUN   TestRegularTemplateDependencies/missing-template
+=== RUN   TestRegularTemplateDependencies/draft-only
+=== RUN   TestRegularTemplateDependencies/composite
+=== RUN   TestRegularTemplateDependencies/unknown-kind
+=== RUN   TestRegularTemplateDependencies/wrong-version
+=== RUN   TestRegularTemplateDependencies/late-serial
+=== RUN   TestRegularTemplateDependencies/late-provision
+=== RUN   TestRegularTemplateDependencies/late-project
+=== RUN   TestRegularTemplateDependencies/late-template
+=== RUN   TestRegularTemplateDependencies/late-version
+=== RUN   TestRegularTemplateDependencies/late-content
+=== RUN   TestRegularTemplateDependencies/late-platform
+=== RUN   TestRegularTemplateDependencies/late-selection
+--- PASS: TestRegularTemplateDependencies (0.29s)
+    --- PASS: TestRegularTemplateDependencies/stable (0.02s)
+    --- PASS: TestRegularTemplateDependencies/empty-selection-single (0.02s)
+    --- PASS: TestRegularTemplateDependencies/empty-selection-multi (0.02s)
+    --- PASS: TestRegularTemplateDependencies/unprovisioned (0.01s)
+    --- PASS: TestRegularTemplateDependencies/unassigned (0.01s)
+    --- PASS: TestRegularTemplateDependencies/unreachable (0.01s)
+    --- PASS: TestRegularTemplateDependencies/missing-project (0.01s)
+    --- PASS: TestRegularTemplateDependencies/missing-template (0.01s)
+    --- PASS: TestRegularTemplateDependencies/draft-only (0.01s)
+    --- PASS: TestRegularTemplateDependencies/composite (0.01s)
+    --- PASS: TestRegularTemplateDependencies/unknown-kind (0.01s)
+    --- PASS: TestRegularTemplateDependencies/wrong-version (0.01s)
+    --- PASS: TestRegularTemplateDependencies/late-serial (0.02s)
+    --- PASS: TestRegularTemplateDependencies/late-provision (0.02s)
+    --- PASS: TestRegularTemplateDependencies/late-project (0.02s)
+    --- PASS: TestRegularTemplateDependencies/late-template (0.02s)
+    --- PASS: TestRegularTemplateDependencies/late-version (0.02s)
+    --- PASS: TestRegularTemplateDependencies/late-content (0.02s)
+    --- PASS: TestRegularTemplateDependencies/late-platform (0.02s)
+    --- PASS: TestRegularTemplateDependencies/late-selection (0.02s)
+=== RUN   TestTemplateDeploymentEmptySelection
+=== RUN   TestTemplateDeploymentEmptySelection/SINGLE_SELECT/omitted
+=== RUN   TestTemplateDeploymentEmptySelection/SINGLE_SELECT/supplied
+=== RUN   TestTemplateDeploymentEmptySelection/SINGLE_SELECT/empty-value
+=== RUN   TestTemplateDeploymentEmptySelection/SINGLE_SELECT/empty-list
+=== RUN   TestTemplateDeploymentEmptySelection/SINGLE_SELECT/required-omitted
+=== RUN   TestTemplateDeploymentEmptySelection/SINGLE_SELECT/required-empty-list
+=== RUN   TestTemplateDeploymentEmptySelection/SINGLE_SELECT/retained-default
+=== RUN   TestTemplateDeploymentEmptySelection/SINGLE_SELECT/nonempty-default-selection
+=== RUN   TestTemplateDeploymentEmptySelection/SINGLE_SELECT/empty-default-selection
+=== RUN   TestTemplateDeploymentEmptySelection/SINGLE_SELECT/null-default-selection
+=== RUN   TestTemplateDeploymentEmptySelection/SINGLE_SELECT/malformed-default-selection
+=== RUN   TestTemplateDeploymentEmptySelection/SINGLE_SELECT/missing-values
+=== RUN   TestTemplateDeploymentEmptySelection/SINGLE_SELECT/null-values
+=== RUN   TestTemplateDeploymentEmptySelection/SINGLE_SELECT/array-values
+=== RUN   TestTemplateDeploymentEmptySelection/MULTI_SELECT/omitted
+=== RUN   TestTemplateDeploymentEmptySelection/MULTI_SELECT/supplied
+=== RUN   TestTemplateDeploymentEmptySelection/MULTI_SELECT/empty-value
+=== RUN   TestTemplateDeploymentEmptySelection/MULTI_SELECT/empty-list
+=== RUN   TestTemplateDeploymentEmptySelection/MULTI_SELECT/required-omitted
+=== RUN   TestTemplateDeploymentEmptySelection/MULTI_SELECT/required-empty-list
+=== RUN   TestTemplateDeploymentEmptySelection/MULTI_SELECT/retained-default
+=== RUN   TestTemplateDeploymentEmptySelection/MULTI_SELECT/nonempty-default-selection
+=== RUN   TestTemplateDeploymentEmptySelection/MULTI_SELECT/empty-default-selection
+=== RUN   TestTemplateDeploymentEmptySelection/MULTI_SELECT/null-default-selection
+=== RUN   TestTemplateDeploymentEmptySelection/MULTI_SELECT/malformed-default-selection
+=== RUN   TestTemplateDeploymentEmptySelection/MULTI_SELECT/missing-values
+=== RUN   TestTemplateDeploymentEmptySelection/MULTI_SELECT/null-values
+=== RUN   TestTemplateDeploymentEmptySelection/MULTI_SELECT/array-values
+--- PASS: TestTemplateDeploymentEmptySelection (0.00s)
+    --- PASS: TestTemplateDeploymentEmptySelection/SINGLE_SELECT/omitted (0.00s)
+    --- PASS: TestTemplateDeploymentEmptySelection/SINGLE_SELECT/supplied (0.00s)
+    --- PASS: TestTemplateDeploymentEmptySelection/SINGLE_SELECT/empty-value (0.00s)
+    --- PASS: TestTemplateDeploymentEmptySelection/SINGLE_SELECT/empty-list (0.00s)
+    --- PASS: TestTemplateDeploymentEmptySelection/SINGLE_SELECT/required-omitted (0.00s)
+    --- PASS: TestTemplateDeploymentEmptySelection/SINGLE_SELECT/required-empty-list (0.00s)
+    --- PASS: TestTemplateDeploymentEmptySelection/SINGLE_SELECT/retained-default (0.00s)
+    --- PASS: TestTemplateDeploymentEmptySelection/SINGLE_SELECT/nonempty-default-selection (0.00s)
+    --- PASS: TestTemplateDeploymentEmptySelection/SINGLE_SELECT/empty-default-selection (0.00s)
+    --- PASS: TestTemplateDeploymentEmptySelection/SINGLE_SELECT/null-default-selection (0.00s)
+    --- PASS: TestTemplateDeploymentEmptySelection/SINGLE_SELECT/malformed-default-selection (0.00s)
+    --- PASS: TestTemplateDeploymentEmptySelection/SINGLE_SELECT/missing-values (0.00s)
+    --- PASS: TestTemplateDeploymentEmptySelection/SINGLE_SELECT/null-values (0.00s)
+    --- PASS: TestTemplateDeploymentEmptySelection/SINGLE_SELECT/array-values (0.00s)
+    --- PASS: TestTemplateDeploymentEmptySelection/MULTI_SELECT/omitted (0.00s)
+    --- PASS: TestTemplateDeploymentEmptySelection/MULTI_SELECT/supplied (0.00s)
+    --- PASS: TestTemplateDeploymentEmptySelection/MULTI_SELECT/empty-value (0.00s)
+    --- PASS: TestTemplateDeploymentEmptySelection/MULTI_SELECT/empty-list (0.00s)
+    --- PASS: TestTemplateDeploymentEmptySelection/MULTI_SELECT/required-omitted (0.00s)
+    --- PASS: TestTemplateDeploymentEmptySelection/MULTI_SELECT/required-empty-list (0.00s)
+    --- PASS: TestTemplateDeploymentEmptySelection/MULTI_SELECT/retained-default (0.00s)
+    --- PASS: TestTemplateDeploymentEmptySelection/MULTI_SELECT/nonempty-default-selection (0.00s)
+    --- PASS: TestTemplateDeploymentEmptySelection/MULTI_SELECT/empty-default-selection (0.00s)
+    --- PASS: TestTemplateDeploymentEmptySelection/MULTI_SELECT/null-default-selection (0.00s)
+    --- PASS: TestTemplateDeploymentEmptySelection/MULTI_SELECT/malformed-default-selection (0.00s)
+    --- PASS: TestTemplateDeploymentEmptySelection/MULTI_SELECT/missing-values (0.00s)
+    --- PASS: TestTemplateDeploymentEmptySelection/MULTI_SELECT/null-values (0.00s)
+    --- PASS: TestTemplateDeploymentEmptySelection/MULTI_SELECT/array-values (0.00s)
+=== RUN   TestRegularTemplateSubmission
+=== RUN   TestRegularTemplateSubmission/accepted
+=== RUN   TestRegularTemplateSubmission/accepted-empty-selection
+=== RUN   TestRegularTemplateSubmission/lost-receipt
+=== RUN   TestRegularTemplateSubmission/rejected
+=== RUN   TestRegularTemplateSubmission/caller-change
+=== RUN   TestRegularTemplateSubmission/late-version
+=== RUN   TestRegularTemplateSubmission/late-platform
+=== RUN   TestRegularTemplateSubmission/late-content
+=== RUN   TestRegularTemplateSubmission/late-empty-selection
+=== RUN   TestRegularTemplateSubmission/recover-success
+=== RUN   TestRegularTemplateSubmission/recover-success/owned-same
+=== RUN   TestRegularTemplateSubmission/recover-success/owned-record
+=== RUN   TestRegularTemplateSubmission/recover-success/owned-record-owner
+=== RUN   TestRegularTemplateSubmission/recover-success/owned-record-late-source
+=== RUN   TestRegularTemplateSubmission/recover-success/owned-record-late-journal
+=== RUN   TestRegularTemplateSubmission/recover-success/owned-owner
+=== RUN   TestRegularTemplateSubmission/recover-success/owned-no-owner
+=== RUN   TestRegularTemplateSubmission/recover-success/owned-duplicate-owner
+=== RUN   TestRegularTemplateSubmission/recover-success/owned-source
+=== RUN   TestRegularTemplateSubmission/recover-success/owned-config-generation
+=== RUN   TestRegularTemplateSubmission/recover-success/owned-controller-generation
+=== RUN   TestRegularTemplateSubmission/recover-success/owned-wrong-operation
+=== RUN   TestRegularTemplateSubmission/recover-success/owned-late-source
+=== RUN   TestRegularTemplateSubmission/recover-success/owned-late-journal
+=== RUN   TestRegularTemplateSubmission/recover-success/executor-prepared
+=== RUN   TestRegularTemplateSubmission/recover-success/executor-prepared-source
+=== RUN   TestRegularTemplateSubmission/recover-success/executor-prepared-resource
+=== RUN   TestRegularTemplateSubmission/recover-success/executor-owner
+=== RUN   TestRegularTemplateSubmission/recover-success/executor-accepted
+=== RUN   TestRegularTemplateSubmission/recover-success/executor-verifying
+=== RUN   TestRegularTemplateSubmission/recover-success/executor-unknown
+=== RUN   TestRegularTemplateSubmission/recover-success/compiler-prerequisites
+=== RUN   TestRegularTemplateSubmission/recover-empty-selection
+=== RUN   TestRegularTemplateSubmission/recover-new-latest
+=== RUN   TestRegularTemplateSubmission/recover-pending
+=== RUN   TestRegularTemplateSubmission/recover-failed
+--- PASS: TestRegularTemplateSubmission (1.27s)
+    --- PASS: TestRegularTemplateSubmission/accepted (0.02s)
+    --- PASS: TestRegularTemplateSubmission/accepted-empty-selection (0.02s)
+    --- PASS: TestRegularTemplateSubmission/lost-receipt (0.02s)
+    --- PASS: TestRegularTemplateSubmission/rejected (0.02s)
+    --- PASS: TestRegularTemplateSubmission/caller-change (0.02s)
+    --- PASS: TestRegularTemplateSubmission/late-version (0.02s)
+    --- PASS: TestRegularTemplateSubmission/late-platform (0.02s)
+    --- PASS: TestRegularTemplateSubmission/late-content (0.02s)
+    --- PASS: TestRegularTemplateSubmission/late-empty-selection (0.02s)
+    --- PASS: TestRegularTemplateSubmission/recover-success (1.02s)
+        --- PASS: TestRegularTemplateSubmission/recover-success/owned-same (0.62s)
+        --- PASS: TestRegularTemplateSubmission/recover-success/owned-record (0.03s)
+        --- PASS: TestRegularTemplateSubmission/recover-success/owned-record-owner (0.01s)
+        --- PASS: TestRegularTemplateSubmission/recover-success/owned-record-late-source (0.02s)
+        --- PASS: TestRegularTemplateSubmission/recover-success/owned-record-late-journal (0.02s)
+        --- PASS: TestRegularTemplateSubmission/recover-success/owned-owner (0.01s)
+        --- PASS: TestRegularTemplateSubmission/recover-success/owned-no-owner (0.01s)
+        --- PASS: TestRegularTemplateSubmission/recover-success/owned-duplicate-owner (0.01s)
+        --- PASS: TestRegularTemplateSubmission/recover-success/owned-source (0.01s)
+        --- PASS: TestRegularTemplateSubmission/recover-success/owned-config-generation (0.01s)
+        --- PASS: TestRegularTemplateSubmission/recover-success/owned-controller-generation (0.01s)
+        --- PASS: TestRegularTemplateSubmission/recover-success/owned-wrong-operation (0.01s)
+        --- PASS: TestRegularTemplateSubmission/recover-success/owned-late-source (0.02s)
+        --- PASS: TestRegularTemplateSubmission/recover-success/owned-late-journal (0.02s)
+        --- PASS: TestRegularTemplateSubmission/recover-success/executor-prepared (0.02s)
+        --- PASS: TestRegularTemplateSubmission/recover-success/executor-prepared-source (0.01s)
+        --- PASS: TestRegularTemplateSubmission/recover-success/executor-prepared-resource (0.02s)
+        --- PASS: TestRegularTemplateSubmission/recover-success/executor-owner (0.01s)
+        --- PASS: TestRegularTemplateSubmission/recover-success/executor-accepted (0.02s)
+        --- PASS: TestRegularTemplateSubmission/recover-success/executor-verifying (0.02s)
+        --- PASS: TestRegularTemplateSubmission/recover-success/executor-unknown (0.01s)
+        --- PASS: TestRegularTemplateSubmission/recover-success/compiler-prerequisites (0.04s)
+    --- PASS: TestRegularTemplateSubmission/recover-empty-selection (0.02s)
+    --- PASS: TestRegularTemplateSubmission/recover-new-latest (0.03s)
+    --- PASS: TestRegularTemplateSubmission/recover-pending (0.02s)
+    --- PASS: TestRegularTemplateSubmission/recover-failed (0.02s)
+=== RUN   TestTemplateDeploymentParameters
+=== RUN   TestTemplateDeploymentParameters/string
+=== RUN   TestTemplateDeploymentParameters/integer
+=== RUN   TestTemplateDeploymentParameters/ip
+=== RUN   TestTemplateDeploymentParameters/mac
+=== RUN   TestTemplateDeploymentParameters/array
+=== RUN   TestTemplateDeploymentParameters/empty-array
+=== RUN   TestTemplateDeploymentParameters/default
+=== RUN   TestTemplateDeploymentParameters/binding
+=== RUN   TestTemplateDeploymentParameters/optional
+=== RUN   TestTemplateDeploymentParameters/missing
+=== RUN   TestTemplateDeploymentParameters/empty-required
+=== RUN   TestTemplateDeploymentParameters/extra
+=== RUN   TestTemplateDeploymentParameters/nil
+=== RUN   TestTemplateDeploymentParameters/duplicate
+=== RUN   TestTemplateDeploymentParameters/bad-type
+=== RUN   TestTemplateDeploymentParameters/bad-flag
+=== RUN   TestTemplateDeploymentParameters/divider
+=== RUN   TestTemplateDeploymentParameters/not-param
+=== RUN   TestTemplateDeploymentParameters/fraction
+=== RUN   TestTemplateDeploymentParameters/bad-ip
+=== RUN   TestTemplateDeploymentParameters/scoped-ip
+=== RUN   TestTemplateDeploymentParameters/bad-mac
+=== RUN   TestTemplateDeploymentParameters/scalar-many
+=== RUN   TestTemplateDeploymentParameters/bad-default
+--- PASS: TestTemplateDeploymentParameters (0.00s)
+    --- PASS: TestTemplateDeploymentParameters/string (0.00s)
+    --- PASS: TestTemplateDeploymentParameters/integer (0.00s)
+    --- PASS: TestTemplateDeploymentParameters/ip (0.00s)
+    --- PASS: TestTemplateDeploymentParameters/mac (0.00s)
+    --- PASS: TestTemplateDeploymentParameters/array (0.00s)
+    --- PASS: TestTemplateDeploymentParameters/empty-array (0.00s)
+    --- PASS: TestTemplateDeploymentParameters/default (0.00s)
+    --- PASS: TestTemplateDeploymentParameters/binding (0.00s)
+    --- PASS: TestTemplateDeploymentParameters/optional (0.00s)
+    --- PASS: TestTemplateDeploymentParameters/missing (0.00s)
+    --- PASS: TestTemplateDeploymentParameters/empty-required (0.00s)
+    --- PASS: TestTemplateDeploymentParameters/extra (0.00s)
+    --- PASS: TestTemplateDeploymentParameters/nil (0.00s)
+    --- PASS: TestTemplateDeploymentParameters/duplicate (0.00s)
+    --- PASS: TestTemplateDeploymentParameters/bad-type (0.00s)
+    --- PASS: TestTemplateDeploymentParameters/bad-flag (0.00s)
+    --- PASS: TestTemplateDeploymentParameters/divider (0.00s)
+    --- PASS: TestTemplateDeploymentParameters/not-param (0.00s)
+    --- PASS: TestTemplateDeploymentParameters/fraction (0.00s)
+    --- PASS: TestTemplateDeploymentParameters/bad-ip (0.00s)
+    --- PASS: TestTemplateDeploymentParameters/scoped-ip (0.00s)
+    --- PASS: TestTemplateDeploymentParameters/bad-mac (0.00s)
+    --- PASS: TestTemplateDeploymentParameters/scalar-many (0.00s)
+    --- PASS: TestTemplateDeploymentParameters/bad-default (0.00s)
+=== RUN   TestTemplateDeploymentIntegerRange
+=== RUN   TestTemplateDeploymentIntegerRange/minimum
+=== RUN   TestTemplateDeploymentIntegerRange/maximum
+=== RUN   TestTemplateDeploymentIntegerRange/second
+=== RUN   TestTemplateDeploymentIntegerRange/gap
+=== RUN   TestTemplateDeploymentIntegerRange/below
+=== RUN   TestTemplateDeploymentIntegerRange/above
+=== RUN   TestTemplateDeploymentIntegerRange/reversed
+=== RUN   TestTemplateDeploymentIntegerRange/missing
+=== RUN   TestTemplateDeploymentIntegerRange/fraction
+=== RUN   TestTemplateDeploymentIntegerRange/string-bound
+=== RUN   TestTemplateDeploymentIntegerRange/imprecise
+=== RUN   TestTemplateDeploymentIntegerRange/noninteger
+=== RUN   TestTemplateDeploymentIntegerRange/array-bad
+=== RUN   TestTemplateDeploymentIntegerRange/exact-large
+--- PASS: TestTemplateDeploymentIntegerRange (0.00s)
+    --- PASS: TestTemplateDeploymentIntegerRange/minimum (0.00s)
+    --- PASS: TestTemplateDeploymentIntegerRange/maximum (0.00s)
+    --- PASS: TestTemplateDeploymentIntegerRange/second (0.00s)
+    --- PASS: TestTemplateDeploymentIntegerRange/gap (0.00s)
+    --- PASS: TestTemplateDeploymentIntegerRange/below (0.00s)
+    --- PASS: TestTemplateDeploymentIntegerRange/above (0.00s)
+    --- PASS: TestTemplateDeploymentIntegerRange/reversed (0.00s)
+    --- PASS: TestTemplateDeploymentIntegerRange/missing (0.00s)
+    --- PASS: TestTemplateDeploymentIntegerRange/fraction (0.00s)
+    --- PASS: TestTemplateDeploymentIntegerRange/string-bound (0.00s)
+    --- PASS: TestTemplateDeploymentIntegerRange/imprecise (0.00s)
+    --- PASS: TestTemplateDeploymentIntegerRange/noninteger (0.00s)
+    --- PASS: TestTemplateDeploymentIntegerRange/array-bad (0.00s)
+    --- PASS: TestTemplateDeploymentIntegerRange/exact-large (0.00s)
+=== RUN   TestTemplateDeploymentReceipt
+=== RUN   TestTemplateDeploymentReceipt/direct
+=== RUN   TestTemplateDeploymentReceipt/nested
+=== RUN   TestTemplateDeploymentReceipt/provider-progress
+=== RUN   TestTemplateDeploymentReceipt/corrected-progress
+=== RUN   TestTemplateDeploymentReceipt/consistent
+=== RUN   TestTemplateDeploymentReceipt/progress-suffix
+=== RUN   TestTemplateDeploymentReceipt/progress-path
+=== RUN   TestTemplateDeploymentReceipt/progress-trailing-text
+=== RUN   TestTemplateDeploymentReceipt/missing
+=== RUN   TestTemplateDeploymentReceipt/task-only
+=== RUN   TestTemplateDeploymentReceipt/optimistic-message
+=== RUN   TestTemplateDeploymentReceipt/conflicting
+=== RUN   TestTemplateDeploymentReceipt/duplicate-progress
+=== RUN   TestTemplateDeploymentReceipt/nil-uuid
+=== RUN   TestTemplateDeploymentReceipt/path
+=== RUN   TestTemplateDeploymentReceipt/malformed
+--- PASS: TestTemplateDeploymentReceipt (0.00s)
+    --- PASS: TestTemplateDeploymentReceipt/direct (0.00s)
+    --- PASS: TestTemplateDeploymentReceipt/nested (0.00s)
+    --- PASS: TestTemplateDeploymentReceipt/provider-progress (0.00s)
+    --- PASS: TestTemplateDeploymentReceipt/corrected-progress (0.00s)
+    --- PASS: TestTemplateDeploymentReceipt/consistent (0.00s)
+    --- PASS: TestTemplateDeploymentReceipt/progress-suffix (0.00s)
+    --- PASS: TestTemplateDeploymentReceipt/progress-path (0.00s)
+    --- PASS: TestTemplateDeploymentReceipt/progress-trailing-text (0.00s)
+    --- PASS: TestTemplateDeploymentReceipt/missing (0.00s)
+    --- PASS: TestTemplateDeploymentReceipt/task-only (0.00s)
+    --- PASS: TestTemplateDeploymentReceipt/optimistic-message (0.00s)
+    --- PASS: TestTemplateDeploymentReceipt/conflicting (0.00s)
+    --- PASS: TestTemplateDeploymentReceipt/duplicate-progress (0.00s)
+    --- PASS: TestTemplateDeploymentReceipt/nil-uuid (0.00s)
+    --- PASS: TestTemplateDeploymentReceipt/path (0.00s)
+    --- PASS: TestTemplateDeploymentReceipt/malformed (0.00s)
+=== RUN   TestTemplateDeploymentCompletion
+=== RUN   TestTemplateDeploymentCompletion/success
+=== RUN   TestTemplateDeploymentCompletion/rfc3339
+=== RUN   TestTemplateDeploymentCompletion/init
+=== RUN   TestTemplateDeploymentCompletion/running
+=== RUN   TestTemplateDeploymentCompletion/device-running
+=== RUN   TestTemplateDeploymentCompletion/failure
+=== RUN   TestTemplateDeploymentCompletion/device-failure
+=== RUN   TestTemplateDeploymentCompletion/unknown
+=== RUN   TestTemplateDeploymentCompletion/wrong-id
+=== RUN   TestTemplateDeploymentCompletion/wrong-device
+=== RUN   TestTemplateDeploymentCompletion/wrong-identifier
+=== RUN   TestTemplateDeploymentCompletion/wrong-type
+=== RUN   TestTemplateDeploymentCompletion/wrong-project
+=== RUN   TestTemplateDeploymentCompletion/wrong-template
+=== RUN   TestTemplateDeploymentCompletion/wrong-version
+=== RUN   TestTemplateDeploymentCompletion/missing-devices
+=== RUN   TestTemplateDeploymentCompletion/duplicate-devices
+=== RUN   TestTemplateDeploymentCompletion/missing-start
+=== RUN   TestTemplateDeploymentCompletion/old-start
+=== RUN   TestTemplateDeploymentCompletion/future-end
+=== RUN   TestTemplateDeploymentCompletion/reverse-time
+=== RUN   TestTemplateDeploymentCompletion/device-old-start
+=== RUN   TestTemplateDeploymentCompletion/missing-status
+=== RUN   TestTemplateDeploymentCompletion/unqueryable
+--- PASS: TestTemplateDeploymentCompletion (0.24s)
+    --- PASS: TestTemplateDeploymentCompletion/success (0.01s)
+    --- PASS: TestTemplateDeploymentCompletion/rfc3339 (0.01s)
+    --- PASS: TestTemplateDeploymentCompletion/init (0.01s)
+    --- PASS: TestTemplateDeploymentCompletion/running (0.01s)
+    --- PASS: TestTemplateDeploymentCompletion/device-running (0.01s)
+    --- PASS: TestTemplateDeploymentCompletion/failure (0.01s)
+    --- PASS: TestTemplateDeploymentCompletion/device-failure (0.01s)
+    --- PASS: TestTemplateDeploymentCompletion/unknown (0.01s)
+    --- PASS: TestTemplateDeploymentCompletion/wrong-id (0.01s)
+    --- PASS: TestTemplateDeploymentCompletion/wrong-device (0.01s)
+    --- PASS: TestTemplateDeploymentCompletion/wrong-identifier (0.01s)
+    --- PASS: TestTemplateDeploymentCompletion/wrong-type (0.01s)
+    --- PASS: TestTemplateDeploymentCompletion/wrong-project (0.01s)
+    --- PASS: TestTemplateDeploymentCompletion/wrong-template (0.01s)
+    --- PASS: TestTemplateDeploymentCompletion/wrong-version (0.01s)
+    --- PASS: TestTemplateDeploymentCompletion/missing-devices (0.01s)
+    --- PASS: TestTemplateDeploymentCompletion/duplicate-devices (0.01s)
+    --- PASS: TestTemplateDeploymentCompletion/missing-start (0.01s)
+    --- PASS: TestTemplateDeploymentCompletion/old-start (0.01s)
+    --- PASS: TestTemplateDeploymentCompletion/future-end (0.01s)
+    --- PASS: TestTemplateDeploymentCompletion/reverse-time (0.01s)
+    --- PASS: TestTemplateDeploymentCompletion/device-old-start (0.01s)
+    --- PASS: TestTemplateDeploymentCompletion/missing-status (0.01s)
+    --- PASS: TestTemplateDeploymentCompletion/unqueryable (0.01s)
+=== RUN   TestTemplateDeploymentResourceBinding
+--- PASS: TestTemplateDeploymentResourceBinding (0.00s)
+=== RUN   TestTemplateDeploymentReceiptSuppression
+=== RUN   TestTemplateDeploymentReceiptSuppression/NEVER/same
+=== RUN   TestTemplateDeploymentReceiptSuppression/NEVER/first
+=== RUN   TestTemplateDeploymentReceiptSuppression/NEVER/revision
+=== RUN   TestTemplateDeploymentReceiptSuppression/NEVER/version
+=== RUN   TestTemplateDeploymentReceiptSuppression/NEVER/foreign
+=== RUN   TestTemplateDeploymentReceiptSuppression/NEVER/unowned
+=== RUN   TestTemplateDeploymentReceiptSuppression/NEVER/duplicate
+=== RUN   TestTemplateDeploymentReceiptSuppression/NEVER/unverified
+=== RUN   TestTemplateDeploymentReceiptSuppression/NEVER/bad-time
+=== RUN   TestTemplateDeploymentReceiptSuppression/NEVER/bad-receipt
+=== RUN   TestTemplateDeploymentReceiptSuppression/NEVER/replaced-device
+=== RUN   TestTemplateDeploymentReceiptSuppression/NEVER/active
+=== RUN   TestTemplateDeploymentReceiptSuppression/ALWAYS/same
+=== RUN   TestTemplateDeploymentReceiptSuppression/ALWAYS/first
+=== RUN   TestTemplateDeploymentReceiptSuppression/ALWAYS/revision
+=== RUN   TestTemplateDeploymentReceiptSuppression/ALWAYS/version
+=== RUN   TestTemplateDeploymentReceiptSuppression/ALWAYS/foreign
+=== RUN   TestTemplateDeploymentReceiptSuppression/ALWAYS/unowned
+=== RUN   TestTemplateDeploymentReceiptSuppression/ALWAYS/duplicate
+=== RUN   TestTemplateDeploymentReceiptSuppression/ALWAYS/unverified
+=== RUN   TestTemplateDeploymentReceiptSuppression/ALWAYS/bad-time
+=== RUN   TestTemplateDeploymentReceiptSuppression/ALWAYS/bad-receipt
+=== RUN   TestTemplateDeploymentReceiptSuppression/ALWAYS/replaced-device
+=== RUN   TestTemplateDeploymentReceiptSuppression/ALWAYS/active
+=== RUN   TestTemplateDeploymentReceiptSuppression/ON_CHANGE/same
+=== RUN   TestTemplateDeploymentReceiptSuppression/ON_CHANGE/first
+=== RUN   TestTemplateDeploymentReceiptSuppression/ON_CHANGE/revision
+=== RUN   TestTemplateDeploymentReceiptSuppression/ON_CHANGE/version
+=== RUN   TestTemplateDeploymentReceiptSuppression/ON_CHANGE/foreign
+=== RUN   TestTemplateDeploymentReceiptSuppression/ON_CHANGE/unowned
+=== RUN   TestTemplateDeploymentReceiptSuppression/ON_CHANGE/duplicate
+=== RUN   TestTemplateDeploymentReceiptSuppression/ON_CHANGE/unverified
+=== RUN   TestTemplateDeploymentReceiptSuppression/ON_CHANGE/bad-time
+=== RUN   TestTemplateDeploymentReceiptSuppression/ON_CHANGE/bad-receipt
+=== RUN   TestTemplateDeploymentReceiptSuppression/ON_CHANGE/replaced-device
+=== RUN   TestTemplateDeploymentReceiptSuppression/ON_CHANGE/active
+--- PASS: TestTemplateDeploymentReceiptSuppression (0.00s)
+    --- PASS: TestTemplateDeploymentReceiptSuppression/NEVER/same (0.00s)
+    --- PASS: TestTemplateDeploymentReceiptSuppression/NEVER/first (0.00s)
+    --- PASS: TestTemplateDeploymentReceiptSuppression/NEVER/revision (0.00s)
+    --- PASS: TestTemplateDeploymentReceiptSuppression/NEVER/version (0.00s)
+    --- PASS: TestTemplateDeploymentReceiptSuppression/NEVER/foreign (0.00s)
+    --- PASS: TestTemplateDeploymentReceiptSuppression/NEVER/unowned (0.00s)
+    --- PASS: TestTemplateDeploymentReceiptSuppression/NEVER/duplicate (0.00s)
+    --- PASS: TestTemplateDeploymentReceiptSuppression/NEVER/unverified (0.00s)
+    --- PASS: TestTemplateDeploymentReceiptSuppression/NEVER/bad-time (0.00s)
+    --- PASS: TestTemplateDeploymentReceiptSuppression/NEVER/bad-receipt (0.00s)
+    --- PASS: TestTemplateDeploymentReceiptSuppression/NEVER/replaced-device (0.00s)
+    --- PASS: TestTemplateDeploymentReceiptSuppression/NEVER/active (0.00s)
+    --- PASS: TestTemplateDeploymentReceiptSuppression/ALWAYS/same (0.00s)
+    --- PASS: TestTemplateDeploymentReceiptSuppression/ALWAYS/first (0.00s)
+    --- PASS: TestTemplateDeploymentReceiptSuppression/ALWAYS/revision (0.00s)
+    --- PASS: TestTemplateDeploymentReceiptSuppression/ALWAYS/version (0.00s)
+    --- PASS: TestTemplateDeploymentReceiptSuppression/ALWAYS/foreign (0.00s)
+    --- PASS: TestTemplateDeploymentReceiptSuppression/ALWAYS/unowned (0.00s)
+    --- PASS: TestTemplateDeploymentReceiptSuppression/ALWAYS/duplicate (0.00s)
+    --- PASS: TestTemplateDeploymentReceiptSuppression/ALWAYS/unverified (0.00s)
+    --- PASS: TestTemplateDeploymentReceiptSuppression/ALWAYS/bad-time (0.00s)
+    --- PASS: TestTemplateDeploymentReceiptSuppression/ALWAYS/bad-receipt (0.00s)
+    --- PASS: TestTemplateDeploymentReceiptSuppression/ALWAYS/replaced-device (0.00s)
+    --- PASS: TestTemplateDeploymentReceiptSuppression/ALWAYS/active (0.00s)
+    --- PASS: TestTemplateDeploymentReceiptSuppression/ON_CHANGE/same (0.00s)
+    --- PASS: TestTemplateDeploymentReceiptSuppression/ON_CHANGE/first (0.00s)
+    --- PASS: TestTemplateDeploymentReceiptSuppression/ON_CHANGE/revision (0.00s)
+    --- PASS: TestTemplateDeploymentReceiptSuppression/ON_CHANGE/version (0.00s)
+    --- PASS: TestTemplateDeploymentReceiptSuppression/ON_CHANGE/foreign (0.00s)
+    --- PASS: TestTemplateDeploymentReceiptSuppression/ON_CHANGE/unowned (0.00s)
+    --- PASS: TestTemplateDeploymentReceiptSuppression/ON_CHANGE/duplicate (0.00s)
+    --- PASS: TestTemplateDeploymentReceiptSuppression/ON_CHANGE/unverified (0.00s)
+    --- PASS: TestTemplateDeploymentReceiptSuppression/ON_CHANGE/bad-time (0.00s)
+    --- PASS: TestTemplateDeploymentReceiptSuppression/ON_CHANGE/bad-receipt (0.00s)
+    --- PASS: TestTemplateDeploymentReceiptSuppression/ON_CHANGE/replaced-device (0.00s)
+    --- PASS: TestTemplateDeploymentReceiptSuppression/ON_CHANGE/active (0.00s)
+=== RUN   TestTemplateDeploymentSelection
+=== RUN   TestTemplateDeploymentSelection/single
+=== RUN   TestTemplateDeploymentSelection/multi
+=== RUN   TestTemplateDeploymentSelection/default
+=== RUN   TestTemplateDeploymentSelection/optional-empty
+=== RUN   TestTemplateDeploymentSelection/label
+=== RUN   TestTemplateDeploymentSelection/unknown
+=== RUN   TestTemplateDeploymentSelection/duplicate
+=== RUN   TestTemplateDeploymentSelection/single-many
+=== RUN   TestTemplateDeploymentSelection/bad-kind
+=== RUN   TestTemplateDeploymentSelection/missing-values
+=== RUN   TestTemplateDeploymentSelection/numeric-value
+=== RUN   TestTemplateDeploymentSelection/bad-default
+=== RUN   TestTemplateDeploymentSelection/many-defaults
+=== RUN   TestTemplateDeploymentSelection/required-empty
+=== RUN   TestTemplateDeploymentSelection/bad-shape
+--- PASS: TestTemplateDeploymentSelection (0.00s)
+    --- PASS: TestTemplateDeploymentSelection/single (0.00s)
+    --- PASS: TestTemplateDeploymentSelection/multi (0.00s)
+    --- PASS: TestTemplateDeploymentSelection/default (0.00s)
+    --- PASS: TestTemplateDeploymentSelection/optional-empty (0.00s)
+    --- PASS: TestTemplateDeploymentSelection/label (0.00s)
+    --- PASS: TestTemplateDeploymentSelection/unknown (0.00s)
+    --- PASS: TestTemplateDeploymentSelection/duplicate (0.00s)
+    --- PASS: TestTemplateDeploymentSelection/single-many (0.00s)
+    --- PASS: TestTemplateDeploymentSelection/bad-kind (0.00s)
+    --- PASS: TestTemplateDeploymentSelection/missing-values (0.00s)
+    --- PASS: TestTemplateDeploymentSelection/numeric-value (0.00s)
+    --- PASS: TestTemplateDeploymentSelection/bad-default (0.00s)
+    --- PASS: TestTemplateDeploymentSelection/many-defaults (0.00s)
+    --- PASS: TestTemplateDeploymentSelection/required-empty (0.00s)
+    --- PASS: TestTemplateDeploymentSelection/bad-shape (0.00s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	4.186s

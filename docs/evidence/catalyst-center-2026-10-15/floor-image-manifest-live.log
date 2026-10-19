@@ -1,0 +1,26 @@
+=== RUN   TestLiveCatalystCenterFloorImageManifest
+    site_execution_live_test.go:68: isolated qualification hierarchy: Global/CVK-Q-20261014-225135-000000000
+    site_execution_live_test.go:202: public manifest step=0 status=Waiting operation=Accepted task=01a13c9d-2cdd-7773-bbd2-a8f0f0dbda13 reasons=[AdapterAvailable TaskAccepted TaskAccepted]
+    site_execution_live_test.go:202: public manifest Create reached InSync across simulated worker restarts; journal cleared, owner retained, no-op verified
+    site_execution_live_test.go:214: bulk create task=01a13c9d-2cdd-7773-bbd2-a8f0f0dbda13
+    site_execution_live_test.go:240: single native batch created all three site identities; retained member/anchor binding and task tree verified
+    site_execution_live_test.go:269: public manifest step=0 status=Waiting operation=Accepted task=01a13c9d-48d3-7180-a88b-43dfad7a0947 reasons=[AdapterAvailable TaskAccepted TaskAccepted]
+    site_execution_live_test.go:269: public manifest Update reached InSync across simulated worker restarts; journal cleared, owner retained, no-op verified
+    site_execution_live_test.go:276: submitted task=01a13c9d-48d3-7180-a88b-43dfad7a0947 at=2026-10-14T22:51:43Z
+    site_execution_live_test.go:294: verified Update floor
+    site_execution_live_test.go:303: three creates, one floor update, and full hierarchy read-back verified
+    floor_image_live_test.go:58: floor upload receipt HTTP=201 JSON keys=[apCount basementTotalCount buildingCount buildingName contact criticalRadioCount dot11aRadioCount dot11bRadioCount dot11gRadioCount floorCount floorIndex floorTotalCount geometry groupInstanceUuid hierarchyName id imageInfo incomplete instanceUuid isRootDomain lastUpdated location maintainAspectRatio metrics name outdoorAreaCount parentGroupUuid rfModel siteHierarchyId siteName status type unitsOfMeasure wirelessClientsCount] response keys=[]
+    floor_image_live_test.go:68: floor upload DTO binding: instance=false site=false group=true hierarchy=false hierarchyAbsent=false imageMetadata=true
+    site_execution_live_test.go:305: public manifest step=0 status=Verifying operation=Verifying task= reasons=[AdapterAvailable SynchronousResponseAccepted SynchronousResponseAccepted]
+    site_execution_live_test.go:305: public manifest Update reached InSync across simulated worker restarts; journal cleared, owner retained, no-op verified
+    site_execution_live_test.go:305: floor image revision 1 completed through public journal with exact source/floor/synchronous-response receipt; restarted no-op preserved
+    floor_image_live_test.go:58: floor upload receipt HTTP=201 JSON keys=[apCount basementTotalCount buildingCount buildingName contact criticalRadioCount dot11aRadioCount dot11bRadioCount dot11gRadioCount floorCount floorIndex floorTotalCount geometry groupInstanceUuid hierarchyName id imageInfo incomplete instanceUuid isRootDomain lastUpdated location maintainAspectRatio metrics name outdoorAreaCount parentGroupUuid rfModel siteHierarchyId siteName status type unitsOfMeasure wirelessClientsCount] response keys=[]
+    floor_image_live_test.go:68: floor upload DTO binding: instance=false site=false group=true hierarchy=false hierarchyAbsent=false imageMetadata=true
+    site_execution_live_test.go:305: public manifest step=0 status=Verifying operation=Verifying task= reasons=[AdapterAvailable SynchronousResponseAccepted SynchronousResponseAccepted]
+    site_execution_live_test.go:305: public manifest Update reached InSync across simulated worker restarts; journal cleared, owner retained, no-op verified
+    site_execution_live_test.go:305: floor image revision 2 completed through public journal with exact source/floor/synchronous-response receipt; restarted no-op preserved
+    site_execution_live_test.go:305: public Report preserved geometry observations and explicitly left remote image contents unverified
+    site_execution_live_test.go:179: isolated hierarchy cleanup verified
+--- PASS: TestLiveCatalystCenterFloorImageManifest (25.24s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	26.133s

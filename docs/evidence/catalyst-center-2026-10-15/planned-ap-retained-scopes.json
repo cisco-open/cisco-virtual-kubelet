@@ -1,0 +1,114 @@
+[
+  {
+    "root": "Global/CVK-Q-20261015-120036-000000000",
+    "observedSites": [
+      {
+        "id": "093a8334-3849-45aa-a02b-04ab4b05f37e",
+        "parentId": "8995b7da-5b82-40fd-a706-82150affe92d",
+        "type": "area",
+        "nameHierarchy": "Global/CVK-Q-20261015-120036-000000000",
+        "assignedDeviceCount": 0
+      },
+      {
+        "id": "99a3ff70-c2e2-4e23-96af-5eb3bdf07c98",
+        "parentId": "f5cf6a13-2d5b-4643-bc6a-779b62d9a14e",
+        "type": "floor",
+        "nameHierarchy": "Global/CVK-Q-20261015-120036-000000000/TestBuilding/TestFloor",
+        "assignedDeviceCount": 0,
+        "plannedAPCount": 0
+      },
+      {
+        "id": "f5cf6a13-2d5b-4643-bc6a-779b62d9a14e",
+        "parentId": "093a8334-3849-45aa-a02b-04ab4b05f37e",
+        "type": "building",
+        "nameHierarchy": "Global/CVK-Q-20261015-120036-000000000/TestBuilding",
+        "assignedDeviceCount": 0
+      }
+    ],
+    "disposition": "retained; read-only audit does not resolve original operation"
+  },
+  {
+    "root": "Global/CVK-Q-20261015-120653-000000000",
+    "observedSites": [
+      {
+        "id": "5b208a6f-17ed-4645-8ec2-5e78535c6ee9",
+        "parentId": "6ed91e53-6517-4e8f-96c1-df8366388d4f",
+        "type": "building",
+        "nameHierarchy": "Global/CVK-Q-20261015-120653-000000000/TestBuilding",
+        "assignedDeviceCount": 0
+      },
+      {
+        "id": "6211eb84-f303-4747-abae-b5245cae95cf",
+        "parentId": "5b208a6f-17ed-4645-8ec2-5e78535c6ee9",
+        "type": "floor",
+        "nameHierarchy": "Global/CVK-Q-20261015-120653-000000000/TestBuilding/TestFloor",
+        "assignedDeviceCount": 0,
+        "plannedAPCount": 0
+      },
+      {
+        "id": "6ed91e53-6517-4e8f-96c1-df8366388d4f",
+        "parentId": "8995b7da-5b82-40fd-a706-82150affe92d",
+        "type": "area",
+        "nameHierarchy": "Global/CVK-Q-20261015-120653-000000000",
+        "assignedDeviceCount": 0
+      }
+    ],
+    "disposition": "retained; read-only audit does not resolve original operation"
+  },
+  {
+    "root": "Global/CVK-Q-20261015-120826-000000000",
+    "observedSites": [
+      {
+        "id": "034a165c-f91a-4220-be13-f5249fc0caea",
+        "parentId": "8995b7da-5b82-40fd-a706-82150affe92d",
+        "type": "area",
+        "nameHierarchy": "Global/CVK-Q-20261015-120826-000000000",
+        "assignedDeviceCount": 0
+      },
+      {
+        "id": "0cd42c93-2b47-4978-b412-4f96b23c2539",
+        "parentId": "034a165c-f91a-4220-be13-f5249fc0caea",
+        "type": "building",
+        "nameHierarchy": "Global/CVK-Q-20261015-120826-000000000/TestBuilding",
+        "assignedDeviceCount": 0
+      },
+      {
+        "id": "cef1b1e8-3964-4a3e-afa0-866c7634c1c4",
+        "parentId": "0cd42c93-2b47-4978-b412-4f96b23c2539",
+        "type": "floor",
+        "nameHierarchy": "Global/CVK-Q-20261015-120826-000000000/TestBuilding/TestFloor",
+        "assignedDeviceCount": 0,
+        "plannedAPCount": 0
+      }
+    ],
+    "disposition": "retained; read-only audit does not resolve original operation"
+  },
+  {
+    "root": "Global/CVK-Q-20261015-121016-000000000",
+    "observedSites": [
+      {
+        "id": "2005f5f6-8e0d-41e4-8c91-99eac224b913",
+        "parentId": "6e043072-2175-4eef-acd0-5e292d875542",
+        "type": "floor",
+        "nameHierarchy": "Global/CVK-Q-20261015-121016-000000000/TestBuilding/TestFloor",
+        "assignedDeviceCount": 0,
+        "plannedAPCount": 0
+      },
+      {
+        "id": "4d560efb-0ec1-41ae-b178-a75e5ab0b00a",
+        "parentId": "8995b7da-5b82-40fd-a706-82150affe92d",
+        "type": "area",
+        "nameHierarchy": "Global/CVK-Q-20261015-121016-000000000",
+        "assignedDeviceCount": 0
+      },
+      {
+        "id": "6e043072-2175-4eef-acd0-5e292d875542",
+        "parentId": "4d560efb-0ec1-41ae-b178-a75e5ab0b00a",
+        "type": "building",
+        "nameHierarchy": "Global/CVK-Q-20261015-121016-000000000/TestBuilding",
+        "assignedDeviceCount": 0
+      }
+    ],
+    "disposition": "retained; read-only audit does not resolve original operation"
+  }
+]

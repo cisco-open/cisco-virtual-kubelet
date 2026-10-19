@@ -1,0 +1,11 @@
+=== RUN   TestLiveWirelessTagRetainedFixtureCleanup
+    wireless_tag_retained_cleanup_live_test.go:210: exact retained cleanup task /dna/intent/api/v1/wirelessProfiles/be1bc74d-4350-4507-8b69-73b456cbac7b/siteTags/mdi0q1zl-x05F-ndLM-ngq0-mdbHndbLmtmXn19tqZbwmuSYxZno 01a14a3a-388f-7ee6-bbb4-8608671861c1
+    wireless_tag_retained_cleanup_live_test.go:212: exact retained cleanup task /dna/intent/api/v1/networkProfilesForSites/be1bc74d-4350-4507-8b69-73b456cbac7b/siteAssignments/0b192db6-9eab-4068-b259-e72fb8a907d4 01a14a3a-4159-7e89-a06d-0a46d32fea96
+    wireless_tag_retained_cleanup_live_test.go:214: exact retained cleanup task /dna/intent/api/v1/wirelessProfiles/be1bc74d-4350-4507-8b69-73b456cbac7b 01a14a3a-4add-7754-9846-d14008be09ce
+    wireless_tag_retained_cleanup_live_test.go:216: exact retained cleanup task /dna/intent/api/v1/sites/8995b7da-5b82-40fd-a706-82150affe92d/wirelessSettings/ssids/mdiYq1zl-x1nF-mda4-nZnH-mgzIn2qZyZqYmemWvJflmL8ZuZrF 01a14a3a-52af-7c89-807c-20bb8c0f7084
+    wireless_tag_retained_cleanup_live_test.go:219: exact retained cleanup task /dna/intent/api/v1/areas/0b192db6-9eab-4068-b259-e72fb8a907d4 01a14a3a-5a17-7483-9dc7-443c38bfa2a2
+    wireless_tag_retained_cleanup_live_test.go:219: exact retained cleanup task /dna/intent/api/v1/areas/e78606cb-eed2-4d42-abfa-e2d49d5ed99c 01a14a3a-60c3-73fa-9cb2-86f37ebba9d2
+    wireless_tag_retained_cleanup_live_test.go:225: retained generated fixture removed; unrelated site/profile/SSID baselines preserved; no physical operation submitted
+--- PASS: TestLiveWirelessTagRetainedFixtureCleanup (13.63s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	16.059s

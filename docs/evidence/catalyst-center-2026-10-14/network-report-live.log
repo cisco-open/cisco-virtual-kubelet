@@ -1,0 +1,22 @@
+=== RUN   TestLiveCatalystCenterAAAReport
+    aaa_settings_live_test.go:74: PASS: sites=3 AAA groups explicit=0 inherited=0 unset=6; model reporting; shared secrets excluded; no writes
+--- PASS: TestLiveCatalystCenterAAAReport (1.40s)
+=== RUN   TestLiveCatalystCenterAuthTemplatesReport
+    authentication_templates_live_test.go:56: PASS: global authentication templates=3; resolved model round trip and synthetic drift and native executor no-op; no writes
+--- PASS: TestLiveCatalystCenterAuthTemplatesReport (1.89s)
+=== RUN   TestLiveCatalystCenterConfigurationIdentities
+    config_device_identity_live_test.go:53: verified assignment reads across 3 sites; assigned devices=3
+    config_device_identity_live_test.go:54: configuration inventory entries=3; verified lab device bindings=3; no writes or device values printed
+--- PASS: TestLiveCatalystCenterConfigurationIdentities (0.93s)
+=== RUN   TestLiveCatalystCenterInventoryReport
+    inventory_intent_live_test.go:67: native assignment executor independently confirmed convergence; no write submitted
+    inventory_intent_live_test.go:68: compiled and observed ASSIGN model for 3 lab devices; no drift; no mutations
+--- PASS: TestLiveCatalystCenterInventoryReport (1.83s)
+=== RUN   TestLiveCatalystCenterNetworkSettingsReport
+    network_settings_live_test.go:80: PASS: sites=3 explicit=0 inherited=0 unset=9; complete reporting and synthetic drift; no configuration writes
+--- PASS: TestLiveCatalystCenterNetworkSettingsReport (2.95s)
+=== RUN   TestLiveCatalystCenterNetworkScalarReport
+    network_settings_live_test.go:162: PASS: sites=3 explicit=1 inherited=2 unset=3; timezone/banner model reports and synthetic drift; no writes
+--- PASS: TestLiveCatalystCenterNetworkScalarReport (3.44s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	14.477s

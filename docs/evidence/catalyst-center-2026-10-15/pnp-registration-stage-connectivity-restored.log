@@ -1,0 +1,5 @@
+token HTTP 200
+pnp HTTP 200
+pnp rows 1
+network HTTP 200
+network rows 3

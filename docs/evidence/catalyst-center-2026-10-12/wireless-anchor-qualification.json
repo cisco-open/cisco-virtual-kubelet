@@ -1,0 +1,23 @@
+{
+  "result": "PASS",
+  "scope": "Native isolated external anchor-group definition; no WLC provisioning",
+  "fixture": "CVK_12213227",
+  "targetID": "mdeYq1zl-xZeY-mJeZ-mJi3-qZbwmuSYxZmXndi1mJyXnZm4mJKY",
+  "createTask": "01a13209-2d4f-7fb2-9298-ae8dc1eb7dc2",
+  "updateTask": "01a13209-331c-7928-8ff4-cf3fdf13b581",
+  "deleteTask": "01a13209-3807-7812-a688-9e62da00d943",
+  "priorityChange": [
+    "PRIMARY",
+    "SECONDARY"
+  ],
+  "uuidPreserved": true,
+  "noOpVerified": true,
+  "baselineRestored": true,
+  "workerRollout": false,
+  "limits": [
+    "Managed-WLC hostname resolution and ambiguous-name refusal fixture-tested, not live-qualified",
+    "Multiple peers, private IP transitions, IPv6 and peer replacement not live-qualified",
+    "No WLC hardware, mobility tunnel, SSID association or client behavior tested",
+    "Retain only; automatic prune and ownership transfer remain pending"
+  ]
+}

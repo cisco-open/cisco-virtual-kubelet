@@ -1,0 +1,307 @@
+=== RUN   TestEnvtestNetworkApplications
+=== RUN   TestEnvtestNetworkApplications/ntp/complete
+=== RUN   TestEnvtestNetworkApplications/ntp/unknown
+=== RUN   TestEnvtestNetworkApplications/ntp/replace
+=== RUN   TestEnvtestNetworkApplications/ntp/target-replaced
+=== RUN   TestEnvtestNetworkApplications/ntp/duplicate
+    network_application_envtest_test.go:16: actual API rejected duplicate application key before persistence
+=== RUN   TestEnvtestNetworkApplications/ntp/logical-duplicate
+=== RUN   TestEnvtestNetworkApplications/ntp/legacy
+=== RUN   TestEnvtestNetworkApplications/ntp/generic-verified
+=== RUN   TestEnvtestNetworkApplications/ntp/drop-receipt
+=== RUN   TestEnvtestNetworkApplications/ntp/drop-seal
+=== RUN   TestEnvtestNetworkApplications/ntp/drop-companion
+=== RUN   TestEnvtestNetworkApplications/ntp/lost-ack
+=== RUN   TestEnvtestNetworkApplications/ntp/history-race
+=== RUN   TestEnvtestNetworkApplications/ntp/preflight-history
+=== RUN   TestEnvtestNetworkApplications/ntp/preflight-history-read-failure
+=== RUN   TestEnvtestNetworkApplications/ntp/replace-full
+=== RUN   TestEnvtestNetworkApplications/ntp/drop-row-prefix
+=== RUN   TestEnvtestNetworkApplications/dhcp/complete
+=== RUN   TestEnvtestNetworkApplications/dhcp/unknown
+=== RUN   TestEnvtestNetworkApplications/dhcp/replace
+=== RUN   TestEnvtestNetworkApplications/dhcp/target-replaced
+=== RUN   TestEnvtestNetworkApplications/dhcp/duplicate
+    network_application_envtest_test.go:16: actual API rejected duplicate application key before persistence
+=== RUN   TestEnvtestNetworkApplications/dhcp/logical-duplicate
+=== RUN   TestEnvtestNetworkApplications/dhcp/legacy
+=== RUN   TestEnvtestNetworkApplications/dhcp/generic-verified
+=== RUN   TestEnvtestNetworkApplications/dhcp/drop-receipt
+=== RUN   TestEnvtestNetworkApplications/dhcp/drop-seal
+=== RUN   TestEnvtestNetworkApplications/dhcp/drop-companion
+=== RUN   TestEnvtestNetworkApplications/dhcp/lost-ack
+=== RUN   TestEnvtestNetworkApplications/dhcp/history-race
+=== RUN   TestEnvtestNetworkApplications/dhcp/preflight-history
+=== RUN   TestEnvtestNetworkApplications/dhcp/preflight-history-read-failure
+=== RUN   TestEnvtestNetworkApplications/dhcp/replace-full
+=== RUN   TestEnvtestNetworkApplications/dhcp/drop-row-prefix
+=== RUN   TestEnvtestNetworkApplications/dns/complete
+=== RUN   TestEnvtestNetworkApplications/dns/unknown
+=== RUN   TestEnvtestNetworkApplications/dns/replace
+=== RUN   TestEnvtestNetworkApplications/dns/target-replaced
+=== RUN   TestEnvtestNetworkApplications/dns/duplicate
+    network_application_envtest_test.go:16: actual API rejected duplicate application key before persistence
+=== RUN   TestEnvtestNetworkApplications/dns/logical-duplicate
+=== RUN   TestEnvtestNetworkApplications/dns/legacy
+=== RUN   TestEnvtestNetworkApplications/dns/generic-verified
+=== RUN   TestEnvtestNetworkApplications/dns/drop-receipt
+=== RUN   TestEnvtestNetworkApplications/dns/drop-seal
+=== RUN   TestEnvtestNetworkApplications/dns/drop-companion
+=== RUN   TestEnvtestNetworkApplications/dns/lost-ack
+=== RUN   TestEnvtestNetworkApplications/dns/history-race
+=== RUN   TestEnvtestNetworkApplications/dns/preflight-history
+=== RUN   TestEnvtestNetworkApplications/dns/preflight-history-read-failure
+=== RUN   TestEnvtestNetworkApplications/dns/replace-full
+=== RUN   TestEnvtestNetworkApplications/dns/drop-row-prefix
+=== RUN   TestEnvtestNetworkApplications/timezone/complete
+=== RUN   TestEnvtestNetworkApplications/timezone/unknown
+=== RUN   TestEnvtestNetworkApplications/timezone/replace
+=== RUN   TestEnvtestNetworkApplications/timezone/target-replaced
+=== RUN   TestEnvtestNetworkApplications/timezone/duplicate
+    network_application_envtest_test.go:16: actual API rejected duplicate application key before persistence
+=== RUN   TestEnvtestNetworkApplications/timezone/logical-duplicate
+=== RUN   TestEnvtestNetworkApplications/timezone/legacy
+=== RUN   TestEnvtestNetworkApplications/timezone/generic-verified
+=== RUN   TestEnvtestNetworkApplications/timezone/drop-receipt
+=== RUN   TestEnvtestNetworkApplications/timezone/drop-seal
+=== RUN   TestEnvtestNetworkApplications/timezone/drop-companion
+=== RUN   TestEnvtestNetworkApplications/timezone/lost-ack
+=== RUN   TestEnvtestNetworkApplications/timezone/history-race
+=== RUN   TestEnvtestNetworkApplications/timezone/preflight-history
+=== RUN   TestEnvtestNetworkApplications/timezone/preflight-history-read-failure
+=== RUN   TestEnvtestNetworkApplications/timezone/replace-full
+=== RUN   TestEnvtestNetworkApplications/timezone/drop-row-prefix
+=== RUN   TestEnvtestNetworkApplications/banner/complete
+=== RUN   TestEnvtestNetworkApplications/banner/unknown
+=== RUN   TestEnvtestNetworkApplications/banner/replace
+=== RUN   TestEnvtestNetworkApplications/banner/target-replaced
+=== RUN   TestEnvtestNetworkApplications/banner/duplicate
+    network_application_envtest_test.go:16: actual API rejected duplicate application key before persistence
+=== RUN   TestEnvtestNetworkApplications/banner/logical-duplicate
+=== RUN   TestEnvtestNetworkApplications/banner/legacy
+=== RUN   TestEnvtestNetworkApplications/banner/generic-verified
+=== RUN   TestEnvtestNetworkApplications/banner/drop-receipt
+=== RUN   TestEnvtestNetworkApplications/banner/drop-seal
+=== RUN   TestEnvtestNetworkApplications/banner/drop-companion
+=== RUN   TestEnvtestNetworkApplications/banner/lost-ack
+=== RUN   TestEnvtestNetworkApplications/banner/history-race
+=== RUN   TestEnvtestNetworkApplications/banner/preflight-history
+=== RUN   TestEnvtestNetworkApplications/banner/preflight-history-read-failure
+=== RUN   TestEnvtestNetworkApplications/banner/replace-full
+=== RUN   TestEnvtestNetworkApplications/banner/drop-row-prefix
+=== RUN   TestEnvtestNetworkApplications/telemetry/complete
+=== RUN   TestEnvtestNetworkApplications/telemetry/unknown
+=== RUN   TestEnvtestNetworkApplications/telemetry/replace
+=== RUN   TestEnvtestNetworkApplications/telemetry/target-replaced
+=== RUN   TestEnvtestNetworkApplications/telemetry/duplicate
+    network_application_envtest_test.go:16: actual API rejected duplicate application key before persistence
+=== RUN   TestEnvtestNetworkApplications/telemetry/logical-duplicate
+=== RUN   TestEnvtestNetworkApplications/telemetry/legacy
+=== RUN   TestEnvtestNetworkApplications/telemetry/generic-verified
+=== RUN   TestEnvtestNetworkApplications/telemetry/drop-receipt
+=== RUN   TestEnvtestNetworkApplications/telemetry/drop-seal
+=== RUN   TestEnvtestNetworkApplications/telemetry/drop-companion
+=== RUN   TestEnvtestNetworkApplications/telemetry/lost-ack
+=== RUN   TestEnvtestNetworkApplications/telemetry/history-race
+=== RUN   TestEnvtestNetworkApplications/telemetry/preflight-history
+=== RUN   TestEnvtestNetworkApplications/telemetry/preflight-history-read-failure
+=== RUN   TestEnvtestNetworkApplications/telemetry/replace-full
+=== RUN   TestEnvtestNetworkApplications/telemetry/drop-row-prefix
+--- PASS: TestEnvtestNetworkApplications (64.98s)
+    --- PASS: TestEnvtestNetworkApplications/ntp/complete (2.92s)
+    --- PASS: TestEnvtestNetworkApplications/ntp/unknown (0.31s)
+    --- PASS: TestEnvtestNetworkApplications/ntp/replace (0.55s)
+    --- PASS: TestEnvtestNetworkApplications/ntp/target-replaced (0.48s)
+    --- PASS: TestEnvtestNetworkApplications/ntp/duplicate (0.29s)
+    --- PASS: TestEnvtestNetworkApplications/ntp/logical-duplicate (0.43s)
+    --- PASS: TestEnvtestNetworkApplications/ntp/legacy (0.25s)
+    --- PASS: TestEnvtestNetworkApplications/ntp/generic-verified (0.30s)
+    --- PASS: TestEnvtestNetworkApplications/ntp/drop-receipt (0.20s)
+    --- PASS: TestEnvtestNetworkApplications/ntp/drop-seal (0.20s)
+    --- PASS: TestEnvtestNetworkApplications/ntp/drop-companion (0.23s)
+    --- PASS: TestEnvtestNetworkApplications/ntp/lost-ack (0.28s)
+    --- PASS: TestEnvtestNetworkApplications/ntp/history-race (0.22s)
+    --- PASS: TestEnvtestNetworkApplications/ntp/preflight-history (0.15s)
+    --- PASS: TestEnvtestNetworkApplications/ntp/preflight-history-read-failure (0.15s)
+    --- PASS: TestEnvtestNetworkApplications/ntp/replace-full (5.13s)
+    --- PASS: TestEnvtestNetworkApplications/ntp/drop-row-prefix (0.21s)
+    --- PASS: TestEnvtestNetworkApplications/dhcp/complete (0.30s)
+    --- PASS: TestEnvtestNetworkApplications/dhcp/unknown (0.30s)
+    --- PASS: TestEnvtestNetworkApplications/dhcp/replace (0.55s)
+    --- PASS: TestEnvtestNetworkApplications/dhcp/target-replaced (0.47s)
+    --- PASS: TestEnvtestNetworkApplications/dhcp/duplicate (0.30s)
+    --- PASS: TestEnvtestNetworkApplications/dhcp/logical-duplicate (0.41s)
+    --- PASS: TestEnvtestNetworkApplications/dhcp/legacy (0.26s)
+    --- PASS: TestEnvtestNetworkApplications/dhcp/generic-verified (0.29s)
+    --- PASS: TestEnvtestNetworkApplications/dhcp/drop-receipt (0.19s)
+    --- PASS: TestEnvtestNetworkApplications/dhcp/drop-seal (0.21s)
+    --- PASS: TestEnvtestNetworkApplications/dhcp/drop-companion (0.22s)
+    --- PASS: TestEnvtestNetworkApplications/dhcp/lost-ack (0.29s)
+    --- PASS: TestEnvtestNetworkApplications/dhcp/history-race (0.22s)
+    --- PASS: TestEnvtestNetworkApplications/dhcp/preflight-history (0.15s)
+    --- PASS: TestEnvtestNetworkApplications/dhcp/preflight-history-read-failure (0.15s)
+    --- PASS: TestEnvtestNetworkApplications/dhcp/replace-full (5.10s)
+    --- PASS: TestEnvtestNetworkApplications/dhcp/drop-row-prefix (0.20s)
+    --- PASS: TestEnvtestNetworkApplications/dns/complete (0.29s)
+    --- PASS: TestEnvtestNetworkApplications/dns/unknown (0.31s)
+    --- PASS: TestEnvtestNetworkApplications/dns/replace (0.53s)
+    --- PASS: TestEnvtestNetworkApplications/dns/target-replaced (0.47s)
+    --- PASS: TestEnvtestNetworkApplications/dns/duplicate (0.30s)
+    --- PASS: TestEnvtestNetworkApplications/dns/logical-duplicate (0.40s)
+    --- PASS: TestEnvtestNetworkApplications/dns/legacy (0.26s)
+    --- PASS: TestEnvtestNetworkApplications/dns/generic-verified (0.29s)
+    --- PASS: TestEnvtestNetworkApplications/dns/drop-receipt (0.20s)
+    --- PASS: TestEnvtestNetworkApplications/dns/drop-seal (0.20s)
+    --- PASS: TestEnvtestNetworkApplications/dns/drop-companion (0.22s)
+    --- PASS: TestEnvtestNetworkApplications/dns/lost-ack (0.28s)
+    --- PASS: TestEnvtestNetworkApplications/dns/history-race (0.22s)
+    --- PASS: TestEnvtestNetworkApplications/dns/preflight-history (0.15s)
+    --- PASS: TestEnvtestNetworkApplications/dns/preflight-history-read-failure (0.15s)
+    --- PASS: TestEnvtestNetworkApplications/dns/replace-full (5.10s)
+    --- PASS: TestEnvtestNetworkApplications/dns/drop-row-prefix (0.20s)
+    --- PASS: TestEnvtestNetworkApplications/timezone/complete (0.28s)
+    --- PASS: TestEnvtestNetworkApplications/timezone/unknown (0.30s)
+    --- PASS: TestEnvtestNetworkApplications/timezone/replace (0.56s)
+    --- PASS: TestEnvtestNetworkApplications/timezone/target-replaced (0.47s)
+    --- PASS: TestEnvtestNetworkApplications/timezone/duplicate (0.30s)
+    --- PASS: TestEnvtestNetworkApplications/timezone/logical-duplicate (0.41s)
+    --- PASS: TestEnvtestNetworkApplications/timezone/legacy (0.25s)
+    --- PASS: TestEnvtestNetworkApplications/timezone/generic-verified (0.28s)
+    --- PASS: TestEnvtestNetworkApplications/timezone/drop-receipt (0.20s)
+    --- PASS: TestEnvtestNetworkApplications/timezone/drop-seal (0.21s)
+    --- PASS: TestEnvtestNetworkApplications/timezone/drop-companion (0.22s)
+    --- PASS: TestEnvtestNetworkApplications/timezone/lost-ack (0.28s)
+    --- PASS: TestEnvtestNetworkApplications/timezone/history-race (0.28s)
+    --- PASS: TestEnvtestNetworkApplications/timezone/preflight-history (0.18s)
+    --- PASS: TestEnvtestNetworkApplications/timezone/preflight-history-read-failure (0.15s)
+    --- PASS: TestEnvtestNetworkApplications/timezone/replace-full (5.22s)
+    --- PASS: TestEnvtestNetworkApplications/timezone/drop-row-prefix (0.22s)
+    --- PASS: TestEnvtestNetworkApplications/banner/complete (0.30s)
+    --- PASS: TestEnvtestNetworkApplications/banner/unknown (0.30s)
+    --- PASS: TestEnvtestNetworkApplications/banner/replace (0.56s)
+    --- PASS: TestEnvtestNetworkApplications/banner/target-replaced (0.47s)
+    --- PASS: TestEnvtestNetworkApplications/banner/duplicate (0.36s)
+    --- PASS: TestEnvtestNetworkApplications/banner/logical-duplicate (0.41s)
+    --- PASS: TestEnvtestNetworkApplications/banner/legacy (0.25s)
+    --- PASS: TestEnvtestNetworkApplications/banner/generic-verified (0.33s)
+    --- PASS: TestEnvtestNetworkApplications/banner/drop-receipt (0.19s)
+    --- PASS: TestEnvtestNetworkApplications/banner/drop-seal (0.20s)
+    --- PASS: TestEnvtestNetworkApplications/banner/drop-companion (0.21s)
+    --- PASS: TestEnvtestNetworkApplications/banner/lost-ack (0.28s)
+    --- PASS: TestEnvtestNetworkApplications/banner/history-race (0.21s)
+    --- PASS: TestEnvtestNetworkApplications/banner/preflight-history (0.14s)
+    --- PASS: TestEnvtestNetworkApplications/banner/preflight-history-read-failure (0.15s)
+    --- PASS: TestEnvtestNetworkApplications/banner/replace-full (5.12s)
+    --- PASS: TestEnvtestNetworkApplications/banner/drop-row-prefix (0.22s)
+    --- PASS: TestEnvtestNetworkApplications/telemetry/complete (0.30s)
+    --- PASS: TestEnvtestNetworkApplications/telemetry/unknown (0.32s)
+    --- PASS: TestEnvtestNetworkApplications/telemetry/replace (0.58s)
+    --- PASS: TestEnvtestNetworkApplications/telemetry/target-replaced (0.52s)
+    --- PASS: TestEnvtestNetworkApplications/telemetry/duplicate (0.34s)
+    --- PASS: TestEnvtestNetworkApplications/telemetry/logical-duplicate (0.44s)
+    --- PASS: TestEnvtestNetworkApplications/telemetry/legacy (0.28s)
+    --- PASS: TestEnvtestNetworkApplications/telemetry/generic-verified (0.31s)
+    --- PASS: TestEnvtestNetworkApplications/telemetry/drop-receipt (0.21s)
+    --- PASS: TestEnvtestNetworkApplications/telemetry/drop-seal (0.23s)
+    --- PASS: TestEnvtestNetworkApplications/telemetry/drop-companion (0.24s)
+    --- PASS: TestEnvtestNetworkApplications/telemetry/lost-ack (0.30s)
+    --- PASS: TestEnvtestNetworkApplications/telemetry/history-race (0.24s)
+    --- PASS: TestEnvtestNetworkApplications/telemetry/preflight-history (0.15s)
+    --- PASS: TestEnvtestNetworkApplications/telemetry/preflight-history-read-failure (0.15s)
+    --- PASS: TestEnvtestNetworkApplications/telemetry/replace-full (5.16s)
+    --- PASS: TestEnvtestNetworkApplications/telemetry/drop-row-prefix (0.22s)
+=== RUN   TestEnvtestProfileSiteApplications
+[controller-runtime] log.SetLogger(...) was never called; logs will not be displayed.
+Detected at:
+	>  goroutine 16017 [running]:
+	>  runtime/debug.Stack()
+	>  	/Users/johalley/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.9.darwin-arm64/src/runtime/debug/stack.go:26 +0x6c
+	>  sigs.k8s.io/controller-runtime/pkg/log.eventuallyFulfillRoot()
+	>  	/Users/johalley/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.23.3/pkg/log/log.go:60 +0xc4
+	>  sigs.k8s.io/controller-runtime/pkg/log.(*delegatingLogSink).Enabled(0xc000827940, 0x1)
+	>  	/Users/johalley/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.23.3/pkg/log/deleg.go:111 +0x30
+	>  github.com/go-logr/logr.Logger.Info({{0x10a2fcf08?, 0xc000827940?}, 0xc000796f00?}, {0x107a349a4, 0x16}, {0x0, 0x0, 0x0})
+	>  	/Users/johalley/go/pkg/mod/github.com/go-logr/logr@v1.4.4/logr.go:276 +0x60
+	>  sigs.k8s.io/controller-runtime/pkg/envtest.(*Environment).Start(0xc000d302c8)
+	>  	/Users/johalley/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.23.3/pkg/envtest/server.go:303 +0x934
+	>  github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter.qualificationAPIServerClientEnvironment(0xc0005a2d88, 0xc000d302c8)
+	>  	/Users/johalley/Git/cisco-virtual-kubelet/internal/controlleradapter/catalystcenter/configuration_envtest_test.go:27 +0x44
+	>  github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter.qualificationAPIServerClient(0xc0005a2d88, {0xc001395e68, 0x1, 0x0?})
+	>  	/Users/johalley/Git/cisco-virtual-kubelet/internal/controlleradapter/catalystcenter/configuration_envtest_test.go:22 +0x1ac
+	>  github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter.TestEnvtestProfileSiteApplications(0xc0005a2d88)
+	>  	/Users/johalley/Git/cisco-virtual-kubelet/internal/controlleradapter/catalystcenter/profile_site_applications_envtest_test.go:13 +0x58
+	>  testing.tRunner(0xc0005a2d88, 0x10a2a1d70)
+	>  	/Users/johalley/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.9.darwin-arm64/src/testing/testing.go:2036 +0x168
+	>  created by testing.(*T).Run in goroutine 1
+	>  	/Users/johalley/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.9.darwin-arm64/src/testing/testing.go:2101 +0x7c0
+=== RUN   TestEnvtestProfileSiteApplications/wireless-false-complete
+=== RUN   TestEnvtestProfileSiteApplications/wireless-false-accepted
+=== RUN   TestEnvtestProfileSiteApplications/wireless-false-import
+=== RUN   TestEnvtestProfileSiteApplications/wireless-false-legacy
+=== RUN   TestEnvtestProfileSiteApplications/wireless-false-repair
+=== RUN   TestEnvtestProfileSiteApplications/wireless-false-capacity
+=== RUN   TestEnvtestProfileSiteApplications/wireless-false-replace-at-capacity
+=== RUN   TestEnvtestProfileSiteApplications/wireless-false-drop-verified-row
+=== RUN   TestEnvtestProfileSiteApplications/wireless-false-corrupt-row
+=== RUN   TestEnvtestProfileSiteApplications/wireless-false-corrupt-commit
+=== RUN   TestEnvtestProfileSiteApplications/wireless-false-settled-corrupt-row
+=== RUN   TestEnvtestProfileSiteApplications/wireless-false-duplicate
+=== RUN   TestEnvtestProfileSiteApplications/wireless-false-history-race
+=== RUN   TestEnvtestProfileSiteApplications/wireless-false-alias
+=== RUN   TestEnvtestProfileSiteApplications/wireless-false-site-replaced
+=== RUN   TestEnvtestProfileSiteApplications/wireless-false-parent-replaced
+=== RUN   TestEnvtestProfileSiteApplications/wireless-false-deselect
+=== RUN   TestEnvtestProfileSiteApplications/wireless-true-complete
+=== RUN   TestEnvtestProfileSiteApplications/wireless-true-accepted
+=== RUN   TestEnvtestProfileSiteApplications/wireless-true-import
+=== RUN   TestEnvtestProfileSiteApplications/wireless-true-legacy
+=== RUN   TestEnvtestProfileSiteApplications/wireless-true-repair
+=== RUN   TestEnvtestProfileSiteApplications/wireless-true-capacity
+=== RUN   TestEnvtestProfileSiteApplications/wireless-true-replace-at-capacity
+=== RUN   TestEnvtestProfileSiteApplications/wireless-true-drop-verified-row
+=== RUN   TestEnvtestProfileSiteApplications/wireless-true-corrupt-row
+=== RUN   TestEnvtestProfileSiteApplications/wireless-true-corrupt-commit
+=== RUN   TestEnvtestProfileSiteApplications/wireless-true-settled-corrupt-row
+=== RUN   TestEnvtestProfileSiteApplications/wireless-true-duplicate
+=== RUN   TestEnvtestProfileSiteApplications/wireless-true-history-race
+=== RUN   TestEnvtestProfileSiteApplications/wireless-true-alias
+=== RUN   TestEnvtestProfileSiteApplications/wireless-true-site-replaced
+=== RUN   TestEnvtestProfileSiteApplications/wireless-true-parent-replaced
+=== RUN   TestEnvtestProfileSiteApplications/wireless-true-deselect
+--- PASS: TestEnvtestProfileSiteApplications (47.20s)
+    --- PASS: TestEnvtestProfileSiteApplications/wireless-false-complete (2.33s)
+    --- PASS: TestEnvtestProfileSiteApplications/wireless-false-accepted (0.29s)
+    --- PASS: TestEnvtestProfileSiteApplications/wireless-false-import (0.26s)
+    --- PASS: TestEnvtestProfileSiteApplications/wireless-false-legacy (0.19s)
+    --- PASS: TestEnvtestProfileSiteApplications/wireless-false-repair (0.59s)
+    --- PASS: TestEnvtestProfileSiteApplications/wireless-false-capacity (4.11s)
+    --- PASS: TestEnvtestProfileSiteApplications/wireless-false-replace-at-capacity (11.61s)
+    --- PASS: TestEnvtestProfileSiteApplications/wireless-false-drop-verified-row (0.28s)
+    --- PASS: TestEnvtestProfileSiteApplications/wireless-false-corrupt-row (0.29s)
+    --- PASS: TestEnvtestProfileSiteApplications/wireless-false-corrupt-commit (0.29s)
+    --- PASS: TestEnvtestProfileSiteApplications/wireless-false-settled-corrupt-row (0.29s)
+    --- PASS: TestEnvtestProfileSiteApplications/wireless-false-duplicate (0.31s)
+    --- PASS: TestEnvtestProfileSiteApplications/wireless-false-history-race (0.29s)
+    --- PASS: TestEnvtestProfileSiteApplications/wireless-false-alias (0.38s)
+    --- PASS: TestEnvtestProfileSiteApplications/wireless-false-site-replaced (0.37s)
+    --- PASS: TestEnvtestProfileSiteApplications/wireless-false-parent-replaced (0.38s)
+    --- PASS: TestEnvtestProfileSiteApplications/wireless-false-deselect (0.36s)
+    --- PASS: TestEnvtestProfileSiteApplications/wireless-true-complete (0.28s)
+    --- PASS: TestEnvtestProfileSiteApplications/wireless-true-accepted (0.29s)
+    --- PASS: TestEnvtestProfileSiteApplications/wireless-true-import (0.22s)
+    --- PASS: TestEnvtestProfileSiteApplications/wireless-true-legacy (0.19s)
+    --- PASS: TestEnvtestProfileSiteApplications/wireless-true-repair (0.64s)
+    --- PASS: TestEnvtestProfileSiteApplications/wireless-true-capacity (4.14s)
+    --- PASS: TestEnvtestProfileSiteApplications/wireless-true-replace-at-capacity (11.65s)
+    --- PASS: TestEnvtestProfileSiteApplications/wireless-true-drop-verified-row (0.28s)
+    --- PASS: TestEnvtestProfileSiteApplications/wireless-true-corrupt-row (0.29s)
+    --- PASS: TestEnvtestProfileSiteApplications/wireless-true-corrupt-commit (0.29s)
+    --- PASS: TestEnvtestProfileSiteApplications/wireless-true-settled-corrupt-row (0.30s)
+    --- PASS: TestEnvtestProfileSiteApplications/wireless-true-duplicate (0.31s)
+    --- PASS: TestEnvtestProfileSiteApplications/wireless-true-history-race (0.29s)
+    --- PASS: TestEnvtestProfileSiteApplications/wireless-true-alias (0.38s)
+    --- PASS: TestEnvtestProfileSiteApplications/wireless-true-site-replaced (0.40s)
+    --- PASS: TestEnvtestProfileSiteApplications/wireless-true-parent-replaced (0.37s)
+    --- PASS: TestEnvtestProfileSiteApplications/wireless-true-deselect (0.36s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	114.348s

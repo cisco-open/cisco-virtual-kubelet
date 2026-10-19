@@ -1,0 +1,22 @@
+=== RUN   TestEnvtestWirelessTagMembershipRemoval
+=== RUN   TestEnvtestWirelessTagMembershipRemoval/cohort-false/membership-zone-complete
+=== RUN   TestEnvtestWirelessTagMembershipRemoval/cohort-false/membership-zone-device
+=== RUN   TestEnvtestWirelessTagMembershipRemoval/cohort-true/membership-zone-complete
+=== RUN   TestEnvtestWirelessTagMembershipRemoval/cohort-true/membership-zone-device
+--- PASS: TestEnvtestWirelessTagMembershipRemoval (28.64s)
+    --- PASS: TestEnvtestWirelessTagMembershipRemoval/cohort-false/membership-zone-complete (7.88s)
+    --- PASS: TestEnvtestWirelessTagMembershipRemoval/cohort-false/membership-zone-device (4.65s)
+    --- PASS: TestEnvtestWirelessTagMembershipRemoval/cohort-true/membership-zone-complete (7.10s)
+    --- PASS: TestEnvtestWirelessTagMembershipRemoval/cohort-true/membership-zone-device (5.49s)
+=== RUN   TestWirelessTagMembershipRemoval
+=== RUN   TestWirelessTagMembershipRemoval/cohort-false/membership-zone-complete
+=== RUN   TestWirelessTagMembershipRemoval/cohort-false/membership-zone-device
+=== RUN   TestWirelessTagMembershipRemoval/cohort-true/membership-zone-complete
+=== RUN   TestWirelessTagMembershipRemoval/cohort-true/membership-zone-device
+--- PASS: TestWirelessTagMembershipRemoval (9.10s)
+    --- PASS: TestWirelessTagMembershipRemoval/cohort-false/membership-zone-complete (2.10s)
+    --- PASS: TestWirelessTagMembershipRemoval/cohort-false/membership-zone-device (1.76s)
+    --- PASS: TestWirelessTagMembershipRemoval/cohort-true/membership-zone-complete (2.95s)
+    --- PASS: TestWirelessTagMembershipRemoval/cohort-true/membership-zone-device (2.28s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	40.136s

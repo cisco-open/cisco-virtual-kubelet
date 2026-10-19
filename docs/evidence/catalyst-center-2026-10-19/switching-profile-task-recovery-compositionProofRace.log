@@ -1,0 +1,72 @@
+=== RUN   TestConfigurationNoDispatchProof
+=== RUN   TestConfigurationNoDispatchProof/switching-profile-create/refuse
+=== RUN   TestConfigurationNoDispatchProof/switching-profile-create/read-error
+=== RUN   TestConfigurationNoDispatchProof/switching-profile-create/unknown-phase
+=== RUN   TestConfigurationNoDispatchProof/switching-profile-create/cancel
+=== RUN   TestConfigurationNoDispatchProof/switching-profile-create/conflict
+=== RUN   TestConfigurationNoDispatchProof/switching-profile-create/conflict-exhausted
+=== RUN   TestConfigurationNoDispatchProof/switching-profile-create/ordinary-error
+=== RUN   TestConfigurationNoDispatchProof/switching-profile-create/lost-ack
+=== RUN   TestConfigurationNoDispatchProof/switching-profile-create/foreign-proof
+=== RUN   TestConfigurationNoDispatchProof/switching-profile-create/replayed-proof
+=== RUN   TestConfigurationNoDispatchProof/switching-profile-create/changed-operation
+=== RUN   TestConfigurationNoDispatchProof/switching-profile-create/changed-owner
+=== RUN   TestConfigurationNoDispatchProof/switching-profile-create/changed-generation
+=== RUN   TestConfigurationNoDispatchProof/switching-profile-create/recorded-task
+=== RUN   TestConfigurationNoDispatchProof/switching-profile-create/recorded-receipt
+=== RUN   TestConfigurationNoDispatchProof/switching-profile-create/changed-parent
+=== RUN   TestConfigurationNoDispatchProof/switching-profile-create/changed-preparation
+=== RUN   TestConfigurationNoDispatchProof/switching-profile-update/refuse
+=== RUN   TestConfigurationNoDispatchProof/switching-profile-update/read-error
+=== RUN   TestConfigurationNoDispatchProof/switching-profile-update/unknown-phase
+=== RUN   TestConfigurationNoDispatchProof/switching-profile-update/cancel
+=== RUN   TestConfigurationNoDispatchProof/switching-profile-update/conflict
+=== RUN   TestConfigurationNoDispatchProof/switching-profile-update/conflict-exhausted
+=== RUN   TestConfigurationNoDispatchProof/switching-profile-update/ordinary-error
+=== RUN   TestConfigurationNoDispatchProof/switching-profile-update/lost-ack
+=== RUN   TestConfigurationNoDispatchProof/switching-profile-update/foreign-proof
+=== RUN   TestConfigurationNoDispatchProof/switching-profile-update/replayed-proof
+=== RUN   TestConfigurationNoDispatchProof/switching-profile-update/changed-operation
+=== RUN   TestConfigurationNoDispatchProof/switching-profile-update/changed-owner
+=== RUN   TestConfigurationNoDispatchProof/switching-profile-update/changed-generation
+=== RUN   TestConfigurationNoDispatchProof/switching-profile-update/recorded-task
+=== RUN   TestConfigurationNoDispatchProof/switching-profile-update/recorded-receipt
+=== RUN   TestConfigurationNoDispatchProof/switching-profile-update/changed-parent
+=== RUN   TestConfigurationNoDispatchProof/switching-profile-update/changed-preparation
+--- PASS: TestConfigurationNoDispatchProof (1.87s)
+    --- PASS: TestConfigurationNoDispatchProof/switching-profile-create/refuse (0.62s)
+    --- PASS: TestConfigurationNoDispatchProof/switching-profile-create/read-error (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/switching-profile-create/unknown-phase (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/switching-profile-create/cancel (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/switching-profile-create/conflict (0.03s)
+    --- PASS: TestConfigurationNoDispatchProof/switching-profile-create/conflict-exhausted (0.34s)
+    --- PASS: TestConfigurationNoDispatchProof/switching-profile-create/ordinary-error (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/switching-profile-create/lost-ack (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/switching-profile-create/foreign-proof (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/switching-profile-create/replayed-proof (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/switching-profile-create/changed-operation (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/switching-profile-create/changed-owner (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/switching-profile-create/changed-generation (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/switching-profile-create/recorded-task (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/switching-profile-create/recorded-receipt (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/switching-profile-create/changed-parent (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/switching-profile-create/changed-preparation (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/switching-profile-update/refuse (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/switching-profile-update/read-error (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/switching-profile-update/unknown-phase (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/switching-profile-update/cancel (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/switching-profile-update/conflict (0.03s)
+    --- PASS: TestConfigurationNoDispatchProof/switching-profile-update/conflict-exhausted (0.34s)
+    --- PASS: TestConfigurationNoDispatchProof/switching-profile-update/ordinary-error (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/switching-profile-update/lost-ack (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/switching-profile-update/foreign-proof (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/switching-profile-update/replayed-proof (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/switching-profile-update/changed-operation (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/switching-profile-update/changed-owner (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/switching-profile-update/changed-generation (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/switching-profile-update/recorded-task (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/switching-profile-update/recorded-receipt (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/switching-profile-update/changed-parent (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/switching-profile-update/changed-preparation (0.02s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	4.189s

@@ -1,0 +1,19 @@
+=== RUN   TestLiveDiscoveryInitialNoAuthUnsubmittedDeletion
+=== RUN   TestLiveDiscoveryInitialNoAuthUnsubmittedDeletion/inline
+    discovery_credential_unsubmitted_live_test.go:306: inline: real Kubernetes API and native absence reads; original preparation retained, manager released, 1 native jobs/3 devices preserved; zero native mutation attempts and no credential delivery
+=== RUN   TestLiveDiscoveryInitialNoAuthUnsubmittedDeletion/configmap
+    discovery_credential_unsubmitted_live_test.go:306: configmap: real Kubernetes API and native absence reads; original preparation retained, manager released, 1 native jobs/3 devices preserved; zero native mutation attempts and no credential delivery
+=== RUN   TestLiveDiscoveryInitialNoAuthUnsubmittedDeletion/lost-retirement-ack
+    discovery_credential_unsubmitted_live_test.go:306: lost-retirement-ack: real Kubernetes API and native absence reads; original preparation retained, manager released, 1 native jobs/3 devices preserved; zero native mutation attempts and no credential delivery
+=== RUN   TestLiveDiscoveryInitialNoAuthUnsubmittedDeletion/lost-completion-ack
+    discovery_credential_unsubmitted_live_test.go:306: lost-completion-ack: real Kubernetes API and native absence reads; original preparation retained, manager released, 1 native jobs/3 devices preserved; zero native mutation attempts and no credential delivery
+=== RUN   TestLiveDiscoveryInitialNoAuthUnsubmittedDeletion/proven-preflight-refusal
+    discovery_credential_unsubmitted_live_test.go:232: real API/native read path: original Prepared safely retired before fresh planning; injected final post-permit read failure proved no dispatch; only operation retired, inventory owner retained, zero mutation attempts; no credential delivery or automatic retry attempted
+--- PASS: TestLiveDiscoveryInitialNoAuthUnsubmittedDeletion (15.34s)
+    --- PASS: TestLiveDiscoveryInitialNoAuthUnsubmittedDeletion/inline (3.62s)
+    --- PASS: TestLiveDiscoveryInitialNoAuthUnsubmittedDeletion/configmap (0.90s)
+    --- PASS: TestLiveDiscoveryInitialNoAuthUnsubmittedDeletion/lost-retirement-ack (5.45s)
+    --- PASS: TestLiveDiscoveryInitialNoAuthUnsubmittedDeletion/lost-completion-ack (0.93s)
+    --- PASS: TestLiveDiscoveryInitialNoAuthUnsubmittedDeletion/proven-preflight-refusal (0.82s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	17.495s

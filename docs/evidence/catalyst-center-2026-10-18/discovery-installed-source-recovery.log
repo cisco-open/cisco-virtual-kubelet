@@ -1,0 +1,6 @@
+=== RUN   TestLiveInstalledDiscoverySourceRecovery
+    installed_discovery_source_recovery_live_test.go:151: private installed recovery checkpoint /private/tmp/cvk-installed-discovery-source-709168992
+    installed_discovery_source_recovery_live_test.go:309: installed source-loss recovery and manager-only finalization verified; owner/tombstone retained 203
+--- PASS: TestLiveInstalledDiscoverySourceRecovery (71.73s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	74.097s

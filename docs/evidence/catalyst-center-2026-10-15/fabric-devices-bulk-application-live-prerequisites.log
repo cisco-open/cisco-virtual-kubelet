@@ -1,0 +1,5 @@
+=== RUN   TestLiveCatalystCenterFabricInventoryRead
+    fabric_inventory_live_test.go:24: no fabric sites: multicast and embedded WLC qualification unavailable
+--- SKIP: TestLiveCatalystCenterFabricInventoryRead (0.34s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	1.003s

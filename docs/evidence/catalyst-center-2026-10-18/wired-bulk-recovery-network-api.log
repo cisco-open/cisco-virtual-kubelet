@@ -1,0 +1,11 @@
+=== RUN   TestEnvtestConfigurationDeviceEvidence
+    config_group_device_evidence_envtest_test.go:24: private API retained one pending request, assigned real UID/timestamps/generation, separated worker status, and refused redaction/spec replacement; actor writes simulated
+--- PASS: TestEnvtestConfigurationDeviceEvidence (5.99s)
+=== RUN   TestEnvtestConfigurationScalarDeviceEvidence
+    config_group_device_evidence_envtest_test.go:28: private API retained one pending request, assigned real UID/timestamps/generation, separated worker status, and refused redaction/spec replacement; actor writes simulated
+--- PASS: TestEnvtestConfigurationScalarDeviceEvidence (5.95s)
+=== RUN   TestEnvtestConfigurationFabricDeviceEvidence
+    config_group_device_evidence_envtest_test.go:32: private API retained one pending request, assigned real UID/timestamps/generation, separated worker status, and refused redaction/spec replacement; actor writes simulated
+--- PASS: TestEnvtestConfigurationFabricDeviceEvidence (5.32s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	19.457s

@@ -1,0 +1,252 @@
+=== RUN   TestTemplateCreatorTaskResult
+=== RUN   TestTemplateCreatorTaskResult/p/valid
+=== RUN   TestTemplateCreatorTaskResult/p/missing-data
+=== RUN   TestTemplateCreatorTaskResult/p/prose
+=== RUN   TestTemplateCreatorTaskResult/p/json
+=== RUN   TestTemplateCreatorTaskResult/p/wrong-service
+=== RUN   TestTemplateCreatorTaskResult/p/wrong-task
+=== RUN   TestTemplateCreatorTaskResult/p/failed
+=== RUN   TestTemplateCreatorTaskResult/p/running
+=== RUN   TestTemplateCreatorTaskResult/p/stale
+=== RUN   TestTemplateCreatorTaskResult/p/future
+=== RUN   TestTemplateCreatorTaskResult/p/nil-uuid
+=== RUN   TestTemplateCreatorTaskResult/p/uppercase
+=== RUN   TestTemplateCreatorTaskResult/p/missing-source
+=== RUN   TestTemplateCreatorTaskResult/p/missing-source-pair
+=== RUN   TestTemplateCreatorTaskResult/r/valid
+=== RUN   TestTemplateCreatorTaskResult/r/missing-data
+=== RUN   TestTemplateCreatorTaskResult/r/prose
+=== RUN   TestTemplateCreatorTaskResult/r/json
+=== RUN   TestTemplateCreatorTaskResult/r/wrong-service
+=== RUN   TestTemplateCreatorTaskResult/r/wrong-task
+=== RUN   TestTemplateCreatorTaskResult/r/failed
+=== RUN   TestTemplateCreatorTaskResult/r/running
+=== RUN   TestTemplateCreatorTaskResult/r/stale
+=== RUN   TestTemplateCreatorTaskResult/r/future
+=== RUN   TestTemplateCreatorTaskResult/r/nil-uuid
+=== RUN   TestTemplateCreatorTaskResult/r/uppercase
+=== RUN   TestTemplateCreatorTaskResult/r/missing-source
+=== RUN   TestTemplateCreatorTaskResult/r/missing-source-pair
+=== RUN   TestTemplateCreatorTaskResult/c/valid
+=== RUN   TestTemplateCreatorTaskResult/c/missing-data
+=== RUN   TestTemplateCreatorTaskResult/c/prose
+=== RUN   TestTemplateCreatorTaskResult/c/json
+=== RUN   TestTemplateCreatorTaskResult/c/wrong-service
+=== RUN   TestTemplateCreatorTaskResult/c/wrong-task
+=== RUN   TestTemplateCreatorTaskResult/c/failed
+=== RUN   TestTemplateCreatorTaskResult/c/running
+=== RUN   TestTemplateCreatorTaskResult/c/stale
+=== RUN   TestTemplateCreatorTaskResult/c/future
+=== RUN   TestTemplateCreatorTaskResult/c/nil-uuid
+=== RUN   TestTemplateCreatorTaskResult/c/uppercase
+=== RUN   TestTemplateCreatorTaskResult/c/missing-source
+=== RUN   TestTemplateCreatorTaskResult/c/missing-source-pair
+--- PASS: TestTemplateCreatorTaskResult (0.38s)
+    --- PASS: TestTemplateCreatorTaskResult/p/valid (0.01s)
+    --- PASS: TestTemplateCreatorTaskResult/p/missing-data (0.01s)
+    --- PASS: TestTemplateCreatorTaskResult/p/prose (0.01s)
+    --- PASS: TestTemplateCreatorTaskResult/p/json (0.01s)
+    --- PASS: TestTemplateCreatorTaskResult/p/wrong-service (0.01s)
+    --- PASS: TestTemplateCreatorTaskResult/p/wrong-task (0.01s)
+    --- PASS: TestTemplateCreatorTaskResult/p/failed (0.01s)
+    --- PASS: TestTemplateCreatorTaskResult/p/running (0.01s)
+    --- PASS: TestTemplateCreatorTaskResult/p/stale (0.01s)
+    --- PASS: TestTemplateCreatorTaskResult/p/future (0.01s)
+    --- PASS: TestTemplateCreatorTaskResult/p/nil-uuid (0.01s)
+    --- PASS: TestTemplateCreatorTaskResult/p/uppercase (0.01s)
+    --- PASS: TestTemplateCreatorTaskResult/p/missing-source (0.00s)
+    --- PASS: TestTemplateCreatorTaskResult/p/missing-source-pair (0.00s)
+    --- PASS: TestTemplateCreatorTaskResult/r/valid (0.01s)
+    --- PASS: TestTemplateCreatorTaskResult/r/missing-data (0.01s)
+    --- PASS: TestTemplateCreatorTaskResult/r/prose (0.01s)
+    --- PASS: TestTemplateCreatorTaskResult/r/json (0.01s)
+    --- PASS: TestTemplateCreatorTaskResult/r/wrong-service (0.01s)
+    --- PASS: TestTemplateCreatorTaskResult/r/wrong-task (0.01s)
+    --- PASS: TestTemplateCreatorTaskResult/r/failed (0.01s)
+    --- PASS: TestTemplateCreatorTaskResult/r/running (0.01s)
+    --- PASS: TestTemplateCreatorTaskResult/r/stale (0.01s)
+    --- PASS: TestTemplateCreatorTaskResult/r/future (0.01s)
+    --- PASS: TestTemplateCreatorTaskResult/r/nil-uuid (0.01s)
+    --- PASS: TestTemplateCreatorTaskResult/r/uppercase (0.01s)
+    --- PASS: TestTemplateCreatorTaskResult/r/missing-source (0.00s)
+    --- PASS: TestTemplateCreatorTaskResult/r/missing-source-pair (0.00s)
+    --- PASS: TestTemplateCreatorTaskResult/c/valid (0.01s)
+    --- PASS: TestTemplateCreatorTaskResult/c/missing-data (0.01s)
+    --- PASS: TestTemplateCreatorTaskResult/c/prose (0.01s)
+    --- PASS: TestTemplateCreatorTaskResult/c/json (0.01s)
+    --- PASS: TestTemplateCreatorTaskResult/c/wrong-service (0.01s)
+    --- PASS: TestTemplateCreatorTaskResult/c/wrong-task (0.01s)
+    --- PASS: TestTemplateCreatorTaskResult/c/failed (0.01s)
+    --- PASS: TestTemplateCreatorTaskResult/c/running (0.01s)
+    --- PASS: TestTemplateCreatorTaskResult/c/stale (0.01s)
+    --- PASS: TestTemplateCreatorTaskResult/c/future (0.01s)
+    --- PASS: TestTemplateCreatorTaskResult/c/nil-uuid (0.01s)
+    --- PASS: TestTemplateCreatorTaskResult/c/uppercase (0.01s)
+    --- PASS: TestTemplateCreatorTaskResult/c/missing-source (0.00s)
+    --- PASS: TestTemplateCreatorTaskResult/c/missing-source-pair (0.00s)
+=== RUN   TestTemplateCreatorReceiptEnvelope
+=== RUN   TestTemplateCreatorReceiptEnvelope/p/valid
+=== RUN   TestTemplateCreatorReceiptEnvelope/p/source-loss
+=== RUN   TestTemplateCreatorReceiptEnvelope/p/source-pair-loss
+=== RUN   TestTemplateCreatorReceiptEnvelope/p/wrong-key
+=== RUN   TestTemplateCreatorReceiptEnvelope/p/missing-owner
+=== RUN   TestTemplateCreatorReceiptEnvelope/p/future
+=== RUN   TestTemplateCreatorReceiptEnvelope/p/wrong-phase
+=== RUN   TestTemplateCreatorReceiptEnvelope/p/wrong-action
+=== RUN   TestTemplateCreatorReceiptEnvelope/p/duplicate
+=== RUN   TestTemplateCreatorReceiptEnvelope/p/duplicate-id
+=== RUN   TestTemplateCreatorReceiptEnvelope/r/valid
+=== RUN   TestTemplateCreatorReceiptEnvelope/r/source-loss
+=== RUN   TestTemplateCreatorReceiptEnvelope/r/source-pair-loss
+=== RUN   TestTemplateCreatorReceiptEnvelope/r/wrong-key
+=== RUN   TestTemplateCreatorReceiptEnvelope/r/missing-owner
+=== RUN   TestTemplateCreatorReceiptEnvelope/r/future
+=== RUN   TestTemplateCreatorReceiptEnvelope/r/wrong-phase
+=== RUN   TestTemplateCreatorReceiptEnvelope/r/wrong-action
+=== RUN   TestTemplateCreatorReceiptEnvelope/r/duplicate
+=== RUN   TestTemplateCreatorReceiptEnvelope/r/duplicate-id
+=== RUN   TestTemplateCreatorReceiptEnvelope/c/valid
+=== RUN   TestTemplateCreatorReceiptEnvelope/c/source-loss
+=== RUN   TestTemplateCreatorReceiptEnvelope/c/source-pair-loss
+=== RUN   TestTemplateCreatorReceiptEnvelope/c/wrong-key
+=== RUN   TestTemplateCreatorReceiptEnvelope/c/missing-owner
+=== RUN   TestTemplateCreatorReceiptEnvelope/c/future
+=== RUN   TestTemplateCreatorReceiptEnvelope/c/wrong-phase
+=== RUN   TestTemplateCreatorReceiptEnvelope/c/wrong-action
+=== RUN   TestTemplateCreatorReceiptEnvelope/c/duplicate
+=== RUN   TestTemplateCreatorReceiptEnvelope/c/duplicate-id
+--- PASS: TestTemplateCreatorReceiptEnvelope (0.00s)
+    --- PASS: TestTemplateCreatorReceiptEnvelope/p/valid (0.00s)
+    --- PASS: TestTemplateCreatorReceiptEnvelope/p/source-loss (0.00s)
+    --- PASS: TestTemplateCreatorReceiptEnvelope/p/source-pair-loss (0.00s)
+    --- PASS: TestTemplateCreatorReceiptEnvelope/p/wrong-key (0.00s)
+    --- PASS: TestTemplateCreatorReceiptEnvelope/p/missing-owner (0.00s)
+    --- PASS: TestTemplateCreatorReceiptEnvelope/p/future (0.00s)
+    --- PASS: TestTemplateCreatorReceiptEnvelope/p/wrong-phase (0.00s)
+    --- PASS: TestTemplateCreatorReceiptEnvelope/p/wrong-action (0.00s)
+    --- PASS: TestTemplateCreatorReceiptEnvelope/p/duplicate (0.00s)
+    --- PASS: TestTemplateCreatorReceiptEnvelope/p/duplicate-id (0.00s)
+    --- PASS: TestTemplateCreatorReceiptEnvelope/r/valid (0.00s)
+    --- PASS: TestTemplateCreatorReceiptEnvelope/r/source-loss (0.00s)
+    --- PASS: TestTemplateCreatorReceiptEnvelope/r/source-pair-loss (0.00s)
+    --- PASS: TestTemplateCreatorReceiptEnvelope/r/wrong-key (0.00s)
+    --- PASS: TestTemplateCreatorReceiptEnvelope/r/missing-owner (0.00s)
+    --- PASS: TestTemplateCreatorReceiptEnvelope/r/future (0.00s)
+    --- PASS: TestTemplateCreatorReceiptEnvelope/r/wrong-phase (0.00s)
+    --- PASS: TestTemplateCreatorReceiptEnvelope/r/wrong-action (0.00s)
+    --- PASS: TestTemplateCreatorReceiptEnvelope/r/duplicate (0.00s)
+    --- PASS: TestTemplateCreatorReceiptEnvelope/r/duplicate-id (0.00s)
+    --- PASS: TestTemplateCreatorReceiptEnvelope/c/valid (0.00s)
+    --- PASS: TestTemplateCreatorReceiptEnvelope/c/source-loss (0.00s)
+    --- PASS: TestTemplateCreatorReceiptEnvelope/c/source-pair-loss (0.00s)
+    --- PASS: TestTemplateCreatorReceiptEnvelope/c/wrong-key (0.00s)
+    --- PASS: TestTemplateCreatorReceiptEnvelope/c/missing-owner (0.00s)
+    --- PASS: TestTemplateCreatorReceiptEnvelope/c/future (0.00s)
+    --- PASS: TestTemplateCreatorReceiptEnvelope/c/wrong-phase (0.00s)
+    --- PASS: TestTemplateCreatorReceiptEnvelope/c/wrong-action (0.00s)
+    --- PASS: TestTemplateCreatorReceiptEnvelope/c/duplicate (0.00s)
+    --- PASS: TestTemplateCreatorReceiptEnvelope/c/duplicate-id (0.00s)
+=== RUN   TestTemplateCreatorPublicFlow
+=== RUN   TestTemplateCreatorPublicFlow/project-create/known
+=== RUN   TestTemplateCreatorPublicFlow/project-create/missing-data
+=== RUN   TestTemplateCreatorPublicFlow/project-create/prose-data
+=== RUN   TestTemplateCreatorPublicFlow/project-create/json-data
+=== RUN   TestTemplateCreatorPublicFlow/project-create/wrong-service
+=== RUN   TestTemplateCreatorPublicFlow/project-create/foreign-task
+=== RUN   TestTemplateCreatorPublicFlow/project-create/wrong-uuid
+=== RUN   TestTemplateCreatorPublicFlow/project-create/same-name-replacement
+=== RUN   TestTemplateCreatorPublicFlow/project-create/source-during-proof
+=== RUN   TestTemplateCreatorPublicFlow/project-create/owner-during-proof
+=== RUN   TestTemplateCreatorPublicFlow/project-create/receipt-conflict
+=== RUN   TestTemplateCreatorPublicFlow/project-create/receipt-lost-ack
+=== RUN   TestTemplateCreatorPublicFlow/project-create/receipt-pruned
+=== RUN   TestTemplateCreatorPublicFlow/project-create/source-fields-pruned
+=== RUN   TestTemplateCreatorPublicFlow/project-create/noop-replacement
+=== RUN   TestTemplateCreatorPublicFlow/project-create/update-replacement
+=== RUN   TestTemplateCreatorPublicFlow/draft-create/known
+=== RUN   TestTemplateCreatorPublicFlow/draft-create/missing-data
+=== RUN   TestTemplateCreatorPublicFlow/draft-create/prose-data
+=== RUN   TestTemplateCreatorPublicFlow/draft-create/json-data
+=== RUN   TestTemplateCreatorPublicFlow/draft-create/wrong-service
+=== RUN   TestTemplateCreatorPublicFlow/draft-create/foreign-task
+=== RUN   TestTemplateCreatorPublicFlow/draft-create/wrong-uuid
+=== RUN   TestTemplateCreatorPublicFlow/draft-create/same-name-replacement
+=== RUN   TestTemplateCreatorPublicFlow/draft-create/kind-changed
+=== RUN   TestTemplateCreatorPublicFlow/draft-create/source-during-proof
+=== RUN   TestTemplateCreatorPublicFlow/draft-create/owner-during-proof
+=== RUN   TestTemplateCreatorPublicFlow/draft-create/receipt-conflict
+=== RUN   TestTemplateCreatorPublicFlow/draft-create/receipt-lost-ack
+=== RUN   TestTemplateCreatorPublicFlow/draft-create/receipt-pruned
+=== RUN   TestTemplateCreatorPublicFlow/draft-create/source-fields-pruned
+=== RUN   TestTemplateCreatorPublicFlow/draft-create/noop-replacement
+=== RUN   TestTemplateCreatorPublicFlow/draft-create/update-replacement
+=== RUN   TestTemplateCreatorPublicFlow/composite-draft/known
+=== RUN   TestTemplateCreatorPublicFlow/composite-draft/missing-data
+=== RUN   TestTemplateCreatorPublicFlow/composite-draft/prose-data
+=== RUN   TestTemplateCreatorPublicFlow/composite-draft/json-data
+=== RUN   TestTemplateCreatorPublicFlow/composite-draft/wrong-service
+=== RUN   TestTemplateCreatorPublicFlow/composite-draft/foreign-task
+=== RUN   TestTemplateCreatorPublicFlow/composite-draft/wrong-uuid
+=== RUN   TestTemplateCreatorPublicFlow/composite-draft/same-name-replacement
+=== RUN   TestTemplateCreatorPublicFlow/composite-draft/kind-changed
+=== RUN   TestTemplateCreatorPublicFlow/composite-draft/source-during-proof
+=== RUN   TestTemplateCreatorPublicFlow/composite-draft/owner-during-proof
+=== RUN   TestTemplateCreatorPublicFlow/composite-draft/receipt-conflict
+=== RUN   TestTemplateCreatorPublicFlow/composite-draft/receipt-lost-ack
+=== RUN   TestTemplateCreatorPublicFlow/composite-draft/receipt-pruned
+=== RUN   TestTemplateCreatorPublicFlow/composite-draft/source-fields-pruned
+=== RUN   TestTemplateCreatorPublicFlow/composite-draft/noop-replacement
+=== RUN   TestTemplateCreatorPublicFlow/composite-draft/update-replacement
+--- PASS: TestTemplateCreatorPublicFlow (18.29s)
+    --- PASS: TestTemplateCreatorPublicFlow/project-create/known (0.69s)
+    --- PASS: TestTemplateCreatorPublicFlow/project-create/missing-data (0.41s)
+    --- PASS: TestTemplateCreatorPublicFlow/project-create/prose-data (0.41s)
+    --- PASS: TestTemplateCreatorPublicFlow/project-create/json-data (0.40s)
+    --- PASS: TestTemplateCreatorPublicFlow/project-create/wrong-service (0.40s)
+    --- PASS: TestTemplateCreatorPublicFlow/project-create/foreign-task (0.39s)
+    --- PASS: TestTemplateCreatorPublicFlow/project-create/wrong-uuid (0.42s)
+    --- PASS: TestTemplateCreatorPublicFlow/project-create/same-name-replacement (0.42s)
+    --- PASS: TestTemplateCreatorPublicFlow/project-create/source-during-proof (0.30s)
+    --- PASS: TestTemplateCreatorPublicFlow/project-create/owner-during-proof (0.30s)
+    --- PASS: TestTemplateCreatorPublicFlow/project-create/receipt-conflict (0.09s)
+    --- PASS: TestTemplateCreatorPublicFlow/project-create/receipt-lost-ack (0.08s)
+    --- PASS: TestTemplateCreatorPublicFlow/project-create/receipt-pruned (0.31s)
+    --- PASS: TestTemplateCreatorPublicFlow/project-create/source-fields-pruned (0.29s)
+    --- PASS: TestTemplateCreatorPublicFlow/project-create/noop-replacement (0.08s)
+    --- PASS: TestTemplateCreatorPublicFlow/project-create/update-replacement (0.08s)
+    --- PASS: TestTemplateCreatorPublicFlow/draft-create/known (0.17s)
+    --- PASS: TestTemplateCreatorPublicFlow/draft-create/missing-data (0.42s)
+    --- PASS: TestTemplateCreatorPublicFlow/draft-create/prose-data (0.43s)
+    --- PASS: TestTemplateCreatorPublicFlow/draft-create/json-data (0.42s)
+    --- PASS: TestTemplateCreatorPublicFlow/draft-create/wrong-service (0.42s)
+    --- PASS: TestTemplateCreatorPublicFlow/draft-create/foreign-task (0.43s)
+    --- PASS: TestTemplateCreatorPublicFlow/draft-create/wrong-uuid (0.55s)
+    --- PASS: TestTemplateCreatorPublicFlow/draft-create/same-name-replacement (0.55s)
+    --- PASS: TestTemplateCreatorPublicFlow/draft-create/kind-changed (0.53s)
+    --- PASS: TestTemplateCreatorPublicFlow/draft-create/source-during-proof (0.33s)
+    --- PASS: TestTemplateCreatorPublicFlow/draft-create/owner-during-proof (0.32s)
+    --- PASS: TestTemplateCreatorPublicFlow/draft-create/receipt-conflict (0.18s)
+    --- PASS: TestTemplateCreatorPublicFlow/draft-create/receipt-lost-ack (0.17s)
+    --- PASS: TestTemplateCreatorPublicFlow/draft-create/receipt-pruned (0.35s)
+    --- PASS: TestTemplateCreatorPublicFlow/draft-create/source-fields-pruned (0.32s)
+    --- PASS: TestTemplateCreatorPublicFlow/draft-create/noop-replacement (0.16s)
+    --- PASS: TestTemplateCreatorPublicFlow/draft-create/update-replacement (0.16s)
+    --- PASS: TestTemplateCreatorPublicFlow/composite-draft/known (0.24s)
+    --- PASS: TestTemplateCreatorPublicFlow/composite-draft/missing-data (0.48s)
+    --- PASS: TestTemplateCreatorPublicFlow/composite-draft/prose-data (0.47s)
+    --- PASS: TestTemplateCreatorPublicFlow/composite-draft/json-data (0.49s)
+    --- PASS: TestTemplateCreatorPublicFlow/composite-draft/wrong-service (0.48s)
+    --- PASS: TestTemplateCreatorPublicFlow/composite-draft/foreign-task (0.49s)
+    --- PASS: TestTemplateCreatorPublicFlow/composite-draft/wrong-uuid (0.72s)
+    --- PASS: TestTemplateCreatorPublicFlow/composite-draft/same-name-replacement (0.70s)
+    --- PASS: TestTemplateCreatorPublicFlow/composite-draft/kind-changed (0.68s)
+    --- PASS: TestTemplateCreatorPublicFlow/composite-draft/source-during-proof (0.38s)
+    --- PASS: TestTemplateCreatorPublicFlow/composite-draft/owner-during-proof (0.38s)
+    --- PASS: TestTemplateCreatorPublicFlow/composite-draft/receipt-conflict (0.26s)
+    --- PASS: TestTemplateCreatorPublicFlow/composite-draft/receipt-lost-ack (0.25s)
+    --- PASS: TestTemplateCreatorPublicFlow/composite-draft/receipt-pruned (0.41s)
+    --- PASS: TestTemplateCreatorPublicFlow/composite-draft/source-fields-pruned (0.37s)
+    --- PASS: TestTemplateCreatorPublicFlow/composite-draft/noop-replacement (0.23s)
+    --- PASS: TestTemplateCreatorPublicFlow/composite-draft/update-replacement (0.23s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	21.007s

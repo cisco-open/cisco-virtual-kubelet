@@ -1,0 +1,106 @@
+=== RUN   TestSWIMMutationsAreNeverReplayed
+=== RUN   TestSWIMMutationsAreNeverReplayed/401
+=== RUN   TestSWIMMutationsAreNeverReplayed/403
+=== RUN   TestSWIMMutationsAreNeverReplayed/429
+=== RUN   TestSWIMMutationsAreNeverReplayed/500
+--- PASS: TestSWIMMutationsAreNeverReplayed (0.04s)
+    --- PASS: TestSWIMMutationsAreNeverReplayed/401 (0.01s)
+    --- PASS: TestSWIMMutationsAreNeverReplayed/403 (0.01s)
+    --- PASS: TestSWIMMutationsAreNeverReplayed/429 (0.01s)
+    --- PASS: TestSWIMMutationsAreNeverReplayed/500 (0.01s)
+=== RUN   TestInvalidSWIMIdentifiersDoNotDial
+--- PASS: TestInvalidSWIMIdentifiersDoNotDial (0.00s)
+=== RUN   TestSWIMClientContracts
+--- PASS: TestSWIMClientContracts (0.01s)
+=== RUN   TestFailedProbePersistsAttemptTimeAndReportsManagedSWIMCapability
+--- PASS: TestFailedProbePersistsAttemptTimeAndReportsManagedSWIMCapability (0.61s)
+=== RUN   TestSWIMExecutionRequiresVerificationBeforeRelease
+--- PASS: TestSWIMExecutionRequiresVerificationBeforeRelease (0.00s)
+=== RUN   TestSWIMLostTaskReceiptNeverReplaysAfterRestart
+--- PASS: TestSWIMLostTaskReceiptNeverReplaysAfterRestart (0.00s)
+=== RUN   TestSWIMRecordedTaskSurvivesObservationOutageAndRestart
+=== RUN   TestSWIMRecordedTaskSurvivesObservationOutageAndRestart/Distributing
+=== RUN   TestSWIMRecordedTaskSurvivesObservationOutageAndRestart/Activating
+--- PASS: TestSWIMRecordedTaskSurvivesObservationOutageAndRestart (0.00s)
+    --- PASS: TestSWIMRecordedTaskSurvivesObservationOutageAndRestart/Distributing (0.00s)
+    --- PASS: TestSWIMRecordedTaskSurvivesObservationOutageAndRestart/Activating (0.00s)
+=== RUN   TestSWIMLostSubmissionResponseDoesNotFallback
+--- PASS: TestSWIMLostSubmissionResponseDoesNotFallback (0.00s)
+=== RUN   TestSWIMAdmissionAndPersistenceFailuresPreventPOST
+=== RUN   TestSWIMAdmissionAndPersistenceFailuresPreventPOST/claim_denied
+=== RUN   TestSWIMAdmissionAndPersistenceFailuresPreventPOST/claim_not_persisted
+=== RUN   TestSWIMAdmissionAndPersistenceFailuresPreventPOST/admission_revoked
+--- PASS: TestSWIMAdmissionAndPersistenceFailuresPreventPOST (0.00s)
+    --- PASS: TestSWIMAdmissionAndPersistenceFailuresPreventPOST/claim_denied (0.00s)
+    --- PASS: TestSWIMAdmissionAndPersistenceFailuresPreventPOST/claim_not_persisted (0.00s)
+    --- PASS: TestSWIMAdmissionAndPersistenceFailuresPreventPOST/admission_revoked (0.00s)
+=== RUN   TestSWIMTaskDisappearanceOrFailureRetainsFence
+=== RUN   TestSWIMTaskDisappearanceOrFailureRetainsFence/missing
+=== RUN   TestSWIMTaskDisappearanceOrFailureRetainsFence/failed
+--- PASS: TestSWIMTaskDisappearanceOrFailureRetainsFence (0.00s)
+    --- PASS: TestSWIMTaskDisappearanceOrFailureRetainsFence/missing (0.00s)
+    --- PASS: TestSWIMTaskDisappearanceOrFailureRetainsFence/failed (0.00s)
+=== RUN   TestSWIMExecutionIdentityCannotChange
+--- PASS: TestSWIMExecutionIdentityCannotChange (0.00s)
+=== RUN   TestParseSWIMTaskRequiresExplicitCorrelatedCompletion
+--- PASS: TestParseSWIMTaskRequiresExplicitCorrelatedCompletion (0.00s)
+=== RUN   TestSWIMActivationReceiptLossCannotRebootTwice
+--- PASS: TestSWIMActivationReceiptLossCannotRebootTwice (0.00s)
+=== RUN   TestSWIMIncompleteRecordCannotAdvanceOrRelease
+=== RUN   TestSWIMIncompleteRecordCannotAdvanceOrRelease/Distributed
+=== RUN   TestSWIMIncompleteRecordCannotAdvanceOrRelease/Verifying
+=== RUN   TestSWIMIncompleteRecordCannotAdvanceOrRelease/Succeeded
+--- PASS: TestSWIMIncompleteRecordCannotAdvanceOrRelease (0.00s)
+    --- PASS: TestSWIMIncompleteRecordCannotAdvanceOrRelease/Distributed (0.00s)
+    --- PASS: TestSWIMIncompleteRecordCannotAdvanceOrRelease/Verifying (0.00s)
+    --- PASS: TestSWIMIncompleteRecordCannotAdvanceOrRelease/Succeeded (0.00s)
+=== RUN   TestAutomaticPreparationGatesBothSWIMStages
+--- PASS: TestAutomaticPreparationGatesBothSWIMStages (0.00s)
+=== RUN   TestModernSWIMWireContract
+--- PASS: TestModernSWIMWireContract (0.01s)
+=== RUN   TestResolveSWIMTarget
+=== RUN   TestResolveSWIMTarget/missing_serial
+=== RUN   TestResolveSWIMTarget/wrong_address
+=== RUN   TestResolveSWIMTarget/unreachable
+=== RUN   TestResolveSWIMTarget/duplicate
+=== RUN   TestResolveSWIMTarget/aliased_ID
+=== RUN   TestResolveSWIMTarget/aliased_address
+=== RUN   TestResolveSWIMTarget/blank_addresses
+=== RUN   TestResolveSWIMTarget/deleted
+=== RUN   TestResolveSWIMTarget/unbound_UID
+--- PASS: TestResolveSWIMTarget (0.00s)
+    --- PASS: TestResolveSWIMTarget/missing_serial (0.00s)
+    --- PASS: TestResolveSWIMTarget/wrong_address (0.00s)
+    --- PASS: TestResolveSWIMTarget/unreachable (0.00s)
+    --- PASS: TestResolveSWIMTarget/duplicate (0.00s)
+    --- PASS: TestResolveSWIMTarget/aliased_ID (0.00s)
+    --- PASS: TestResolveSWIMTarget/aliased_address (0.00s)
+    --- PASS: TestResolveSWIMTarget/blank_addresses (0.00s)
+    --- PASS: TestResolveSWIMTarget/deleted (0.00s)
+    --- PASS: TestResolveSWIMTarget/unbound_UID (0.00s)
+=== RUN   TestResolveSWIMImage
+--- PASS: TestResolveSWIMImage (0.00s)
+=== RUN   TestModernSWIMRechecksBeforeActivationAndVerifies
+--- PASS: TestModernSWIMRechecksBeforeActivationAndVerifies (0.00s)
+=== RUN   TestModernSWIMDoesNotTrustParentTaskOrPartialReadiness
+--- PASS: TestModernSWIMDoesNotTrustParentTaskOrPartialReadiness (0.00s)
+=== RUN   TestModernSWIMReadinessReceiptLossNeverReplays
+=== RUN   TestModernSWIMReadinessReceiptLossNeverReplays/response
+=== RUN   TestModernSWIMReadinessReceiptLossNeverReplays/persistence
+--- PASS: TestModernSWIMReadinessReceiptLossNeverReplays (0.00s)
+    --- PASS: TestModernSWIMReadinessReceiptLossNeverReplays/response (0.00s)
+    --- PASS: TestModernSWIMReadinessReceiptLossNeverReplays/persistence (0.00s)
+=== RUN   TestModernSWIMReadinessReplacementBoundedAndJournaled
+--- PASS: TestModernSWIMReadinessReplacementBoundedAndJournaled (0.00s)
+=== RUN   TestModernSWIMReadinessReplacementRetainsUncertainMarker
+=== RUN   TestModernSWIMReadinessReplacementRetainsUncertainMarker/response
+=== RUN   TestModernSWIMReadinessReplacementRetainsUncertainMarker/persistence
+=== RUN   TestModernSWIMReadinessReplacementRetainsUncertainMarker/revoked
+--- PASS: TestModernSWIMReadinessReplacementRetainsUncertainMarker (0.00s)
+    --- PASS: TestModernSWIMReadinessReplacementRetainsUncertainMarker/response (0.00s)
+    --- PASS: TestModernSWIMReadinessReplacementRetainsUncertainMarker/persistence (0.00s)
+    --- PASS: TestModernSWIMReadinessReplacementRetainsUncertainMarker/revoked (0.00s)
+=== RUN   TestModernSWIMReadinessReplacementCooldownAndTaskReuse
+--- PASS: TestModernSWIMReadinessReplacementCooldownAndTaskReuse (0.00s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	3.012s

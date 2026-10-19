@@ -1,0 +1,21 @@
+=== RUN   TestLiveCatalystCenterCompositeTemplatePacing
+    template_pacing_live_test.go:197: public native task accepted CVK-Q-Pacing-20261016-121657 01a144a4-f85a-736a-ba88-9f499f76b3ee
+    template_pacing_live_test.go:197: public native task accepted draft:CVK-Q-Pacing-20261016-121657#base 01a144a5-1d21-70f3-87d2-91e8c01af80e
+    template_pacing_live_test.go:197: public native task accepted commit:CVK-Q-Pacing-20261016-121657#base 01a144a5-5a49-7899-af3e-4715406b51cf
+    template_pacing_live_test.go:197: public native task accepted draft:CVK-Q-Pacing-20261016-121657#combined 01a144a5-c9d9-72cd-845b-ffecfa82253a
+    template_pacing_live_test.go:197: public native task accepted commit:CVK-Q-Pacing-20261016-121657#combined 01a144a6-4334-7d8f-a0e1-22fd4dd29371
+    template_pacing_live_test.go:234: original acknowledged metadata tasks recovered from Unknown without replay 5
+    template_pacing_live_test.go:240: public template preflight refusals retired with owners/history intact 5 prepared composite refusals 2 native mutations after fresh replanning 5
+    template_pacing_live_test.go:266: public template model reached InSync with durable settling, simulated restarts and no-replay CVK-Q-Pacing-20261016-121657
+    template_pacing_live_test.go:290: isolated source revision updated; qualifying project/draft updates and member-version recommit
+    template_pacing_live_test.go:197: public native task accepted CVK-Q-Pacing-20261016-121657 01a144a6-c8a5-723f-8e2c-dbcde799c956
+    template_pacing_live_test.go:197: public native task accepted draft:CVK-Q-Pacing-20261016-121657#base 01a144a7-1097-749b-a744-82ed5ac24f0f
+    template_pacing_live_test.go:197: public native task accepted commit:CVK-Q-Pacing-20261016-121657#base 01a144a7-6679-79d1-9e08-b3413e66e50d
+    template_pacing_live_test.go:197: public native task accepted commit:CVK-Q-Pacing-20261016-121657#combined 01a144a7-e526-7042-ba86-2acc0fc03246
+    template_pacing_live_test.go:234: original acknowledged metadata tasks recovered from Unknown without replay 9
+    template_pacing_live_test.go:240: public template preflight refusals retired with owners/history intact 9 prepared composite refusals 3 native mutations after fresh replanning 9
+    template_pacing_live_test.go:266: public template model reached InSync with durable settling, simulated restarts and no-replay CVK-Q-Pacing-20261016-121657
+    template_pacing_live_test.go:157: isolated template/project cleanup verified CVK-Q-Pacing-20261016-121657
+--- PASS: TestLiveCatalystCenterCompositeTemplatePacing (221.07s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	223.655s

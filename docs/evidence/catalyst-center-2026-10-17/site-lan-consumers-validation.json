@@ -1,0 +1,157 @@
+{
+  "scope": "LAN session/per-device site consumer fences; generated-site native lifecycle and original-task retained recovery, simulated Kubernetes persistence; no native LAN workflow mutation or public/installed retirement routing",
+  "gates": {
+    "regression": {
+      "families": 67,
+      "subcases": 1005,
+      "seconds": 86.498,
+      "exit_code": 0,
+      "log_sha256": "e9022942d2a20753abeb8841eb094806e91705b91622b72be126d66a596647bc"
+    },
+    "api": {
+      "families": 8,
+      "subcases": 114,
+      "seconds": 77.75,
+      "exit_code": 0,
+      "log_sha256": "acffc151fd7ce81c45d6b79573ff7d3fd505686d38895bc3b400a729a12ada62"
+    },
+    "lan-regression": {
+      "families": 66,
+      "subcases": 565,
+      "seconds": 222.307,
+      "exit_code": 0,
+      "log_sha256": "7cc43df41f81f5b599d0255e8e2f4f8488e28a2044d8fe8f04d279407b5a98ba"
+    }
+  },
+  "native": {
+    "interrupted": {
+      "outcome": {
+        "baselineRestored": true,
+        "cleanupDeletes": 2,
+        "installed": false,
+        "newCreates": 0,
+        "originalTask": "01a14b82-51c8-7886-a0a9-ad2c780a9a1c",
+        "originalTaskSettled": true,
+        "rows": 8
+      },
+      "task_ids": [
+        "01a14b81-a504-742b-a336-491e591eb19b",
+        "01a14b81-ae14-7d2d-8a50-c8c8901db519",
+        "01a14b81-f1cd-7da6-9008-2b8d7505e3f9",
+        "01a14b82-3506-7247-bf97-769aa84f6ad2",
+        "01a14b82-437a-74ae-ba9c-282e717ca37d",
+        "01a14b82-51c8-7886-a0a9-ad2c780a9a1c",
+        "01a14b87-780d-7122-b0cc-9e15fc63f08c",
+        "01a14b87-b7ad-7209-ae4d-d5de82f1fc6b"
+      ],
+      "receipt_count": 8,
+      "archived_rows": 4,
+      "retained_owners": 1,
+      "active_operation": false,
+      "private_checkpoint": "/private/tmp/cvk-site-lifecycle-2462464766",
+      "log_sha256": "5bac7865729e54b36d8dc5410bc446c89b5752a0d363b1dcc4b97e06be2b2a2a"
+    },
+    "fresh_final": {
+      "outcome": {
+        "archivedCohorts": 2,
+        "baselineRestored": true,
+        "deletes": 4,
+        "firstID": "e547e8fa-de90-4089-bdee-57f605119747",
+        "installed": false,
+        "parentChild": true,
+        "parentHandoff": true,
+        "posts": 4,
+        "publicRetirementRouting": false,
+        "secondID": "8e4e5a39-ea21-44c8-8f4c-32339fe3a7fb"
+      },
+      "task_ids": [
+        "01a14b88-e751-779d-8ab1-c022c337236d",
+        "01a14b88-f0cd-73c2-a8ae-d40bb3bfb04c",
+        "01a14b89-352c-786f-b0dc-cadfa2ccf3d7",
+        "01a14b89-74c6-79c4-9a0d-ca33acad5d3e",
+        "01a14b89-853f-7bdb-82b9-ba50adaae041",
+        "01a14b89-91f9-746a-b47f-20062217302f",
+        "01a14b89-d8d0-75fc-bd87-935f4dd35720",
+        "01a14b8a-1a67-7c6b-965f-a0cc1878520c"
+      ],
+      "receipt_count": 8,
+      "archived_rows": 4,
+      "retained_owners": 1,
+      "active_operation": false,
+      "private_checkpoint": "/private/tmp/cvk-site-lifecycle-1776032071",
+      "log_sha256": "07e94a744afc6bce62c564d5a34f73b355695a5746d608158f20fdfa0a9d9175"
+    }
+  },
+  "retained_settlement": {
+    "seconds": 35.78,
+    "go_test_seconds": 38.209,
+    "exit_code": 0,
+    "new_creates": 0,
+    "cleanup_deletes": 2,
+    "baseline_restored": true
+  },
+  "fresh_native": {
+    "seconds": 83.15,
+    "go_test_seconds": 85.592,
+    "exit_code": 0,
+    "creates": 4,
+    "deletes": 4,
+    "baseline_restored": true
+  },
+  "interruption": "Initial qualifier treated a stale read-only recreation observation as terminal. Exact original task/source/key/history/parent proof subsequently revalidated; original task settled with no Create. Transient native read consistency is suspected, not proven at individual-field level. Qualifier now waits boundedly through stale/busy observations under the original binding; production guards were not relaxed. Fresh cycle began only after original baseline restoration.",
+  "production_and_fixture_sha256": {
+    "internal/controlleradapter/catalystcenter/lan_sessions.go": "683bd4515dba85db69889066e8aac3959ff490fca328f3fb46579d76036ac8bf",
+    "internal/controlleradapter/catalystcenter/site_retirement_lan.go": "881c33029022c03fca440f1887225a5598020204dfae671c794006d0e7b053ab",
+    "internal/controlleradapter/catalystcenter/site_retirement_lan_test.go": "9aa30cf3431b60c7c67ee2c083cd4bdfc021ca54985871c41138b9f4f63b14da",
+    "internal/controlleradapter/catalystcenter/site_retirement.go": "c8875154015bf2d6a427cacbb8006450cbfaa8bb3ecb17580f90770c8326935e",
+    "internal/controlleradapter/catalystcenter/site_retirement_settings_test.go": "4c785c4b21d621cae119a0a3a6b56fd68aa40f08268c9f7b4aebc93acfa9f7d7",
+    "internal/controlleradapter/catalystcenter/site_retirement_binding_test.go": "98a2a134175d42d4c4d5f7d51262545a06267c15e4f9b660f0d92623147e8740",
+    "internal/controlleradapter/catalystcenter/site_retirement_dispatch_test.go": "e7496f7c09ac65a23de5f7e516509af85cc625145a379da0eb0d05b974a264f6",
+    "internal/controlleradapter/catalystcenter/site_retirement_test.go": "07b82c62d320ee2d0bc9874b55431a3ee2011c0d8ab8c29a3a2225a179ff160f"
+  },
+  "initial_boundary_sha256": {
+    "internal/controlleradapter/catalystcenter/lan_sessions.go": "683bd4515dba85db69889066e8aac3959ff490fca328f3fb46579d76036ac8bf",
+    "internal/controlleradapter/catalystcenter/site_retirement_lan.go": "881c33029022c03fca440f1887225a5598020204dfae671c794006d0e7b053ab",
+    "internal/controlleradapter/catalystcenter/site_retirement_lan_test.go": "9aa30cf3431b60c7c67ee2c083cd4bdfc021ca54985871c41138b9f4f63b14da",
+    "internal/controlleradapter/catalystcenter/site_retirement.go": "c8875154015bf2d6a427cacbb8006450cbfaa8bb3ecb17580f90770c8326935e",
+    "internal/controlleradapter/catalystcenter/site_retirement_settings_test.go": "4c785c4b21d621cae119a0a3a6b56fd68aa40f08268c9f7b4aebc93acfa9f7d7",
+    "internal/controlleradapter/catalystcenter/site_retirement_binding_test.go": "98a2a134175d42d4c4d5f7d51262545a06267c15e4f9b660f0d92623147e8740",
+    "internal/controlleradapter/catalystcenter/site_retirement_dispatch_test.go": "e7496f7c09ac65a23de5f7e516509af85cc625145a379da0eb0d05b974a264f6",
+    "internal/controlleradapter/catalystcenter/site_retirement_test.go": "07b82c62d320ee2d0bc9874b55431a3ee2011c0d8ab8c29a3a2225a179ff160f",
+    "internal/controlleradapter/catalystcenter/site_recreation_live_test.go": "1626406e465637859557d20062a412600caff50afcb4bdf006ba05b5357980d3"
+  },
+  "retained_harness_boundary_sha256": {
+    "internal/controlleradapter/catalystcenter/site_recreation_live_test.go": "bb1e042975c86d09e9c64cbe4dc554b2fdd1f09edfde5d2465ac2c262508b610",
+    "internal/controlleradapter/catalystcenter/site_lifecycle_recovery_live_test.go": "940885e83a1460b9fc02f879d387364205c72b982ef97593e101fbd1c4ac95c5"
+  },
+  "final_boundary_sha256": {
+    "internal/controlleradapter/catalystcenter/lan_sessions.go": "683bd4515dba85db69889066e8aac3959ff490fca328f3fb46579d76036ac8bf",
+    "internal/controlleradapter/catalystcenter/site_retirement_lan.go": "881c33029022c03fca440f1887225a5598020204dfae671c794006d0e7b053ab",
+    "internal/controlleradapter/catalystcenter/site_retirement_lan_test.go": "9aa30cf3431b60c7c67ee2c083cd4bdfc021ca54985871c41138b9f4f63b14da",
+    "internal/controlleradapter/catalystcenter/site_retirement.go": "c8875154015bf2d6a427cacbb8006450cbfaa8bb3ecb17580f90770c8326935e",
+    "internal/controlleradapter/catalystcenter/site_retirement_settings_test.go": "4c785c4b21d621cae119a0a3a6b56fd68aa40f08268c9f7b4aebc93acfa9f7d7",
+    "internal/controlleradapter/catalystcenter/site_retirement_binding_test.go": "98a2a134175d42d4c4d5f7d51262545a06267c15e4f9b660f0d92623147e8740",
+    "internal/controlleradapter/catalystcenter/site_retirement_dispatch_test.go": "e7496f7c09ac65a23de5f7e516509af85cc625145a379da0eb0d05b974a264f6",
+    "internal/controlleradapter/catalystcenter/site_retirement_test.go": "07b82c62d320ee2d0bc9874b55431a3ee2011c0d8ab8c29a3a2225a179ff160f",
+    "internal/controlleradapter/catalystcenter/site_recreation_live_test.go": "0eb7c55857ef13eca2123ee54964a2f6f5b8e3bd6bb93e43f5b09e730219928a",
+    "internal/controlleradapter/catalystcenter/site_lifecycle_recovery_live_test.go": "940885e83a1460b9fc02f879d387364205c72b982ef97593e101fbd1c4ac95c5"
+  },
+  "read_only_endpoint": {
+    "scope": "Read-only LAN session endpoint availability; first page only, not a complete inventory qualification",
+    "http_status": 200,
+    "array_response": true,
+    "page_count": 0
+  },
+  "primary_schema": "https://developer.cisco.com/docs/catalyst-center/lan-automation-status/",
+  "pinned_resource_rows": 93,
+  "remaining": [
+    "legacy LAN sessions without complete per-device scope",
+    "native populated-session scope/override qualification",
+    "remaining operational consumer assessment",
+    "policy cleanup",
+    "public/compiler routing",
+    "configuration deletion",
+    "building/floor native lifecycle",
+    "installed complete-cycle qualification"
+  ]
+}

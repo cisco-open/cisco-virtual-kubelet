@@ -1,0 +1,20 @@
+=== RUN   TestLiveCatalystCenterTemplateProject
+    template_projects_live_test.go:138: submitted Create CVK-Q-Project-20261016-181057 01a145e8-ffbb-720e-a747-fda053827379
+    template_projects_live_test.go:138: submitted Update CVK-Q-Project-20261016-181057 01a145e9-1147-7043-9557-01e0bb322541
+    template_projects_live_test.go:164: project create and description update verified
+    template_projects_live_test.go:166: native template operation Create draft:CVK-Q-Project-20261016-181057#CVK-Commit-Qualification 01a145e9-2ec3-7d25-bc42-cff363f3dd19
+    template_projects_live_test.go:166: native template operation Update commit:CVK-Q-Project-20261016-181057#CVK-Commit-Qualification 01a145e9-6a5b-73f7-9a67-94530a7bb715
+    template_projects_live_test.go:166: native template operation Update draft:CVK-Q-Project-20261016-181057#CVK-Commit-Qualification 01a145e9-b078-7852-a6e0-604d4799ad97
+    template_projects_live_test.go:166: native template operation Update commit:CVK-Q-Project-20261016-181057#CVK-Commit-Qualification 01a145e9-ef7c-70fc-9da5-64f50e771e59
+    template_projects_live_test.go:166: native draft create/update and two committed versions verified 823dad10-40a2-4a9e-a9ec-7151afdf8cb6
+    template_projects_live_test.go:166: divider candidate task ordered-divider 01a145ea-2bd4-7b07-878a-f5fe35cbca87
+    template_projects_live_test.go:166: divider candidate result ordered-divider dividerPreserved false managedFieldsMatch false
+    template_projects_live_test.go:166: divider candidate task ordered-content-reference 01a145ea-4f30-7f05-8d68-c4ffea00b259
+    template_projects_live_test.go:166: divider candidate result ordered-content-reference dividerPreserved false managedFieldsMatch false
+    template_projects_live_test.go:166: divider candidate outcome uncertain; no replay controller configuration input has changed
+    template_commit_live_test.go:64: retained uncertain template fixture 823dad10-40a2-4a9e-a9ec-7151afdf8cb6
+    template_projects_live_test.go:54: retained uncertain project CVK-Q-Project-20261016-181057 1b09a66c-fcc0-4399-b3ab-b68b44f7d1c3
+--- FAIL: TestLiveCatalystCenterTemplateProject (97.02s)
+FAIL
+FAIL	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	98.387s
+FAIL

@@ -1,0 +1,61 @@
+=== RUN   TestEnvtestPnPRegistrationCapacity
+=== RUN   TestEnvtestPnPRegistrationCapacity/full
+=== RUN   TestEnvtestPnPRegistrationCapacity/cohort
+=== RUN   TestEnvtestPnPRegistrationCapacity/bytes
+=== RUN   TestEnvtestPnPRegistrationCapacity/edge
+=== RUN   TestEnvtestPnPRegistrationCapacity/late-count
+=== RUN   TestEnvtestPnPRegistrationCapacity/late-bytes
+=== RUN   TestEnvtestPnPRegistrationCapacity/publication-count
+=== RUN   TestEnvtestPnPRegistrationCapacity/publication-bytes
+--- PASS: TestEnvtestPnPRegistrationCapacity (53.66s)
+    --- PASS: TestEnvtestPnPRegistrationCapacity/full (5.95s)
+    --- PASS: TestEnvtestPnPRegistrationCapacity/cohort (3.31s)
+    --- PASS: TestEnvtestPnPRegistrationCapacity/bytes (5.78s)
+    --- PASS: TestEnvtestPnPRegistrationCapacity/edge (6.95s)
+    --- PASS: TestEnvtestPnPRegistrationCapacity/late-count (4.97s)
+    --- PASS: TestEnvtestPnPRegistrationCapacity/late-bytes (5.76s)
+    --- PASS: TestEnvtestPnPRegistrationCapacity/publication-count (7.79s)
+    --- PASS: TestEnvtestPnPRegistrationCapacity/publication-bytes (9.76s)
+=== RUN   TestEnvtestPnPPrivateRegistrationCapacity
+[controller-runtime] log.SetLogger(...) was never called; logs will not be displayed.
+Detected at:
+	>  goroutine 1597 [running]:
+	>  runtime/debug.Stack()
+	>  	/Users/johalley/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.9.darwin-arm64/src/runtime/debug/stack.go:26 +0x6c
+	>  sigs.k8s.io/controller-runtime/pkg/log.eventuallyFulfillRoot()
+	>  	/Users/johalley/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.23.3/pkg/log/log.go:60 +0xc4
+	>  sigs.k8s.io/controller-runtime/pkg/log.(*delegatingLogSink).Enabled(0xc00078ddc0, 0x1)
+	>  	/Users/johalley/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.23.3/pkg/log/deleg.go:111 +0x30
+	>  github.com/go-logr/logr.Logger.Info({{0x109f457c8?, 0xc00078ddc0?}, 0xc000b45638?}, {0x1075becf7, 0x16}, {0x0, 0x0, 0x0})
+	>  	/Users/johalley/go/pkg/mod/github.com/go-logr/logr@v1.4.4/logr.go:276 +0x60
+	>  sigs.k8s.io/controller-runtime/pkg/envtest.(*Environment).Start(0xc0002ab8c8)
+	>  	/Users/johalley/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.23.3/pkg/envtest/server.go:303 +0x934
+	>  github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter.qualificationAPIServerClientEnvironment(0xc000cca008, 0xc0002ab8c8)
+	>  	/Users/johalley/Git/cisco-virtual-kubelet/internal/controlleradapter/catalystcenter/configuration_envtest_test.go:27 +0x44
+	>  github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter.qualificationAPIServerClient(0xc000cca008, {0xc0000ade98, 0x1, 0x0?})
+	>  	/Users/johalley/Git/cisco-virtual-kubelet/internal/controlleradapter/catalystcenter/configuration_envtest_test.go:22 +0x1ac
+	>  github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter.TestEnvtestPnPPrivateRegistrationCapacity(0xc000cca008)
+	>  	/Users/johalley/Git/cisco-virtual-kubelet/internal/controlleradapter/catalystcenter/pnp_registration_capacity_envtest_test.go:19 +0x54
+	>  testing.tRunner(0xc000cca008, 0x109ee7ef8)
+	>  	/Users/johalley/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.9.darwin-arm64/src/testing/testing.go:2036 +0x168
+	>  created by testing.(*T).Run in goroutine 1
+	>  	/Users/johalley/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.9.darwin-arm64/src/testing/testing.go:2101 +0x7c0
+=== RUN   TestEnvtestPnPPrivateRegistrationCapacity/full
+=== RUN   TestEnvtestPnPPrivateRegistrationCapacity/cohort
+=== RUN   TestEnvtestPnPPrivateRegistrationCapacity/bytes
+=== RUN   TestEnvtestPnPPrivateRegistrationCapacity/edge
+=== RUN   TestEnvtestPnPPrivateRegistrationCapacity/late-count
+=== RUN   TestEnvtestPnPPrivateRegistrationCapacity/late-bytes
+=== RUN   TestEnvtestPnPPrivateRegistrationCapacity/publication-count
+=== RUN   TestEnvtestPnPPrivateRegistrationCapacity/publication-bytes
+--- PASS: TestEnvtestPnPPrivateRegistrationCapacity (52.36s)
+    --- PASS: TestEnvtestPnPPrivateRegistrationCapacity/full (5.15s)
+    --- PASS: TestEnvtestPnPPrivateRegistrationCapacity/cohort (3.12s)
+    --- PASS: TestEnvtestPnPPrivateRegistrationCapacity/bytes (5.43s)
+    --- PASS: TestEnvtestPnPPrivateRegistrationCapacity/edge (6.65s)
+    --- PASS: TestEnvtestPnPPrivateRegistrationCapacity/late-count (4.79s)
+    --- PASS: TestEnvtestPnPPrivateRegistrationCapacity/late-bytes (5.64s)
+    --- PASS: TestEnvtestPnPPrivateRegistrationCapacity/publication-count (7.55s)
+    --- PASS: TestEnvtestPnPPrivateRegistrationCapacity/publication-bytes (9.79s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	108.222s

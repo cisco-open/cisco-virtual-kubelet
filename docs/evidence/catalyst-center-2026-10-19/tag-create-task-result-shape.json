@@ -1,0 +1,23 @@
+{
+  "taskID": "01a1510e-3b23-7ec7-b57d-2cb8f80f1904",
+  "serviceType": "Grouping Service",
+  "isError": false,
+  "fields": [
+    "data",
+    "endTime",
+    "id",
+    "instanceTenantId",
+    "isError",
+    "operationIdList",
+    "progress",
+    "serviceType",
+    "startTime",
+    "version"
+  ],
+  "dataType": "str",
+  "dataLength": 36,
+  "progressType": "str",
+  "dataCanonicalUUID": true,
+  "dataUUID": "bf00dc0d-f53c-4547-8879-597094458bbc",
+  "progressCanonicalUUID": false
+}

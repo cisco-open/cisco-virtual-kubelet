@@ -1,0 +1,4 @@
+{"id": "6ad1123f0bc0186771caae30", "serialMatch": true, "hostnameMatch": true, "pidMatch": true, "state": "Unclaimed", "onbState": "Not Contacted", "hasSite": false, "hasWorkflowID": false}
+workflow absent
+systemWorkflow absent
+systemResetWorkflow absent

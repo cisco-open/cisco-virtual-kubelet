@@ -1,0 +1,10 @@
+=== RUN   TestLiveWirelessSSIDManifestRetirementRecovery
+    wireless_ssid_manifest_live_test.go:164: isolated disabled SSID and private recovery directory CVK_PSK_5967c900b62c5914 /private/tmp/cvk-ssid-manifest-1348129769
+    wireless_ssid_manifest_live_test.go:548: disabled credential SSID created and accepted-task restart verified CVK_PSK_5967c900b62c5914 mdi0q1zl-x1bt-s181-oty3-yZKWmgi2mMm1ote0qZbwmuSYxZnq
+    wireless_ssid_manifest_live_test.go:559: multi-PSK priority reorder converged without native mutation
+    wireless_ssid_manifest_live_test.go:573: accepted native update retained its task through simulated uncertain-phase restart 1
+    wireless_ssid_manifest_live_test.go:573: SSID manifest did not converge; inspect private journal Waiting
+--- FAIL: TestLiveWirelessSSIDManifestRetirementRecovery (82.97s)
+FAIL
+FAIL	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	84.029s
+FAIL

@@ -1,0 +1,10 @@
+=== RUN   TestTemplateCreatorInlineSource
+--- PASS: TestTemplateCreatorInlineSource (0.68s)
+=== RUN   TestTemplateCreatorWholeSetCapacity
+=== RUN   TestTemplateCreatorWholeSetCapacity/count
+=== RUN   TestTemplateCreatorWholeSetCapacity/bytes
+--- PASS: TestTemplateCreatorWholeSetCapacity (0.44s)
+    --- PASS: TestTemplateCreatorWholeSetCapacity/count (0.03s)
+    --- PASS: TestTemplateCreatorWholeSetCapacity/bytes (0.41s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	3.479s

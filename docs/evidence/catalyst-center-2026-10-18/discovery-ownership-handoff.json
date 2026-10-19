@@ -1,0 +1,196 @@
+{
+  "branch": "pr/johalley/catc-support",
+  "productionSHA256": "5d36bf0dfde744b2b1e5894f6f736213134f628629a50abf4be784086b357ce2",
+  "fullSuiteCommand": "go test -race -json ./internal/controlleradapter/catalystcenter -count=1 -timeout=40m",
+  "fullSuiteLog": "/private/tmp/cvk-discovery-handoff-full-final.jsonl",
+  "native": {
+    "deletes": 2,
+    "installedClusterMutated": false,
+    "managerReleased": true,
+    "nativeAttempts": 4,
+    "nativeBaselineRestored": true,
+    "naturalCreateUnknown": true,
+    "newConfigUID": "native-handoff-successor",
+    "newNativeUUID": "223",
+    "oldConfigUID": "config",
+    "oldTombstonePreserved": true,
+    "posts": 2,
+    "sameConfigName": true,
+    "sameJobName": true,
+    "checkpoint": "/private/tmp/cvk-discovery-owned-1546835622",
+    "testElapsedSeconds": 67.74,
+    "successorCreateTask": "01a14d2d-c089-773c-b56f-e9ab062fdd88",
+    "deletionReceipts": [
+      {
+        "section": "inventory",
+        "resource": "discovery-record:bdfb4cd15d59bdb04b8ad00c2f7a0065a09b61a13909e416ab143d6d7fab0d2d:218",
+        "operation": {
+          "id": "896073815538743e729903ef649d41bb",
+          "configName": "sites",
+          "configUID": "config",
+          "configGeneration": 2,
+          "controllerGeneration": 1,
+          "section": "inventory",
+          "resource": "discovery-finalize:v1:1e8260ac6114c93eaa0d835a4ce63e2f0cfc8dd47d7f7d26a1e12efe48633b9f:9675ad55e5eb60a03d3377d94ab82c1207ca019738457c24701e370b8e8e29cc:745d0dc86594a25e86a86421c56d8bbf0c3949ed246440b66f5b64564d239356:discovery-owned:bdfb4cd15d59bdb04b8ad00c2f7a0065a09b61a13909e416ab143d6d7fab0d2d:1f:ceeacb94b5256f8dbdbeca065b86673fd2249088346c61e18c065228a9585332:prune",
+          "targetID": "218",
+          "action": "Delete",
+          "phase": "Verified",
+          "submittedAt": "2026-10-18T04:03:20Z",
+          "taskID": "01a14d2d-a8ba-7360-b10c-8af209d4b390"
+        },
+        "verifiedAt": "2026-10-18T04:03:22Z"
+      },
+      {
+        "section": "inventory",
+        "resource": "discovery-record:bdfb4cd15d59bdb04b8ad00c2f7a0065a09b61a13909e416ab143d6d7fab0d2d:223",
+        "operation": {
+          "id": "7ded25576e51031dfef53caf98793021",
+          "configName": "sites",
+          "configUID": "native-handoff-successor",
+          "configGeneration": 1,
+          "controllerGeneration": 1,
+          "section": "inventory",
+          "resource": "discovery-finalize:v1:2013b328fe5a44760dcbd3a4fb21e1555b4b5e4a891ca02439f141fd1f4a391e:d7fe4953827f3eb92169151a1a688b06ceddb1702c08de13ca7c0a1306404823:93c916bd5a0e5eaf4a3dd0699a3e0d2149d3cabb5d3eb4f051266a24521a28d5:discovery-owned:bdfb4cd15d59bdb04b8ad00c2f7a0065a09b61a13909e416ab143d6d7fab0d2d:1f:ceeacb94b5256f8dbdbeca065b86673fd2249088346c61e18c065228a9585332:prune",
+          "targetID": "223",
+          "action": "Delete",
+          "phase": "Verified",
+          "submittedAt": "2026-10-18T04:03:54Z",
+          "taskID": "01a14d2e-2db3-7916-bfdf-a64b3a7b4b2e"
+        },
+        "verifiedAt": "2026-10-18T04:03:57Z"
+      }
+    ]
+  },
+  "qualificationBoundary": {
+    "nativeTasksAndWrites": true,
+    "kubernetesPersistence": "fixture",
+    "managerIndexes": "emulated",
+    "installedHandoff": false,
+    "predecessorUnknownInjected": true,
+    "successorUnknownInjected": false
+  },
+  "handoffCases": [
+    "closed",
+    "public",
+    "recreate",
+    "same-name",
+    "prior-present",
+    "prior-deleting",
+    "missing-proof",
+    "malformed-proof",
+    "proof-edit",
+    "proof-generation",
+    "receipt-edit",
+    "create-receipt",
+    "receipt-missing",
+    "foreign-owner",
+    "pending",
+    "reappeared",
+    "native-race",
+    "source-race",
+    "evidence-race",
+    "controller-race",
+    "cas-conflict",
+    "read-error",
+    "old-read-error",
+    "mixed",
+    "unenrolled",
+    "retain",
+    "empty-owned",
+    "history-edit",
+    "history-prune",
+    "history-proof-missing",
+    "history-reappeared"
+  ],
+  "gates": {
+    "discoveryRace": {
+      "passed": true,
+      "seconds": 18.91,
+      "log": "discovery-handoff-regression.log"
+    },
+    "realAPIRace": {
+      "passed": true,
+      "seconds": 42.604,
+      "log": "discovery-handoff-api.log"
+    },
+    "registryRace": {
+      "passed": true,
+      "seconds": 2.306
+    },
+    "NDRace": {
+      "passed": true,
+      "seconds": 4.728
+    },
+    "softwareUpgradeRace": {
+      "passed": true,
+      "seconds": 14.604
+    },
+    "directGNOIRace": {
+      "passed": true,
+      "seconds": 5.201
+    },
+    "productionBuild": {
+      "passed": true
+    },
+    "fullHandoffRace": {
+      "state": "passed",
+      "elapsedSeconds": 1688.248,
+      "passedTestEvents": 13593,
+      "failEvents": 0,
+      "terminalEvidence": "discovery-handoff-full-suite.json",
+      "rawLog": "/private/tmp/cvk-discovery-handoff-full-final.jsonl",
+      "sourceSHA256": "5d36bf0dfde744b2b1e5894f6f736213134f628629a50abf4be784086b357ce2"
+    },
+    "preHandoffFullRace": {
+      "boundary": "Production before discovery ownership handoff; includes retained-source and site-bulk repairs; not a post-handoff full-suite claim",
+      "command": "go test -race -json ./internal/controlleradapter/catalystcenter -count=1 -timeout=40m",
+      "testPassEvents": 13561,
+      "failEvents": 0,
+      "terminal": {
+        "Time": "2026-10-18T05:46:04.36021+02:00",
+        "Action": "pass",
+        "Package": "github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter",
+        "Elapsed": 1676.28
+      },
+      "log": "/private/tmp/cvk-retained-source-full-final.jsonl"
+    }
+  },
+  "sourceSHA256": {
+    "internal/controlleradapter/catalystcenter/discovery_ownership_handoff.go": "f0a44dbef54f0c9e6c2f260df65db816c5afa7232c9db88b6f6465c9d91a6529",
+    "internal/controlleradapter/catalystcenter/discovery_ownership_handoff_test.go": "b8c08852602428efbadc78e9bd34dca0c8e729ce436a126f51b34467f09da28e",
+    "internal/controlleradapter/catalystcenter/discovery_ownership_handoff_live_test.go": "a16e005e5f44595b16d4c3205feace5439105d617ad3c2ecbdcb7c64282dfb10",
+    "internal/controlleradapter/catalystcenter/discovery_owned_live_test.go": "a3af195819ce1982084a807fb93a2eafa1f39b8019786788df4cda3eae47fca3",
+    "internal/controlleradapter/catalystcenter/discovery_owned.go": "1b066193017954ca914f181704aa960d97bf5b616bc6eda52a048958319fd4cd",
+    "internal/controlleradapter/catalystcenter/discovery_prune.go": "a25e20ab103bcd77d86ce69eb0004fde393a92fa6974709138c930a8a86426d7",
+    "internal/controlleradapter/catalystcenter/discovery_ownership_binding.go": "691f603d1b4135002c56322b30f91a81c5b72838cd5b93d39fd29bd93fd750e1",
+    "internal/controlleradapter/catalystcenter/discovery_config_cleanup_completion.go": "035fb02c975cd06e8a086639ca4787cba85ad35545a28a0ecbe3c6199d2409c9",
+    "internal/controlleradapter/catalystcenter/discovery_config_cleanup_observation.go": "dbc44886addd86c44a4d2876640b286dcbdb00fb9959ae3f018f36b5b2ed66a9",
+    "internal/controlleradapter/catalystcenter/discovery_config_cleanup_execution.go": "dae8b829f211f655bf6f967fb5fbac34e456d30fa7ad6963d5f6dfb6f70a4b19",
+    "internal/controlleradapter/catalystcenter/discovery_config_deletion_drain.go": "c4c0fbd646359b03024dd89ff59be1539a85c09ec2d4a098aeaee22034a63560",
+    "internal/controlleradapter/catalystcenter/config_journal.go": "2827ef4878d61718eafd10b4d51513687f300c738e9c416c280f3dcc21db4b4a",
+    "internal/controlleradapter/catalystcenter/config_apply.go": "3cf93d1bbac810419ef28ceb6e81ba53006ce67007c99b85c2b0d49f82167484",
+    "internal/controlleradapter/catalystcenter/discovery_config_cleanup_observation_envtest_test.go": "f925f7ea944ff04d732ebeecca461c5bab0dc058a28614aa84f728723aa85cc7"
+  },
+  "binary": {
+    "path": "/private/tmp/cvk-discovery-handoff-final",
+    "sha256": "0ebb82d22b8cbcae15ed2705e97f3b57956273a6544793ba2e70b6fa71d18dcc"
+  },
+  "checkpointSHA256": {
+    "/private/tmp/cvk-discovery-owned-1546835622/handoff-claim.json": "5331394900f139bf8567efb1a742c46aa785be4d0d379596351d69de8f99fb28",
+    "/private/tmp/cvk-discovery-owned-1546835622/handoff-complete.json": "1bbb8a181bf1f8a8ce2089f3a11d882f6009fa17448ec8548d5e44fb9d031dd1",
+    "/private/tmp/cvk-discovery-owned-1546835622/handoff-config.json": "69cf20014442dfc9195cfb20de9f3ab45d8e2674ac4f96d978f53ebba5355b22",
+    "/private/tmp/cvk-discovery-owned-1546835622/handoff-created.json": "9a71707d0d9cc364ac79230e8bfe6c7b967a99b4f1481348f8dbbfb7a40c1cc6",
+    "/private/tmp/cvk-discovery-owned-1546835622/handoff-journal.json": "c26868edcf8ac24d8efa3d559791b95392b98d224deea4dd7385cbf0f07b536f"
+  },
+  "installedQualification": {
+    "passed": true,
+    "testElapsedSeconds": 164.33,
+    "evidence": "discovery-installed-handoff.json",
+    "namespace": "cvk-catc-handoff-20261018",
+    "nativeIDs": [
+      "228",
+      "233"
+    ],
+    "statusInjected": false
+  }
+}

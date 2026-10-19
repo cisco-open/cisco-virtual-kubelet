@@ -1,0 +1,54 @@
+{
+  "sourceSha256": {
+    "internal/controlleradapter/catalystcenter/site_retirement.go": "4c101aa6854db45c5141b696ad65c68670ac26a5f6e47b15022e6890c0b2f1e1",
+    "internal/controlleradapter/catalystcenter/site_retirement_test.go": "a2fa2496cc8de1c9ff44429ba5e5009f49d1ad16c07e82ed0c6f1e52206de197",
+    "internal/controlleradapter/catalystcenter/network_profiles.go": "7456c69bddca980c326539044ffefe5a7e0d7700572ad341e85aa3b4d010b3e1",
+    "internal/controlleradapter/catalystcenter/installed_site_execution_live_test.go": "5bb49d0ebeaeaaf95a169191cd20c4887f63cb2169e3375597acc892bcf56b6b"
+  },
+  "workerImage": "cvk-catc-worker-qualification:20261017-image-lifetime-44ace7027833",
+  "newDependencyCheck": "native observation in qualification process, not installed worker dispatch",
+  "generatedHierarchy": "CVK_INST_961a3abda34e",
+  "status": "dependency-prerequisite-qualified; public retirement incomplete",
+  "nativeSeconds": 102.91,
+  "nativeGoSeconds": 105.392,
+  "controllerUID": "99608da9-03bf-44d8-8c85-9e3bcb9d68c1",
+  "clusterUID": "5d2a68ec-9be0-4597-90f8-35f2f3e707f1",
+  "independentNativeObservations": 2,
+  "retainedRows": 4,
+  "typedSiteBaselinesRestored": true,
+  "finalControllerPhase": "Ready",
+  "activeIntentCount": 0,
+  "outstandingOperation": false,
+  "publicDeleteEnabled": false,
+  "automaticPruneQualified": false,
+  "missing": [
+    "public Delete/prune policy admission and selection",
+    "source/owner/private-baseline/retained-journal dispatch binding",
+    "acknowledged original-task Delete recovery and absence verification",
+    "atomic retirement receipts and bounded recreation lineage",
+    "explicit settings/credential ownership and additional operational consumer protection"
+  ],
+  "gates": [
+    {
+      "log": "site-retirement-dependencies-focused.log",
+      "result": "ok  \tgithub.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter\t3.009s",
+      "topLevelPasses": 2,
+      "subcasePasses": 44,
+      "sha256": "f9a7252a54e0fdfd6a28c555b7659121bb8970c18a287244e419975c4e1cf1f7"
+    },
+    {
+      "log": "site-retirement-dependencies-regression.log",
+      "result": "ok  \tgithub.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter\t113.370s",
+      "topLevelPasses": 19,
+      "subcasePasses": 276,
+      "sha256": "38a26de6acb10f0325da1359d56f4ffe8fc73a02b09953c82e0d37fa981c8472"
+    },
+    {
+      "log": "site-retirement-dependencies-native.log",
+      "result": "ok  \tgithub.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter\t105.392s",
+      "topLevelPasses": 1,
+      "subcasePasses": 0,
+      "sha256": "b048638dab881f9971be2ba7886eece3984c515912f873d3e477c8cd43e2a05c"
+    }
+  ]
+}

@@ -1,0 +1,80 @@
+=== RUN   TestSiteCreatorReceiptBoundaries
+=== RUN   TestSiteCreatorReceiptBoundaries/valid
+=== RUN   TestSiteCreatorReceiptBoundaries/configmap
+=== RUN   TestSiteCreatorReceiptBoundaries/lost-source
+=== RUN   TestSiteCreatorReceiptBoundaries/bad-target
+=== RUN   TestSiteCreatorReceiptBoundaries/bad-path
+=== RUN   TestSiteCreatorReceiptBoundaries/bad-kind
+=== RUN   TestSiteCreatorReceiptBoundaries/no-parent
+=== RUN   TestSiteCreatorReceiptBoundaries/unverified
+=== RUN   TestSiteCreatorReceiptBoundaries/no-task
+=== RUN   TestSiteCreatorReceiptBoundaries/no-time
+=== RUN   TestSiteCreatorReceiptBoundaries/future
+=== RUN   TestSiteCreatorReceiptBoundaries/duplicate
+=== RUN   TestSiteCreatorReceiptBoundaries/alias
+=== RUN   TestSiteCreatorReceiptBoundaries/pruned-result
+=== RUN   TestSiteCreatorReceiptBoundaries/foreign-section
+--- PASS: TestSiteCreatorReceiptBoundaries (0.00s)
+    --- PASS: TestSiteCreatorReceiptBoundaries/valid (0.00s)
+    --- PASS: TestSiteCreatorReceiptBoundaries/configmap (0.00s)
+    --- PASS: TestSiteCreatorReceiptBoundaries/lost-source (0.00s)
+    --- PASS: TestSiteCreatorReceiptBoundaries/bad-target (0.00s)
+    --- PASS: TestSiteCreatorReceiptBoundaries/bad-path (0.00s)
+    --- PASS: TestSiteCreatorReceiptBoundaries/bad-kind (0.00s)
+    --- PASS: TestSiteCreatorReceiptBoundaries/no-parent (0.00s)
+    --- PASS: TestSiteCreatorReceiptBoundaries/unverified (0.00s)
+    --- PASS: TestSiteCreatorReceiptBoundaries/no-task (0.00s)
+    --- PASS: TestSiteCreatorReceiptBoundaries/no-time (0.00s)
+    --- PASS: TestSiteCreatorReceiptBoundaries/future (0.00s)
+    --- PASS: TestSiteCreatorReceiptBoundaries/duplicate (0.00s)
+    --- PASS: TestSiteCreatorReceiptBoundaries/alias (0.00s)
+    --- PASS: TestSiteCreatorReceiptBoundaries/pruned-result (0.00s)
+    --- PASS: TestSiteCreatorReceiptBoundaries/foreign-section (0.00s)
+=== RUN   TestSiteCreatorIdentityFence
+=== RUN   TestSiteCreatorIdentityFence/same
+=== RUN   TestSiteCreatorIdentityFence/replaced
+=== RUN   TestSiteCreatorIdentityFence/missing
+=== RUN   TestSiteCreatorIdentityFence/parent
+=== RUN   TestSiteCreatorIdentityFence/foreign-owner
+=== RUN   TestSiteCreatorIdentityFence/imported
+--- PASS: TestSiteCreatorIdentityFence (0.00s)
+    --- PASS: TestSiteCreatorIdentityFence/same (0.00s)
+    --- PASS: TestSiteCreatorIdentityFence/replaced (0.00s)
+    --- PASS: TestSiteCreatorIdentityFence/missing (0.00s)
+    --- PASS: TestSiteCreatorIdentityFence/parent (0.00s)
+    --- PASS: TestSiteCreatorIdentityFence/foreign-owner (0.00s)
+    --- PASS: TestSiteCreatorIdentityFence/imported (0.00s)
+=== RUN   TestSiteCreatorCannotSettleWithoutReceipt
+--- PASS: TestSiteCreatorCannotSettleWithoutReceipt (0.61s)
+=== RUN   TestSiteCreatorCapacity
+=== RUN   TestSiteCreatorCapacity/empty
+=== RUN   TestSiteCreatorCapacity/existing
+=== RUN   TestSiteCreatorCapacity/duplicate-operation
+=== RUN   TestSiteCreatorCapacity/count
+=== RUN   TestSiteCreatorCapacity/bytes
+=== RUN   TestSiteCreatorCapacity/changed-history
+--- PASS: TestSiteCreatorCapacity (0.01s)
+    --- PASS: TestSiteCreatorCapacity/empty (0.00s)
+    --- PASS: TestSiteCreatorCapacity/existing (0.00s)
+    --- PASS: TestSiteCreatorCapacity/duplicate-operation (0.00s)
+    --- PASS: TestSiteCreatorCapacity/count (0.00s)
+    --- PASS: TestSiteCreatorCapacity/bytes (0.01s)
+    --- PASS: TestSiteCreatorCapacity/changed-history (0.00s)
+=== RUN   TestSiteCreatorPublicIdentityFence
+=== RUN   TestSiteCreatorPublicIdentityFence/area-create/creator-replaced
+=== RUN   TestSiteCreatorPublicIdentityFence/area-create/creator-missing
+=== RUN   TestSiteCreatorPublicIdentityFence/building-create/creator-replaced
+=== RUN   TestSiteCreatorPublicIdentityFence/building-create/creator-missing
+=== RUN   TestSiteCreatorPublicIdentityFence/floor-create/creator-replaced
+=== RUN   TestSiteCreatorPublicIdentityFence/floor-create/creator-missing
+--- PASS: TestSiteCreatorPublicIdentityFence (1.88s)
+    --- PASS: TestSiteCreatorPublicIdentityFence/area-create/creator-replaced (0.30s)
+    --- PASS: TestSiteCreatorPublicIdentityFence/area-create/creator-missing (0.30s)
+    --- PASS: TestSiteCreatorPublicIdentityFence/building-create/creator-replaced (0.32s)
+    --- PASS: TestSiteCreatorPublicIdentityFence/building-create/creator-missing (0.31s)
+    --- PASS: TestSiteCreatorPublicIdentityFence/floor-create/creator-replaced (0.32s)
+    --- PASS: TestSiteCreatorPublicIdentityFence/floor-create/creator-missing (0.33s)
+=== RUN   TestSiteCreatorSnapshotDoesNotAliasStatus
+--- PASS: TestSiteCreatorSnapshotDoesNotAliasStatus (0.00s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	4.859s

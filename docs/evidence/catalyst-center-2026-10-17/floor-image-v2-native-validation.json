@@ -1,0 +1,44 @@
+{
+  "status": "passed",
+  "seconds": 158.18,
+  "goSeconds": 160.618,
+  "installedTasks": {
+    "01a14ab9-c81f-7bd5-82f5-6947f4653642": "Create",
+    "01a14aba-282d-7384-b26f-df9b65442392": "Create",
+    "01a14aba-7ec2-7770-9892-4c07c53ebab2": "Create",
+    "01a14aba-e1cb-7e5f-9b3b-f03f13f48e6d": "Update"
+  },
+  "synchronousUploadCheckpoints": 3,
+  "identicalByteSourcePathReplacement": true,
+  "finalHashedSourcePathVerified": true,
+  "preservedConfigGeneration": true,
+  "boundedImageReceiptSlots": 1,
+  "asynchronousImageTaskInferred": false,
+  "originalGeometryTaskRecoveredAfterProcessInterruption": true,
+  "privateCreators": 3,
+  "latestGeometryRows": 1,
+  "postOmissionImageRows": 1,
+  "subsequentPodReplacementPassed": true,
+  "supervisedCleanupTasks": [
+    {
+      "type": "floor",
+      "taskID": "01a14abc-19ea-713c-91cc-cf8fdfdf5a2a"
+    },
+    {
+      "type": "building",
+      "taskID": "01a14abc-209d-7915-9f6e-fa9435a6aea5"
+    },
+    {
+      "type": "area",
+      "taskID": "01a14abc-2746-7336-818b-2bc78eb030d9"
+    }
+  ],
+  "typedSiteBaselinesRestored": true,
+  "finalControllerPhase": "Ready",
+  "outstandingOperation": false,
+  "activeIntentCount": 0,
+  "sourceSha256": {
+    "internal/controlleradapter/catalystcenter/installed_site_execution_live_test.go": "8e023e38799b33dc97c0f2e2dffed83f466f046e1494ef86a302f64259f08c19",
+    "internal/controlleradapter/catalystcenter/installed_floor_images_live_test.go": "7d755a9eb1acaf2ac193b60113aed46abfc7c1dcd4e593238348e97908041792"
+  }
+}

@@ -1,0 +1,37 @@
+{
+  "recordedAt": "2026-10-12T20:25:03.646645+00:00",
+  "result": "NOT_QUALIFIED",
+  "test": "TestLiveFabricL3Definition",
+  "binarySHA256": "14b7aa55c08f1c7152831275bd793623a68d2a2f22acafd60af79364de1df26c",
+  "initialName": "CVK-Test-20261012-201929",
+  "initialRejection": {
+    "httpStatus": 400,
+    "errorCode": "NCHS20631",
+    "reason": "virtualNetworkName malformed",
+    "inventoryUnchanged": true
+  },
+  "acceptedName": "CVK_12202211",
+  "taskID": "01a131c8-d578-7032-a183-3dc6223368a3",
+  "taskError": "NCSP11000",
+  "failureStage": "Preprocessing of business intent",
+  "rollbackStatus": "not_supported",
+  "inventoryAfter": [
+    "DEFAULT_VN",
+    "INFRA_VN"
+  ],
+  "temporaryResourcePresent": false,
+  "cleanupRequired": false,
+  "limitations": [
+    "Backend failure cause not established by task tree",
+    "Global definition creation not live-qualified",
+    "Exact appliance name restrictions remain unresolved",
+    "No fabric/device association attempted",
+    "Worker qualification pending"
+  ],
+  "prerequisiteObservation": {
+    "recordedAt": "2026-10-12T20:28:34.091868+00:00",
+    "policyServerCount": 0,
+    "iseServerCount": 0,
+    "causalConclusion": "Not established: task tree does not identify the missing prerequisite or backend cause"
+  }
+}

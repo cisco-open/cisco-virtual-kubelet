@@ -1,0 +1,18 @@
+=== RUN   TestLiveCatalystCenterTemplateProject
+    template_projects_live_test.go:138: submitted Create CVK-Q-Project-20261016-161516 01a1457f-1514-7eca-8cbd-5a3d27469f19
+    template_projects_live_test.go:138: submitted Update CVK-Q-Project-20261016-161516 01a1457f-26a5-7e42-ad4d-426f0298ec27
+    template_projects_live_test.go:164: project create and description update verified
+    template_projects_live_test.go:166: native template operation Create draft:CVK-Q-Project-20261016-161516#CVK-Commit-Qualification 01a1457f-4430-7f9c-a1ab-0e76c3c4082e
+    template_projects_live_test.go:166: native template operation Update commit:CVK-Q-Project-20261016-161516#CVK-Commit-Qualification 01a1457f-7d85-759e-8854-9bd450cf1d2d
+    template_projects_live_test.go:166: native template operation Update draft:CVK-Q-Project-20261016-161516#CVK-Commit-Qualification 01a1457f-c7a8-7580-b358-f699267e0dd5
+    template_projects_live_test.go:166: native template operation Update commit:CVK-Q-Project-20261016-161516#CVK-Commit-Qualification 01a14580-06a3-7561-b598-24b93e13b479
+    template_projects_live_test.go:166: native draft create/update and two committed versions verified 7dd78224-ccba-409b-a051-50718e5585e8
+    template_projects_live_test.go:166: real native history and simulated taskless Unknown journal reference verified held
+    template_projects_live_test.go:166: real native history and simulated taskless Unknown journal reference verified source-deleted
+    template_projects_live_test.go:166: real native history and simulated taskless Unknown journal reference verified restarted
+    template_commit_live_test.go:84: template mutation receipt DELETE 01a14580-5efb-728f-a8d3-4109e72fa49b
+    template_commit_live_test.go:95: template fixture cleanup verified 7dd78224-ccba-409b-a051-50718e5585e8
+    template_projects_live_test.go:112: isolated project cleanup verified 6fd1cdf8-039f-428f-87c9-220c26a8139d
+--- PASS: TestLiveCatalystCenterTemplateProject (90.60s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	92.804s

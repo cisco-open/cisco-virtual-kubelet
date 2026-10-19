@@ -1,0 +1,32 @@
+ok  	github.com/cisco/virtual-kubelet-cisco/api/config/v1alpha1	1.466s
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter	2.034s
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controllerconfiguration	31.041s
+2026/10/15 01:28:11 http: TLS handshake error from 127.0.0.1:49770: remote error: tls: bad certificate
+--- FAIL: TestLANSessionModelProjectionAndPayload (0.00s)
+    lan_session_model_test.go:30: controller configuration credential projection is unavailable, changed, or invalid
+--- FAIL: TestRMAMarkManifestCycle (5.39s)
+    --- FAIL: TestRMAMarkManifestCycle/prune-multi (0.35s)
+        rma_inventory_cycle_test.go:364: multi cleanup verification VerificationPending
+    --- FAIL: TestRMAMarkManifestCycle/prune-multi-mixed-retain (0.34s)
+        rma_inventory_cycle_test.go:364: multi cleanup verification VerificationPending
+    --- FAIL: TestRMAMarkManifestCycle/prune-multi-mixed-add (0.37s)
+        rma_inventory_cycle_test.go:364: multi cleanup verification VerificationPending
+    --- FAIL: TestRMAMarkManifestCycle/prune-multi-lost (0.35s)
+        rma_inventory_cycle_test.go:364: multi cleanup verification VerificationPending
+    --- FAIL: TestRMAMarkManifestCycle/prune-multi-failed (0.34s)
+        rma_inventory_cycle_test.go:364: multi cleanup verification VerificationPending
+    --- FAIL: TestRMAMarkManifestCycle/prune-owned (0.13s)
+        rma_inventory_cycle_test.go:715: unexpected owned cleanup recovery invalid controller configuration journal transition
+    --- FAIL: TestRMAMarkManifestCycle/prune-admitted (0.27s)
+        rma_inventory_cycle_test.go:483: public cleanup completion failed VerificationPending
+    --- FAIL: TestRMAMarkManifestCycle/prune-admitted-reapply (0.27s)
+        rma_inventory_cycle_test.go:483: public cleanup completion failed VerificationPending
+    --- FAIL: TestRMAMarkManifestCycle/prune-admitted-finalizer (0.27s)
+        rma_inventory_cycle_test.go:483: public cleanup completion failed VerificationPending
+    --- FAIL: TestRMAMarkManifestCycle/prune-absent (0.13s)
+        rma_inventory_cycle_test.go:715: unexpected owned cleanup recovery invalid controller configuration journal transition
+FAIL
+FAIL	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	275.559s
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter/nacmodel	(cached)
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/nexusdashboard	4.924s
+FAIL

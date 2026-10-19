@@ -1,0 +1,16 @@
+{
+  "branch": "pr/johalley/catc-support",
+  "module": "0.5.0",
+  "moduleCommit": "a435555fe828f03cf3311d52fe1ab6572a247916",
+  "provider": "0.6.1",
+  "providerCommit": "01058637dd5ed4fca93e1b2a96dd7032aec2d3a1",
+  "sourceSha256": {
+    "internal/controlleradapter/catalystcenter/template_read.go": "157355e6947684df23c6da6653e6a8dbe3bda844223f4c39b8432d62e63654df",
+    "internal/controlleradapter/catalystcenter/template_variable_reset_test.go": "8ea8938071b0762c070bb094a4db4c98b00f537f79b222ca38a92c3eda41ebf5",
+    "internal/controlleradapter/catalystcenter/template_variable_metadata_live_test.go": "ca862f28ed6174af4e335647de5bbecb299be429cd8965bad39eca1b1292e964",
+    "internal/controlleradapter/catalystcenter/template_variable_metadata_envtest_test.go": "b9f07b3bb1df813432143eca8dbd36d323c9df39d9a1530180b6f6ad6df06a17",
+    "internal/controlleradapter/catalystcenter/template_variable_metadata_test.go": "e8c23d8ee3f7011d3c34916a0ea11867098463b6da868dd15e96e3c31a342503",
+    "internal/controlleradapter/catalystcenter/template_software_version_test.go": "7b5fd07374ad234a3f2017adb77479c07d46b64d81f76e26e0caaf053f8566c1",
+    "examples/configs/catalyst-center/template-variable-metadata-execution.yaml": "845ceb1cdf1f719b880af05f747ad9f7facf73e80b055629cede6b854c4caf2d"
+  }
+}

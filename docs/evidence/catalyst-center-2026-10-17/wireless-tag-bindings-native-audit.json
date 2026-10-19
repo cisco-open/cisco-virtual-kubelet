@@ -1,0 +1,34 @@
+{
+  "status": "passed",
+  "distinctOriginalTasks": 31,
+  "workflows": [
+    {
+      "test": "TestLiveWirelessProfilePublicRecovery",
+      "seconds": 869.44,
+      "verifiedOriginalTasks": 14,
+      "membershipUpdates": 2,
+      "tagDeletes": 2,
+      "associationDeletes": 2,
+      "orderingVerified": true,
+      "producerGroupsVerified": true,
+      "affectedSiteIDsVerified": true,
+      "retainedPrivateRows": 4,
+      "retainedPrivateMemberProofs": 4,
+      "baselinesRestored": true
+    },
+    {
+      "test": "TestLiveWirelessPolicyCohortPublicRecovery",
+      "seconds": 1703.2,
+      "verifiedOriginalTasks": 17,
+      "membershipUpdates": 3,
+      "tagDeletes": 3,
+      "associationDeletes": 2,
+      "orderingVerified": true,
+      "producerGroupsVerified": true,
+      "affectedSiteIDsVerified": true,
+      "retainedPrivateRows": 5,
+      "retainedPrivateMemberProofs": 6,
+      "baselinesRestored": true
+    }
+  ]
+}

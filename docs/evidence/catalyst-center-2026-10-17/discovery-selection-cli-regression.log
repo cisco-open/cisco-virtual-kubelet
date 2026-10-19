@@ -1,0 +1,58 @@
+=== RUN   TestControllerExportDiscovery
+--- PASS: TestControllerExportDiscovery (0.01s)
+=== RUN   TestControllerExportDiscoveryRefusal
+--- PASS: TestControllerExportDiscoveryRefusal (0.00s)
+=== RUN   TestControllerExportNetworkPrivateArtifact
+--- PASS: TestControllerExportNetworkPrivateArtifact (0.03s)
+=== RUN   TestControllerExportNetworkRefusalAndSymlinks
+--- PASS: TestControllerExportNetworkRefusalAndSymlinks (0.04s)
+=== RUN   TestControllerExportNetworkDefaultsFile
+--- PASS: TestControllerExportNetworkDefaultsFile (0.01s)
+=== RUN   TestControllerExportNetworkSiteSelection
+=== RUN   TestControllerExportNetworkSiteSelection/exact
+=== RUN   TestControllerExportNetworkSiteSelection/repeated
+=== RUN   TestControllerExportNetworkSiteSelection/empty
+=== RUN   TestControllerExportNetworkSiteSelection/false-is-explicit
+=== RUN   TestControllerExportNetworkSiteSelection/missing
+=== RUN   TestControllerExportNetworkSiteSelection/root
+=== RUN   TestControllerExportNetworkSiteSelection/null
+=== RUN   TestControllerExportNetworkSiteSelection/empty-string
+=== RUN   TestControllerExportNetworkSiteSelection/no-exact-sites
+--- PASS: TestControllerExportNetworkSiteSelection (0.08s)
+    --- PASS: TestControllerExportNetworkSiteSelection/exact (0.01s)
+    --- PASS: TestControllerExportNetworkSiteSelection/repeated (0.01s)
+    --- PASS: TestControllerExportNetworkSiteSelection/empty (0.01s)
+    --- PASS: TestControllerExportNetworkSiteSelection/false-is-explicit (0.01s)
+    --- PASS: TestControllerExportNetworkSiteSelection/missing (0.01s)
+    --- PASS: TestControllerExportNetworkSiteSelection/root (0.01s)
+    --- PASS: TestControllerExportNetworkSiteSelection/null (0.00s)
+    --- PASS: TestControllerExportNetworkSiteSelection/empty-string (0.00s)
+    --- PASS: TestControllerExportNetworkSiteSelection/no-exact-sites (0.01s)
+=== RUN   TestControllerReportSeparatesRecognitionFromExecution
+--- PASS: TestControllerReportSeparatesRecognitionFromExecution (0.00s)
+=== RUN   TestControllerReportRejectsAmbiguousInputsWithoutEchoingValues
+--- PASS: TestControllerReportRejectsAmbiguousInputsWithoutEchoingValues (0.01s)
+=== RUN   TestControllerReportUnknownSectionsAreNotSilentlyDropped
+--- PASS: TestControllerReportUnknownSectionsAreNotSilentlyDropped (0.00s)
+=== RUN   TestControllerReportRequiresExactModelVersion
+--- PASS: TestControllerReportRequiresExactModelVersion (0.00s)
+=== RUN   TestControllerReportTemplateReferenceCheck
+--- PASS: TestControllerReportTemplateReferenceCheck (0.00s)
+=== RUN   TestControllerReportTemplateAssets
+--- PASS: TestControllerReportTemplateAssets (0.00s)
+=== RUN   TestReportClassifiesSupportedAndUnsupportedFamilies
+--- PASS: TestReportClassifiesSupportedAndUnsupportedFamilies (0.02s)
+=== RUN   TestEmitCRPopulatesManagedFamilies
+--- PASS: TestEmitCRPopulatesManagedFamilies (0.01s)
+=== RUN   TestEmitCRStrictRejectsUnsupportedFamilies
+--- PASS: TestEmitCRStrictRejectsUnsupportedFamilies (0.01s)
+=== RUN   TestEmitCRDropUnsupportedRemovesSourceFamily
+--- PASS: TestEmitCRDropUnsupportedRemovesSourceFamily (0.01s)
+=== RUN   TestMultiDeviceEnvelopeRequiresDeviceSelection
+--- PASS: TestMultiDeviceEnvelopeRequiresDeviceSelection (0.01s)
+=== RUN   TestMultiDeviceEnvelopeSelectsRequestedDevice
+--- PASS: TestMultiDeviceEnvelopeSelectsRequestedDevice (0.01s)
+=== RUN   TestMatrixRendersFamilyRows
+--- PASS: TestMatrixRendersFamilyRows (0.01s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/tools/cvk-netascode-migrate	2.057s

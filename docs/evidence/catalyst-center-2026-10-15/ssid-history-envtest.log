@@ -1,0 +1,5 @@
+=== RUN   TestEnvtestSSIDCredentialHistoryPersistence
+    wireless_ssid_history_envtest_test.go:82: real API preserves operation/receipt history and rejects invalid priorities, versions and duplicate map keys; no device API used
+--- PASS: TestEnvtestSSIDCredentialHistoryPersistence (5.94s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	8.230s

@@ -1,0 +1,177 @@
+=== RUN   TestDiscoveryCredentialMetadataInputProtocol
+=== RUN   TestDiscoveryCredentialMetadataInputProtocol/legacy-zero
+=== RUN   TestDiscoveryCredentialMetadataInputProtocol/scope-zero
+=== RUN   TestDiscoveryCredentialMetadataInputProtocol/continuation-zero
+=== RUN   TestDiscoveryCredentialMetadataInputProtocol/metadata-with-versions
+=== RUN   TestDiscoveryCredentialMetadataInputProtocol/scope-with-dropped-versions
+=== RUN   TestDiscoveryCredentialMetadataInputProtocol/unknown-version
+=== RUN   TestDiscoveryCredentialMetadataInputProtocol/wrong-target
+=== RUN   TestDiscoveryCredentialMetadataInputProtocol/queued-scope-change
+--- PASS: TestDiscoveryCredentialMetadataInputProtocol (0.00s)
+    --- PASS: TestDiscoveryCredentialMetadataInputProtocol/legacy-zero (0.00s)
+    --- PASS: TestDiscoveryCredentialMetadataInputProtocol/scope-zero (0.00s)
+    --- PASS: TestDiscoveryCredentialMetadataInputProtocol/continuation-zero (0.00s)
+    --- PASS: TestDiscoveryCredentialMetadataInputProtocol/metadata-with-versions (0.00s)
+    --- PASS: TestDiscoveryCredentialMetadataInputProtocol/scope-with-dropped-versions (0.00s)
+    --- PASS: TestDiscoveryCredentialMetadataInputProtocol/unknown-version (0.00s)
+    --- PASS: TestDiscoveryCredentialMetadataInputProtocol/wrong-target (0.00s)
+    --- PASS: TestDiscoveryCredentialMetadataInputProtocol/queued-scope-change (0.00s)
+=== RUN   TestDiscoveryCredentialMetadataActionHistory
+=== RUN   TestDiscoveryCredentialMetadataActionHistory/fabricated-delivery
+=== RUN   TestDiscoveryCredentialMetadataActionHistory/missing-versioned-pair
+=== RUN   TestDiscoveryCredentialMetadataActionHistory/metadata-version-binding
+=== RUN   TestDiscoveryCredentialMetadataActionHistory/queued-scope-change
+=== RUN   TestDiscoveryCredentialMetadataActionHistory/queued-scope-downgrade
+--- PASS: TestDiscoveryCredentialMetadataActionHistory (0.00s)
+    --- PASS: TestDiscoveryCredentialMetadataActionHistory/fabricated-delivery (0.00s)
+    --- PASS: TestDiscoveryCredentialMetadataActionHistory/missing-versioned-pair (0.00s)
+    --- PASS: TestDiscoveryCredentialMetadataActionHistory/metadata-version-binding (0.00s)
+    --- PASS: TestDiscoveryCredentialMetadataActionHistory/queued-scope-change (0.00s)
+    --- PASS: TestDiscoveryCredentialMetadataActionHistory/queued-scope-downgrade (0.00s)
+=== RUN   TestEnvtestDiscoveryCredentialUnsubmittedDeletion
+=== RUN   TestEnvtestDiscoveryCredentialUnsubmittedDeletion/drain-prepared
+=== RUN   TestEnvtestDiscoveryCredentialUnsubmittedDeletion/drain-prepared-handoff
+=== RUN   TestEnvtestDiscoveryCredentialUnsubmittedDeletion/drain-prepared-retained-source-loss
+=== RUN   TestEnvtestDiscoveryCredentialUnsubmittedDeletion/drain-prepared-retained-projection-loss
+=== RUN   TestEnvtestDiscoveryCredentialUnsubmittedDeletion/drain-prepared-configmap
+=== RUN   TestEnvtestDiscoveryCredentialUnsubmittedDeletion/drain-prepared-source-loss
+=== RUN   TestEnvtestDiscoveryCredentialUnsubmittedDeletion/drain-prepared-projection-loss
+=== RUN   TestEnvtestDiscoveryCredentialUnsubmittedDeletion/drain-prepared-scope-loss
+=== RUN   TestEnvtestDiscoveryCredentialUnsubmittedDeletion/drain-prepared-native-conflict
+=== RUN   TestEnvtestDiscoveryCredentialUnsubmittedDeletion/drain-prepared-native-error
+=== RUN   TestEnvtestDiscoveryCredentialUnsubmittedDeletion/drain-prepared-source-race
+=== RUN   TestEnvtestDiscoveryCredentialUnsubmittedDeletion/drain-prepared-config-race
+=== RUN   TestEnvtestDiscoveryCredentialUnsubmittedDeletion/drain-prepared-journal-race
+=== RUN   TestEnvtestDiscoveryCredentialUnsubmittedDeletion/drain-prepared-task-contamination
+=== RUN   TestEnvtestDiscoveryCredentialUnsubmittedDeletion/drain-prepared-credential-contamination
+=== RUN   TestEnvtestDiscoveryCredentialUnsubmittedDeletion/drain-prepared-lost-retirement-ack
+=== RUN   TestEnvtestDiscoveryCredentialUnsubmittedDeletion/drain-prepared-conflict-retirement
+=== RUN   TestEnvtestDiscoveryCredentialUnsubmittedDeletion/drain-prepared-lost-completion-ack
+=== RUN   TestEnvtestDiscoveryCredentialUnsubmittedDeletion/drain-prepared-conflict-completion
+--- PASS: TestEnvtestDiscoveryCredentialUnsubmittedDeletion (14.19s)
+    --- PASS: TestEnvtestDiscoveryCredentialUnsubmittedDeletion/drain-prepared (2.88s)
+    --- PASS: TestEnvtestDiscoveryCredentialUnsubmittedDeletion/drain-prepared-handoff (1.85s)
+    --- PASS: TestEnvtestDiscoveryCredentialUnsubmittedDeletion/drain-prepared-retained-source-loss (0.32s)
+    --- PASS: TestEnvtestDiscoveryCredentialUnsubmittedDeletion/drain-prepared-retained-projection-loss (0.33s)
+    --- PASS: TestEnvtestDiscoveryCredentialUnsubmittedDeletion/drain-prepared-configmap (0.30s)
+    --- PASS: TestEnvtestDiscoveryCredentialUnsubmittedDeletion/drain-prepared-source-loss (0.46s)
+    --- PASS: TestEnvtestDiscoveryCredentialUnsubmittedDeletion/drain-prepared-projection-loss (0.39s)
+    --- PASS: TestEnvtestDiscoveryCredentialUnsubmittedDeletion/drain-prepared-scope-loss (0.35s)
+    --- PASS: TestEnvtestDiscoveryCredentialUnsubmittedDeletion/drain-prepared-native-conflict (0.40s)
+    --- PASS: TestEnvtestDiscoveryCredentialUnsubmittedDeletion/drain-prepared-native-error (0.43s)
+    --- PASS: TestEnvtestDiscoveryCredentialUnsubmittedDeletion/drain-prepared-source-race (0.42s)
+    --- PASS: TestEnvtestDiscoveryCredentialUnsubmittedDeletion/drain-prepared-config-race (0.36s)
+    --- PASS: TestEnvtestDiscoveryCredentialUnsubmittedDeletion/drain-prepared-journal-race (0.37s)
+    --- PASS: TestEnvtestDiscoveryCredentialUnsubmittedDeletion/drain-prepared-task-contamination (0.34s)
+    --- PASS: TestEnvtestDiscoveryCredentialUnsubmittedDeletion/drain-prepared-credential-contamination (0.37s)
+    --- PASS: TestEnvtestDiscoveryCredentialUnsubmittedDeletion/drain-prepared-lost-retirement-ack (0.29s)
+    --- PASS: TestEnvtestDiscoveryCredentialUnsubmittedDeletion/drain-prepared-conflict-retirement (0.34s)
+    --- PASS: TestEnvtestDiscoveryCredentialUnsubmittedDeletion/drain-prepared-lost-completion-ack (0.28s)
+    --- PASS: TestEnvtestDiscoveryCredentialUnsubmittedDeletion/drain-prepared-conflict-completion (0.33s)
+=== RUN   TestDiscoveryCredentialUnsubmittedDeletion
+=== RUN   TestDiscoveryCredentialUnsubmittedDeletion/drain-prepared
+=== RUN   TestDiscoveryCredentialUnsubmittedDeletion/drain-prepared-handoff
+=== RUN   TestDiscoveryCredentialUnsubmittedDeletion/drain-prepared-retained-source-loss
+=== RUN   TestDiscoveryCredentialUnsubmittedDeletion/drain-prepared-retained-projection-loss
+=== RUN   TestDiscoveryCredentialUnsubmittedDeletion/drain-prepared-configmap
+=== RUN   TestDiscoveryCredentialUnsubmittedDeletion/drain-prepared-source-loss
+=== RUN   TestDiscoveryCredentialUnsubmittedDeletion/drain-prepared-projection-loss
+=== RUN   TestDiscoveryCredentialUnsubmittedDeletion/drain-prepared-scope-loss
+=== RUN   TestDiscoveryCredentialUnsubmittedDeletion/drain-prepared-native-conflict
+=== RUN   TestDiscoveryCredentialUnsubmittedDeletion/drain-prepared-native-error
+=== RUN   TestDiscoveryCredentialUnsubmittedDeletion/drain-prepared-source-race
+=== RUN   TestDiscoveryCredentialUnsubmittedDeletion/drain-prepared-config-race
+=== RUN   TestDiscoveryCredentialUnsubmittedDeletion/drain-prepared-journal-race
+=== RUN   TestDiscoveryCredentialUnsubmittedDeletion/drain-prepared-task-contamination
+=== RUN   TestDiscoveryCredentialUnsubmittedDeletion/drain-prepared-credential-contamination
+=== RUN   TestDiscoveryCredentialUnsubmittedDeletion/drain-prepared-lost-retirement-ack
+=== RUN   TestDiscoveryCredentialUnsubmittedDeletion/drain-prepared-conflict-retirement
+=== RUN   TestDiscoveryCredentialUnsubmittedDeletion/drain-prepared-lost-completion-ack
+=== RUN   TestDiscoveryCredentialUnsubmittedDeletion/drain-prepared-conflict-completion
+--- PASS: TestDiscoveryCredentialUnsubmittedDeletion (3.13s)
+    --- PASS: TestDiscoveryCredentialUnsubmittedDeletion/drain-prepared (0.11s)
+    --- PASS: TestDiscoveryCredentialUnsubmittedDeletion/drain-prepared-handoff (0.81s)
+    --- PASS: TestDiscoveryCredentialUnsubmittedDeletion/drain-prepared-retained-source-loss (0.13s)
+    --- PASS: TestDiscoveryCredentialUnsubmittedDeletion/drain-prepared-retained-projection-loss (0.13s)
+    --- PASS: TestDiscoveryCredentialUnsubmittedDeletion/drain-prepared-configmap (0.12s)
+    --- PASS: TestDiscoveryCredentialUnsubmittedDeletion/drain-prepared-source-loss (0.13s)
+    --- PASS: TestDiscoveryCredentialUnsubmittedDeletion/drain-prepared-projection-loss (0.13s)
+    --- PASS: TestDiscoveryCredentialUnsubmittedDeletion/drain-prepared-scope-loss (0.12s)
+    --- PASS: TestDiscoveryCredentialUnsubmittedDeletion/drain-prepared-native-conflict (0.16s)
+    --- PASS: TestDiscoveryCredentialUnsubmittedDeletion/drain-prepared-native-error (0.16s)
+    --- PASS: TestDiscoveryCredentialUnsubmittedDeletion/drain-prepared-source-race (0.15s)
+    --- PASS: TestDiscoveryCredentialUnsubmittedDeletion/drain-prepared-config-race (0.13s)
+    --- PASS: TestDiscoveryCredentialUnsubmittedDeletion/drain-prepared-journal-race (0.13s)
+    --- PASS: TestDiscoveryCredentialUnsubmittedDeletion/drain-prepared-task-contamination (0.12s)
+    --- PASS: TestDiscoveryCredentialUnsubmittedDeletion/drain-prepared-credential-contamination (0.12s)
+    --- PASS: TestDiscoveryCredentialUnsubmittedDeletion/drain-prepared-lost-retirement-ack (0.13s)
+    --- PASS: TestDiscoveryCredentialUnsubmittedDeletion/drain-prepared-conflict-retirement (0.13s)
+    --- PASS: TestDiscoveryCredentialUnsubmittedDeletion/drain-prepared-lost-completion-ack (0.11s)
+    --- PASS: TestDiscoveryCredentialUnsubmittedDeletion/drain-prepared-conflict-completion (0.13s)
+=== RUN   TestEnvtestDiscoveryInitialNoAuthLifecycle
+=== RUN   TestEnvtestDiscoveryInitialNoAuthLifecycle/inline
+=== RUN   TestEnvtestDiscoveryInitialNoAuthLifecycle/configmap
+=== RUN   TestEnvtestDiscoveryInitialNoAuthLifecycle/unknown
+=== RUN   TestEnvtestDiscoveryInitialNoAuthLifecycle/prepared
+=== RUN   TestEnvtestDiscoveryInitialNoAuthLifecycle/prepared-configmap
+=== RUN   TestEnvtestDiscoveryInitialNoAuthLifecycle/prepared-source-loss
+=== RUN   TestEnvtestDiscoveryInitialNoAuthLifecycle/prepared-committed-source-loss
+=== RUN   TestEnvtestDiscoveryInitialNoAuthLifecycle/prepared-native-conflict
+=== RUN   TestEnvtestDiscoveryInitialNoAuthLifecycle/prepared-scope-loss
+--- PASS: TestEnvtestDiscoveryInitialNoAuthLifecycle (11.45s)
+    --- PASS: TestEnvtestDiscoveryInitialNoAuthLifecycle/inline (2.67s)
+    --- PASS: TestEnvtestDiscoveryInitialNoAuthLifecycle/configmap (0.70s)
+    --- PASS: TestEnvtestDiscoveryInitialNoAuthLifecycle/unknown (0.67s)
+    --- PASS: TestEnvtestDiscoveryInitialNoAuthLifecycle/prepared (0.23s)
+    --- PASS: TestEnvtestDiscoveryInitialNoAuthLifecycle/prepared-configmap (0.24s)
+    --- PASS: TestEnvtestDiscoveryInitialNoAuthLifecycle/prepared-source-loss (1.17s)
+    --- PASS: TestEnvtestDiscoveryInitialNoAuthLifecycle/prepared-committed-source-loss (0.24s)
+    --- PASS: TestEnvtestDiscoveryInitialNoAuthLifecycle/prepared-native-conflict (1.19s)
+    --- PASS: TestEnvtestDiscoveryInitialNoAuthLifecycle/prepared-scope-loss (0.87s)
+=== RUN   TestDiscoveryInitialNoAuthLifecycle
+=== RUN   TestDiscoveryInitialNoAuthLifecycle/inline
+=== RUN   TestDiscoveryInitialNoAuthLifecycle/configmap
+=== RUN   TestDiscoveryInitialNoAuthLifecycle/unknown
+=== RUN   TestDiscoveryInitialNoAuthLifecycle/prepared
+=== RUN   TestDiscoveryInitialNoAuthLifecycle/prepared-configmap
+=== RUN   TestDiscoveryInitialNoAuthLifecycle/prepared-source-loss
+=== RUN   TestDiscoveryInitialNoAuthLifecycle/prepared-committed-source-loss
+[controller-runtime] log.SetLogger(...) was never called; logs will not be displayed.
+Detected at:
+	>  goroutine 6679 [running]:
+	>  runtime/debug.Stack()
+	>  	/Users/johalley/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.9.darwin-arm64/src/runtime/debug/stack.go:26 +0x6c
+	>  sigs.k8s.io/controller-runtime/pkg/log.eventuallyFulfillRoot()
+	>  	/Users/johalley/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.23.3/pkg/log/log.go:60 +0xc4
+	>  sigs.k8s.io/controller-runtime/pkg/log.(*delegatingLogSink).WithValues(0xc0004db080, {0x0, 0x0, 0x0})
+	>  	/Users/johalley/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.23.3/pkg/log/deleg.go:168 +0x3c
+	>  github.com/go-logr/logr.Logger.WithValues(...)
+	>  	/Users/johalley/go/pkg/mod/github.com/go-logr/logr@v1.4.4/logr.go:332
+	>  sigs.k8s.io/controller-runtime/pkg/log.FromContext({0x10a1fa748, 0x10b34efc0}, {0x0, 0x0, 0x0})
+	>  	/Users/johalley/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.23.3/pkg/log/log.go:98 +0xb8
+	>  github.com/cisco/virtual-kubelet-cisco/internal/controller.(*NetworkControllerReconciler).Reconcile(0xc00024b2d0, {0x10a1fa748, 0x10b34efc0}, {{{0x107741a85, 0x3}, {0x10774247e, 0x4}}})
+	>  	/Users/johalley/Git/cisco-virtual-kubelet/internal/controller/networkcontroller_controller.go:101 +0x5c
+	>  github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter.enrollPublicCredentialFixture(0xc0009d8008, 0xc000582160, 0xc001028008, {0x107744b84, 0x6}, 0xc00178c300)
+	>  	/Users/johalley/Git/cisco-virtual-kubelet/internal/controlleradapter/catalystcenter/discovery_credential_public_deletion_test.go:58 +0x66c
+	>  github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter.initialNoAuthScenario(0xc0009d8008, {0x1077abe10, 0x1e}, 0x0)
+	>  	/Users/johalley/Git/cisco-virtual-kubelet/internal/controlleradapter/catalystcenter/discovery_initial_noauth_test.go:103 +0xa8c
+	>  github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter.TestDiscoveryInitialNoAuthLifecycle.func1(0xc0009d8008)
+	>  	/Users/johalley/Git/cisco-virtual-kubelet/internal/controlleradapter/catalystcenter/discovery_initial_noauth_test.go:27 +0x44
+	>  testing.tRunner(0xc0009d8008, 0xc0001805d0)
+	>  	/Users/johalley/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.9.darwin-arm64/src/testing/testing.go:2036 +0x168
+	>  created by testing.(*T).Run in goroutine 6587
+	>  	/Users/johalley/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.9.darwin-arm64/src/testing/testing.go:2101 +0x7c0
+=== RUN   TestDiscoveryInitialNoAuthLifecycle/prepared-native-conflict
+=== RUN   TestDiscoveryInitialNoAuthLifecycle/prepared-scope-loss
+--- PASS: TestDiscoveryInitialNoAuthLifecycle (1.83s)
+    --- PASS: TestDiscoveryInitialNoAuthLifecycle/inline (0.22s)
+    --- PASS: TestDiscoveryInitialNoAuthLifecycle/configmap (0.23s)
+    --- PASS: TestDiscoveryInitialNoAuthLifecycle/unknown (0.22s)
+    --- PASS: TestDiscoveryInitialNoAuthLifecycle/prepared (0.08s)
+    --- PASS: TestDiscoveryInitialNoAuthLifecycle/prepared-configmap (0.08s)
+    --- PASS: TestDiscoveryInitialNoAuthLifecycle/prepared-source-loss (0.31s)
+    --- PASS: TestDiscoveryInitialNoAuthLifecycle/prepared-committed-source-loss (0.10s)
+    --- PASS: TestDiscoveryInitialNoAuthLifecycle/prepared-native-conflict (0.36s)
+    --- PASS: TestDiscoveryInitialNoAuthLifecycle/prepared-scope-loss (0.24s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	32.938s

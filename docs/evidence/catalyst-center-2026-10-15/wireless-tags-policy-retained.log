@@ -1,0 +1,5 @@
+=== RUN   TestLiveWirelessProfileTagRetainedReadback
+    wireless_profile_retained_live_test.go:43: original accepted operation verified with retained resource identity and unchanged tag inventory; no request replayed
+--- PASS: TestLiveWirelessProfileTagRetainedReadback (3.90s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	5.773s

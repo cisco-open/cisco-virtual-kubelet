@@ -1,0 +1,38 @@
+=== RUN   TestEnvtestNetworkNativeComparison
+=== RUN   TestEnvtestNetworkNativeComparison/complete
+=== RUN   TestEnvtestNetworkNativeComparison/companion
+=== RUN   TestEnvtestNetworkNativeComparison/restore-companion
+=== RUN   TestEnvtestNetworkNativeComparison/key
+=== RUN   TestEnvtestNetworkNativeComparison/restore-key
+=== RUN   TestEnvtestNetworkNativeComparison/missing-key
+=== RUN   TestEnvtestNetworkNativeComparison/proof
+=== RUN   TestEnvtestNetworkNativeComparison/downgrade
+=== RUN   TestEnvtestNetworkNativeComparison/lost-ack
+=== RUN   TestEnvtestNetworkNativeComparison/noop
+=== RUN   TestEnvtestNetworkNativeComparison/drift
+=== RUN   TestEnvtestNetworkNativeComparison/drop-key
+=== RUN   TestEnvtestNetworkNativeComparison/legacy
+=== RUN   TestEnvtestNetworkNativeComparison/replace
+=== RUN   TestEnvtestNetworkNativeComparison/retarget
+=== RUN   TestEnvtestNetworkNativeComparison/missing-state
+=== RUN   TestEnvtestNetworkNativeComparison/unapproved-key
+--- PASS: TestEnvtestNetworkNativeComparison (14.95s)
+    --- PASS: TestEnvtestNetworkNativeComparison/complete (3.06s)
+    --- PASS: TestEnvtestNetworkNativeComparison/companion (0.46s)
+    --- PASS: TestEnvtestNetworkNativeComparison/restore-companion (0.75s)
+    --- PASS: TestEnvtestNetworkNativeComparison/key (0.41s)
+    --- PASS: TestEnvtestNetworkNativeComparison/restore-key (0.75s)
+    --- PASS: TestEnvtestNetworkNativeComparison/missing-key (0.26s)
+    --- PASS: TestEnvtestNetworkNativeComparison/proof (0.44s)
+    --- PASS: TestEnvtestNetworkNativeComparison/downgrade (0.41s)
+    --- PASS: TestEnvtestNetworkNativeComparison/lost-ack (0.35s)
+    --- PASS: TestEnvtestNetworkNativeComparison/noop (0.06s)
+    --- PASS: TestEnvtestNetworkNativeComparison/drift (0.46s)
+    --- PASS: TestEnvtestNetworkNativeComparison/drop-key (0.58s)
+    --- PASS: TestEnvtestNetworkNativeComparison/legacy (0.76s)
+    --- PASS: TestEnvtestNetworkNativeComparison/replace (0.99s)
+    --- PASS: TestEnvtestNetworkNativeComparison/retarget (0.80s)
+    --- PASS: TestEnvtestNetworkNativeComparison/missing-state (0.22s)
+    --- PASS: TestEnvtestNetworkNativeComparison/unapproved-key (0.11s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	17.136s

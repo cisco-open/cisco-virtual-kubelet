@@ -1,0 +1,6 @@
+=== RUN   TestApplyExamplesCompile
+=== RUN   TestApplyExamplesCompile/network-settings-reset-apply.yaml
+--- PASS: TestApplyExamplesCompile (0.00s)
+    --- PASS: TestApplyExamplesCompile/network-settings-reset-apply.yaml (0.00s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	1.046s

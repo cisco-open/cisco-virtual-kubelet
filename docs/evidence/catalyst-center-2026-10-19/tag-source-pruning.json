@@ -1,0 +1,158 @@
+{
+  "branch": "pr/johalley/catc-support",
+  "modelVersion": "0.5.0",
+  "upstreamRevision": "a435555fe828f03cf3311d52fe1ab6572a247916",
+  "applied": true,
+  "broadGateSource": {
+    "files": 1655,
+    "sha256": "073626f554b9b0694550b7f7958c1686dcc76e9f1203d2fa2ac800d7f31f7792",
+    "productionSHA256": "41b1479bc159bbe35c61b9b57d915a58c79e8b8c2f5483cd2c68b35d9b7ac9e7"
+  },
+  "finalSource": {
+    "files": 1656,
+    "sha256": "57d8d837172e0c84ef0e64469b880e8fcc2df4100da43ed745ee99daeec761fc",
+    "productionSHA256": "6feb28778b1dc880a274a58cb3ef0bcf548701331839722474ba18adb7db64b9"
+  },
+  "newCRDTransportStateMachineCredentialStoreOrPermit": false,
+  "publicSourcePruning": true,
+  "CRDeletion": false,
+  "recreationAfterTombstone": false,
+  "crossOwnerHandoff": false,
+  "installedActors": false,
+  "fullPinnedModelParity": false,
+  "consumerCoverage": [
+    "advertised networkdevice",
+    "advertised interface",
+    "template even when omitted from type advertisement"
+  ],
+  "unknownConsumerTypesRefused": true,
+  "completeNativeDetailFingerprint": true,
+  "legacyWritableOnlyReceiptsMayDelete": false,
+  "explicitOwnedUpdateCanSupplyFullBaseline": true,
+  "legacyBaselineNativeQualified": true,
+  "nativeTagMembersEmptyResponseShapes": "cvk-tag-prune-native-member-shape.json",
+  "nativeTagEndpointShapes": "cvk-tag-prune-native-shape.json",
+  "gates": {
+    "api": {
+      "passed": true,
+      "passingEvents": 142,
+      "durationSeconds": 83.966,
+      "log": "cvk-tag-prune-api-regression.log"
+    },
+    "composition": {
+      "passed": true,
+      "passingEvents": 2013,
+      "durationSeconds": 190.496,
+      "log": "cvk-tag-prune-composition.log"
+    },
+    "refusal": {
+      "passed": true,
+      "passingEvents": 8,
+      "durationSeconds": 15.379,
+      "log": "cvk-tag-prune-final-refusal-corrected.log"
+    },
+    "proofsExamplesSettlement": {
+      "passed": true,
+      "passingEvents": 410,
+      "durationSeconds": 14.064,
+      "log": "cvk-tag-prune-final-proofs-examples.log"
+    },
+    "foundation": {
+      "passed": true,
+      "log": "cvk-tag-prune-foundation.log"
+    },
+    "finalSwim": {
+      "passed": true,
+      "log": "cvk-tag-prune-final-swim.log"
+    },
+    "finalBuild": {
+      "passed": true,
+      "binarySHA256": "b3bead613e70623a87df93f7e85a7a8f054d170cdcaedac26173e38575c19683"
+    },
+    "strictDocs": {
+      "passed": true,
+      "durationSeconds": 7.87,
+      "log": "cvk-tag-prune-docs.log"
+    },
+    "scopedWhitespace": {
+      "passed": true
+    }
+  },
+  "native": {
+    "newFullBaseline": {
+      "passed": true,
+      "durationSeconds": 22.235,
+      "legacyBaseline": false,
+      "scope": "combined inventory/templates, canonical templates journal",
+      "posts": 1,
+      "puts": 1,
+      "deletes": 1,
+      "supervisedCleanup": false,
+      "cleanedByManifest": true,
+      "baselineRestored": true,
+      "log": "cvk-tag-prune-native-initial-qualified.log"
+    },
+    "retainedBaselineUpgrade": {
+      "passed": true,
+      "durationSeconds": 20.222,
+      "legacyBaseline": true,
+      "scope": "combined inventory/templates, canonical templates journal",
+      "posts": 1,
+      "puts": 1,
+      "deletes": 1,
+      "supervisedCleanup": false,
+      "cleanedByManifest": true,
+      "baselineRestored": true,
+      "log": "cvk-tag-prune-native-legacy-public-recovery.log"
+    },
+    "finalInventoryScope": {
+      "passed": true,
+      "scope": "inventory only, final runtime with asynchronous proof correction",
+      "durationSeconds": 21.374,
+      "posts": 1,
+      "puts": 1,
+      "deletes": 1,
+      "cleanedByManifest": true,
+      "supervisedCleanup": false,
+      "baselineRestored": true,
+      "log": "cvk-tag-prune-native-inventory-public-recovery.log"
+    }
+  },
+  "earlierFailures": [
+    {
+      "log": "cvk-tag-prune-empty-selection-failure.log",
+      "issue": "Inventory parser rejected explicit empty tags; corrected pinned empty-selection semantics"
+    },
+    {
+      "log": "cvk-tag-prune-combined-empty-failure.log",
+      "issue": "Combined compiler dropped empty tag union; preserved declared empty selections and allowed default-empty template section"
+    },
+    {
+      "log": "cvk-tag-prune-refusal-inventory-failure.log",
+      "issue": "Inventory proof assumed synchronous registration and left unsubmitted asynchronous tag Delete Unknown; narrowed asynchronous tag exception and corrected proof fixtures"
+    },
+    {
+      "log": "cvk-tag-prune-example-empty-failure.log",
+      "issue": "Example compiler did not recognize tag prune-all semantics; added bounded tag-source recognition"
+    }
+  ],
+  "remaining": [
+    "CR-driven deletion/finalizer integration",
+    "recreation lineage and owner handoff",
+    "owned dynamic-rule native lifecycle beyond definition/operator qualification",
+    "ConfigMap prune execution qualification beyond existing source/ownership tests",
+    "shared receipt count/byte limits bound resource scale",
+    "broader93-resource parity and installed actors"
+  ],
+  "newExamples": [
+    "examples/configs/catalyst-center/tags-owned-prune-apply.yaml",
+    "examples/configs/catalyst-center/tags-owned-prune-empty-apply.yaml"
+  ],
+  "resourceLedgerRows": 93,
+  "catalystCenterResourceRows": 91,
+  "auxiliaryResourceRows": [
+    "terraform_data",
+    "time_sleep"
+  ],
+  "sourceUnchangedAfterGates": true
+}

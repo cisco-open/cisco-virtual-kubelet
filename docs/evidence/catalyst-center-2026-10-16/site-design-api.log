@@ -1,0 +1,22 @@
+=== RUN   TestEnvtestPrivateSiteDesignComposition
+=== RUN   TestEnvtestPrivateSiteDesignComposition/normal-private
+=== RUN   TestEnvtestPrivateSiteDesignComposition/optional-private
+=== RUN   TestEnvtestPrivateSiteDesignComposition/image-private
+=== RUN   TestEnvtestPrivateSiteDesignComposition/recover-private
+=== RUN   TestEnvtestPrivateSiteDesignComposition/image-recover-private
+=== RUN   TestEnvtestPrivateSiteDesignComposition/ambiguous-private
+=== RUN   TestEnvtestPrivateSiteDesignComposition/image-ambiguous-private
+=== RUN   TestEnvtestPrivateSiteDesignComposition/image-refuse-private
+=== RUN   TestEnvtestPrivateSiteDesignComposition/recover-refuse-private
+--- PASS: TestEnvtestPrivateSiteDesignComposition (19.26s)
+    --- PASS: TestEnvtestPrivateSiteDesignComposition/normal-private (3.77s)
+    --- PASS: TestEnvtestPrivateSiteDesignComposition/optional-private (1.02s)
+    --- PASS: TestEnvtestPrivateSiteDesignComposition/image-private (1.98s)
+    --- PASS: TestEnvtestPrivateSiteDesignComposition/recover-private (1.04s)
+    --- PASS: TestEnvtestPrivateSiteDesignComposition/image-recover-private (2.00s)
+    --- PASS: TestEnvtestPrivateSiteDesignComposition/ambiguous-private (1.04s)
+    --- PASS: TestEnvtestPrivateSiteDesignComposition/image-ambiguous-private (1.12s)
+    --- PASS: TestEnvtestPrivateSiteDesignComposition/image-refuse-private (2.21s)
+    --- PASS: TestEnvtestPrivateSiteDesignComposition/recover-refuse-private (1.54s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	21.659s

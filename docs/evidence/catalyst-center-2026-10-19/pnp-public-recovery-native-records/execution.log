@@ -1,0 +1,9 @@
+=== RUN   TestLivePnPJournalPublicRecovery
+    pnp_registration_stage_live_test.go:143: private registration recovery directory /private/tmp/cvk-pnp-registration-4110133220
+    pnp_registration_stage_live_test.go:143: owned native registration 6ad589f80bc0186771cb115f CVK522D5DF0
+    pnp_registration_stage_live_test.go:143: canonical removal baseline retained with unchanged original operation/time; serialized restart no extra POST 6ad589f80bc0186771cb115f cvk522d5df0
+    pnp_registration_stage_live_test.go:143: canonical source-independent Delete acknowledgement, restart, atomic absence receipt and release verified 6ad589f80bc0186771cb115f
+    pnp_registration_stage_live_test.go:143: safe Delete acknowledgement structure {"auditCount":2,"hasDeviceInfo":true,"hasResponse":false,"rootIDMatches":true,"status":200,"validObject":true}
+--- PASS: TestLivePnPJournalPublicRecovery (10.63s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	13.093s

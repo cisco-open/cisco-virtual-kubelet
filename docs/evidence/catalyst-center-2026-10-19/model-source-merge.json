@@ -1,0 +1,185 @@
+{
+  "scope": "offline full controller/defaults source assembly with existing bounded site design execution",
+  "branch": "pr/johalley/catc-support",
+  "modelVersion": "0.5.0",
+  "upstreamRevision": "a435555fe828f03cf3311d52fe1ab6572a247916",
+  "utilsVersion": "2.0.0",
+  "utilsRevision": "a383caa57652edc7952f3bd596f9a75719480643",
+  "fullModelComplete": false,
+  "fullInputLanguageComplete": false,
+  "installedMergeExecutionQualified": false,
+  "allElevenSectionEnvelopesPreserved": true,
+  "nativePersistence": "simulated Kubernetes; real temporary API persistence qualification separate",
+  "sourceFingerprints": {
+    "internal/controlleradapter/catalystcenter": "35a595d18b459d5105b1ac9044fba71751179af407257e1f6c53ca51d1faaf5b",
+    "internal/controlleradapter/catalystcenter/nacmodel": "3b43f32720303e2587c09a77f25b1c3a3e9d031838e4c8638d0b9f18273fe8d0",
+    "tools/cvk-netascode-migrate": "795c622f7e924ee81759a3940822bebd2b97d25057805c7d36d4aa276106641b"
+  },
+  "nativeSourceFingerprints": {
+    "internal/controlleradapter/catalystcenter": "35a595d18b459d5105b1ac9044fba71751179af407257e1f6c53ca51d1faaf5b",
+    "internal/controlleradapter/catalystcenter/nacmodel": "376bc9bdba3c8234c52c4d2f384929b7154265623147916b5bcb8bc5182ff148",
+    "tools/cvk-netascode-migrate": "795c622f7e924ee81759a3940822bebd2b97d25057805c7d36d4aa276106641b"
+  },
+  "gates": {
+    "allModelExporterRace": {
+      "exitCode": 0,
+      "passingTestEvents": 95,
+      "log": "model-source-merge-allModelExporterRace.log",
+      "sha256": "c8015e7a3879b7a6fd770768e702504e8de94753032a5d4f1c631e7723e4c3a2"
+    },
+    "publicDesignRace": {
+      "exitCode": 0,
+      "passingTestEvents": 1,
+      "log": "model-source-merge-publicDesignRace.log",
+      "sha256": "d3e65d7bb64dede4e9ddd3162451e5a749d1dabb9c3542a7be1d32ddf919c379"
+    },
+    "temporaryAPI": {
+      "exitCode": 0,
+      "passingTestEvents": 1,
+      "log": "model-source-merge-temporaryAPI.log",
+      "sha256": "3768132d123ba933364a05a23cd5ba31ef911596baad6c50561e2be3d9d57425"
+    },
+    "native": {
+      "exitCode": 0,
+      "passingTestEvents": 1,
+      "log": "model-source-merge-native.log",
+      "sha256": "52ea7b0d37170180e23a0938150ba9e9ef7cc9e97e5d5789751f1502a236c034"
+    },
+    "foundationRegression": {
+      "exitCode": 0,
+      "passingPackages": [
+        "github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/nexusdashboard",
+        "github.com/cisco/virtual-kubelet-cisco/internal/managedprotocol",
+        "github.com/cisco/virtual-kubelet-cisco/internal/softwarelifecycle",
+        "github.com/cisco/virtual-kubelet-cisco/internal/provider/maintenance",
+        "github.com/cisco/virtual-kubelet-cisco/internal/provider/softwareupgrade",
+        "github.com/cisco/virtual-kubelet-cisco/internal/controllerconfiguration"
+      ],
+      "passingTestEvents": 2278,
+      "log": "/private/tmp/cvk-model-merge-foundation-regression.log",
+      "sha256": "f0184b4975ce0bc447f32fbb6ad941f49c1cb61686b7b8c409bad954e17a1da6"
+    },
+    "productionBuild": {
+      "exitCode": 0,
+      "log": "/private/tmp/cvk-model-merge-reviewed-production-build.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "migrationBuild": {
+      "exitCode": 0,
+      "log": "/private/tmp/cvk-model-merge-reviewed-build.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "strictDocs": {
+      "exitCode": 0,
+      "log": "/private/tmp/cvk-model-merge-docs.log",
+      "sha256": "4d81045a74f6f5fb5b7bd9681e7468dccff25f08f823b70378d37f6ff52bcd47"
+    }
+  },
+  "native": {
+    "activeOperation": false,
+    "baselineRestored": true,
+    "generatedPath": "Global/CVK-Q-20261019-114804-000000000",
+    "installed": false,
+    "managedSiteSelection": true,
+    "mergedSource": true,
+    "modelAndAssetSnapshot": true,
+    "originalTaskRecoveries": 8,
+    "retainedActionRows": 6,
+    "sourceDefaultsExport": true
+  },
+  "nativeDesignMutations": 6,
+  "synchronousImageUploads": 2,
+  "siteSetupMutations": 4,
+  "remainingGeneratedFixtures": [],
+  "exampleProvenance": {
+    "model": {
+      "format": "netascode-catalyst-center",
+      "modelVersion": "0.5.0",
+      "upstreamRevision": "a435555fe828f03cf3311d52fe1ab6572a247916",
+      "utilsVersion": "2.0.0",
+      "utilsRevision": "a383caa57652edc7952f3bd596f9a75719480643",
+      "policySHA256": "610d940cbceecbbbc2c1fc6a1569210cdf19f170d9c588e76e8e1fafbb553998",
+      "inputsSHA256": [
+        "a2182375b61d625d6a019cf8028dbe1cf2920e7b97bbb6ad229d63af246cf56d",
+        "fb19867b947fb798555acb159a99f20bb975e2fcc98cd7103f332a3a4a94479c",
+        "80d7688fe0b603e7736d3ca4790f99e729ce74b45d6c07b46eb9905662cae9d2"
+      ],
+      "orderedInputsSHA256": "9d6cb741e001b666a9a6c802d9174bb5af5490856acfe1c84710867695e0a637",
+      "outputSHA256": "f1a6938a57617ce02d528f2d26197e957d4ff5b1525f93b049023351fda5ee98",
+      "component": "model",
+      "resolved": false,
+      "configurationParity": false,
+      "limitations": [
+        "Offline merge is not defaults resolution, schema validation or execution parity. Use the existing section exporter and runtime ownership/recovery path.",
+        "Only explicit Catalyst Center/defaults mappings with core scalar tags are admitted. Resolve anchors, YAML merges, custom tags and environment substitution upstream. Input order is significant; duplicate list members are preserved as upstream specifies.",
+        "The module permits utils >= 2.0.0; CVK pins the merge algorithm to 2.0.0, not arbitrary later provider semantics."
+      ]
+    },
+    "defaults": {
+      "format": "netascode-catalyst-center",
+      "modelVersion": "0.5.0",
+      "upstreamRevision": "a435555fe828f03cf3311d52fe1ab6572a247916",
+      "utilsVersion": "2.0.0",
+      "utilsRevision": "a383caa57652edc7952f3bd596f9a75719480643",
+      "policySHA256": "610d940cbceecbbbc2c1fc6a1569210cdf19f170d9c588e76e8e1fafbb553998",
+      "inputsSHA256": [
+        "a2182375b61d625d6a019cf8028dbe1cf2920e7b97bbb6ad229d63af246cf56d",
+        "fb19867b947fb798555acb159a99f20bb975e2fcc98cd7103f332a3a4a94479c",
+        "80d7688fe0b603e7736d3ca4790f99e729ce74b45d6c07b46eb9905662cae9d2"
+      ],
+      "orderedInputsSHA256": "9d6cb741e001b666a9a6c802d9174bb5af5490856acfe1c84710867695e0a637",
+      "outputSHA256": "e4f1be6966d802b927cc098386b03370665bf219c8dfc218cc16fa9819111858",
+      "component": "defaults",
+      "resolved": false,
+      "configurationParity": false,
+      "limitations": [
+        "Offline merge is not defaults resolution, schema validation or execution parity. Use the existing section exporter and runtime ownership/recovery path.",
+        "Only explicit Catalyst Center/defaults mappings with core scalar tags are admitted. Resolve anchors, YAML merges, custom tags and environment substitution upstream. Input order is significant; duplicate list members are preserved as upstream specifies.",
+        "The module permits utils >= 2.0.0; CVK pins the merge algorithm to 2.0.0, not arbitrary later provider semantics."
+      ]
+    },
+    "resolved": {
+      "exporter": "cvk-site-defaults-v1:policy-sha256:8522906cc771391cfbdec4e71271b57d7662248f0012e2f30755d2e217fb8f9a",
+      "executionSyntaxValidated": true,
+      "leafSchemaValidated": false,
+      "format": "netascode-catalyst-center",
+      "modelVersion": "0.5.0",
+      "upstreamRevision": "a435555fe828f03cf3311d52fe1ab6572a247916",
+      "policySHA256": "8522906cc771391cfbdec4e71271b57d7662248f0012e2f30755d2e217fb8f9a",
+      "defaultsSHA256": "8efb7f12853af1f8d2b182fb2b9e323e30ddf2330e61286dbb959a84fd5a505f",
+      "inputSHA256": "f1a6938a57617ce02d528f2d26197e957d4ff5b1525f93b049023351fda5ee98",
+      "overridesSHA256": "e4f1be6966d802b927cc098386b03370665bf219c8dfc218cc16fa9819111858",
+      "outputSHA256": "6a4c49be0792bc60022436b3f9aa948d32f5d2cd07bf0f9b93dcd35c5631075e",
+      "resolutionScope": "sites-design-snapshot",
+      "configurationParity": false,
+      "limitations": [
+        "One already-selected sites-only model; no file merging, managed-site filtering or other sections. Images require an explicit same-ConfigMap model/index/BinaryData snapshot; no model path is opened.",
+        "Pinned site defaults and supported overrides only; numeric null fallback follows upstream try expressions, while unsupported unresolved values refuse.",
+        "Singular area parents stay explicit; bulk omitted parent uses literal Global, matching the pinned resource map.",
+        "No nested schema/parity attestation, native AP/antenna catalogue validation, API request, ownership transfer or change to runtime defaulting. Runtime revalidates source assets and native state independently."
+      ],
+      "siteExpressionsSHA256": "8d7f003049677a761a8206e1c1a8fa49f5871886fef61c5e46316c433b88cba9",
+      "useBulkAPI": false,
+      "resources": 3,
+      "defaultedFields": 5,
+      "plannedAccessPoints": 1,
+      "assetsValidated": false
+    }
+  },
+  "history": [
+    "Initial public fixture invocation passed an explicit nil variadic API installer and panicked; fixed to omit the optional installer. Re-run public race gate passed. API-backed gate was unaffected.",
+    "After native qualification, merge provenance was strengthened to include the strict document parser and exact module-version checks. No merge/mutation semantics changed; the final complete model/exporter race suite and builds pass. Final review removed unused standalone reference helpers only; complete model/exporter race gates and both builds passed again. The effective merge algorithm and native mutation path are unchanged."
+  ],
+  "remaining": [
+    "anchors, YAML merge keys, environment/custom tag input resolution and broader YAML loader semantics",
+    "installed source-production/default/selection/projection composition and recovery",
+    "complete leaf schema and native catalogue capability coverage",
+    "other resource-specific physical/bulk, ownership and destructive lifecycle gaps across 93 rows",
+    "partial PnP acquisition cancellation original-manager quiescence proof"
+  ],
+  "resourceCoverage": {
+    "distinctInventoryRows": 93,
+    "coreMergeSectionEnvelopes": 11,
+    "completeResourceParity": false
+  }
+}

@@ -1,0 +1,5 @@
+=== RUN   TestLiveCatalystCenterWiredBulkNetworkContext
+    wired_bulk_network_context_live_test.go:59: no settled NTP policy for a lab device; live scoped network-context qualification remains pending
+--- SKIP: TestLiveCatalystCenterWiredBulkNetworkContext (24.61s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	26.961s

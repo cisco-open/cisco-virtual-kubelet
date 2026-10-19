@@ -1,0 +1,60 @@
+=== RUN   TestEnvtestProfileSiteTagDependencies
+=== RUN   TestEnvtestProfileSiteTagDependencies/cohort-false/membership-compose-complete
+=== RUN   TestEnvtestProfileSiteTagDependencies/cohort-false/membership-compose-retain
+=== RUN   TestEnvtestProfileSiteTagDependencies/cohort-false/membership-compose-foreign-tag
+=== RUN   TestEnvtestProfileSiteTagDependencies/cohort-false/membership-compose-unselected-tag
+=== RUN   TestEnvtestProfileSiteTagDependencies/cohort-false/membership-compose-device
+=== RUN   TestEnvtestProfileSiteTagDependencies/cohort-false/membership-compose-read-error
+=== RUN   TestEnvtestProfileSiteTagDependencies/cohort-false/membership-compose-preflight-consumer
+=== RUN   TestEnvtestProfileSiteTagDependencies/cohort-false/membership-compose-late-foreign
+=== RUN   TestEnvtestProfileSiteTagDependencies/cohort-false/membership-compose-post-task-foreign
+=== RUN   TestEnvtestProfileSiteTagDependencies/cohort-false/membership-compose-lost-ack
+=== RUN   TestEnvtestProfileSiteTagDependencies/cohort-false/membership-compose-child-failed
+=== RUN   TestEnvtestProfileSiteTagDependencies/cohort-false/membership-compose-source
+=== RUN   TestEnvtestProfileSiteTagDependencies/cohort-false/membership-compose-owner
+=== RUN   TestEnvtestProfileSiteTagDependencies/cohort-false/membership-compose-parent-change
+=== RUN   TestEnvtestProfileSiteTagDependencies/cohort-true/membership-compose-complete
+=== RUN   TestEnvtestProfileSiteTagDependencies/cohort-true/membership-compose-retain
+=== RUN   TestEnvtestProfileSiteTagDependencies/cohort-true/membership-compose-foreign-tag
+=== RUN   TestEnvtestProfileSiteTagDependencies/cohort-true/membership-compose-unselected-tag
+=== RUN   TestEnvtestProfileSiteTagDependencies/cohort-true/membership-compose-device
+=== RUN   TestEnvtestProfileSiteTagDependencies/cohort-true/membership-compose-read-error
+=== RUN   TestEnvtestProfileSiteTagDependencies/cohort-true/membership-compose-preflight-consumer
+=== RUN   TestEnvtestProfileSiteTagDependencies/cohort-true/membership-compose-late-foreign
+=== RUN   TestEnvtestProfileSiteTagDependencies/cohort-true/membership-compose-post-task-foreign
+=== RUN   TestEnvtestProfileSiteTagDependencies/cohort-true/membership-compose-lost-ack
+=== RUN   TestEnvtestProfileSiteTagDependencies/cohort-true/membership-compose-child-failed
+=== RUN   TestEnvtestProfileSiteTagDependencies/cohort-true/membership-compose-source
+=== RUN   TestEnvtestProfileSiteTagDependencies/cohort-true/membership-compose-owner
+=== RUN   TestEnvtestProfileSiteTagDependencies/cohort-true/membership-compose-parent-change
+--- PASS: TestEnvtestProfileSiteTagDependencies (171.08s)
+    --- PASS: TestEnvtestProfileSiteTagDependencies/cohort-false/membership-compose-complete (9.06s)
+    --- PASS: TestEnvtestProfileSiteTagDependencies/cohort-false/membership-compose-retain (4.06s)
+    --- PASS: TestEnvtestProfileSiteTagDependencies/cohort-false/membership-compose-foreign-tag (6.79s)
+    --- PASS: TestEnvtestProfileSiteTagDependencies/cohort-false/membership-compose-unselected-tag (6.27s)
+    --- PASS: TestEnvtestProfileSiteTagDependencies/cohort-false/membership-compose-device (4.39s)
+    --- PASS: TestEnvtestProfileSiteTagDependencies/cohort-false/membership-compose-read-error (4.59s)
+    --- PASS: TestEnvtestProfileSiteTagDependencies/cohort-false/membership-compose-preflight-consumer (4.96s)
+    --- PASS: TestEnvtestProfileSiteTagDependencies/cohort-false/membership-compose-late-foreign (7.76s)
+    --- PASS: TestEnvtestProfileSiteTagDependencies/cohort-false/membership-compose-post-task-foreign (6.82s)
+    --- PASS: TestEnvtestProfileSiteTagDependencies/cohort-false/membership-compose-lost-ack (4.07s)
+    --- PASS: TestEnvtestProfileSiteTagDependencies/cohort-false/membership-compose-child-failed (4.26s)
+    --- PASS: TestEnvtestProfileSiteTagDependencies/cohort-false/membership-compose-source (4.10s)
+    --- PASS: TestEnvtestProfileSiteTagDependencies/cohort-false/membership-compose-owner (4.03s)
+    --- PASS: TestEnvtestProfileSiteTagDependencies/cohort-false/membership-compose-parent-change (4.85s)
+    --- PASS: TestEnvtestProfileSiteTagDependencies/cohort-true/membership-compose-complete (8.63s)
+    --- PASS: TestEnvtestProfileSiteTagDependencies/cohort-true/membership-compose-retain (4.91s)
+    --- PASS: TestEnvtestProfileSiteTagDependencies/cohort-true/membership-compose-foreign-tag (8.55s)
+    --- PASS: TestEnvtestProfileSiteTagDependencies/cohort-true/membership-compose-unselected-tag (7.58s)
+    --- PASS: TestEnvtestProfileSiteTagDependencies/cohort-true/membership-compose-device (5.36s)
+    --- PASS: TestEnvtestProfileSiteTagDependencies/cohort-true/membership-compose-read-error (5.31s)
+    --- PASS: TestEnvtestProfileSiteTagDependencies/cohort-true/membership-compose-preflight-consumer (5.96s)
+    --- PASS: TestEnvtestProfileSiteTagDependencies/cohort-true/membership-compose-late-foreign (9.83s)
+    --- PASS: TestEnvtestProfileSiteTagDependencies/cohort-true/membership-compose-post-task-foreign (8.62s)
+    --- PASS: TestEnvtestProfileSiteTagDependencies/cohort-true/membership-compose-lost-ack (5.10s)
+    --- PASS: TestEnvtestProfileSiteTagDependencies/cohort-true/membership-compose-child-failed (5.27s)
+    --- PASS: TestEnvtestProfileSiteTagDependencies/cohort-true/membership-compose-source (5.21s)
+    --- PASS: TestEnvtestProfileSiteTagDependencies/cohort-true/membership-compose-owner (5.02s)
+    --- PASS: TestEnvtestProfileSiteTagDependencies/cohort-true/membership-compose-parent-change (6.04s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	173.284s

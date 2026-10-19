@@ -1,0 +1,45 @@
+=== RUN   TestLiveCatalystCenterMergedSiteDesign
+    site_execution_live_test.go:137: isolated qualification hierarchy: Global/CVK-Q-20261019-114804-000000000
+    site_execution_live_test.go:279: private default-design checkpoint /private/tmp/cvk-site-default-design-2858398429
+    site_bulk_manifest_live_test.go:71: singular manifest create task 01a153fd-83b5-731f-8c81-891768550274
+    site_bulk_manifest_live_test.go:71: retained acknowledged singular-site task as Unknown for restarted observation
+    site_bulk_manifest_live_test.go:71: singular manifest create task 01a153fd-8c9e-7bff-bbca-f3ddb6a109b3
+    site_bulk_manifest_live_test.go:71: retained acknowledged singular-site task as Unknown for restarted observation
+    site_bulk_manifest_live_test.go:71: singular manifest create task 01a153fd-99ed-7c6a-b9ba-e2719b6fad65
+    site_bulk_manifest_live_test.go:71: retained acknowledged singular-site task as Unknown for restarted observation
+    site_execution_live_test.go:360: three original create-task result UUIDs bind exact native kind, path and parent; creator receipt identity independently verified
+    site_execution_live_test.go:372: three durable original-task site creator receipts retained through restarted reconciliation
+    site_execution_live_test.go:374: three singular manifest creates and complete native hierarchy verified
+    site_execution_live_test.go:485: retained acknowledged singular-site task as Unknown for restarted observation
+    site_execution_live_test.go:485: public manifest step=0 status=Waiting operation=Accepted task=01a153fd-afc8-7396-b55f-77ff482ac6ad reasons=[AdapterAvailable TaskAccepted TaskAccepted]
+    site_execution_live_test.go:485: public manifest Update reached InSync across simulated worker restarts; journal cleared, owner retained, no-op verified
+    site_execution_live_test.go:492: submitted task=01a153fd-afc8-7396-b55f-77ff482ac6ad at=2026-10-19T11:48:15Z
+    site_execution_live_test.go:510: verified Update floor
+    site_execution_live_test.go:519: three creates, one floor update, and full hierarchy read-back verified
+    site_execution_live_test.go:529: 4 acknowledged Unknown tasks recovered through restarted public reconciliation without resubmission
+    site_design_live_test.go:51: design stage 1 Update plannedAP false
+    planned_ap_live_test.go:40: planned AP native response POST HTTP 202 transportError false
+    site_design_live_test.go:51: design stage 2 Create plannedAP true
+    site_design_live_test.go:51: design task 01a153fd-e77b-7c2f-b74c-d9f11d63c51c
+    site_design_live_test.go:51: retained acknowledged singular-site task as Unknown for restarted observation
+    site_execution_live_test.go:538: isolated AP UUID 2960a664-4492-4483-8ab7-19cf66217f88 floor UUID 905f6502-06bb-41ea-830a-73927f1f97bc
+    site_design_live_test.go:51: design stage 1 Update plannedAP false
+    planned_ap_live_test.go:40: planned AP native response POST HTTP 202 transportError false
+    site_design_live_test.go:51: design stage 1 Update plannedAP true
+    site_design_live_test.go:51: design task 01a153fe-1c80-7da4-9c15-29e1ca452004
+    site_design_live_test.go:51: retained acknowledged singular-site task as Unknown for restarted observation
+    site_execution_live_test.go:538: design stage 1 Update plannedAP false
+    site_execution_live_test.go:538: design task 01a153fe-335a-7c3c-a6f5-1070da04768a
+    site_execution_live_test.go:538: retained acknowledged singular-site task as Unknown for restarted observation
+    planned_ap_live_test.go:40: planned AP native response POST HTTP 202 transportError false
+    site_execution_live_test.go:538: design stage 2 Update plannedAP true
+    site_execution_live_test.go:538: design task 01a153fe-551a-7aed-b201-6af4c9b6f834
+    site_execution_live_test.go:538: retained acknowledged singular-site task as Unknown for restarted observation
+    site_execution_live_test.go:538: complete native AP footprint, exact identities and observed antenna sensor flag preserved across image, AP and geometry edits
+    site_execution_live_test.go:538: selected floor-only design and empty Global scope retained all three site creators under Delete policy; re-selection emitted no native writes
+    site_execution_live_test.go:538: private floor/image/AP composition: two synchronous image uploads, AP create/update and later keyed geometry update; exact mutations 6 geometry AP corrections 1 unchanged creators and bounded image/latest receipts
+    site_design_live_test.go:220: exact private planned-AP UUID removed before hierarchy cleanup
+    site_execution_live_test.go:265: isolated hierarchy cleanup verified
+--- PASS: TestLiveCatalystCenterMergedSiteDesign (70.08s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	71.247s

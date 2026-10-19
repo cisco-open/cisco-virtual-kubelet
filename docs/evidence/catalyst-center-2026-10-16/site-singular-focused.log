@@ -1,0 +1,204 @@
+=== RUN   TestSiteSingularPublicNoDispatch
+=== RUN   TestSiteSingularPublicNoDispatch/area-create/stable
+=== RUN   TestSiteSingularPublicNoDispatch/area-create/native-edit
+=== RUN   TestSiteSingularPublicNoDispatch/area-create/source-edit
+=== RUN   TestSiteSingularPublicNoDispatch/area-create/partial-read
+=== RUN   TestSiteSingularPublicNoDispatch/area-create/owner-edit
+=== RUN   TestSiteSingularPublicNoDispatch/area-create/lost-ack
+=== RUN   TestSiteSingularPublicNoDispatch/building-create/stable
+=== RUN   TestSiteSingularPublicNoDispatch/building-create/native-edit
+=== RUN   TestSiteSingularPublicNoDispatch/building-create/source-edit
+=== RUN   TestSiteSingularPublicNoDispatch/building-create/partial-read
+=== RUN   TestSiteSingularPublicNoDispatch/building-create/owner-edit
+=== RUN   TestSiteSingularPublicNoDispatch/building-create/lost-ack
+=== RUN   TestSiteSingularPublicNoDispatch/floor-create/stable
+=== RUN   TestSiteSingularPublicNoDispatch/floor-create/native-edit
+=== RUN   TestSiteSingularPublicNoDispatch/floor-create/source-edit
+=== RUN   TestSiteSingularPublicNoDispatch/floor-create/partial-read
+=== RUN   TestSiteSingularPublicNoDispatch/floor-create/owner-edit
+=== RUN   TestSiteSingularPublicNoDispatch/floor-create/lost-ack
+=== RUN   TestSiteSingularPublicNoDispatch/building-update/stable
+=== RUN   TestSiteSingularPublicNoDispatch/building-update/native-edit
+=== RUN   TestSiteSingularPublicNoDispatch/building-update/source-edit
+=== RUN   TestSiteSingularPublicNoDispatch/building-update/partial-read
+=== RUN   TestSiteSingularPublicNoDispatch/building-update/owner-edit
+=== RUN   TestSiteSingularPublicNoDispatch/building-update/lost-ack
+=== RUN   TestSiteSingularPublicNoDispatch/floor-update/stable
+=== RUN   TestSiteSingularPublicNoDispatch/floor-update/native-edit
+=== RUN   TestSiteSingularPublicNoDispatch/floor-update/source-edit
+=== RUN   TestSiteSingularPublicNoDispatch/floor-update/partial-read
+=== RUN   TestSiteSingularPublicNoDispatch/floor-update/owner-edit
+=== RUN   TestSiteSingularPublicNoDispatch/floor-update/lost-ack
+--- PASS: TestSiteSingularPublicNoDispatch (7.92s)
+    --- PASS: TestSiteSingularPublicNoDispatch/area-create/stable (0.85s)
+    --- PASS: TestSiteSingularPublicNoDispatch/area-create/native-edit (0.25s)
+    --- PASS: TestSiteSingularPublicNoDispatch/area-create/source-edit (0.25s)
+    --- PASS: TestSiteSingularPublicNoDispatch/area-create/partial-read (0.25s)
+    --- PASS: TestSiteSingularPublicNoDispatch/area-create/owner-edit (0.20s)
+    --- PASS: TestSiteSingularPublicNoDispatch/area-create/lost-ack (0.21s)
+    --- PASS: TestSiteSingularPublicNoDispatch/building-create/stable (0.24s)
+    --- PASS: TestSiteSingularPublicNoDispatch/building-create/native-edit (0.25s)
+    --- PASS: TestSiteSingularPublicNoDispatch/building-create/source-edit (0.26s)
+    --- PASS: TestSiteSingularPublicNoDispatch/building-create/partial-read (0.25s)
+    --- PASS: TestSiteSingularPublicNoDispatch/building-create/owner-edit (0.21s)
+    --- PASS: TestSiteSingularPublicNoDispatch/building-create/lost-ack (0.22s)
+    --- PASS: TestSiteSingularPublicNoDispatch/floor-create/stable (0.26s)
+    --- PASS: TestSiteSingularPublicNoDispatch/floor-create/native-edit (0.27s)
+    --- PASS: TestSiteSingularPublicNoDispatch/floor-create/source-edit (0.27s)
+    --- PASS: TestSiteSingularPublicNoDispatch/floor-create/partial-read (0.27s)
+    --- PASS: TestSiteSingularPublicNoDispatch/floor-create/owner-edit (0.22s)
+    --- PASS: TestSiteSingularPublicNoDispatch/floor-create/lost-ack (0.23s)
+    --- PASS: TestSiteSingularPublicNoDispatch/building-update/stable (0.24s)
+    --- PASS: TestSiteSingularPublicNoDispatch/building-update/native-edit (0.26s)
+    --- PASS: TestSiteSingularPublicNoDispatch/building-update/source-edit (0.25s)
+    --- PASS: TestSiteSingularPublicNoDispatch/building-update/partial-read (0.25s)
+    --- PASS: TestSiteSingularPublicNoDispatch/building-update/owner-edit (0.21s)
+    --- PASS: TestSiteSingularPublicNoDispatch/building-update/lost-ack (0.22s)
+    --- PASS: TestSiteSingularPublicNoDispatch/floor-update/stable (0.27s)
+    --- PASS: TestSiteSingularPublicNoDispatch/floor-update/native-edit (0.27s)
+    --- PASS: TestSiteSingularPublicNoDispatch/floor-update/source-edit (0.27s)
+    --- PASS: TestSiteSingularPublicNoDispatch/floor-update/partial-read (0.27s)
+    --- PASS: TestSiteSingularPublicNoDispatch/floor-update/owner-edit (0.23s)
+    --- PASS: TestSiteSingularPublicNoDispatch/floor-update/lost-ack (0.23s)
+=== RUN   TestSiteSingularDispatch
+=== RUN   TestSiteSingularDispatch/area-create/stable
+=== RUN   TestSiteSingularDispatch/area-create/parent-replaced
+=== RUN   TestSiteSingularDispatch/area-create/ancestor-changed
+=== RUN   TestSiteSingularDispatch/area-create/caller-intent
+=== RUN   TestSiteSingularDispatch/area-create/caller-descendant
+=== RUN   TestSiteSingularDispatch/area-create/during-guard
+=== RUN   TestSiteSingularDispatch/area-create/guard-denied
+=== RUN   TestSiteSingularDispatch/area-create/partial
+=== RUN   TestSiteSingularDispatch/area-create/missing-root
+=== RUN   TestSiteSingularDispatch/area-create/unrelated
+=== RUN   TestSiteSingularDispatch/area-create/reordered
+=== RUN   TestSiteSingularDispatch/area-create/uncertain
+=== RUN   TestSiteSingularDispatch/area-create/target-changed
+=== RUN   TestSiteSingularDispatch/building-create/stable
+=== RUN   TestSiteSingularDispatch/building-create/parent-replaced
+=== RUN   TestSiteSingularDispatch/building-create/ancestor-changed
+=== RUN   TestSiteSingularDispatch/building-create/caller-intent
+=== RUN   TestSiteSingularDispatch/building-create/caller-descendant
+=== RUN   TestSiteSingularDispatch/building-create/during-guard
+=== RUN   TestSiteSingularDispatch/building-create/guard-denied
+=== RUN   TestSiteSingularDispatch/building-create/partial
+=== RUN   TestSiteSingularDispatch/building-create/missing-root
+=== RUN   TestSiteSingularDispatch/building-create/unrelated
+=== RUN   TestSiteSingularDispatch/building-create/reordered
+=== RUN   TestSiteSingularDispatch/building-create/uncertain
+=== RUN   TestSiteSingularDispatch/building-create/target-changed
+=== RUN   TestSiteSingularDispatch/floor-create/stable
+=== RUN   TestSiteSingularDispatch/floor-create/parent-replaced
+=== RUN   TestSiteSingularDispatch/floor-create/ancestor-changed
+=== RUN   TestSiteSingularDispatch/floor-create/caller-intent
+=== RUN   TestSiteSingularDispatch/floor-create/caller-descendant
+=== RUN   TestSiteSingularDispatch/floor-create/during-guard
+=== RUN   TestSiteSingularDispatch/floor-create/guard-denied
+=== RUN   TestSiteSingularDispatch/floor-create/partial
+=== RUN   TestSiteSingularDispatch/floor-create/missing-root
+=== RUN   TestSiteSingularDispatch/floor-create/unrelated
+=== RUN   TestSiteSingularDispatch/floor-create/reordered
+=== RUN   TestSiteSingularDispatch/floor-create/uncertain
+=== RUN   TestSiteSingularDispatch/floor-create/target-changed
+=== RUN   TestSiteSingularDispatch/building-update/stable
+=== RUN   TestSiteSingularDispatch/building-update/parent-replaced
+=== RUN   TestSiteSingularDispatch/building-update/ancestor-changed
+=== RUN   TestSiteSingularDispatch/building-update/caller-intent
+=== RUN   TestSiteSingularDispatch/building-update/caller-descendant
+=== RUN   TestSiteSingularDispatch/building-update/during-guard
+=== RUN   TestSiteSingularDispatch/building-update/guard-denied
+=== RUN   TestSiteSingularDispatch/building-update/partial
+=== RUN   TestSiteSingularDispatch/building-update/missing-root
+=== RUN   TestSiteSingularDispatch/building-update/unrelated
+=== RUN   TestSiteSingularDispatch/building-update/reordered
+=== RUN   TestSiteSingularDispatch/building-update/uncertain
+=== RUN   TestSiteSingularDispatch/building-update/target-changed
+=== RUN   TestSiteSingularDispatch/building-update/target-field
+=== RUN   TestSiteSingularDispatch/building-update/unselected-field
+=== RUN   TestSiteSingularDispatch/floor-update/stable
+=== RUN   TestSiteSingularDispatch/floor-update/parent-replaced
+=== RUN   TestSiteSingularDispatch/floor-update/ancestor-changed
+=== RUN   TestSiteSingularDispatch/floor-update/caller-intent
+=== RUN   TestSiteSingularDispatch/floor-update/caller-descendant
+=== RUN   TestSiteSingularDispatch/floor-update/during-guard
+=== RUN   TestSiteSingularDispatch/floor-update/guard-denied
+=== RUN   TestSiteSingularDispatch/floor-update/partial
+=== RUN   TestSiteSingularDispatch/floor-update/missing-root
+=== RUN   TestSiteSingularDispatch/floor-update/unrelated
+=== RUN   TestSiteSingularDispatch/floor-update/reordered
+=== RUN   TestSiteSingularDispatch/floor-update/uncertain
+=== RUN   TestSiteSingularDispatch/floor-update/target-changed
+=== RUN   TestSiteSingularDispatch/floor-update/target-field
+=== RUN   TestSiteSingularDispatch/floor-update/unselected-field
+--- PASS: TestSiteSingularDispatch (0.83s)
+    --- PASS: TestSiteSingularDispatch/area-create/stable (0.01s)
+    --- PASS: TestSiteSingularDispatch/area-create/parent-replaced (0.01s)
+    --- PASS: TestSiteSingularDispatch/area-create/ancestor-changed (0.01s)
+    --- PASS: TestSiteSingularDispatch/area-create/caller-intent (0.01s)
+    --- PASS: TestSiteSingularDispatch/area-create/caller-descendant (0.01s)
+    --- PASS: TestSiteSingularDispatch/area-create/during-guard (0.01s)
+    --- PASS: TestSiteSingularDispatch/area-create/guard-denied (0.01s)
+    --- PASS: TestSiteSingularDispatch/area-create/partial (0.01s)
+    --- PASS: TestSiteSingularDispatch/area-create/missing-root (0.01s)
+    --- PASS: TestSiteSingularDispatch/area-create/unrelated (0.01s)
+    --- PASS: TestSiteSingularDispatch/area-create/reordered (0.01s)
+    --- PASS: TestSiteSingularDispatch/area-create/uncertain (0.01s)
+    --- PASS: TestSiteSingularDispatch/area-create/target-changed (0.01s)
+    --- PASS: TestSiteSingularDispatch/building-create/stable (0.01s)
+    --- PASS: TestSiteSingularDispatch/building-create/parent-replaced (0.01s)
+    --- PASS: TestSiteSingularDispatch/building-create/ancestor-changed (0.01s)
+    --- PASS: TestSiteSingularDispatch/building-create/caller-intent (0.01s)
+    --- PASS: TestSiteSingularDispatch/building-create/caller-descendant (0.01s)
+    --- PASS: TestSiteSingularDispatch/building-create/during-guard (0.01s)
+    --- PASS: TestSiteSingularDispatch/building-create/guard-denied (0.01s)
+    --- PASS: TestSiteSingularDispatch/building-create/partial (0.01s)
+    --- PASS: TestSiteSingularDispatch/building-create/missing-root (0.01s)
+    --- PASS: TestSiteSingularDispatch/building-create/unrelated (0.01s)
+    --- PASS: TestSiteSingularDispatch/building-create/reordered (0.01s)
+    --- PASS: TestSiteSingularDispatch/building-create/uncertain (0.01s)
+    --- PASS: TestSiteSingularDispatch/building-create/target-changed (0.01s)
+    --- PASS: TestSiteSingularDispatch/floor-create/stable (0.04s)
+    --- PASS: TestSiteSingularDispatch/floor-create/parent-replaced (0.01s)
+    --- PASS: TestSiteSingularDispatch/floor-create/ancestor-changed (0.01s)
+    --- PASS: TestSiteSingularDispatch/floor-create/caller-intent (0.01s)
+    --- PASS: TestSiteSingularDispatch/floor-create/caller-descendant (0.01s)
+    --- PASS: TestSiteSingularDispatch/floor-create/during-guard (0.01s)
+    --- PASS: TestSiteSingularDispatch/floor-create/guard-denied (0.01s)
+    --- PASS: TestSiteSingularDispatch/floor-create/partial (0.01s)
+    --- PASS: TestSiteSingularDispatch/floor-create/missing-root (0.01s)
+    --- PASS: TestSiteSingularDispatch/floor-create/unrelated (0.01s)
+    --- PASS: TestSiteSingularDispatch/floor-create/reordered (0.01s)
+    --- PASS: TestSiteSingularDispatch/floor-create/uncertain (0.01s)
+    --- PASS: TestSiteSingularDispatch/floor-create/target-changed (0.01s)
+    --- PASS: TestSiteSingularDispatch/building-update/stable (0.01s)
+    --- PASS: TestSiteSingularDispatch/building-update/parent-replaced (0.01s)
+    --- PASS: TestSiteSingularDispatch/building-update/ancestor-changed (0.01s)
+    --- PASS: TestSiteSingularDispatch/building-update/caller-intent (0.01s)
+    --- PASS: TestSiteSingularDispatch/building-update/caller-descendant (0.01s)
+    --- PASS: TestSiteSingularDispatch/building-update/during-guard (0.01s)
+    --- PASS: TestSiteSingularDispatch/building-update/guard-denied (0.01s)
+    --- PASS: TestSiteSingularDispatch/building-update/partial (0.01s)
+    --- PASS: TestSiteSingularDispatch/building-update/missing-root (0.01s)
+    --- PASS: TestSiteSingularDispatch/building-update/unrelated (0.01s)
+    --- PASS: TestSiteSingularDispatch/building-update/reordered (0.01s)
+    --- PASS: TestSiteSingularDispatch/building-update/uncertain (0.01s)
+    --- PASS: TestSiteSingularDispatch/building-update/target-changed (0.01s)
+    --- PASS: TestSiteSingularDispatch/building-update/target-field (0.01s)
+    --- PASS: TestSiteSingularDispatch/building-update/unselected-field (0.01s)
+    --- PASS: TestSiteSingularDispatch/floor-update/stable (0.01s)
+    --- PASS: TestSiteSingularDispatch/floor-update/parent-replaced (0.01s)
+    --- PASS: TestSiteSingularDispatch/floor-update/ancestor-changed (0.01s)
+    --- PASS: TestSiteSingularDispatch/floor-update/caller-intent (0.01s)
+    --- PASS: TestSiteSingularDispatch/floor-update/caller-descendant (0.01s)
+    --- PASS: TestSiteSingularDispatch/floor-update/during-guard (0.01s)
+    --- PASS: TestSiteSingularDispatch/floor-update/guard-denied (0.01s)
+    --- PASS: TestSiteSingularDispatch/floor-update/partial (0.01s)
+    --- PASS: TestSiteSingularDispatch/floor-update/missing-root (0.01s)
+    --- PASS: TestSiteSingularDispatch/floor-update/unrelated (0.01s)
+    --- PASS: TestSiteSingularDispatch/floor-update/reordered (0.01s)
+    --- PASS: TestSiteSingularDispatch/floor-update/uncertain (0.01s)
+    --- PASS: TestSiteSingularDispatch/floor-update/target-changed (0.01s)
+    --- PASS: TestSiteSingularDispatch/floor-update/target-field (0.01s)
+    --- PASS: TestSiteSingularDispatch/floor-update/unselected-field (0.01s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	11.153s

@@ -1,0 +1,210 @@
+=== RUN   TestGlobalCredentialManifestKnownTaskRecovery
+=== RUN   TestGlobalCredentialManifestKnownTaskRecovery/cli_credentials/combined=false
+=== RUN   TestGlobalCredentialManifestKnownTaskRecovery/cli_credentials/combined=true
+=== RUN   TestGlobalCredentialManifestKnownTaskRecovery/https_read_credentials/combined=false
+=== RUN   TestGlobalCredentialManifestKnownTaskRecovery/https_read_credentials/combined=true
+=== RUN   TestGlobalCredentialManifestKnownTaskRecovery/https_write_credentials/combined=false
+=== RUN   TestGlobalCredentialManifestKnownTaskRecovery/https_write_credentials/combined=true
+=== RUN   TestGlobalCredentialManifestKnownTaskRecovery/snmpv2_read_credentials/combined=false
+=== RUN   TestGlobalCredentialManifestKnownTaskRecovery/snmpv2_read_credentials/combined=true
+=== RUN   TestGlobalCredentialManifestKnownTaskRecovery/snmpv2_write_credentials/combined=false
+=== RUN   TestGlobalCredentialManifestKnownTaskRecovery/snmpv2_write_credentials/combined=true
+=== RUN   TestGlobalCredentialManifestKnownTaskRecovery/snmpv3_credentials/combined=false
+=== RUN   TestGlobalCredentialManifestKnownTaskRecovery/snmpv3_credentials/combined=true
+--- PASS: TestGlobalCredentialManifestKnownTaskRecovery (4.01s)
+    --- PASS: TestGlobalCredentialManifestKnownTaskRecovery/cli_credentials/combined=false (0.80s)
+    --- PASS: TestGlobalCredentialManifestKnownTaskRecovery/cli_credentials/combined=true (0.41s)
+    --- PASS: TestGlobalCredentialManifestKnownTaskRecovery/https_read_credentials/combined=false (0.17s)
+    --- PASS: TestGlobalCredentialManifestKnownTaskRecovery/https_read_credentials/combined=true (0.37s)
+    --- PASS: TestGlobalCredentialManifestKnownTaskRecovery/https_write_credentials/combined=false (0.17s)
+    --- PASS: TestGlobalCredentialManifestKnownTaskRecovery/https_write_credentials/combined=true (0.37s)
+    --- PASS: TestGlobalCredentialManifestKnownTaskRecovery/snmpv2_read_credentials/combined=false (0.17s)
+    --- PASS: TestGlobalCredentialManifestKnownTaskRecovery/snmpv2_read_credentials/combined=true (0.37s)
+    --- PASS: TestGlobalCredentialManifestKnownTaskRecovery/snmpv2_write_credentials/combined=false (0.18s)
+    --- PASS: TestGlobalCredentialManifestKnownTaskRecovery/snmpv2_write_credentials/combined=true (0.37s)
+    --- PASS: TestGlobalCredentialManifestKnownTaskRecovery/snmpv3_credentials/combined=false (0.20s)
+    --- PASS: TestGlobalCredentialManifestKnownTaskRecovery/snmpv3_credentials/combined=true (0.42s)
+=== RUN   TestGlobalCredentialMetadataOwnershipAndModeBoundaries
+=== RUN   TestGlobalCredentialMetadataOwnershipAndModeBoundaries/stable
+=== RUN   TestGlobalCredentialMetadataOwnershipAndModeBoundaries/foreign-existing
+=== RUN   TestGlobalCredentialMetadataOwnershipAndModeBoundaries/missing-owned
+=== RUN   TestGlobalCredentialMetadataOwnershipAndModeBoundaries/replaced-owned
+=== RUN   TestGlobalCredentialMetadataOwnershipAndModeBoundaries/foreign-receipt
+=== RUN   TestGlobalCredentialMetadataOwnershipAndModeBoundaries/duplicate-receipt
+=== RUN   TestGlobalCredentialMetadataOwnershipAndModeBoundaries/pruned-timestamp
+=== RUN   TestGlobalCredentialMetadataOwnershipAndModeBoundaries/changed-native-mode
+=== RUN   TestGlobalCredentialMetadataOwnershipAndModeBoundaries/versioned-owner
+=== RUN   TestGlobalCredentialMetadataOwnershipAndModeBoundaries/to-auth
+=== RUN   TestGlobalCredentialMetadataOwnershipAndModeBoundaries/same-name-cli
+--- PASS: TestGlobalCredentialMetadataOwnershipAndModeBoundaries (0.11s)
+    --- PASS: TestGlobalCredentialMetadataOwnershipAndModeBoundaries/stable (0.01s)
+    --- PASS: TestGlobalCredentialMetadataOwnershipAndModeBoundaries/foreign-existing (0.01s)
+    --- PASS: TestGlobalCredentialMetadataOwnershipAndModeBoundaries/missing-owned (0.01s)
+    --- PASS: TestGlobalCredentialMetadataOwnershipAndModeBoundaries/replaced-owned (0.01s)
+    --- PASS: TestGlobalCredentialMetadataOwnershipAndModeBoundaries/foreign-receipt (0.01s)
+    --- PASS: TestGlobalCredentialMetadataOwnershipAndModeBoundaries/duplicate-receipt (0.01s)
+    --- PASS: TestGlobalCredentialMetadataOwnershipAndModeBoundaries/pruned-timestamp (0.01s)
+    --- PASS: TestGlobalCredentialMetadataOwnershipAndModeBoundaries/changed-native-mode (0.01s)
+    --- PASS: TestGlobalCredentialMetadataOwnershipAndModeBoundaries/versioned-owner (0.01s)
+    --- PASS: TestGlobalCredentialMetadataOwnershipAndModeBoundaries/to-auth (0.01s)
+    --- PASS: TestGlobalCredentialMetadataOwnershipAndModeBoundaries/same-name-cli (0.01s)
+=== RUN   TestGlobalCredentialMetadataKnownTaskRecovery
+--- PASS: TestGlobalCredentialMetadataKnownTaskRecovery (0.20s)
+=== RUN   TestGlobalCredentialMetadataPromotion
+--- PASS: TestGlobalCredentialMetadataPromotion (0.41s)
+=== RUN   TestGlobalCredentialPromotionTaskBoundaries
+=== RUN   TestGlobalCredentialPromotionTaskBoundaries/valid
+=== RUN   TestGlobalCredentialPromotionTaskBoundaries/wrong-target
+=== RUN   TestGlobalCredentialPromotionTaskBoundaries/create
+=== RUN   TestGlobalCredentialPromotionTaskBoundaries/old-task
+=== RUN   TestGlobalCredentialPromotionTaskBoundaries/old-operation
+=== RUN   TestGlobalCredentialPromotionTaskBoundaries/before-origin
+=== RUN   TestGlobalCredentialPromotionTaskBoundaries/future-config
+=== RUN   TestGlobalCredentialPromotionTaskBoundaries/future-controller
+=== RUN   TestGlobalCredentialPromotionTaskBoundaries/foreign-root
+=== RUN   TestGlobalCredentialPromotionTaskBoundaries/duplicate-root
+=== RUN   TestGlobalCredentialPromotionTaskBoundaries/missing-verified
+=== RUN   TestGlobalCredentialPromotionTaskBoundaries/different-prior
+=== RUN   TestGlobalCredentialPromotionTaskBoundaries/same-prior-operation
+--- PASS: TestGlobalCredentialPromotionTaskBoundaries (0.01s)
+    --- PASS: TestGlobalCredentialPromotionTaskBoundaries/valid (0.00s)
+    --- PASS: TestGlobalCredentialPromotionTaskBoundaries/wrong-target (0.00s)
+    --- PASS: TestGlobalCredentialPromotionTaskBoundaries/create (0.00s)
+    --- PASS: TestGlobalCredentialPromotionTaskBoundaries/old-task (0.00s)
+    --- PASS: TestGlobalCredentialPromotionTaskBoundaries/old-operation (0.00s)
+    --- PASS: TestGlobalCredentialPromotionTaskBoundaries/before-origin (0.00s)
+    --- PASS: TestGlobalCredentialPromotionTaskBoundaries/future-config (0.00s)
+    --- PASS: TestGlobalCredentialPromotionTaskBoundaries/future-controller (0.00s)
+    --- PASS: TestGlobalCredentialPromotionTaskBoundaries/foreign-root (0.00s)
+    --- PASS: TestGlobalCredentialPromotionTaskBoundaries/duplicate-root (0.00s)
+    --- PASS: TestGlobalCredentialPromotionTaskBoundaries/missing-verified (0.00s)
+    --- PASS: TestGlobalCredentialPromotionTaskBoundaries/different-prior (0.00s)
+    --- PASS: TestGlobalCredentialPromotionTaskBoundaries/same-prior-operation (0.00s)
+=== RUN   TestGlobalCredentialPromotionPlanningBoundaries
+=== RUN   TestGlobalCredentialPromotionPlanningBoundaries/authpriv
+=== RUN   TestGlobalCredentialPromotionPlanningBoundaries/authnopriv
+=== RUN   TestGlobalCredentialPromotionPlanningBoundaries/missing-native
+=== RUN   TestGlobalCredentialPromotionPlanningBoundaries/replaced-native
+=== RUN   TestGlobalCredentialPromotionPlanningBoundaries/changed-payload
+=== RUN   TestGlobalCredentialPromotionPlanningBoundaries/changed-native-mode
+=== RUN   TestGlobalCredentialPromotionPlanningBoundaries/missing-root
+=== RUN   TestGlobalCredentialPromotionPlanningBoundaries/foreign-root
+=== RUN   TestGlobalCredentialPromotionPlanningBoundaries/duplicate-root
+--- PASS: TestGlobalCredentialPromotionPlanningBoundaries (0.09s)
+    --- PASS: TestGlobalCredentialPromotionPlanningBoundaries/authpriv (0.01s)
+    --- PASS: TestGlobalCredentialPromotionPlanningBoundaries/authnopriv (0.01s)
+    --- PASS: TestGlobalCredentialPromotionPlanningBoundaries/missing-native (0.01s)
+    --- PASS: TestGlobalCredentialPromotionPlanningBoundaries/replaced-native (0.01s)
+    --- PASS: TestGlobalCredentialPromotionPlanningBoundaries/changed-payload (0.01s)
+    --- PASS: TestGlobalCredentialPromotionPlanningBoundaries/changed-native-mode (0.01s)
+    --- PASS: TestGlobalCredentialPromotionPlanningBoundaries/missing-root (0.01s)
+    --- PASS: TestGlobalCredentialPromotionPlanningBoundaries/foreign-root (0.01s)
+    --- PASS: TestGlobalCredentialPromotionPlanningBoundaries/duplicate-root (0.01s)
+=== RUN   TestGlobalCredentialKnownTaskSelection
+=== RUN   TestGlobalCredentialKnownTaskSelection/update-false/valid
+=== RUN   TestGlobalCredentialKnownTaskSelection/update-false/taskless
+=== RUN   TestGlobalCredentialKnownTaskSelection/update-false/undeclared
+=== RUN   TestGlobalCredentialKnownTaskSelection/update-false/foreign-owner
+=== RUN   TestGlobalCredentialKnownTaskSelection/update-false/foreign-config
+=== RUN   TestGlobalCredentialKnownTaskSelection/update-false/wrong-section
+=== RUN   TestGlobalCredentialKnownTaskSelection/update-false/parent
+=== RUN   TestGlobalCredentialKnownTaskSelection/update-false/physical
+=== RUN   TestGlobalCredentialKnownTaskSelection/update-false/dependency
+=== RUN   TestGlobalCredentialKnownTaskSelection/update-false/cancelled
+=== RUN   TestGlobalCredentialKnownTaskSelection/update-false/created-id
+=== RUN   TestGlobalCredentialKnownTaskSelection/update-false/prepared
+=== RUN   TestGlobalCredentialKnownTaskSelection/update-false/ssid-history
+=== RUN   TestGlobalCredentialKnownTaskSelection/update-false/pruned-version
+=== RUN   TestGlobalCredentialKnownTaskSelection/update-false/changed-version
+=== RUN   TestGlobalCredentialKnownTaskSelection/update-false/changed-alias
+=== RUN   TestGlobalCredentialKnownTaskSelection/update-false/changed-secret-key
+=== RUN   TestGlobalCredentialKnownTaskSelection/update-false/duplicate-version
+=== RUN   TestGlobalCredentialKnownTaskSelection/update-false/wrong-target
+=== RUN   TestGlobalCredentialKnownTaskSelection/update-false/missing-prior
+=== RUN   TestGlobalCredentialKnownTaskSelection/update-false/duplicate-prior
+=== RUN   TestGlobalCredentialKnownTaskSelection/update-false/foreign-prior
+=== RUN   TestGlobalCredentialKnownTaskSelection/update-false/pruned-prior-versions
+=== RUN   TestGlobalCredentialKnownTaskSelection/update-false/changed-prior-target
+=== RUN   TestGlobalCredentialKnownTaskSelection/update-false/wrong-phase
+=== RUN   TestGlobalCredentialKnownTaskSelection/update-false/partial-source
+=== RUN   TestGlobalCredentialKnownTaskSelection/update-true/valid
+=== RUN   TestGlobalCredentialKnownTaskSelection/update-true/taskless
+=== RUN   TestGlobalCredentialKnownTaskSelection/update-true/undeclared
+=== RUN   TestGlobalCredentialKnownTaskSelection/update-true/foreign-owner
+=== RUN   TestGlobalCredentialKnownTaskSelection/update-true/foreign-config
+=== RUN   TestGlobalCredentialKnownTaskSelection/update-true/wrong-section
+=== RUN   TestGlobalCredentialKnownTaskSelection/update-true/parent
+=== RUN   TestGlobalCredentialKnownTaskSelection/update-true/physical
+=== RUN   TestGlobalCredentialKnownTaskSelection/update-true/dependency
+=== RUN   TestGlobalCredentialKnownTaskSelection/update-true/cancelled
+=== RUN   TestGlobalCredentialKnownTaskSelection/update-true/created-id
+=== RUN   TestGlobalCredentialKnownTaskSelection/update-true/prepared
+=== RUN   TestGlobalCredentialKnownTaskSelection/update-true/ssid-history
+=== RUN   TestGlobalCredentialKnownTaskSelection/update-true/pruned-version
+=== RUN   TestGlobalCredentialKnownTaskSelection/update-true/changed-version
+=== RUN   TestGlobalCredentialKnownTaskSelection/update-true/changed-alias
+=== RUN   TestGlobalCredentialKnownTaskSelection/update-true/changed-secret-key
+=== RUN   TestGlobalCredentialKnownTaskSelection/update-true/duplicate-version
+=== RUN   TestGlobalCredentialKnownTaskSelection/update-true/wrong-target
+=== RUN   TestGlobalCredentialKnownTaskSelection/update-true/missing-prior
+=== RUN   TestGlobalCredentialKnownTaskSelection/update-true/duplicate-prior
+=== RUN   TestGlobalCredentialKnownTaskSelection/update-true/foreign-prior
+=== RUN   TestGlobalCredentialKnownTaskSelection/update-true/pruned-prior-versions
+=== RUN   TestGlobalCredentialKnownTaskSelection/update-true/changed-prior-target
+=== RUN   TestGlobalCredentialKnownTaskSelection/update-true/wrong-phase
+=== RUN   TestGlobalCredentialKnownTaskSelection/update-true/partial-source
+--- PASS: TestGlobalCredentialKnownTaskSelection (0.03s)
+    --- PASS: TestGlobalCredentialKnownTaskSelection/update-false/valid (0.00s)
+    --- PASS: TestGlobalCredentialKnownTaskSelection/update-false/taskless (0.00s)
+    --- PASS: TestGlobalCredentialKnownTaskSelection/update-false/undeclared (0.00s)
+    --- PASS: TestGlobalCredentialKnownTaskSelection/update-false/foreign-owner (0.00s)
+    --- PASS: TestGlobalCredentialKnownTaskSelection/update-false/foreign-config (0.00s)
+    --- PASS: TestGlobalCredentialKnownTaskSelection/update-false/wrong-section (0.00s)
+    --- PASS: TestGlobalCredentialKnownTaskSelection/update-false/parent (0.00s)
+    --- PASS: TestGlobalCredentialKnownTaskSelection/update-false/physical (0.00s)
+    --- PASS: TestGlobalCredentialKnownTaskSelection/update-false/dependency (0.00s)
+    --- PASS: TestGlobalCredentialKnownTaskSelection/update-false/cancelled (0.00s)
+    --- PASS: TestGlobalCredentialKnownTaskSelection/update-false/created-id (0.00s)
+    --- PASS: TestGlobalCredentialKnownTaskSelection/update-false/prepared (0.00s)
+    --- PASS: TestGlobalCredentialKnownTaskSelection/update-false/ssid-history (0.00s)
+    --- PASS: TestGlobalCredentialKnownTaskSelection/update-false/pruned-version (0.00s)
+    --- PASS: TestGlobalCredentialKnownTaskSelection/update-false/changed-version (0.00s)
+    --- PASS: TestGlobalCredentialKnownTaskSelection/update-false/changed-alias (0.00s)
+    --- PASS: TestGlobalCredentialKnownTaskSelection/update-false/changed-secret-key (0.00s)
+    --- PASS: TestGlobalCredentialKnownTaskSelection/update-false/duplicate-version (0.00s)
+    --- PASS: TestGlobalCredentialKnownTaskSelection/update-false/wrong-target (0.00s)
+    --- PASS: TestGlobalCredentialKnownTaskSelection/update-false/missing-prior (0.00s)
+    --- PASS: TestGlobalCredentialKnownTaskSelection/update-false/duplicate-prior (0.00s)
+    --- PASS: TestGlobalCredentialKnownTaskSelection/update-false/foreign-prior (0.00s)
+    --- PASS: TestGlobalCredentialKnownTaskSelection/update-false/pruned-prior-versions (0.00s)
+    --- PASS: TestGlobalCredentialKnownTaskSelection/update-false/changed-prior-target (0.00s)
+    --- PASS: TestGlobalCredentialKnownTaskSelection/update-false/wrong-phase (0.00s)
+    --- PASS: TestGlobalCredentialKnownTaskSelection/update-false/partial-source (0.00s)
+    --- PASS: TestGlobalCredentialKnownTaskSelection/update-true/valid (0.00s)
+    --- PASS: TestGlobalCredentialKnownTaskSelection/update-true/taskless (0.00s)
+    --- PASS: TestGlobalCredentialKnownTaskSelection/update-true/undeclared (0.00s)
+    --- PASS: TestGlobalCredentialKnownTaskSelection/update-true/foreign-owner (0.00s)
+    --- PASS: TestGlobalCredentialKnownTaskSelection/update-true/foreign-config (0.00s)
+    --- PASS: TestGlobalCredentialKnownTaskSelection/update-true/wrong-section (0.00s)
+    --- PASS: TestGlobalCredentialKnownTaskSelection/update-true/parent (0.00s)
+    --- PASS: TestGlobalCredentialKnownTaskSelection/update-true/physical (0.00s)
+    --- PASS: TestGlobalCredentialKnownTaskSelection/update-true/dependency (0.00s)
+    --- PASS: TestGlobalCredentialKnownTaskSelection/update-true/cancelled (0.00s)
+    --- PASS: TestGlobalCredentialKnownTaskSelection/update-true/created-id (0.00s)
+    --- PASS: TestGlobalCredentialKnownTaskSelection/update-true/prepared (0.00s)
+    --- PASS: TestGlobalCredentialKnownTaskSelection/update-true/ssid-history (0.00s)
+    --- PASS: TestGlobalCredentialKnownTaskSelection/update-true/pruned-version (0.00s)
+    --- PASS: TestGlobalCredentialKnownTaskSelection/update-true/changed-version (0.00s)
+    --- PASS: TestGlobalCredentialKnownTaskSelection/update-true/changed-alias (0.00s)
+    --- PASS: TestGlobalCredentialKnownTaskSelection/update-true/changed-secret-key (0.00s)
+    --- PASS: TestGlobalCredentialKnownTaskSelection/update-true/duplicate-version (0.00s)
+    --- PASS: TestGlobalCredentialKnownTaskSelection/update-true/wrong-target (0.00s)
+    --- PASS: TestGlobalCredentialKnownTaskSelection/update-true/missing-prior (0.00s)
+    --- PASS: TestGlobalCredentialKnownTaskSelection/update-true/duplicate-prior (0.00s)
+    --- PASS: TestGlobalCredentialKnownTaskSelection/update-true/foreign-prior (0.00s)
+    --- PASS: TestGlobalCredentialKnownTaskSelection/update-true/pruned-prior-versions (0.00s)
+    --- PASS: TestGlobalCredentialKnownTaskSelection/update-true/changed-prior-target (0.00s)
+    --- PASS: TestGlobalCredentialKnownTaskSelection/update-true/wrong-phase (0.00s)
+    --- PASS: TestGlobalCredentialKnownTaskSelection/update-true/partial-source (0.00s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	7.332s

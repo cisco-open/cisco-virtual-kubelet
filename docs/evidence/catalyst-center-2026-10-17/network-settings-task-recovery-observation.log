@@ -1,0 +1,46 @@
+=== RUN   TestFabricOwnedObservationBracket
+=== RUN   TestFabricOwnedObservationBracket/valid
+=== RUN   TestFabricOwnedObservationBracket/wrong-section
+=== RUN   TestFabricOwnedObservationBracket/missing-owner
+=== RUN   TestFabricOwnedObservationBracket/foreign-owner
+=== RUN   TestFabricOwnedObservationBracket/late-owner
+=== RUN   TestFabricOwnedObservationBracket/late-source
+=== RUN   TestFabricOwnedObservationBracket/wrong-operation
+--- PASS: TestFabricOwnedObservationBracket (0.71s)
+    --- PASS: TestFabricOwnedObservationBracket/valid (0.63s)
+    --- PASS: TestFabricOwnedObservationBracket/wrong-section (0.01s)
+    --- PASS: TestFabricOwnedObservationBracket/missing-owner (0.01s)
+    --- PASS: TestFabricOwnedObservationBracket/foreign-owner (0.01s)
+    --- PASS: TestFabricOwnedObservationBracket/late-owner (0.01s)
+    --- PASS: TestFabricOwnedObservationBracket/late-source (0.01s)
+    --- PASS: TestFabricOwnedObservationBracket/wrong-operation (0.01s)
+=== RUN   TestRMAOwnedRecovery
+=== RUN   TestRMAOwnedRecovery/observe
+=== RUN   TestRMAOwnedRecovery/record
+=== RUN   TestRMAOwnedRecovery/owner
+=== RUN   TestRMAOwnedRecovery/no-owner
+=== RUN   TestRMAOwnedRecovery/duplicate-owner
+=== RUN   TestRMAOwnedRecovery/source
+=== RUN   TestRMAOwnedRecovery/wrong-operation
+=== RUN   TestRMAOwnedRecovery/late-source
+=== RUN   TestRMAOwnedRecovery/late-journal
+=== RUN   TestRMAOwnedRecovery/record-owner
+=== RUN   TestRMAOwnedRecovery/record-late-source
+=== RUN   TestRMAOwnedRecovery/record-late-journal
+--- PASS: TestRMAOwnedRecovery (0.29s)
+    --- PASS: TestRMAOwnedRecovery/observe (0.03s)
+    --- PASS: TestRMAOwnedRecovery/record (0.04s)
+    --- PASS: TestRMAOwnedRecovery/owner (0.02s)
+    --- PASS: TestRMAOwnedRecovery/no-owner (0.02s)
+    --- PASS: TestRMAOwnedRecovery/duplicate-owner (0.02s)
+    --- PASS: TestRMAOwnedRecovery/source (0.02s)
+    --- PASS: TestRMAOwnedRecovery/wrong-operation (0.02s)
+    --- PASS: TestRMAOwnedRecovery/late-source (0.03s)
+    --- PASS: TestRMAOwnedRecovery/late-journal (0.03s)
+    --- PASS: TestRMAOwnedRecovery/record-owner (0.02s)
+    --- PASS: TestRMAOwnedRecovery/record-late-source (0.03s)
+    --- PASS: TestRMAOwnedRecovery/record-late-journal (0.03s)
+=== RUN   TestTemplateDeploymentResourceBinding
+--- PASS: TestTemplateDeploymentResourceBinding (0.00s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	3.290s

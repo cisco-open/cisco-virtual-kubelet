@@ -1,0 +1,5 @@
+Restored upstream reference from immutable commit a435555fe828f03cf3311d52fe1ab6572a247916 after detecting an incomplete temporary checkout.
+Pinned NetAsCode Catalyst Center 0.5.0 cc_*.tf inventory: 93 distinct resource types.
+Ledger: 93 matching unique rows; missing/extra resource types: none.
+Includes 91 Catalyst Center types plus terraform_data/time_sleep.
+Archive/source hashes are recorded separately. This inventory is not full execution parity; geometry handoff, destructive lifecycle and installed qualification remain incomplete.

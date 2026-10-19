@@ -1,0 +1,60 @@
+{
+  "deleteTask": "01a14d13-9be8-7f06-8e26-76a92d0e29a1",
+  "deletedUUID": "203",
+  "installedActors": true,
+  "inventoryIdentityPreserved": true,
+  "managerReleased": true,
+  "nativeBaselineRestored": true,
+  "originalOperation": "cb5b41ddc83a06ad863a12d5dc500072",
+  "originalTask": "01a14d13-089f-7a1c-9999-f54a69ac3b5b",
+  "ownerAndTombstoneRetained": true,
+  "sourceRemoved": true,
+  "statusInjected": false,
+  "sourceSHA256": "3dd37f0d780c790b4f537874bff1687ecc0f82fd48be88a5212f4052a308124d",
+  "image": "cvk-catc-worker-qualification:20261018-discovery-source-3dd37f0d780c",
+  "branch": "pr/johalley/catc-support",
+  "imageID": "sha256:cc03b6f2786557726de72d9fecf18973bdb826cb7d3d242469cfe105d002da11",
+  "testElapsedSeconds": 71.73,
+  "clusterUID": "5d2a68ec-9be0-4597-90f8-35f2f3e707f1",
+  "controllerUID": "2ce33f86-8bce-4095-9ed7-c84cd366ecf9",
+  "checkpoint": "/private/tmp/cvk-installed-discovery-source-709168992",
+  "helmValuesUpdated": false,
+  "qualificationOnlyDeploymentOverride": true,
+  "sha256": {
+    "internal/controlleradapter/catalystcenter/installed_discovery_source_recovery_live_test.go": "70507850254bfe863c37dbcc7184f983157b69498a51bbe2347da9c44dd12142",
+    "/private/tmp/cvk-installed-discovery-source-qualification-20261018/build/cisco-vk": "cad7752a76680f9ff417570a78f83a5c5c5550ad4d2cbfaec0bc18553374c697",
+    "/private/tmp/cvk-installed-discovery-source-qualification-20261018/build/Dockerfile": "7188ed2f3ecdc59af92b0f6b9e6afb147eedb06c7416cb297852a59f49e1a0bb",
+    "/private/tmp/cvk-installed-discovery-source-qualification-20261018/manager-image-patch.json": "3292c3e4f574007bbdb3ad5760161bef85d4cdf9d5126c3551799b575c88d66c",
+    "/private/tmp/cvk-installed-discovery-source-709168992/final-journal.json": "a6ec7ccfbc0b6f0729926a00d3a606dcfbeec9bef6a6fd0bbee1b42eeda6b68e",
+    "/private/tmp/cvk-installed-discovery-source-709168992/final-config.json": "8d616ec75222d2ffe28d1c39e1c67f6119ee6ece107b84cd8a79ca94914999af",
+    "/private/tmp/cvk-installed-discovery-source-709168992/interrupted-pod.json": "8042f049be9581246cbff868d6e9d515b7654cacf23d6d72a123dba3a0d765c5",
+    "/private/tmp/cvk-installed-discovery-source-709168992/recovered-pod.json": "b7c8078e8256a16d4d095b4322a66c8625d58a48b7526d7ffcd5ce7592dc2f5b",
+    "/private/tmp/cvk-installed-discovery-source-qualification-20261018/worker-permissions.json": "4f01d528fb81ff56e6f2c6d1bed53d8404df8a5332ef08bd6ca0d55e068a5699"
+  },
+  "currentTestSourceSHA256": "84d16488288b8991458d28873ce5029e9382d89d8924ee1a27b62974369d44ca",
+  "postRunSourceChange": "Comment clarification only: the observer reads separately supplied API credentials, while Kubernetes Secrets and projected comparison keys are never read.",
+  "docsBuild": {
+    "strict": true,
+    "passed": true,
+    "seconds": 7.61,
+    "log": "/private/tmp/cvk-installed-discovery-source-qualification-20261018/docs-build.log",
+    "resourceLedgerRows": 93
+  },
+  "installedWorkerPermissions": {
+    "patch networkcontrollerconfigs": {
+      "allowed": false,
+      "exit": 1,
+      "diagnostic": ""
+    },
+    "update networkcontrollerconfigs": {
+      "allowed": false,
+      "exit": 1,
+      "diagnostic": ""
+    },
+    "update networkcontrollerconfigs/status": {
+      "allowed": true,
+      "exit": 0,
+      "diagnostic": ""
+    }
+  }
+}

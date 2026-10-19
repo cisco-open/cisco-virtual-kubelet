@@ -1,0 +1,30 @@
+{
+  "recordedAt": "2026-10-12T20:05:56.347414+00:00",
+  "test": "TestLiveDeviceRoleNoOp",
+  "result": "PASS",
+  "binarySHA256": "75ce5f58dac2eadf46ee2fccad062a7ebf4a5085fdbcff4ed1235fa1370c5750",
+  "devices": [
+    {
+      "ip": "198.51.100.100",
+      "role": "ACCESS",
+      "roleSource": "AUTO"
+    },
+    {
+      "ip": "198.51.100.101",
+      "role": "ACCESS",
+      "roleSource": "AUTO"
+    },
+    {
+      "ip": "198.51.100.103",
+      "role": "ACCESS",
+      "roleSource": "AUTO"
+    }
+  ],
+  "mutations": false,
+  "limitations": [
+    "Native metadata and no-op qualification only",
+    "Task-based mutation and identity recovery are fixture-tested, not lab-qualified",
+    "Manifest role writes remain gated pending device mutation lease integration",
+    "AUTO role behavior after topology recalculation not qualified"
+  ]
+}

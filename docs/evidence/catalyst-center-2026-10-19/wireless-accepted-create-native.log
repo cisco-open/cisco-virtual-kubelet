@@ -1,0 +1,53 @@
+=== RUN   TestLiveWirelessAcceptedMetadataCreates
+=== RUN   TestLiveWirelessAcceptedMetadataCreates/anchor_groups
+    wireless_definition_recovery_live_test.go:156: fixture CVK_DR_692036482000 evidence /var/folders/w5/1l6hg4ks3wvcdv_bkztxwtyw0000gn/T/cvk-definition-recovery-2326021633
+    wireless_definition_recovery_live_test.go:306: preflight read refused; exact operation retired without mutation; owner retained CVK_DR_692036482000
+    wireless_definition_recovery_live_test.go:291: retained acknowledged update Unknown mde5q1zl-x0rs-xZy5-mJaZ-nJq4mJaWmemWvJflmL8Zrdrsnv82 01a1541f-3e05-76ed-8ef2-397d6bb5614c
+    wireless_definition_recovery_live_test.go:352: stale observation refused and consumed before mutation CVK_DR_692036482000 mde5q1zl-x0rs-xZy5-mJaZ-nJq4mJaWmemWvJflmL8Zrdrsnv82
+    wireless_definition_recovery_live_test.go:407: complete CVK_DR_692036482000 mde5q1zl-x0rs-xZy5-mJaZ-nJq4mJaWmemWvJflmL8Zrdrsnv82 tasks map[Create:01a1541f-3098-7870-83fd-fa494a955c76 Delete:01a1541f-4b20-7660-ba3b-ecf1312e3535 Update:01a1541f-3e05-76ed-8ef2-397d6bb5614c] mutations 3 baseline restored
+=== RUN   TestLiveWirelessAcceptedMetadataCreates/interfaces
+    wireless_definition_recovery_live_test.go:156: fixture CVK_DR_701098829000 evidence /var/folders/w5/1l6hg4ks3wvcdv_bkztxwtyw0000gn/T/cvk-definition-recovery-1118680072
+    wireless_definition_recovery_live_test.go:306: preflight read refused; exact operation retired without mutation; owner retained CVK_DR_701098829000
+    wireless_definition_recovery_live_test.go:291: retained acknowledged update Unknown mde5q1zl-x0rs-xZCW-mta5-odGYotaWmemWvJflmL8Zrdrsnv82 01a1541f-58ae-7eb3-8975-72cb07a4ff82
+    wireless_definition_recovery_live_test.go:352: stale observation refused and consumed before mutation CVK_DR_701098829000 mde5q1zl-x0rs-xZCW-mta5-odGYotaWmemWvJflmL8Zrdrsnv82
+    wireless_definition_recovery_live_test.go:407: complete CVK_DR_701098829000 mde5q1zl-x0rs-xZCW-mta5-odGYotaWmemWvJflmL8Zrdrsnv82 tasks map[Create:01a1541f-527c-718d-8dcc-1ad817d01515 Delete:01a1541f-6078-78ad-bbd5-dd69540eba01 Update:01a1541f-58ae-7eb3-8975-72cb07a4ff82] mutations 3 baseline restored
+=== RUN   TestLiveWirelessAcceptedMetadataCreates/power_profiles
+    wireless_definition_recovery_live_test.go:156: fixture CVK_DR_706558838000 evidence /var/folders/w5/1l6hg4ks3wvcdv_bkztxwtyw0000gn/T/cvk-definition-recovery-3683510852
+    wireless_definition_recovery_live_test.go:306: preflight read refused; exact operation retired without mutation; owner retained CVK_DR_706558838000
+    wireless_definition_recovery_live_test.go:291: retained acknowledged update Unknown mde5q1zl-x0rs-xZCW-nJu1-odGZodaWmemWvJflmL8Zrdrsnv82 01a1541f-6e1b-7e6e-9521-d90301051864
+    wireless_definition_recovery_live_test.go:352: stale observation refused and consumed before mutation CVK_DR_706558838000 mde5q1zl-x0rs-xZCW-nJu1-odGZodaWmemWvJflmL8Zrdrsnv82
+    wireless_definition_recovery_live_test.go:407: complete CVK_DR_706558838000 mde5q1zl-x0rs-xZCW-nJu1-odGZodaWmemWvJflmL8Zrdrsnv82 tasks map[Create:01a1541f-67ce-76a4-95c9-5683f76f77e0 Delete:01a1541f-75d1-7ea4-8817-0268e1d057c2 Update:01a1541f-6e1b-7e6e-9521-d90301051864] mutations 3 baseline restored
+=== RUN   TestLiveWirelessAcceptedMetadataCreates/dot11be_profiles
+    wireless_definition_recovery_live_test.go:156: fixture CVK_DR_711119628000 evidence /var/folders/w5/1l6hg4ks3wvcdv_bkztxwtyw0000gn/T/cvk-definition-recovery-294268232
+    wireless_definition_recovery_live_test.go:306: preflight read refused; exact operation retired without mutation; owner retained CVK_DR_711119628000
+    wireless_definition_recovery_live_test.go:291: retained acknowledged update Unknown f2ae6fe0-9e8b-3baf-a49f-3dbee4e8bb7e 01a1541f-801d-7ca0-a06a-27f40a711030
+    wireless_definition_recovery_live_test.go:352: stale observation refused and consumed before mutation CVK_DR_711119628000 f2ae6fe0-9e8b-3baf-a49f-3dbee4e8bb7e
+    wireless_definition_recovery_live_test.go:407: complete CVK_DR_711119628000 f2ae6fe0-9e8b-3baf-a49f-3dbee4e8bb7e tasks map[Create:01a1541f-79b0-7053-8f47-af7b45e4780b Delete:01a1541f-87a6-7992-a9f7-8276ac6e1de9 Update:01a1541f-801d-7ca0-a06a-27f40a711030] mutations 3 baseline restored
+=== RUN   TestLiveWirelessAcceptedMetadataCreates/security_settings
+    wireless_definition_recovery_live_test.go:156: fixture CVK_DR_443_716620758000 evidence /var/folders/w5/1l6hg4ks3wvcdv_bkztxwtyw0000gn/T/cvk-definition-recovery-757660107
+    wireless_definition_recovery_live_test.go:306: preflight read refused; exact operation retired without mutation; owner retained CVK_DR_443_716620758000
+    wireless_definition_recovery_live_test.go:291: retained acknowledged update Unknown mdiZq1zl-x0rs-xZq0-m183-mty2mJa3ntGWmdbdmfyXsZjFm0q0 01a1541f-957d-7481-9186-f3e6b0b42d15
+    wireless_definition_recovery_live_test.go:352: stale observation refused and consumed before mutation CVK_DR_443_716620758000 mdiZq1zl-x0rs-xZq0-m183-mty2mJa3ntGWmdbdmfyXsZjFm0q0
+    wireless_definition_recovery_live_test.go:407: complete CVK_DR_443_716620758000 mdiZq1zl-x0rs-xZq0-m183-mty2mJa3ntGWmdbdmfyXsZjFm0q0 tasks map[Create:01a1541f-8f17-787e-ac89-8459367994f5 Delete:01a1541f-9d22-7dc5-bda3-93e20cbe7930 Update:01a1541f-957d-7481-9186-f3e6b0b42d15] mutations 3 baseline restored
+=== RUN   TestLiveWirelessAcceptedMetadataCreates/rf_profiles
+    wireless_definition_recovery_live_test.go:156: fixture CVK_DR_100_721164385000 evidence /var/folders/w5/1l6hg4ks3wvcdv_bkztxwtyw0000gn/T/cvk-definition-recovery-98865369
+    wireless_definition_recovery_live_test.go:306: preflight read refused; exact operation retired without mutation; owner retained CVK_DR_100_721164385000
+    wireless_definition_recovery_live_test.go:291: retained acknowledged update Unknown mdiZq1zl-x0rs-xZeW-mf83-mJeXnJqZoduWmdbdmfyXsZjFm0q0 01a1541f-a79f-71ee-9f8c-274e125786ba
+    wireless_definition_recovery_live_test.go:352: stale observation refused and consumed before mutation CVK_DR_100_721164385000 mdiZq1zl-x0rs-xZeW-mf83-mJeXnJqZoduWmdbdmfyXsZjFm0q0
+    wireless_definition_recovery_live_test.go:407: complete CVK_DR_100_721164385000 mdiZq1zl-x0rs-xZeW-mf83-mJeXnJqZoduWmdbdmfyXsZjFm0q0 tasks map[Create:01a1541f-a0e3-7eb3-8a49-f57f35b4fbc0 Delete:01a1541f-b598-7557-a0f6-cdffe65d8dd0 Update:01a1541f-a79f-71ee-9f8c-274e125786ba] mutations 3 baseline restored
+=== RUN   TestLiveWirelessAcceptedMetadataCreates/ap_profiles
+    wireless_definition_recovery_live_test.go:156: fixture CVK_DR_728313369000 evidence /var/folders/w5/1l6hg4ks3wvcdv_bkztxwtyw0000gn/T/cvk-definition-recovery-954251054
+    wireless_definition_recovery_live_test.go:306: preflight read refused; exact operation retired without mutation; owner retained CVK_DR_728313369000
+    wireless_definition_recovery_live_test.go:291: retained acknowledged update Unknown mde5q1zl-x0rs-xZCY-odmX-mZm2otaWmemWvJflmL8Zrdrsnv82 01a1541f-c2f3-76fb-80ef-097cac6f0dc8
+    wireless_definition_recovery_live_test.go:352: stale observation refused and consumed before mutation CVK_DR_728313369000 mde5q1zl-x0rs-xZCY-odmX-mZm2otaWmemWvJflmL8Zrdrsnv82
+    wireless_definition_recovery_live_test.go:407: complete CVK_DR_728313369000 mde5q1zl-x0rs-xZCY-odmX-mZm2otaWmemWvJflmL8Zrdrsnv82 tasks map[Create:01a1541f-bcc2-749f-b20f-af41aba3e4cc Delete:01a1541f-cb9d-7991-bc8b-6d467b181fd2 Update:01a1541f-c2f3-76fb-80ef-097cac6f0dc8] mutations 3 baseline restored
+--- PASS: TestLiveWirelessAcceptedMetadataCreates (40.98s)
+    --- PASS: TestLiveWirelessAcceptedMetadataCreates/anchor_groups (9.02s)
+    --- PASS: TestLiveWirelessAcceptedMetadataCreates/interfaces (5.46s)
+    --- PASS: TestLiveWirelessAcceptedMetadataCreates/power_profiles (4.55s)
+    --- PASS: TestLiveWirelessAcceptedMetadataCreates/dot11be_profiles (5.50s)
+    --- PASS: TestLiveWirelessAcceptedMetadataCreates/security_settings (4.56s)
+    --- PASS: TestLiveWirelessAcceptedMetadataCreates/rf_profiles (7.14s)
+    --- PASS: TestLiveWirelessAcceptedMetadataCreates/ap_profiles (4.75s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	42.024s

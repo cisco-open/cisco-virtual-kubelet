@@ -1,0 +1,9 @@
+=== RUN   TestLiveWirelessProfileExecution
+    wireless_profile_execution_live_test.go:91: isolated names CVK_N_95036d537ac3d02e CVK_S_4bd378bf460204bd
+    wireless_profile_execution_live_test.go:237: task ssid:8995b7da-5b82-40fd-a706-82150affe92d:CVK_S_4bd378bf460204bd Create 01a13e7f-2296-7eb5-b3c4-2047cd8b76e8
+    wireless_profile_execution_live_test.go:246: owned SSID CVK_S_4bd378bf460204bd mdiYq1zl-x1nF-ngjK-mZC4-yMy0nJaYmdrIzemWvJflmL8ZuZrF
+    wireless_profile_execution_live_test.go:309: submission uncertain; retain wireless/wireless-profile:CVK_N_95036d537ac3d02e:9e216a658968eedd9d94d5b09873913660f81c8e9b02be03b5a7163c0f863cb0 REST POST /dna/intent/api/v1/wirelessProfiles failed with status Not Acceptable
+--- FAIL: TestLiveWirelessProfileExecution (3.72s)
+FAIL
+FAIL	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	4.925s
+FAIL

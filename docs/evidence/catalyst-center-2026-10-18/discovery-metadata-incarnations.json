@@ -1,0 +1,87 @@
+{
+  "branch": "pr/johalley/catc-support",
+  "modelVersion": "0.5.0",
+  "applied": true,
+  "candidateRuntimeMatchedAtApply": true,
+  "overlayCandidateSource": {
+    "files": 1637,
+    "sha256": "56111d902f61ab86b8c225d8374bd5e9cce85a0e7d242140b5d36d508675e1e6",
+    "overlayFile": "/private/tmp/cvk-discovery-metadata-overlay.json",
+    "candidateFilesSHA256": {
+      "internal/controlleradapter/catalystcenter/discovery_credential_identity.go": "615f8e482ed260c86b6bd6f0f6aec56f575cd6285e473823cef60ef386624628",
+      "internal/controlleradapter/catalystcenter/discovery_credentials.go": "d062795f83dbd5f5ac5359851eaa3657be40f29fb9a91aa532f1a5080a669dea",
+      "internal/controlleradapter/catalystcenter/discovery_credential_prune.go": "1f79b17beb6268e0860388d611e1f42c2ee249162acdf5b65a47a1f4f0a191f3",
+      "internal/controlleradapter/catalystcenter/discovery_credential_executor.go": "f5b55fdbc767993c8260e0cdb480f1d436c44b01e091812a314e8308fad9be84",
+      "internal/controlleradapter/catalystcenter/discovery_credential_receipt.go": "636a0deca461cc4f6dbf931ca0f634e4a28f9c3201ee35bbd1a73889cd02dece",
+      "internal/controlleradapter/catalystcenter/discovery_credential_retirement_history.go": "53362343405fda8cab1abedfcd67d964524b35d7e0098e23c9b642a0dd2346ab",
+      "internal/controlleradapter/catalystcenter/discovery_credential_retirement.go": "d27c9864f08eafcf265e22ad6951e223183957b289a5cde2b51991ee70e539f8",
+      "internal/controlleradapter/catalystcenter/discovery_credential_retirement_capacity.go": "d6a472dcf361e805277aec5741ebffe3a5446111256a66047d6dbde0f8bf8e93",
+      "internal/controlleradapter/catalystcenter/discovery_credential_config_cleanup_observation.go": "7dd1a0163a095635708d80d3a45d1cd8f269c876838cacc1a507056774437900",
+      "internal/controlleradapter/catalystcenter/discovery_source_scope.go": "e2465ba77739c1f9d278a776da64cc45cefc8a106ae19ce978a074ef53ebe200",
+      "internal/controlleradapter/catalystcenter/discovery_credential_revision_test.go": "27b0c59f2c2d2d262f81b0948284f02f3e6ed58bd86d8e5cff528922d94e630d",
+      "internal/controlleradapter/catalystcenter/discovery_credential_custody_execution_test.go": "6ccaf16f00b3a3db6b5ddd7b76c76ce90a94ec14d9a21149f278f93e80fc12a6",
+      "internal/controlleradapter/catalystcenter/discovery_credential_custody_cleanup_test.go": "74e02f25794173d514533e4a2174ddb70d9e2e5b9a919b1f7c2401a5b83a10a4",
+      "internal/controlleradapter/catalystcenter/discovery_credential_metadata_protocol_test.go": "edf5c9ae729fef2fa069e79731e6087a0b62466c99147b76ef58d208c06acd9c"
+    },
+    "applied": true
+  },
+  "integratedPackageSource": {
+    "files": 1637,
+    "sha256": "b90ca2f5b58ee816f24dc907ee98818f2a2d4d8b62b3511d3a55d4bfbd338bbd"
+  },
+  "candidateFilesStillMatch": true,
+  "gates": {
+    "overlayRevisions": {
+      "passed": true,
+      "passingEvents": 131,
+      "revisionModesPerPersistence": 57,
+      "newMetadataModesPerPersistence": 23,
+      "log": "discovery-metadata-incarnations-overlay-revisions.log"
+    },
+    "overlayPositive": {
+      "passed": true,
+      "cases": 10,
+      "log": "discovery-metadata-incarnations-overlay-positive.log"
+    },
+    "actualWorktreeRegression": {
+      "passed": true,
+      "status": "complete",
+      "timeout": "25m",
+      "passingEvents": 2678,
+      "durationSeconds": 1249.806,
+      "log": "discovery-metadata-incarnations-integrated-regression.log"
+    },
+    "initialAuditFixtureFailure": {
+      "log": "discovery-metadata-incarnations-initial-fixture-failure.log",
+      "resolved": true
+    },
+    "foundation": {
+      "passed": true,
+      "log": "discovery-metadata-incarnations-foundation.log"
+    },
+    "build": {
+      "passed": true,
+      "log": "discovery-metadata-incarnations-build.log",
+      "binarySHA256": "eadcd14b6937c5dd3e02b0003f7fb658d7b289177d0915d71244ceab9610ed70"
+    },
+    "docs": {
+      "passed": true,
+      "log": "discovery-metadata-incarnations-docs.log"
+    },
+    "swim": {
+      "passed": true,
+      "log": "discovery-metadata-incarnations-swim.log"
+    }
+  },
+  "metadataCreatesCredentialApplication": false,
+  "olderProtocolsAllowMissingVersions": false,
+  "sharedSchemaChanged": false,
+  "newProviderOrTransportOrCRDOrStoreOrFinalizer": false,
+  "initialMetadataOnlyTypedOwnerEnabled": false,
+  "ordinaryTypedCustodyMigrationQualified": false,
+  "nativeMetadataIncarnationMutationQualified": false,
+  "installedMetadataIncarnationQualified": false,
+  "physicalAuthenticationQualified": false,
+  "resourceLedgerRows": 93,
+  "fullPinnedModelParity": false
+}

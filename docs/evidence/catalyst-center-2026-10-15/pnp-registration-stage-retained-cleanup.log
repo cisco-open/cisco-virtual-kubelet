@@ -1,0 +1,5 @@
+=== RUN   TestLiveRetainedPnPRegistrationCleanup
+    pnp_registration_stage_live_test.go:266: retained exact uncontacted UUID removed and empty PnP baseline verified; no registration replay or physical operation 6ad1123f0bc0186771caae30
+--- PASS: TestLiveRetainedPnPRegistrationCleanup (1.51s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	3.615s

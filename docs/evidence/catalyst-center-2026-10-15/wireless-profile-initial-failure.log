@@ -1,0 +1,10 @@
+=== RUN   TestLiveWirelessProfileExecution
+    wireless_profile_execution_live_test.go:42: isolated names CVK_N_1eb5a6e2e80ec29c CVK_S_bd32c501864c3779
+    wireless_profile_execution_live_test.go:144: task ssid:8995b7da-5b82-40fd-a706-82150affe92d:CVK_S_bd32c501864c3779 Create 01a13e07-8196-7fe5-8f80-6336c2930966
+    wireless_profile_execution_live_test.go:153: owned SSID CVK_S_bd32c501864c3779 mdiYq1zl-x1nF-yMqZ-mMm1-mde4nJrJmZC3oumWvJflmL8ZuZrF
+    wireless_profile_execution_live_test.go:172: task wireless/wireless-profile:CVK_N_1eb5a6e2e80ec29c:bddeb852b77b9b594def7dbf1cfa2d0815fa29f228d66d345009c7f3d4421649 Create 01a13e07-8de1-7e1c-8488-fe3eac7c9c34
+    wireless_profile_execution_live_test.go:172: readback incomplete; retain wireless/wireless-profile:CVK_N_1eb5a6e2e80ec29c:bddeb852b77b9b594def7dbf1cfa2d0815fa29f228d66d345009c7f3d4421649 controller section is owned by another config identity
+--- FAIL: TestLiveWirelessProfileExecution (5.49s)
+FAIL
+FAIL	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	6.386s
+FAIL

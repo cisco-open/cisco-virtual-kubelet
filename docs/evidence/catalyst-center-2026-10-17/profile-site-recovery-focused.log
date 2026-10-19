@@ -1,0 +1,138 @@
+=== RUN   TestProfileSitePlansRevalidateCompleteSelection
+=== RUN   TestProfileSitePlansRevalidateCompleteSelection/wireless=false/stable
+=== RUN   TestProfileSitePlansRevalidateCompleteSelection/wireless=false/first-profile
+=== RUN   TestProfileSitePlansRevalidateCompleteSelection/wireless=false/later-profile
+=== RUN   TestProfileSitePlansRevalidateCompleteSelection/wireless=false/first-site
+=== RUN   TestProfileSitePlansRevalidateCompleteSelection/wireless=false/later-site
+=== RUN   TestProfileSitePlansRevalidateCompleteSelection/wireless=false/missing-later-site
+=== RUN   TestProfileSitePlansRevalidateCompleteSelection/wireless=false/mid-read-site
+=== RUN   TestProfileSitePlansRevalidateCompleteSelection/wireless=false/became-present
+=== RUN   TestProfileSitePlansRevalidateCompleteSelection/wireless=false/later-present
+=== RUN   TestProfileSitePlansRevalidateCompleteSelection/wireless=false/caller-mutated
+=== RUN   TestProfileSitePlansRevalidateCompleteSelection/wireless=false/unrelated
+=== RUN   TestProfileSitePlansRevalidateCompleteSelection/wireless=false/lost-ack
+=== RUN   TestProfileSitePlansRevalidateCompleteSelection/wireless=false/read-error
+=== RUN   TestProfileSitePlansRevalidateCompleteSelection/wireless=true/stable
+=== RUN   TestProfileSitePlansRevalidateCompleteSelection/wireless=true/first-profile
+=== RUN   TestProfileSitePlansRevalidateCompleteSelection/wireless=true/later-profile
+=== RUN   TestProfileSitePlansRevalidateCompleteSelection/wireless=true/first-site
+=== RUN   TestProfileSitePlansRevalidateCompleteSelection/wireless=true/later-site
+=== RUN   TestProfileSitePlansRevalidateCompleteSelection/wireless=true/missing-later-site
+=== RUN   TestProfileSitePlansRevalidateCompleteSelection/wireless=true/mid-read-site
+=== RUN   TestProfileSitePlansRevalidateCompleteSelection/wireless=true/became-present
+=== RUN   TestProfileSitePlansRevalidateCompleteSelection/wireless=true/later-present
+=== RUN   TestProfileSitePlansRevalidateCompleteSelection/wireless=true/caller-mutated
+=== RUN   TestProfileSitePlansRevalidateCompleteSelection/wireless=true/unrelated
+=== RUN   TestProfileSitePlansRevalidateCompleteSelection/wireless=true/lost-ack
+=== RUN   TestProfileSitePlansRevalidateCompleteSelection/wireless=true/read-error
+--- PASS: TestProfileSitePlansRevalidateCompleteSelection (0.36s)
+    --- PASS: TestProfileSitePlansRevalidateCompleteSelection/wireless=false/stable (0.02s)
+    --- PASS: TestProfileSitePlansRevalidateCompleteSelection/wireless=false/first-profile (0.01s)
+    --- PASS: TestProfileSitePlansRevalidateCompleteSelection/wireless=false/later-profile (0.01s)
+    --- PASS: TestProfileSitePlansRevalidateCompleteSelection/wireless=false/first-site (0.01s)
+    --- PASS: TestProfileSitePlansRevalidateCompleteSelection/wireless=false/later-site (0.01s)
+    --- PASS: TestProfileSitePlansRevalidateCompleteSelection/wireless=false/missing-later-site (0.01s)
+    --- PASS: TestProfileSitePlansRevalidateCompleteSelection/wireless=false/mid-read-site (0.01s)
+    --- PASS: TestProfileSitePlansRevalidateCompleteSelection/wireless=false/became-present (0.01s)
+    --- PASS: TestProfileSitePlansRevalidateCompleteSelection/wireless=false/later-present (0.01s)
+    --- PASS: TestProfileSitePlansRevalidateCompleteSelection/wireless=false/caller-mutated (0.01s)
+    --- PASS: TestProfileSitePlansRevalidateCompleteSelection/wireless=false/unrelated (0.01s)
+    --- PASS: TestProfileSitePlansRevalidateCompleteSelection/wireless=false/lost-ack (0.01s)
+    --- PASS: TestProfileSitePlansRevalidateCompleteSelection/wireless=false/read-error (0.01s)
+    --- PASS: TestProfileSitePlansRevalidateCompleteSelection/wireless=true/stable (0.02s)
+    --- PASS: TestProfileSitePlansRevalidateCompleteSelection/wireless=true/first-profile (0.01s)
+    --- PASS: TestProfileSitePlansRevalidateCompleteSelection/wireless=true/later-profile (0.01s)
+    --- PASS: TestProfileSitePlansRevalidateCompleteSelection/wireless=true/first-site (0.01s)
+    --- PASS: TestProfileSitePlansRevalidateCompleteSelection/wireless=true/later-site (0.01s)
+    --- PASS: TestProfileSitePlansRevalidateCompleteSelection/wireless=true/missing-later-site (0.01s)
+    --- PASS: TestProfileSitePlansRevalidateCompleteSelection/wireless=true/mid-read-site (0.02s)
+    --- PASS: TestProfileSitePlansRevalidateCompleteSelection/wireless=true/became-present (0.01s)
+    --- PASS: TestProfileSitePlansRevalidateCompleteSelection/wireless=true/later-present (0.01s)
+    --- PASS: TestProfileSitePlansRevalidateCompleteSelection/wireless=true/caller-mutated (0.01s)
+    --- PASS: TestProfileSitePlansRevalidateCompleteSelection/wireless=true/unrelated (0.01s)
+    --- PASS: TestProfileSitePlansRevalidateCompleteSelection/wireless=true/lost-ack (0.01s)
+    --- PASS: TestProfileSitePlansRevalidateCompleteSelection/wireless=true/read-error (0.01s)
+=== RUN   TestProfileSiteRecoveryReadsOnlyAcknowledgedPair
+=== RUN   TestProfileSiteRecoveryReadsOnlyAcknowledgedPair/wireless=false/late-replace=false
+=== RUN   TestProfileSiteRecoveryReadsOnlyAcknowledgedPair/wireless=false/late-replace=true
+=== RUN   TestProfileSiteRecoveryReadsOnlyAcknowledgedPair/wireless=true/late-replace=false
+=== RUN   TestProfileSiteRecoveryReadsOnlyAcknowledgedPair/wireless=true/late-replace=true
+--- PASS: TestProfileSiteRecoveryReadsOnlyAcknowledgedPair (0.05s)
+    --- PASS: TestProfileSiteRecoveryReadsOnlyAcknowledgedPair/wireless=false/late-replace=false (0.01s)
+    --- PASS: TestProfileSiteRecoveryReadsOnlyAcknowledgedPair/wireless=false/late-replace=true (0.01s)
+    --- PASS: TestProfileSiteRecoveryReadsOnlyAcknowledgedPair/wireless=true/late-replace=false (0.01s)
+    --- PASS: TestProfileSiteRecoveryReadsOnlyAcknowledgedPair/wireless=true/late-replace=true (0.01s)
+=== RUN   TestProfileSiteDuplicateSelectionRefused
+--- PASS: TestProfileSiteDuplicateSelectionRefused (0.01s)
+=== RUN   TestProfileSitePublicRecovery
+=== RUN   TestProfileSitePublicRecovery/wireless-false/complete
+=== RUN   TestProfileSitePublicRecovery/wireless-false/no-dispatch
+=== RUN   TestProfileSitePublicRecovery/wireless-false/lost-ack
+=== RUN   TestProfileSitePublicRecovery/wireless-false/child-failed
+=== RUN   TestProfileSitePublicRecovery/wireless-false/child-pending
+=== RUN   TestProfileSitePublicRecovery/wireless-false/tree-missing
+=== RUN   TestProfileSitePublicRecovery/wireless-false/foreign-root
+=== RUN   TestProfileSitePublicRecovery/wireless-false/removed
+=== RUN   TestProfileSitePublicRecovery/wireless-false/site-replaced
+=== RUN   TestProfileSitePublicRecovery/wireless-false/profile-replaced
+=== RUN   TestProfileSitePublicRecovery/wireless-false/mid-tree-site
+=== RUN   TestProfileSitePublicRecovery/wireless-false/source
+=== RUN   TestProfileSitePublicRecovery/wireless-false/owner
+=== RUN   TestProfileSitePublicRecovery/wireless-false/controller
+=== RUN   TestProfileSitePublicRecovery/wireless-false/accepted-partial
+=== RUN   TestProfileSitePublicRecovery/wireless-false/pending-peer
+=== RUN   TestProfileSitePublicRecovery/wireless-false/slash-name
+=== RUN   TestProfileSitePublicRecovery/wireless-true/complete
+=== RUN   TestProfileSitePublicRecovery/wireless-true/no-dispatch
+=== RUN   TestProfileSitePublicRecovery/wireless-true/lost-ack
+=== RUN   TestProfileSitePublicRecovery/wireless-true/child-failed
+=== RUN   TestProfileSitePublicRecovery/wireless-true/child-pending
+=== RUN   TestProfileSitePublicRecovery/wireless-true/tree-missing
+=== RUN   TestProfileSitePublicRecovery/wireless-true/foreign-root
+=== RUN   TestProfileSitePublicRecovery/wireless-true/removed
+=== RUN   TestProfileSitePublicRecovery/wireless-true/site-replaced
+=== RUN   TestProfileSitePublicRecovery/wireless-true/profile-replaced
+=== RUN   TestProfileSitePublicRecovery/wireless-true/mid-tree-site
+=== RUN   TestProfileSitePublicRecovery/wireless-true/source
+=== RUN   TestProfileSitePublicRecovery/wireless-true/owner
+=== RUN   TestProfileSitePublicRecovery/wireless-true/controller
+=== RUN   TestProfileSitePublicRecovery/wireless-true/accepted-partial
+=== RUN   TestProfileSitePublicRecovery/wireless-true/pending-peer
+=== RUN   TestProfileSitePublicRecovery/wireless-true/slash-name
+--- PASS: TestProfileSitePublicRecovery (3.10s)
+    --- PASS: TestProfileSitePublicRecovery/wireless-false/complete (0.68s)
+    --- PASS: TestProfileSitePublicRecovery/wireless-false/no-dispatch (0.10s)
+    --- PASS: TestProfileSitePublicRecovery/wireless-false/lost-ack (0.06s)
+    --- PASS: TestProfileSitePublicRecovery/wireless-false/child-failed (0.07s)
+    --- PASS: TestProfileSitePublicRecovery/wireless-false/child-pending (0.07s)
+    --- PASS: TestProfileSitePublicRecovery/wireless-false/tree-missing (0.08s)
+    --- PASS: TestProfileSitePublicRecovery/wireless-false/foreign-root (0.07s)
+    --- PASS: TestProfileSitePublicRecovery/wireless-false/removed (0.08s)
+    --- PASS: TestProfileSitePublicRecovery/wireless-false/site-replaced (0.07s)
+    --- PASS: TestProfileSitePublicRecovery/wireless-false/profile-replaced (0.07s)
+    --- PASS: TestProfileSitePublicRecovery/wireless-false/mid-tree-site (0.07s)
+    --- PASS: TestProfileSitePublicRecovery/wireless-false/source (0.06s)
+    --- PASS: TestProfileSitePublicRecovery/wireless-false/owner (0.06s)
+    --- PASS: TestProfileSitePublicRecovery/wireless-false/controller (0.04s)
+    --- PASS: TestProfileSitePublicRecovery/wireless-false/accepted-partial (0.07s)
+    --- PASS: TestProfileSitePublicRecovery/wireless-false/pending-peer (0.07s)
+    --- PASS: TestProfileSitePublicRecovery/wireless-false/slash-name (0.08s)
+    --- PASS: TestProfileSitePublicRecovery/wireless-true/complete (0.09s)
+    --- PASS: TestProfileSitePublicRecovery/wireless-true/no-dispatch (0.10s)
+    --- PASS: TestProfileSitePublicRecovery/wireless-true/lost-ack (0.06s)
+    --- PASS: TestProfileSitePublicRecovery/wireless-true/child-failed (0.08s)
+    --- PASS: TestProfileSitePublicRecovery/wireless-true/child-pending (0.08s)
+    --- PASS: TestProfileSitePublicRecovery/wireless-true/tree-missing (0.08s)
+    --- PASS: TestProfileSitePublicRecovery/wireless-true/foreign-root (0.07s)
+    --- PASS: TestProfileSitePublicRecovery/wireless-true/removed (0.08s)
+    --- PASS: TestProfileSitePublicRecovery/wireless-true/site-replaced (0.07s)
+    --- PASS: TestProfileSitePublicRecovery/wireless-true/profile-replaced (0.07s)
+    --- PASS: TestProfileSitePublicRecovery/wireless-true/mid-tree-site (0.07s)
+    --- PASS: TestProfileSitePublicRecovery/wireless-true/source (0.06s)
+    --- PASS: TestProfileSitePublicRecovery/wireless-true/owner (0.06s)
+    --- PASS: TestProfileSitePublicRecovery/wireless-true/controller (0.05s)
+    --- PASS: TestProfileSitePublicRecovery/wireless-true/accepted-partial (0.08s)
+    --- PASS: TestProfileSitePublicRecovery/wireless-true/pending-peer (0.07s)
+    --- PASS: TestProfileSitePublicRecovery/wireless-true/slash-name (0.09s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	5.908s

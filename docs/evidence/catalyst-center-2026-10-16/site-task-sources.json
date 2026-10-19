@@ -1,0 +1,20 @@
+{
+  "branch": "pr/johalley/catc-support",
+  "moduleVersion": "0.5.0",
+  "moduleCommit": "a435555fe828f03cf3311d52fe1ab6572a247916",
+  "providerVersion": "0.6.1",
+  "providerCommit": "01058637dd5ed4fca93e1b2a96dd7032aec2d3a1",
+  "scope": "Singular site full-tree completion and retained acknowledged Unknown observation; production/live code fixed before native qualification; legacy root-only fixture corrections and five added native-readback cases verified separately; final test-source hashes",
+  "sourceSha256": {
+    "internal/controlleradapter/catalystcenter/site_task_recovery.go": "fbe3be11a13fa420106c6fc8ea804c782526c03fda7b522c0ca239be5e0172f5",
+    "internal/controlleradapter/catalystcenter/site_task_recovery_test.go": "6670ebb11b8af34cf0b935fccd3e600110cd14ec3a21269508557ce617f77e20",
+    "internal/controlleradapter/catalystcenter/floor_image_apply.go": "0d780bcbb52116fe44d11e49bc95ffc2520edf7d597a9e429969c48aa9127c21",
+    "internal/controlleradapter/catalystcenter/site_dispatch_binding.go": "89dfced10c0b8fce3c4fe73d617d9a651ac9a837e8604b7408a32d3be9dd6825",
+    "internal/controlleradapter/catalystcenter/site_dispatch_public_test.go": "828f1414de612b6518814dc8d604a0f68230238cfe03636200a72a1653915da9",
+    "internal/controlleradapter/catalystcenter/site_dispatch_envtest_test.go": "61056262606b60bfbd016f55551354f9c036cb99b9d70759703c2dc4b77f0ba7",
+    "internal/controlleradapter/catalystcenter/site_reconcile_test.go": "f7f10968d61874a627d0ec9af959894bb6c029400de6662b83f305a254ec7de6",
+    "internal/controlleradapter/catalystcenter/planned_ap_manifest_test.go": "d234df76cd245bbee7afa516d34d9d55a8f421f64c2a2cb2f8a6f31a51a666d7",
+    "internal/controlleradapter/catalystcenter/site_bulk_manifest_live_test.go": "424cf9e188b7a42ceab4731d2fcc6b063c31b6c7cf41dcec9055e14923b8527a",
+    "internal/controlleradapter/catalystcenter/site_execution_live_test.go": "d65bf120af4ab3bae52d35c951ce8768c3ca065c90e8b3f1f3fe446c819121d4"
+  }
+}

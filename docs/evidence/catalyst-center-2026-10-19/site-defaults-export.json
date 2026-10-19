@@ -1,0 +1,134 @@
+{
+  "scope": "explicit pinned site geometry default export through existing public lifecycle",
+  "branch": "pr/johalley/catc-support",
+  "modelVersion": "0.5.0",
+  "pinnedModelCommit": "a435555fe828f03cf3311d52fe1ab6572a247916",
+  "sourceFingerprints": {
+    "internal/controlleradapter/catalystcenter": "ee254e9052603b4aaf3c5792b89555512f7e80fe1bc91a65ba658d26f4febddc",
+    "internal/controlleradapter/catalystcenter/nacmodel": "28dc57645c671c6ba86be26209273ae93b06edc0275a0d3c37af311a6f8c4da6",
+    "tools/cvk-netascode-migrate": "5b9634144c677321c5ab15c36fb3f012d7a781b23ba3742ddf98e975c78341d8"
+  },
+  "siteExpressionsSHA256": "8d7f003049677a761a8206e1c1a8fa49f5871886fef61c5e46316c433b88cba9",
+  "fullModelComplete": false,
+  "installedDefaultExportQualified": false,
+  "native": {
+    "archivedCohorts": 3,
+    "areaBuildingFloor": true,
+    "baselineRestored": true,
+    "defaultedFieldsPerHierarchy": 5,
+    "deletes": 6,
+    "firstID": "e80c364b-f6c8-4a68-aa26-24d161e163ee",
+    "installed": false,
+    "originalTaskRecoveries": 12,
+    "parentChild": true,
+    "parentHandoff": true,
+    "posts": 6,
+    "publicRetirementRouting": true,
+    "secondID": "7810dd30-0e83-47ef-adf6-c7f0c848fe6d",
+    "siteDefaultsExport": true
+  },
+  "nativeTaskIDs": [
+    "01a153b3-dc67-756c-b44e-67ab7600db4d",
+    "01a153b3-e65b-7270-946e-34b5876c7759",
+    "01a153b3-f57a-7488-b9ef-a753d82e92cc",
+    "01a153b4-3d45-7ccf-a500-1375dfddb364",
+    "01a153b4-812a-7816-b3d2-deb9173a2511",
+    "01a153b4-c450-7a3e-a104-42a4d8fa5a03",
+    "01a153b4-d49e-73fc-a7b9-1cbad52353eb",
+    "01a153b4-e762-78c0-b832-4a63659f5be7",
+    "01a153b4-fbda-7f6a-a430-5f3da4e12180",
+    "01a153b5-46d0-7153-a025-7532cd8000f5",
+    "01a153b5-89ee-7633-9d02-46533993e2ae",
+    "01a153b5-cd76-73bf-a8ae-72312b719e61"
+  ],
+  "generatedPath": "Global/CVK-Q-Life-1019-102737",
+  "remainingGeneratedFixtures": [],
+  "retainedActionRows": 12,
+  "owners": 1,
+  "sourceExampleProvenance": {
+    "exporter": "cvk-site-defaults-v1:policy-sha256:802d218d526e9c6d8b5069cb273a4f247ea64bc319a2f4ec15b892a108b42d11",
+    "executionSyntaxValidated": true,
+    "leafSchemaValidated": false,
+    "format": "netascode-catalyst-center",
+    "modelVersion": "0.5.0",
+    "upstreamRevision": "a435555fe828f03cf3311d52fe1ab6572a247916",
+    "policySHA256": "802d218d526e9c6d8b5069cb273a4f247ea64bc319a2f4ec15b892a108b42d11",
+    "defaultsSHA256": "8efb7f12853af1f8d2b182fb2b9e323e30ddf2330e61286dbb959a84fd5a505f",
+    "inputSHA256": "c51adf2edec759f9129d1329d69fe540e60e4234c817b0c246ac8c1cb54fc4e9",
+    "outputSHA256": "0b268fb250aca74002c73198f7e95a727121bcd47bd8b6e39bfe2bcb02737047",
+    "resolutionScope": "sites-geometry-only",
+    "configurationParity": false,
+    "limitations": [
+      "One already-selected sites-only geometry model; no file merging, managed-site filtering, image/AP assets or other sections.",
+      "Pinned site defaults and supported overrides only; numeric null fallback follows upstream try expressions, while unsupported unresolved values refuse.",
+      "Singular area parents stay explicit; bulk omitted parent uses literal Global, matching the pinned resource map.",
+      "No nested schema/parity attestation, API request, ownership transfer or change to runtime defaulting."
+    ],
+    "siteExpressionsSHA256": "8d7f003049677a761a8206e1c1a8fa49f5871886fef61c5e46316c433b88cba9",
+    "useBulkAPI": false,
+    "resources": 3,
+    "defaultedFields": 5
+  },
+  "separateAPIAndNativeRuns": true,
+  "remaining": [
+    "installed default-exported flow",
+    "multi-file and managed-site selection composition",
+    "floor images and planned AP default composition",
+    "remaining 93-row component/schema/lifecycle gaps"
+  ],
+  "gates": {
+    "regression": {
+      "exitCode": 0,
+      "passingTestEvents": 19411,
+      "passingPackages": 16,
+      "log": "/private/tmp/cvk-site-defaults-regression.log",
+      "sha256": "14a0ba2c8bd6d0010bb29e27a0f8dbce6eabda638e61690079ccf5c5cf9ae999",
+      "scope": "api, all controlleradapter packages, shared controllerconfiguration/controller/aggregator/managedprotocol, maintenance/softwareupgrade/softwarelifecycle, cisco-vk and complete migration tool"
+    },
+    "focusedRace": {
+      "exitCode": 0,
+      "passingTestEvents": 38,
+      "log": "site-defaults-export-race.log",
+      "scope": "site export, existing migration exports, inline/ConfigMap hierarchy lifecycles"
+    },
+    "temporaryAPI": {
+      "exitCode": 0,
+      "passingTestEvents": 1,
+      "log": "site-defaults-export-api.log"
+    },
+    "native": {
+      "exitCode": 0,
+      "originalTaskRecoveries": 12,
+      "creates": 6,
+      "deletes": 6,
+      "log": "site-defaults-export-native.log",
+      "baselineRestored": true
+    },
+    "nativeGuard": {
+      "exitCode": 0,
+      "log": "/private/tmp/cvk-site-defaults-native-guard.log"
+    },
+    "migrationBuild": {
+      "exitCode": 0,
+      "binary": "/private/tmp/cvk-site-defaults-migrate"
+    },
+    "productionBuild": {
+      "exitCode": 0,
+      "binary": "/private/tmp/cvk-site-defaults-cisco-vk"
+    },
+    "strictDocumentation": {
+      "exitCode": 0,
+      "log": "/private/tmp/cvk-site-defaults-docs-final.log"
+    },
+    "pinnedParser": {
+      "exitCode": 0,
+      "log": "/private/tmp/cvk-site-defaults-parser.log"
+    },
+    "coverage": {
+      "uniqueResourceRows": 93,
+      "fullModelComplete": false
+    }
+  },
+  "priorGoalTurnClassification": "progress",
+  "currentGoalTurnClassification": "progress"
+}

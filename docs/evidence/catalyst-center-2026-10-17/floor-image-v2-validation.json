@@ -1,0 +1,87 @@
+{
+  "image": "cvk-catc-worker-qualification:20261017-image-v2-f8dad4488c2a",
+  "binarySha256": "f8dad4488c2aac62abd282c83a3a8713216e5fb50d086cf32ccbdb1426e3c01b",
+  "base": "gcr.io/distroless/static-debian12@sha256:d75cdd72874d4790092fcb1b058493ecf6bb5bf2b2b897045b00ff01d91843f2",
+  "productionAndFocusedTestSources": {
+    "internal/controlleradapter/catalystcenter/floor_image_receipt.go": "01902b6b5650653b2e029e99da415ef19b723b3e2ae727e4b71e998b7a8b7f50",
+    "internal/controlleradapter/catalystcenter/floor_image_execution.go": "985d2b58ed85c41994617dae27ce199279fc9a4eef8953b930f67035c047bbb9",
+    "internal/controlleradapter/catalystcenter/floor_image_journal.go": "0d6c00fbe5072094ad17009d86541b8a8ab51280070f289ea2e285ff28165d09",
+    "internal/controlleradapter/catalystcenter/site_design_dispatch.go": "21c67f954457b76e2d9993d242d9c51e81962ed6119a88aac99395d23759e588",
+    "internal/controlleradapter/catalystcenter/floor_image_path_identity_test.go": "5d6265ffbece2c87fef0291958e5a279b96d27b0b9210f6c5da6d19377c4d0ea",
+    "internal/controlleradapter/catalystcenter/floor_image_receipt_test.go": "ab9e591fbd8a541d3db467236cd6845805c16d5178ec9a426780c3169713f1fc",
+    "internal/controlleradapter/catalystcenter/floor_image_execution_test.go": "400e28be2468bee2206d78ae712da8f21316251c0fbcb56d36d0ccc66cb97f25"
+  },
+  "gates": [
+    {
+      "name": "focused",
+      "status": "passed",
+      "seconds": 3.842,
+      "topLevelPassingTests": 19,
+      "log": "floor-image-v2-local-network.log"
+    },
+    {
+      "name": "composition",
+      "status": "passed",
+      "seconds": 17.188,
+      "topLevelPassingTests": 25,
+      "log": "floor-image-v2-composition.log"
+    },
+    {
+      "name": "api",
+      "status": "passed",
+      "seconds": 53.375,
+      "topLevelPassingTests": 2,
+      "log": "floor-image-v2-api.log"
+    }
+  ],
+  "nativeStatus": {
+    "status": "passed",
+    "seconds": 158.18,
+    "goSeconds": 160.618,
+    "installedTasks": {
+      "01a14ab9-c81f-7bd5-82f5-6947f4653642": "Create",
+      "01a14aba-282d-7384-b26f-df9b65442392": "Create",
+      "01a14aba-7ec2-7770-9892-4c07c53ebab2": "Create",
+      "01a14aba-e1cb-7e5f-9b3b-f03f13f48e6d": "Update"
+    },
+    "synchronousUploadCheckpoints": 3,
+    "identicalByteSourcePathReplacement": true,
+    "finalHashedSourcePathVerified": true,
+    "preservedConfigGeneration": true,
+    "boundedImageReceiptSlots": 1,
+    "asynchronousImageTaskInferred": false,
+    "originalGeometryTaskRecoveredAfterProcessInterruption": true,
+    "privateCreators": 3,
+    "latestGeometryRows": 1,
+    "postOmissionImageRows": 1,
+    "subsequentPodReplacementPassed": true,
+    "supervisedCleanupTasks": [
+      {
+        "type": "floor",
+        "taskID": "01a14abc-19ea-713c-91cc-cf8fdfdf5a2a"
+      },
+      {
+        "type": "building",
+        "taskID": "01a14abc-209d-7915-9f6e-fa9435a6aea5"
+      },
+      {
+        "type": "area",
+        "taskID": "01a14abc-2746-7336-818b-2bc78eb030d9"
+      }
+    ],
+    "typedSiteBaselinesRestored": true,
+    "finalControllerPhase": "Ready",
+    "outstandingOperation": false,
+    "activeIntentCount": 0,
+    "sourceSha256": {
+      "internal/controlleradapter/catalystcenter/installed_site_execution_live_test.go": "8e023e38799b33dc97c0f2e2dffed83f466f046e1494ef86a302f64259f08c19",
+      "internal/controlleradapter/catalystcenter/installed_floor_images_live_test.go": "7d755a9eb1acaf2ac193b60113aed46abfc7c1dcd4e593238348e97908041792"
+    }
+  },
+  "compatibility": "New v2 records bind source_path. Legacy filename cannot be inferred; original legacy no-op and original-task recovery are preserved without forced migration.",
+  "remaining": [
+    "Omission followed by same-path/same-byte reintroduction needs declaration-lifetime handling",
+    "Legacy records lack historical filenames; no forced migration/replay is inferred",
+    "Other formats/size/uncertainty combinations, custody migration, physical/AP and broader pinned model gaps"
+  ]
+}

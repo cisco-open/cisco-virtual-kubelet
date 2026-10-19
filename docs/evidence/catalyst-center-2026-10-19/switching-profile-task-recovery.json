@@ -1,0 +1,131 @@
+{
+  "scope": "Switching profile acknowledged metadata Create/Update recovery and Accepted full task trees",
+  "branch": "pr/johalley/catc-support",
+  "modelVersion": "0.5.0",
+  "upstreamRevision": "a435555fe828f03cf3311d52fe1ab6572a247916",
+  "fullModelComplete": false,
+  "resourceComplete": false,
+  "creatorOwnershipAdded": false,
+  "installedQualification": false,
+  "sourceFingerprints": {
+    "internal/controlleradapter/catalystcenter": "c079eab925afb0c4afe47f4c674232e4fe0c0828ee5f56323bf3ebaac8932b8a",
+    "internal/controlleradapter/catalystcenter/nacmodel": "1827e09b755df6480bf7d80a78e51ed4ccd8ef02a4bf923ac460e7262dd96b82",
+    "tools/cvk-netascode-migrate": "49e5e6ea5ef31b4c3204a5fec1714a6a2e410f36046031692dc0905e4e046ed4"
+  },
+  "gates": {
+    "focusedRace": {
+      "exitCode": 0,
+      "log": "switching-profile-task-recovery-focusedRace.log",
+      "sha256": "37916e3d8bc2c272d510b2dd237e40549b8657c9291ed1f171075fe67f6e1d95",
+      "passingTestEvents": 361
+    },
+    "temporaryAPI": {
+      "exitCode": 0,
+      "log": "switching-profile-task-recovery-temporaryAPI.log",
+      "sha256": "b4db64d0902f982fdfe3e362fcb29fc9a34d010d312df666f6e75aa14a5567b2",
+      "passingTestEvents": 37
+    },
+    "native": {
+      "exitCode": 0,
+      "log": "switching-profile-task-recovery-native.log",
+      "sha256": "55dffdbe4401aa7b642f2c945fc3462176b8f2409cdf95fbc4755dc272bd9817",
+      "passingTestEvents": 1
+    },
+    "productionBuild": {
+      "exitCode": 0,
+      "log": "/private/tmp/cvk-switching-profile-recovery-build.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "strictDocs": {
+      "exitCode": 0,
+      "log": "/private/tmp/cvk-switching-profile-recovery-docs.log",
+      "sha256": "246c389358c9c6195bb393eda044a373ba01b746444270e4bb7446f5bde00250"
+    },
+    "diffCheck": {
+      "exitCode": 0,
+      "log": "/private/tmp/cvk-switching-profile-recovery-diffcheck.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "regression": {
+      "exitCode": 0,
+      "passingTestEvents": 19745,
+      "passingPackages": [
+        "github.com/cisco/virtual-kubelet-cisco/api/config/v1alpha1",
+        "github.com/cisco/virtual-kubelet-cisco/api/ops/v1alpha1",
+        "github.com/cisco/virtual-kubelet-cisco/api/v1alpha1",
+        "github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter",
+        "github.com/cisco/virtual-kubelet-cisco/internal/managedprotocol",
+        "github.com/cisco/virtual-kubelet-cisco/internal/softwarelifecycle",
+        "github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/nexusdashboard",
+        "github.com/cisco/virtual-kubelet-cisco/internal/aggregator",
+        "github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter/nacmodel",
+        "github.com/cisco/virtual-kubelet-cisco/internal/provider/maintenance",
+        "github.com/cisco/virtual-kubelet-cisco/internal/provider/softwareupgrade",
+        "github.com/cisco/virtual-kubelet-cisco/internal/controllerconfiguration",
+        "github.com/cisco/virtual-kubelet-cisco/internal/controller",
+        "github.com/cisco/virtual-kubelet-cisco/tools/cvk-netascode-migrate",
+        "github.com/cisco/virtual-kubelet-cisco/cmd/cisco-vk",
+        "github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter"
+      ],
+      "log": "/private/tmp/cvk-switching-profile-recovery-regression.jsonl",
+      "sha256": "f53d48a7b1f5ef8d7a20d68a2b91832f0a4675feb28a64a12e6227e50af9f245"
+    },
+    "compositionProofRace": {
+      "exitCode": 0,
+      "passingTestEvents": 35,
+      "log": "switching-profile-task-recovery-compositionProofRace.log",
+      "sha256": "71d1199cf8cd15dc249500d3d24e3d3cd0706762cba61f7ec37612fc575a0dab"
+    }
+  },
+  "nativeCycle": {
+    "operations": [
+      {
+        "action": "Create",
+        "resource": "profiles/CVK-Q-Profile-20261019-132551",
+        "taskID": "01a15457-06e3-7d48-be57-45a47005610d",
+        "recoveredUnknown": true
+      },
+      {
+        "action": "Update",
+        "resource": "profiles/CVK-Q-Profile-20261019-132551",
+        "taskID": "01a15457-2e09-7898-82ec-eb2f9d0d3b98",
+        "recoveredUnknown": true
+      },
+      {
+        "action": "Update",
+        "resource": "sites/profile-site-add:v1:a6009ebd74bfc76f6cc8d0af409ecca0779ccd09ad06f35c8a37c80d181ea3f5:ef35de5a054a7b534b9ee4b380587998a78937a58b06c3819d9a28bc3bfc5bbb",
+        "taskID": "01a15457-5d96-79e5-acae-21ffcd63fc5a",
+        "recoveredUnknown": false
+      },
+      {
+        "action": "Update",
+        "resource": "profiles/CVK-Q-Profile-20261019-132551",
+        "taskID": "01a15457-82ac-770c-ab40-28199f6bd0eb",
+        "recoveredUnknown": true
+      },
+      {
+        "action": "Update",
+        "resource": "profiles/CVK-Q-Profile-20261019-132551",
+        "taskID": "01a15457-ab6d-76da-84f8-cf93c4eefe16",
+        "recoveredUnknown": true
+      }
+    ],
+    "recoveredDefinitionTasks": 4,
+    "nativeKubernetesPersistence": "simulated; separate real temporary-API qualification",
+    "installedActorsQualified": false,
+    "generatedArtifactsCleaned": true,
+    "realDeviceTargeted": false,
+    "templateDeploymentPerformed": false
+  },
+  "remaining": [
+    "Installed source/worker projection, persistence and mutation recovery",
+    "Broader onboarding/composite/multi-site and field/default/schema coverage",
+    "Creator custody requires authoritative native Create-result correlation; current convergence grants no ownership",
+    "Resource ownership/adoption/prune and destructive lifecycle",
+    "Taskless and nonempty unbound legacy outcomes remain fenced",
+    "Other outstanding execution/ownership/recovery, installed and hardware gaps across all 93 pinned resource types",
+    "Guard-certified automatic preflight/no-dispatch retirement for switching definitions; current guards refuse stale submissions but uncertain taskless journals are not automatically retired"
+  ],
+  "testScopeNote": "After the main gates compiled, two switching scopes were added to the existing no-dispatch proof matrix. Production sources did not change; the separate focused race proof gate covers these final test-only additions.",
+  "resourceChecklistDistinctRows": 93
+}

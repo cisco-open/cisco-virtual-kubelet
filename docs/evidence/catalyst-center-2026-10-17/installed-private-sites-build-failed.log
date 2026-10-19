@@ -1,0 +1,4 @@
+# github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter.test
+/Users/johalley/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.9.darwin-arm64/pkg/tool/darwin_arm64/link: mapping output file failed: no space left on device
+FAIL	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter [build failed]
+FAIL

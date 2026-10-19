@@ -1,0 +1,10 @@
+=== RUN   TestLiveRetainedEmptyFabricQualification
+    fabric_authentication_retained_live_test.go:113: recorded area task and closed request window verified 01a1406e-aa13-7947-aad6-152abc106ec9 terminal records 1
+    fabric_authentication_retained_live_test.go:129: retained area prerequisite metadata telemetry readable true telemetry groups 5 AAA groups 0
+    fabric_authentication_retained_live_test.go:129: retained area prerequisite metadata aaa readable true telemetry groups 0 AAA groups 2
+    fabric_authentication_retained_live_test.go:168: retained-scope operation POST /dna/intent/api/v1/sda/fabricSites 01a14076-2b2e-70dd-8551-9ed29c8b161c
+    fabric_authentication_retained_live_test.go:168: Catalyst Center configuration task failed (NCSP11008); operation remains fenced for read-back recovery
+--- FAIL: TestLiveRetainedEmptyFabricQualification (7.30s)
+FAIL
+FAIL	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	8.422s
+FAIL

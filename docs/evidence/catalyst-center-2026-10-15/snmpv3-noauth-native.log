@@ -1,0 +1,7 @@
+=== RUN   TestLiveGlobalCredentialNoAuthManifest
+    global_credential_metadata_live_test.go:211: NOAUTHNOPRIV public manifest phase verified step 0 target 9deaf043-f366-40e0-b7b0-47d6f3c451e4 task 01a13fe6-43eb-7185-9bd2-db9ef3c7e600
+    global_credential_metadata_live_test.go:211: NOAUTHNOPRIV public manifest phase verified step 1 target 9deaf043-f366-40e0-b7b0-47d6f3c451e4 task 01a13fe6-58cd-728b-b58c-c51d4a37afb3
+    global_credential_metadata_live_test.go:170: isolated SNMP credential removed; complete non-secret baseline restored target 9deaf043-f366-40e0-b7b0-47d6f3c451e4 cleanupTask 01a13fe6-6cf4-7d54-8991-b90e445c12e0
+--- PASS: TestLiveGlobalCredentialNoAuthManifest (13.05s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	16.361s

@@ -1,0 +1,11 @@
+=== RUN   TestLiveRetainedEmptyFabricQualification
+    fabric_authentication_retained_live_test.go:118: diagnosed failed task and every descendant are terminal 01a14076-2b2e-70dd-8551-9ed29c8b161c nodes 2
+    fabric_authentication_retained_live_test.go:120: recorded area task and closed request window verified 01a1406e-aa13-7947-aad6-152abc106ec9 terminal records 1
+    fabric_authentication_retained_live_test.go:136: retained area prerequisite metadata telemetry readable true telemetry groups 5 AAA groups 0
+    fabric_authentication_retained_live_test.go:136: retained area prerequisite metadata aaa readable true telemetry groups 0 AAA groups 2
+    fabric_authentication_retained_live_test.go:203: retained-scope operation PUT /dna/intent/api/v1/sites/e115620c-5e8d-43c8-ad75-c830d46ae1e7/telemetrySettings 01a1407d-0ea3-71a7-86af-43c0c1a04d07
+    fabric_authentication_retained_live_test.go:206: isolated wired collection did not converge <nil>
+--- FAIL: TestLiveRetainedEmptyFabricQualification (4.78s)
+FAIL
+FAIL	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	5.882s
+FAIL

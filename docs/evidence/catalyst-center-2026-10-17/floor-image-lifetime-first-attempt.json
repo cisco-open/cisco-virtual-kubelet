@@ -1,0 +1,17 @@
+{
+  "result": "failed",
+  "seconds": 168.48,
+  "image": "cvk-catc-worker-qualification:20261017-image-lifetime-44ace7027833",
+  "log": "floor-image-lifetime-first-attempt.log",
+  "cause": "Live harness verifyCore classified floor-image-retained:v1 rows as geometry using only floor-image: prefix; replaced by the shared strict image row decoder.",
+  "completedBeforeFailure": [
+    "three generated site creates",
+    "original geometry task process recovery",
+    "three synchronous image revisions including same-byte path replacement",
+    "omission retained original acknowledgement",
+    "first same-path/same-byte reintroduction in one receipt slot"
+  ],
+  "secondCycle": "not completed by this attempt",
+  "productionFailureInferred": false,
+  "cleanup": "separate supervised retained-fixture qualification; never changes this result to passed"
+}

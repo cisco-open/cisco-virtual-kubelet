@@ -1,0 +1,27 @@
+{
+  "branch": "pr/johalley/catc-support",
+  "moduleVersion": "0.5.0",
+  "moduleCommit": "a435555fe828f03cf3311d52fe1ab6572a247916",
+  "providerVersion": "0.6.1",
+  "providerCommit": "01058637dd5ed4fca93e1b2a96dd7032aec2d3a1",
+  "scope": "Final singular site creator receipts, immutable history and always-on declared identity fences; native/API/broad final runs use this production state. Earlier focused log precedes the always-on no-op fence, separately qualified by final authority/API/broad/native logs.",
+  "sourceSha256": {
+    "internal/controlleradapter/catalystcenter/site_ownership.go": "535127f5704767e6f0dca9eef159d67d657e1fd086b7d33674cc9171ba81706b",
+    "internal/controlleradapter/catalystcenter/site_ownership_test.go": "c6ddf3ed50901735214ba1fff000842c28f7b8bdab8b6330451921f97c80477d",
+    "internal/controlleradapter/catalystcenter/site_dispatch_binding.go": "8bf78502eacc72d33e3d1c31ac41bc1036016091460b27be6b4be19469af2633",
+    "internal/controlleradapter/catalystcenter/site_dispatch_public_test.go": "794b23acddbcc21ca5e123397d7df88b4d83393460e8f64e3f6ce7655d63d603",
+    "internal/controlleradapter/catalystcenter/site_dispatch_envtest_test.go": "1922484b7f212a164031500f00e8d55080f959e3f0f52d556201a786b71507ce",
+    "internal/controlleradapter/catalystcenter/site_task_recovery.go": "fbe3be11a13fa420106c6fc8ea804c782526c03fda7b522c0ca239be5e0172f5",
+    "internal/controlleradapter/catalystcenter/config_executor.go": "ad66670761bf29519aadca01e5a3b175f79962701c1fe7114d151f2a7570e644",
+    "internal/controlleradapter/catalystcenter/floor_image_apply.go": "daa919fc63bdc819cb37d41cccee85456bc5bd93ed1b22d8a1262a156f136961",
+    "internal/controlleradapter/catalystcenter/config_journal.go": "4d381107d6b7388bc2975e923d29cc4012f889f9507e8252c2d6f87dd235bb00",
+    "internal/controlleradapter/catalystcenter/config_journal_test.go": "76d794b69a268c957f12c2a63e3703bfd64ad083fcb56ff81e9b000f9a54433e",
+    "internal/controlleradapter/catalystcenter/site_planned_ap_execution.go": "ca6817c88d682af38d145d70c5ed5e648a0b3f47f8cd724fc1271dce053659aa",
+    "internal/controlleradapter/catalystcenter/site_reconcile_test.go": "6c12bd525151cceb850acd88a96a1fe86a1b82ca7fbb4ef91dcd829951ef686e",
+    "internal/controlleradapter/catalystcenter/planned_ap_manifest_test.go": "b8485c14ad441b53835244833cac233da39446f8cfc4e8b489e693a8c6ba50ea",
+    "internal/controlleradapter/catalystcenter/site_bulk_manifest_live_test.go": "424cf9e188b7a42ceab4731d2fcc6b063c31b6c7cf41dcec9055e14923b8527a",
+    "internal/controlleradapter/catalystcenter/site_execution_live_test.go": "9e89adf16e6eaeeeef50ad1bbeac6f778900a8c986096066f3b54ae39952ef46",
+    "internal/controlleradapter/catalystcenter/config_action_receipt.go": "a985fdd5b3406d332857ec30555944c1e6c8c3410bc20fd0428a1d7cde9fc516",
+    "internal/controlleradapter/catalystcenter/config_completion.go": "9078f39218be187ade87e7f2236901b4972e77c2a1d82ae639caedd6685d2001"
+  }
+}

@@ -17,8 +17,10 @@ runtime subcommands:
 - **`cisco-vk run`** — the Virtual Kubelet provider. One process per device. Reads its config, registers a virtual node in the cluster, and drives the device via RESTCONF when pods come and go.
 - **`cisco-vk controller-worker`** — the network-controller runtime. One
   process per `NetworkController` whose type has a registered adapter; it
-  starts that adapter and watches only its Kubernetes namespace. The current
-  scaffold registers zero product adapters, so this Alpha path remains inactive.
+  starts that adapter and watches its Kubernetes namespace. Nexus Dashboard and
+  Catalyst Center adapters are registered. Catalyst Center's configuration and
+  managed SWIM paths are alpha and have resource-specific qualification limits;
+  see the [alpha scope](controllers/catalyst-center-alpha.md).
 
 This split keeps device/controller API calls and device-side signing workflows
 inside their workers. The manager writes credential Secret references and
@@ -31,8 +33,8 @@ mounted credentials; its Kubernetes API RBAC and cache are namespace-scoped.
 
 ### Network controller extension boundary
 
-External network controllers use the same isolation principle without changing
-the per-device provider or its transports. The manager resolves a registered
+External network controllers use the same isolation principle alongside
+the per-device providers and their transports. The manager resolves a registered
 controller type and creates one namespace-scoped worker per endpoint. A
 product adapter inside that worker consumes resolved, versioned
 controller-centric Network as Code intent and speaks the controller's native
@@ -40,8 +42,11 @@ API. Endpoint processes, credentials, failure domains, and rate limits are
 separate, but the namespace remains the API trust/RBAC/cache boundary. Use a
 dedicated namespace when endpoints or config authors are not mutually trusted.
 Duplicate fencing compares the exact stored endpoint string within that
-namespace only. The current scaffold is report-only and has no apply, prune,
-remote-delete, or mutation-RBAC implementation.
+namespace only. The alpha Catalyst Center adapter has bounded Apply, lifecycle
+and managed SWIM paths, with matching mutation RBAC and admission protocols.
+Other adapters retain their own capabilities; there is no generic authority to
+apply or delete arbitrary controller resources. Physical effects must also pass
+the shared device mutation reservation/handoff checks.
 See the [Network Controller Extension Guide](controller-extension-guide.md) for
 the registry, worker, model, ownership, and security contracts.
 

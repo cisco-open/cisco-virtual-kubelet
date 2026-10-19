@@ -1,0 +1,4 @@
+=== RUN   TestMergedSiteDesignManifest
+--- PASS: TestMergedSiteDesignManifest (1.62s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	4.019s

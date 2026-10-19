@@ -1,0 +1,21 @@
+=== RUN   TestEnvtestTagPrunePublicLifecycle
+=== RUN   TestEnvtestTagPrunePublicLifecycle/inventory/late-consumer
+    tag_prune_envtest_test.go:17: proven pre-submit refusal did not retire its unsubmitted journal Unknown
+=== RUN   TestEnvtestTagPrunePublicLifecycle/templates/late-consumer
+=== RUN   TestEnvtestTagPrunePublicLifecycle/combined/late-consumer
+--- FAIL: TestEnvtestTagPrunePublicLifecycle (11.09s)
+    --- FAIL: TestEnvtestTagPrunePublicLifecycle/inventory/late-consumer (3.48s)
+    --- PASS: TestEnvtestTagPrunePublicLifecycle/templates/late-consumer (1.61s)
+    --- PASS: TestEnvtestTagPrunePublicLifecycle/combined/late-consumer (1.83s)
+=== RUN   TestTagPrunePublicLifecycle
+=== RUN   TestTagPrunePublicLifecycle/inventory/late-consumer
+    tag_prune_test.go:25: proven pre-submit refusal did not retire its unsubmitted journal Unknown
+=== RUN   TestTagPrunePublicLifecycle/templates/late-consumer
+=== RUN   TestTagPrunePublicLifecycle/combined/late-consumer
+--- FAIL: TestTagPrunePublicLifecycle (1.37s)
+    --- FAIL: TestTagPrunePublicLifecycle/inventory/late-consumer (0.26s)
+    --- PASS: TestTagPrunePublicLifecycle/templates/late-consumer (0.53s)
+    --- PASS: TestTagPrunePublicLifecycle/combined/late-consumer (0.58s)
+FAIL
+FAIL	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	13.906s
+FAIL

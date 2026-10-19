@@ -1,0 +1,22 @@
+=== RUN   TestEnvtestPlannedAPTypeUpdates
+=== RUN   TestEnvtestPlannedAPTypeUpdates/model-type
+=== RUN   TestEnvtestPlannedAPTypeUpdates/model-type-recover
+=== RUN   TestEnvtestPlannedAPTypeUpdates/model-type-omitted
+=== RUN   TestEnvtestPlannedAPTypeUpdates/model-type-ignored
+=== RUN   TestEnvtestPlannedAPTypeUpdates/model-type-incompatible
+=== RUN   TestEnvtestPlannedAPTypeUpdates/model-type-keyed-private
+=== RUN   TestEnvtestPlannedAPTypeUpdates/model-type-keyed-recover-private
+=== RUN   TestEnvtestPlannedAPTypeUpdates/image-model-type-keyed-private
+=== RUN   TestEnvtestPlannedAPTypeUpdates/model-type-keyed-ignored-private
+--- PASS: TestEnvtestPlannedAPTypeUpdates (19.21s)
+    --- PASS: TestEnvtestPlannedAPTypeUpdates/model-type (3.42s)
+    --- PASS: TestEnvtestPlannedAPTypeUpdates/model-type-recover (0.76s)
+    --- PASS: TestEnvtestPlannedAPTypeUpdates/model-type-omitted (0.77s)
+    --- PASS: TestEnvtestPlannedAPTypeUpdates/model-type-ignored (0.67s)
+    --- PASS: TestEnvtestPlannedAPTypeUpdates/model-type-incompatible (0.60s)
+    --- PASS: TestEnvtestPlannedAPTypeUpdates/model-type-keyed-private (2.06s)
+    --- PASS: TestEnvtestPlannedAPTypeUpdates/model-type-keyed-recover-private (2.14s)
+    --- PASS: TestEnvtestPlannedAPTypeUpdates/image-model-type-keyed-private (3.37s)
+    --- PASS: TestEnvtestPlannedAPTypeUpdates/model-type-keyed-ignored-private (1.16s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	21.408s

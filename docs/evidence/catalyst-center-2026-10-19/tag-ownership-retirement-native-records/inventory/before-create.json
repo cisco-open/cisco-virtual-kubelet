@@ -1,0 +1,20 @@
+{
+  "baselineDigest": "c2aa1fe47345e5965fd6640b0f9fc334d6ef46dc57563098a2e92298dcaae70b",
+  "configDeletionTimestamp": null,
+  "configFinalizers": [
+    "config.cisco.vk/catalyst-center-discovery-cleanup",
+    "example.com/other"
+  ],
+  "configGone": false,
+  "configStatus": {},
+  "configUID": "48018a56-6c85-4155-adf8-612648928c61",
+  "configuration": null,
+  "controllerConditions": null,
+  "deletes": 0,
+  "generation": 2,
+  "nativeID": "",
+  "phase": "before-create",
+  "posts": 0,
+  "puts": 0,
+  "tagName": "CVK-Q-Tag-Prune-1792370517470377000"
+}

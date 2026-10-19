@@ -1,0 +1,10 @@
+=== RUN   TestEnvtestTemplateSoftwareVersionPublicNoOp
+=== RUN   TestEnvtestTemplateSoftwareVersionPublicNoOp/inherited
+=== RUN   TestEnvtestTemplateSoftwareVersionPublicNoOp/cleared
+=== RUN   TestEnvtestTemplateSoftwareVersionPublicNoOp/invalid
+--- PASS: TestEnvtestTemplateSoftwareVersionPublicNoOp (6.50s)
+    --- PASS: TestEnvtestTemplateSoftwareVersionPublicNoOp/inherited (2.74s)
+    --- PASS: TestEnvtestTemplateSoftwareVersionPublicNoOp/cleared (0.10s)
+    --- PASS: TestEnvtestTemplateSoftwareVersionPublicNoOp/invalid (0.07s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	8.671s

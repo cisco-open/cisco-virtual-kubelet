@@ -1,0 +1,59 @@
+{
+  "sourcePath": "/dna/intent/api/v1/maps/supported-access-points",
+  "selection": "Public catalog model/pattern metadata only; display prefixes normalized for comparison using the existing adapter rule.",
+  "models": {
+    "APIW6300DC": {
+      "2.4": [
+        "AIR-ANT2413P2M-N",
+        "AIR-ANT2450HG-N",
+        "AIR-ANT2450V-N",
+        "AIR-ANT2450VG-N",
+        "AIR-ANT2480V-N",
+        "AIR-ANT2513P4M-N-2.4GHz",
+        "AIR-ANT2547V-N-2.4GHz",
+        "AIR-ANT2547VG-N-2.4GHz",
+        "AIR-ANT2568VG-N-2.4GHz",
+        "AIR-ANT2588P3M-N-2.4GHz"
+      ],
+      "5": [
+        "AIR-ANT2513P4M-N-5GHz",
+        "AIR-ANT2547V-N-5GHz",
+        "AIR-ANT2547VG-N-5GHz",
+        "AIR-ANT2568VG-N-5GHz",
+        "AIR-ANT2588P3M-N-5GHz",
+        "AIR-ANT5114P2M-N",
+        "AIR-ANT5150HG-N",
+        "AIR-ANT5150VG-N",
+        "AIR-ANT5180V-N"
+      ]
+    },
+    "APIW6300AC": {
+      "2.4": [
+        "AIR-ANT2413P2M-N",
+        "AIR-ANT2450HG-N",
+        "AIR-ANT2450V-N",
+        "AIR-ANT2450VG-N",
+        "AIR-ANT2480V-N",
+        "AIR-ANT2513P4M-N-2.4GHz",
+        "AIR-ANT2547V-N-2.4GHz",
+        "AIR-ANT2547VG-N-2.4GHz",
+        "AIR-ANT2568VG-N-2.4GHz",
+        "AIR-ANT2588P3M-N-2.4GHz"
+      ],
+      "5": [
+        "AIR-ANT2513P4M-N-5GHz",
+        "AIR-ANT2547V-N-5GHz",
+        "AIR-ANT2547VG-N-5GHz",
+        "AIR-ANT2568VG-N-5GHz",
+        "AIR-ANT2588P3M-N-5GHz",
+        "AIR-ANT5114P2M-N",
+        "AIR-ANT5150HG-N",
+        "AIR-ANT5150VG-N",
+        "AIR-ANT5180V-N"
+      ]
+    }
+  },
+  "selectedBand": 5,
+  "selectedAntenna": "AIR-ANT2547V-N-5GHz",
+  "sameSelectedPatternInBothModels": true
+}

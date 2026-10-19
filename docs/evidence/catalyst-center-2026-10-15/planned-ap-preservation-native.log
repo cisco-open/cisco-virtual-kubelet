@@ -1,0 +1,25 @@
+=== RUN   TestLiveCatalystCenterPlannedAPManifest
+    site_execution_live_test.go:75: isolated qualification hierarchy: Global/CVK-Q-20261015-121635-000000000
+    site_execution_live_test.go:209: public manifest step=0 status=Waiting operation=Accepted task=01a13f7e-2e37-7486-aa20-ee869ce26a23 reasons=[AdapterAvailable TaskAccepted TaskAccepted]
+    site_execution_live_test.go:209: public manifest Create reached InSync across simulated worker restarts; journal cleared, owner retained, no-op verified
+    site_execution_live_test.go:221: bulk create task=01a13f7e-2e37-7486-aa20-ee869ce26a23
+    site_execution_live_test.go:247: single native batch created all three site identities; retained member/anchor binding and task tree verified
+    site_execution_live_test.go:276: public manifest step=0 status=Waiting operation=Accepted task=01a13f7e-4ef1-759b-a01f-eb5aed5304ee reasons=[AdapterAvailable TaskAccepted TaskAccepted]
+    site_execution_live_test.go:276: public manifest Update reached InSync across simulated worker restarts; journal cleared, owner retained, no-op verified
+    site_execution_live_test.go:283: submitted task=01a13f7e-4ef1-759b-a01f-eb5aed5304ee at=2026-10-15T12:16:44Z
+    site_execution_live_test.go:301: verified Update floor
+    site_execution_live_test.go:310: three creates, one floor update, and full hierarchy read-back verified
+    planned_ap_live_test.go:33: planned AP native response POST HTTP 202 transportError false
+    site_execution_live_test.go:315: public manifest step=0 status=Waiting operation=Accepted task=01a13f7e-6635-7513-8da0-a8e25bca9ba3 reasons=[AdapterAvailable TaskAccepted TaskAccepted]
+    site_execution_live_test.go:315: public manifest Create reached InSync across simulated worker restarts; journal cleared, owner retained, no-op verified
+    site_execution_live_test.go:315: planned AP public manifest task/readback/restart/no-op verified revision 1 radioCount 1
+    planned_ap_live_test.go:33: planned AP native response POST HTTP 202 transportError false
+    site_execution_live_test.go:315: public manifest step=0 status=Waiting operation=Accepted task=01a13f7e-82eb-7b5f-8715-c47172cf0354 reasons=[AdapterAvailable TaskAccepted TaskAccepted]
+    site_execution_live_test.go:315: public manifest Update reached InSync across simulated worker restarts; journal cleared, owner retained, no-op verified
+    site_execution_live_test.go:315: planned AP public manifest task/readback/restart/no-op verified revision 2 radioCount 1
+    planned_ap_live_test.go:33: planned AP native response DELETE HTTP 202 transportError false
+    planned_ap_live_test.go:149: exact planned AP UUID cleanup and empty-floor baseline verified
+    site_execution_live_test.go:186: isolated hierarchy cleanup verified
+--- PASS: TestLiveCatalystCenterPlannedAPManifest (33.86s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	35.979s

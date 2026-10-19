@@ -1,0 +1,10 @@
+=== RUN   TestLiveWirelessProfileFixtureCleanup
+    wireless_profile_fixture_cleanup_live_test.go:268: exact fixture cleanup f5ac3ef3-499d-4fd3-accb-92f259b992f0 01a14976-569a-733d-a4ed-402f6582d04a
+    wireless_profile_fixture_cleanup_live_test.go:277: exact fixture cleanup 003f7bb3-0f98-4911-b462-fa41177e4afc 01a14976-602c-7e8b-9b2b-26b848c74e51
+    wireless_profile_fixture_cleanup_live_test.go:282: exact fixture cleanup mdiYq1zl-x1nF-nta5-m2y2-zdC0ndzLodKWnKmWvJflmL8ZuZrF 01a14976-6bd1-734a-82d3-b6fe247ef410
+    wireless_profile_fixture_cleanup_live_test.go:301: exact fixture cleanup 7e1f2a77-ab7e-4845-a51b-912d9ddaa2c7 01a14976-785e-770a-a001-67de5e4c9201
+    wireless_profile_fixture_cleanup_live_test.go:301: exact fixture cleanup f5ac3ef3-499d-4fd3-accb-92f259b992f0 01a14976-80ab-7627-abb0-0bf963d66a82
+    wireless_profile_fixture_cleanup_live_test.go:306: exact generated profile/tags/assignments/disabled-SSID/empty-area cleanup and unrelated baselines verified; no physical action
+--- PASS: TestLiveWirelessProfileFixtureCleanup (14.14s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	16.539s

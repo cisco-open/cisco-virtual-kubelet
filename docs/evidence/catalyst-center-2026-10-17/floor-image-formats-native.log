@@ -1,0 +1,31 @@
+=== RUN   TestLiveInstalledPrivateSiteExecution
+    installed_site_execution_live_test.go:164: installed private-site baseline absent Global/CVK_INST_d11da3c59641
+    installed_site_execution_live_test.go:213: installed verified original task Create 01a14aeb-998b-7e08-a0ab-22184762ba8a
+    installed_site_execution_live_test.go:213: installed verified original task Create 01a14aeb-efb4-70f8-8579-4fdd9b10d1a2
+    installed_site_execution_live_test.go:213: installed verified original task Create 01a14aec-4ddc-7f90-bfed-87ffaa41d2c6
+    installed_site_execution_live_test.go:303: installed worker process restarted with original acknowledged update still retained 01a14aec-b43a-765c-bb2e-fc76e03038ed
+    installed_site_execution_live_test.go:305: installed verified original task Create 01a14aeb-998b-7e08-a0ab-22184762ba8a
+    installed_site_execution_live_test.go:305: installed verified original task Create 01a14aeb-efb4-70f8-8579-4fdd9b10d1a2
+    installed_site_execution_live_test.go:305: installed verified original task Create 01a14aec-4ddc-7f90-bfed-87ffaa41d2c6
+    installed_site_execution_live_test.go:305: installed verified original task Update 01a14aec-b43a-765c-bb2e-fc76e03038ed
+    installed_site_execution_live_test.go:318: real restarted worker recovered original acknowledged update through full task tree and private latest-applied publication 01a14aec-b43a-765c-bb2e-fc76e03038ed
+    installed_site_execution_live_test.go:321: installed synchronous floor image revision 1 verified with exact floor identity, ConfigMap revision and source-byte digest in one bounded receipt slot; no asynchronous task inferred
+    installed_site_execution_live_test.go:321: installed source-bound image format verified: maps/cvk-installed.png
+    installed_site_execution_live_test.go:321: installed synchronous floor image revision 2 verified with exact floor identity, ConfigMap revision and source-byte digest in one bounded receipt slot; no asynchronous task inferred
+    installed_site_execution_live_test.go:321: installed source-bound image format verified: maps/cvk-installed.jpg
+    installed_site_execution_live_test.go:321: installed synchronous floor image revision 3 verified with exact floor identity, ConfigMap revision and source-byte digest in one bounded receipt slot; no asynchronous task inferred
+    installed_site_execution_live_test.go:321: installed source-bound image format verified: maps/cvk-installed.pdf
+    installed_site_execution_live_test.go:321: installed synchronous floor image revision 4 verified with exact floor identity, ConfigMap revision and source-byte digest in one bounded receipt slot; no asynchronous task inferred
+    installed_site_execution_live_test.go:321: installed source-bound image format verified: maps/renamed/cvk-installed.pdf
+    installed_site_execution_live_test.go:321: installed identical-byte source_path replacement completed through v2 filename identity; legacy receipts were not reinterpreted
+    installed_site_execution_live_test.go:321: installed ConfigMap-only asset revisions preserved CR generation; image_path omission retained upload evidence and returned to geometry-only InSync without claiming remote byte equality
+    installed_site_execution_live_test.go:321: installed same-path/same-byte reintroduction cycle 1 completed with a new operation and unchanged CR generation in the same receipt slot
+    installed_site_execution_live_test.go:321: installed same-path/same-byte reintroduction cycle 2 completed with a new operation and unchanged CR generation in the same receipt slot
+    installed_site_execution_live_test.go:347: real worker replacement retained 3 private creators and one latest-applied receipt; source/native readback and refreshed InSync verified
+    installed_site_execution_live_test.go:365: supervised generated-site cleanup verified floor 01a14aef-c3a6-7d30-9e35-36354a993594
+    installed_site_execution_live_test.go:365: supervised generated-site cleanup verified building 01a14aef-ca8a-77a2-b955-493bd9f9face
+    installed_site_execution_live_test.go:365: supervised generated-site cleanup verified area 01a14aef-d172-7104-b8f4-6e23513a7bc2
+    installed_site_execution_live_test.go:370: installed private Create/Update, real Pod replacement, Retain intent retirement and supervised exact cleanup passed; all site baselines restored; no physical operation
+--- PASS: TestLiveInstalledPrivateSiteExecution (282.46s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	284.845s

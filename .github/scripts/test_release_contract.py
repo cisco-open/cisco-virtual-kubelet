@@ -781,11 +781,11 @@ go_version_is_supported go1.27.9
         )
         self.assertEqual(licensed_runtime, exact_runtime)
 
-        self.assertIn("pull_request:\n    branches: [main]", smoke)
+        self.assertIn("pull_request:\n    branches: [main, pr/moskrive/nd-support]", smoke)
         self.assertIn("version: v3.21.4", smoke)
         self.assertIn("version: v4.2.4", smoke)
         self.assertLess(
-            smoke.index("run: go test -race -count=1 ./..."),
+            smoke.index("run: go test -race -count=1 -timeout=60m ./..."),
             smoke.index("Website lint, audit, build, and license gate"),
         )
         self.assertLess(

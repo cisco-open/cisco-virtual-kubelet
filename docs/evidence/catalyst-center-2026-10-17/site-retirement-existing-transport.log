@@ -1,0 +1,28 @@
+=== RUN   TestSiteSubmissionNeverReplaysMutatingRequests
+=== RUN   TestSiteSubmissionNeverReplaysMutatingRequests/accepted
+=== RUN   TestSiteSubmissionNeverReplaysMutatingRequests/unauthorized
+=== RUN   TestSiteSubmissionNeverReplaysMutatingRequests/unavailable
+=== RUN   TestSiteSubmissionNeverReplaysMutatingRequests/redirect
+=== RUN   TestSiteSubmissionNeverReplaysMutatingRequests/invalid
+=== RUN   TestSiteSubmissionNeverReplaysMutatingRequests/no-receipt
+--- PASS: TestSiteSubmissionNeverReplaysMutatingRequests (0.07s)
+    --- PASS: TestSiteSubmissionNeverReplaysMutatingRequests/accepted (0.01s)
+    --- PASS: TestSiteSubmissionNeverReplaysMutatingRequests/unauthorized (0.01s)
+    --- PASS: TestSiteSubmissionNeverReplaysMutatingRequests/unavailable (0.01s)
+    --- PASS: TestSiteSubmissionNeverReplaysMutatingRequests/redirect (0.01s)
+    --- PASS: TestSiteSubmissionNeverReplaysMutatingRequests/invalid (0.01s)
+    --- PASS: TestSiteSubmissionNeverReplaysMutatingRequests/no-receipt (0.01s)
+=== RUN   TestSiteVerificationChecksIdentityAndAttributes
+=== RUN   TestSiteVerificationChecksIdentityAndAttributes/match
+=== RUN   TestSiteVerificationChecksIdentityAndAttributes/drift
+=== RUN   TestSiteVerificationChecksIdentityAndAttributes/replaced
+=== RUN   TestSiteVerificationChecksIdentityAndAttributes/missing
+=== RUN   TestSiteVerificationChecksIdentityAndAttributes/partial
+--- PASS: TestSiteVerificationChecksIdentityAndAttributes (0.05s)
+    --- PASS: TestSiteVerificationChecksIdentityAndAttributes/match (0.01s)
+    --- PASS: TestSiteVerificationChecksIdentityAndAttributes/drift (0.01s)
+    --- PASS: TestSiteVerificationChecksIdentityAndAttributes/replaced (0.01s)
+    --- PASS: TestSiteVerificationChecksIdentityAndAttributes/missing (0.01s)
+    --- PASS: TestSiteVerificationChecksIdentityAndAttributes/partial (0.01s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	2.414s

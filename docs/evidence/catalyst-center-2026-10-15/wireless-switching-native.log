@@ -1,0 +1,13 @@
+=== RUN   TestLiveWirelessProfileExecution
+    wireless_profile_execution_live_test.go:102: isolated names CVK_N_c4f3e797aed55195 CVK_S_354bb0043cad3e7d
+    wireless_profile_execution_live_test.go:248: task ssid:8995b7da-5b82-40fd-a706-82150affe92d:CVK_S_354bb0043cad3e7d Create 01a13e9b-8027-703b-8cd5-967f2cdadb36
+    wireless_profile_execution_live_test.go:257: owned SSID CVK_S_354bb0043cad3e7d mdiYq1zl-x1nF-mZu0-yMiW-mdqZy2fKm2u3zemWvJflmL8ZuZrF
+    wireless_profile_execution_live_test.go:318: task wireless/wireless-profile:CVK_N_c4f3e797aed55195:c80c1f0f6bc3a03e74b94a593f887f724fa9f9a3e2fcfad9dc790cec92a5e863 Create 01a13e9b-8b5c-7fef-b19d-c0a18fb7683c
+    wireless_profile_execution_live_test.go:327: owned profile CVK_N_c4f3e797aed55195 804ce2f4-e776-419e-b724-522b6f4f01e4
+    wireless_profile_execution_live_test.go:341: task wireless/wireless-profile:CVK_N_c4f3e797aed55195:c80c1f0f6bc3a03e74b94a593f887f724fa9f9a3e2fcfad9dc790cec92a5e863 Update 01a13e9b-9a54-7c37-a7d5-3b92bf7f13df
+    wireless_profile_execution_live_test.go:534: cleanup 804ce2f4-e776-419e-b724-522b6f4f01e4 01a13e9b-a548-78d2-bd11-a75a49b8fb23
+    wireless_profile_execution_live_test.go:540: cleanup mdiYq1zl-x1nF-mZu0-yMiW-mdqZy2fKm2u3zemWvJflmL8ZuZrF 01a13e9b-aad5-7afb-b6aa-88b77d987586
+    wireless_profile_execution_live_test.go:550: baselines restored; no device assignment, provisioning or device operation submitted
+--- PASS: TestLiveWirelessProfileExecution (13.63s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	15.506s

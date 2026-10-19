@@ -1,0 +1,380 @@
+{
+  "result": "PASS",
+  "image": {
+    "image": "cvk-catc-nac:20261012-52562fb00d19",
+    "sha256": "52562fb00d19b79d7a968d37fee68fb1f5335807a727ff7d984f2f817811a7b6"
+  },
+  "configUID": "cffa4b5a-4403-4cf0-b9c2-8825b8daa5f1",
+  "definitions": {
+    "power": "CVK0A5272670",
+    "anchor": "CVK0A5272671",
+    "ap": "CVK0A5272672"
+  },
+  "resourceIDs": {
+    "power": "mdeYq1zl-mee1-mJCY-nJCW-qZbwmuSYmdnbndu1mJy3nZi4nJK3",
+    "anchor": "mdeYq1zl-mee1-mJCY-nJCX-qZbwmuSYmdnbndu1mJy3nZi4nJK3",
+    "ap": "mdeYq1zl-mee1-mJCY-nJCY-qZbwmuSYmdnbndu1mJy3nZi4nJK3"
+  },
+  "runs": {
+    "create": {
+      "events": [
+        {
+          "phase": "Drifted",
+          "operation": null,
+          "operationPhase": null,
+          "resource": null,
+          "task": null
+        },
+        {
+          "phase": "Drifted",
+          "operation": "ff39598f0860cccb5f68f038b035e7ad",
+          "operationPhase": "Submitting",
+          "resource": "power_profiles/power-profile:CVK0A5272670",
+          "task": null
+        },
+        {
+          "phase": "Waiting",
+          "operation": "ff39598f0860cccb5f68f038b035e7ad",
+          "operationPhase": "Accepted",
+          "resource": "power_profiles/power-profile:CVK0A5272670",
+          "task": "01a1321d-d933-7ea3-aea0-61f4a96de031"
+        },
+        {
+          "phase": "Waiting",
+          "operation": "ff39598f0860cccb5f68f038b035e7ad",
+          "operationPhase": "Verifying",
+          "resource": "power_profiles/power-profile:CVK0A5272670",
+          "task": "01a1321d-d933-7ea3-aea0-61f4a96de031"
+        },
+        {
+          "phase": "Waiting",
+          "operation": "ff39598f0860cccb5f68f038b035e7ad",
+          "operationPhase": "Verified",
+          "resource": "power_profiles/power-profile:CVK0A5272670",
+          "task": "01a1321d-d933-7ea3-aea0-61f4a96de031"
+        },
+        {
+          "phase": "Verifying",
+          "operation": "ff39598f0860cccb5f68f038b035e7ad",
+          "operationPhase": "Verified",
+          "resource": "power_profiles/power-profile:CVK0A5272670",
+          "task": "01a1321d-d933-7ea3-aea0-61f4a96de031"
+        },
+        {
+          "phase": "Verifying",
+          "operation": null,
+          "operationPhase": null,
+          "resource": null,
+          "task": null
+        },
+        {
+          "phase": "Waiting",
+          "operation": null,
+          "operationPhase": null,
+          "resource": null,
+          "task": null
+        },
+        {
+          "phase": "Waiting",
+          "operation": "2559feddc6a17880e9d3d42cd9a8ccfd",
+          "operationPhase": "Prepared",
+          "resource": "anchor_groups/anchor-group:CVK0A5272671",
+          "task": null
+        },
+        {
+          "phase": "Waiting",
+          "operation": "2559feddc6a17880e9d3d42cd9a8ccfd",
+          "operationPhase": "Accepted",
+          "resource": "anchor_groups/anchor-group:CVK0A5272671",
+          "task": "01a1321e-2f5b-768c-abd8-351d20e3e273"
+        },
+        {
+          "phase": "Waiting",
+          "operation": "2559feddc6a17880e9d3d42cd9a8ccfd",
+          "operationPhase": "Verifying",
+          "resource": "anchor_groups/anchor-group:CVK0A5272671",
+          "task": "01a1321e-2f5b-768c-abd8-351d20e3e273"
+        },
+        {
+          "phase": "Verifying",
+          "operation": "2559feddc6a17880e9d3d42cd9a8ccfd",
+          "operationPhase": "Verified",
+          "resource": "anchor_groups/anchor-group:CVK0A5272671",
+          "task": "01a1321e-2f5b-768c-abd8-351d20e3e273"
+        },
+        {
+          "phase": "Verifying",
+          "operation": null,
+          "operationPhase": null,
+          "resource": null,
+          "task": null
+        },
+        {
+          "phase": "Waiting",
+          "operation": null,
+          "operationPhase": null,
+          "resource": null,
+          "task": null
+        },
+        {
+          "phase": "Waiting",
+          "operation": "7e082a863eabf32e1130b939f230c9e0",
+          "operationPhase": "Accepted",
+          "resource": "ap-credential-profile:CVK0A5272672",
+          "task": "01a1321e-8324-78e5-a599-72c1477bde46"
+        },
+        {
+          "phase": "Waiting",
+          "operation": "7e082a863eabf32e1130b939f230c9e0",
+          "operationPhase": "Verifying",
+          "resource": "ap-credential-profile:CVK0A5272672",
+          "task": "01a1321e-8324-78e5-a599-72c1477bde46"
+        },
+        {
+          "phase": "Verifying",
+          "operation": "7e082a863eabf32e1130b939f230c9e0",
+          "operationPhase": "Verified",
+          "resource": "ap-credential-profile:CVK0A5272672",
+          "task": "01a1321e-8324-78e5-a599-72c1477bde46"
+        },
+        {
+          "phase": "Waiting",
+          "operation": null,
+          "operationPhase": null,
+          "resource": null,
+          "task": null
+        },
+        {
+          "phase": "InSync",
+          "operation": null,
+          "operationPhase": null,
+          "resource": null,
+          "task": null
+        }
+      ],
+      "restart": {
+        "operation": "7e082a863eabf32e1130b939f230c9e0",
+        "task": "01a1321e-8324-78e5-a599-72c1477bde46",
+        "oldPodUID": "28b7e4ae-2fc4-425c-ae13-dce52dcd3a58",
+        "newPodUID": "cd28f460-f1c8-4fac-b6e3-a0f2c53f1d9a"
+      },
+      "generation": 4,
+      "completed": true
+    },
+    "rotate": {
+      "events": [
+        {
+          "phase": "Failed",
+          "operation": null,
+          "operationPhase": null,
+          "resource": null,
+          "task": null
+        },
+        {
+          "phase": "Failed",
+          "operation": "3f78fb65a2f1984608c88b028ac49334",
+          "operationPhase": "Accepted",
+          "resource": "ap-credential-profile:CVK0A5272672",
+          "task": "01a13222-4e12-7a2f-bb4a-e1de3423d03a"
+        },
+        {
+          "phase": "InSync",
+          "operation": null,
+          "operationPhase": null,
+          "resource": null,
+          "task": null
+        }
+      ],
+      "generation": 5,
+      "completed": true
+    }
+  },
+  "credentialReceipts": {
+    "1": {
+      "configUID": "cffa4b5a-4403-4cf0-b9c2-8825b8daa5f1",
+      "operationID": "7e082a863eabf32e1130b939f230c9e0",
+      "resource": "ap-credential-profile:CVK0A5272672",
+      "section": "wireless",
+      "targetID": "mdeYq1zl-mee1-mJCY-nJCY-qZbwmuSYmdnbndu1mJy3nZi4nJK3",
+      "versions": [
+        {
+          "path": "/ap_profiles/0/dot1x_password",
+          "secretKey": "dot1x_password",
+          "secretName": "catc-ap-qualification",
+          "sourceAlias": "ap-qualification-dot1x-password",
+          "version": 1
+        },
+        {
+          "path": "/ap_profiles/0/management_enable_password",
+          "secretKey": "management_enable_password",
+          "secretName": "catc-ap-qualification",
+          "sourceAlias": "ap-qualification-management-enable-password",
+          "version": 1
+        },
+        {
+          "path": "/ap_profiles/0/management_password",
+          "secretKey": "management_password",
+          "secretName": "catc-ap-qualification",
+          "sourceAlias": "ap-qualification-management-password",
+          "version": 1
+        }
+      ]
+    },
+    "2": {
+      "configUID": "cffa4b5a-4403-4cf0-b9c2-8825b8daa5f1",
+      "operationID": "3f78fb65a2f1984608c88b028ac49334",
+      "resource": "ap-credential-profile:CVK0A5272672",
+      "section": "wireless",
+      "targetID": "mdeYq1zl-mee1-mJCY-nJCY-qZbwmuSYmdnbndu1mJy3nZi4nJK3",
+      "versions": [
+        {
+          "path": "/ap_profiles/0/dot1x_password",
+          "secretKey": "dot1x_password",
+          "secretName": "catc-ap-qualification",
+          "sourceAlias": "ap-qualification-dot1x-password",
+          "version": 2
+        },
+        {
+          "path": "/ap_profiles/0/management_enable_password",
+          "secretKey": "management_enable_password",
+          "secretName": "catc-ap-qualification",
+          "sourceAlias": "ap-qualification-management-enable-password",
+          "version": 2
+        },
+        {
+          "path": "/ap_profiles/0/management_password",
+          "secretKey": "management_password",
+          "secretName": "catc-ap-qualification",
+          "sourceAlias": "ap-qualification-management-password",
+          "version": 2
+        }
+      ]
+    }
+  },
+  "staleProjectionRefused": true,
+  "staleProjectionObservedReasons": [
+    "AdapterAvailable",
+    "ObservationOrPlanFailed"
+  ],
+  "cleanupTasks": {
+    "ap": "01a13223-4e1b-7fb6-b63e-1c94c85c5181",
+    "anchor": "01a13223-5147-7612-bd26-7ee35545dea0",
+    "power": "01a13223-5402-7583-b341-faf3b5529079"
+  },
+  "baselineRestored": true,
+  "originalReportManifestRestored": true,
+  "temporarySecretAndSourcesRemoved": true,
+  "health": {
+    "image": "cvk-catc-nac:20261012-52562fb00d19",
+    "deployments": [
+      {
+        "namespace": "cisco-vk-system",
+        "name": "cisco-vk-cisco-virtual-kubelet-controller",
+        "image": "cvk-catc-nac:20261012-52562fb00d19",
+        "ready": 1
+      },
+      {
+        "namespace": "cvk-live",
+        "name": "cat9k-lab-101-vk",
+        "image": "cvk-catc-handoff:20261009-merge-admission",
+        "ready": 1
+      },
+      {
+        "namespace": "cvk-live",
+        "name": "cat9k-lab-103-vk",
+        "image": "cvk-catc-handoff:20261009-merge-admission",
+        "ready": 1
+      },
+      {
+        "namespace": "cvk-live",
+        "name": "cat9k-live-vk",
+        "image": "cvk-catc-handoff:20261009-merge-admission",
+        "ready": 1
+      },
+      {
+        "namespace": "cvk-live",
+        "name": "catc-controller-worker",
+        "image": "cvk-catc-nac:20261012-52562fb00d19",
+        "ready": 1
+      },
+      {
+        "namespace": "cvk-live",
+        "name": "u20f3e68e-b127-4f2e-9a36-b66945135051-network",
+        "image": "cvk-catc-handoff:20261009-merge-admission",
+        "ready": 1
+      },
+      {
+        "namespace": "cvk-live",
+        "name": "u6afd6bd0-284d-4ee2-a6e4-638ca07976b4-network",
+        "image": "cvk-catc-handoff:20261009-merge-admission",
+        "ready": 1
+      },
+      {
+        "namespace": "cvk-live",
+        "name": "u782dc4b2-7e43-4188-8436-87633f0bf4fb-network",
+        "image": "cvk-catc-handoff:20261009-merge-admission",
+        "ready": 1
+      }
+    ],
+    "nodes": [
+      {
+        "name": "cat9k-lab-101",
+        "ready": "True"
+      },
+      {
+        "name": "cat9k-lab-103",
+        "ready": "True"
+      },
+      {
+        "name": "cat9k-live",
+        "ready": "True"
+      }
+    ],
+    "configuration": {
+      "name": "catc-nac-journal-qualification",
+      "uid": "5c9724f7-af1a-4fe2-8b9c-724f996f2470",
+      "generation": 6,
+      "phase": "InSync",
+      "owners": [
+        {
+          "configName": "catc-wireless-features-qualification",
+          "configUID": "f1e12128-6587-4436-8e53-02600399e97b",
+          "section": "feature_templates"
+        },
+        {
+          "configName": "catc-nac-journal-qualification",
+          "configUID": "5c9724f7-af1a-4fe2-8b9c-724f996f2470",
+          "section": "inventory"
+        },
+        {
+          "configName": "catc-global-credential-qualification",
+          "configUID": "3ca01713-4714-48ad-9fe2-b7ad5c39b305",
+          "section": "network_settings"
+        },
+        {
+          "configName": "catc-aaa-qualification",
+          "configUID": "4510b61d-d0e3-41a9-a7b5-72f104d51c4d",
+          "section": "system_settings"
+        },
+        {
+          "configName": "catc-nac-journal-qualification",
+          "configUID": "5c9724f7-af1a-4fe2-8b9c-724f996f2470",
+          "section": "templates"
+        },
+        {
+          "configName": "catc-wireless-qualification",
+          "configUID": "cffa4b5a-4403-4cf0-b9c2-8825b8daa5f1",
+          "section": "wireless"
+        }
+      ]
+    }
+  },
+  "nxosWorkerPreserved": true,
+  "limits": [
+    "Credential verification is based on a successful task plus public UUID-bound metadata and durable version receipt; no device login was tested",
+    "No physical AP/WLC provisioning, guest tunnel or radio behavior qualified",
+    "Monthly calendar transitions and other AP settings remain unqualified",
+    "Ownership records and credential receipts remain retained; automatic pruning and adoption are not qualified",
+    "Test harness required alias-format correction before controller submission and condition-reason correction at the stale-projection boundary and stale-condition handling during Accepted transition; the saved run was resumed without replay, and no controller operation required supervised journal recovery"
+  ]
+}

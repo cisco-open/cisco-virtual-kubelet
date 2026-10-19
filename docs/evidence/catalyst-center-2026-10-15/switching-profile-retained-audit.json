@@ -1,0 +1,29 @@
+{
+  "scope": {
+    "profile": "8ff6a640-a557-48ad-8961-213ead0b5624",
+    "site": "b0b0f09a-5987-49f7-b867-bd6f25c8d2b3",
+    "template": "acd88415-fff4-41f0-a4b7-9e90d0e9331f",
+    "project": "70443576-cdb9-47d1-b4bb-ac5c3b782fea"
+  },
+  "taskWindowComplete": true,
+  "tasks": [
+    {
+      "id": "01a14016-a813-7ba2-9b0c-a2b5d6baf3b0",
+      "startTime": 1792076589076,
+      "endTime": 1792076589183,
+      "treeMembers": 1,
+      "terminalSuccess": true
+    },
+    {
+      "id": "01a14016-b2dc-7eff-b6f5-c96dc11cfa87",
+      "startTime": 1792076591836,
+      "endTime": 1792076591907,
+      "treeMembers": 1,
+      "terminalSuccess": true
+    }
+  ],
+  "assignedDeviceCount": 0,
+  "childSiteCount": 0,
+  "profileTemplateCount": 1,
+  "disposition": "Read-only audit; no mutation replayed or journal modified"
+}

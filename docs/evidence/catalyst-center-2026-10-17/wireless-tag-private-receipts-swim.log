@@ -1,0 +1,2 @@
+Selected 47 SWIM tests from swim*_test.go
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	4.041s

@@ -1,0 +1,34 @@
+=== RUN   TestBootstrapFenceAdmission
+=== RUN   TestBootstrapFenceAdmission/worker-create
+=== RUN   TestBootstrapFenceAdmission/wrong-namespace
+=== RUN   TestBootstrapFenceAdmission/unmarked-name
+=== RUN   TestBootstrapFenceAdmission/wrong-name
+=== RUN   TestBootstrapFenceAdmission/missing-retain
+=== RUN   TestBootstrapFenceAdmission/missing-binding
+=== RUN   TestBootstrapFenceAdmission/missing-finalizer
+=== RUN   TestBootstrapFenceAdmission/owner-ref
+=== RUN   TestBootstrapFenceAdmission/expiring
+=== RUN   TestBootstrapFenceAdmission/holder
+=== RUN   TestBootstrapFenceAdmission/manager-update
+=== RUN   TestBootstrapFenceAdmission/worker-update
+=== RUN   TestBootstrapFenceAdmission/remove-markers
+=== RUN   TestBootstrapFenceAdmission/manager-delete
+=== RUN   TestBootstrapFenceAdmission/worker-delete
+--- PASS: TestBootstrapFenceAdmission (4.77s)
+    --- PASS: TestBootstrapFenceAdmission/worker-create (0.00s)
+    --- PASS: TestBootstrapFenceAdmission/wrong-namespace (0.00s)
+    --- PASS: TestBootstrapFenceAdmission/unmarked-name (0.00s)
+    --- PASS: TestBootstrapFenceAdmission/wrong-name (0.00s)
+    --- PASS: TestBootstrapFenceAdmission/missing-retain (0.00s)
+    --- PASS: TestBootstrapFenceAdmission/missing-binding (0.00s)
+    --- PASS: TestBootstrapFenceAdmission/missing-finalizer (0.00s)
+    --- PASS: TestBootstrapFenceAdmission/owner-ref (0.00s)
+    --- PASS: TestBootstrapFenceAdmission/expiring (0.00s)
+    --- PASS: TestBootstrapFenceAdmission/holder (0.00s)
+    --- PASS: TestBootstrapFenceAdmission/manager-update (0.00s)
+    --- PASS: TestBootstrapFenceAdmission/worker-update (0.00s)
+    --- PASS: TestBootstrapFenceAdmission/remove-markers (0.00s)
+    --- PASS: TestBootstrapFenceAdmission/manager-delete (0.00s)
+    --- PASS: TestBootstrapFenceAdmission/worker-delete (0.00s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controllerconfiguration	6.724s

@@ -1,0 +1,100 @@
+=== RUN   TestTagRecreationArchiveIntegrity
+=== RUN   TestTagRecreationArchiveIntegrity/valid
+    tag_recreate_test.go:54: valid predecessor refused controller section is owned by another config identity
+=== RUN   TestTagRecreationArchiveIntegrity/missing-creator
+    tag_recreate_test.go:54: valid predecessor refused controller section is owned by another config identity
+=== RUN   TestTagRecreationArchiveIntegrity/missing-applied
+    tag_recreate_test.go:54: valid predecessor refused controller section is owned by another config identity
+=== RUN   TestTagRecreationArchiveIntegrity/missing-delete
+    tag_recreate_test.go:54: valid predecessor refused controller section is owned by another config identity
+=== RUN   TestTagRecreationArchiveIntegrity/changed-archive
+    tag_recreate_test.go:54: valid predecessor refused controller section is owned by another config identity
+=== RUN   TestTagRecreationArchiveIntegrity/wrong-parent
+    tag_recreate_test.go:54: valid predecessor refused controller section is owned by another config identity
+=== RUN   TestTagRecreationArchiveIntegrity/wrong-digest
+    tag_recreate_test.go:54: valid predecessor refused controller section is owned by another config identity
+=== RUN   TestTagRecreationArchiveIntegrity/missing-link
+    tag_recreate_test.go:54: valid predecessor refused controller section is owned by another config identity
+=== RUN   TestTagRecreationArchiveIntegrity/reused-uuid
+    tag_recreate_test.go:54: valid predecessor refused controller section is owned by another config identity
+=== RUN   TestTagRecreationArchiveIntegrity/foreign-owner
+    tag_recreate_test.go:54: valid predecessor refused controller section is owned by another config identity
+=== RUN   TestTagRecreationArchiveIntegrity/foreign-name
+    tag_recreate_test.go:54: valid predecessor refused controller section is owned by another config identity
+=== RUN   TestTagRecreationArchiveIntegrity/wrong-section
+    tag_recreate_test.go:54: valid predecessor refused controller section is owned by another config identity
+=== RUN   TestTagRecreationArchiveIntegrity/early-child
+    tag_recreate_test.go:54: valid predecessor refused controller section is owned by another config identity
+=== RUN   TestTagRecreationArchiveIntegrity/duplicate-operation
+    tag_recreate_test.go:54: valid predecessor refused controller section is owned by another config identity
+=== RUN   TestTagRecreationArchiveIntegrity/orphan
+    tag_recreate_test.go:54: valid predecessor refused controller section is owned by another config identity
+--- FAIL: TestTagRecreationArchiveIntegrity (0.01s)
+    --- FAIL: TestTagRecreationArchiveIntegrity/valid (0.00s)
+    --- FAIL: TestTagRecreationArchiveIntegrity/missing-creator (0.00s)
+    --- FAIL: TestTagRecreationArchiveIntegrity/missing-applied (0.00s)
+    --- FAIL: TestTagRecreationArchiveIntegrity/missing-delete (0.00s)
+    --- FAIL: TestTagRecreationArchiveIntegrity/changed-archive (0.00s)
+    --- FAIL: TestTagRecreationArchiveIntegrity/wrong-parent (0.00s)
+    --- FAIL: TestTagRecreationArchiveIntegrity/wrong-digest (0.00s)
+    --- FAIL: TestTagRecreationArchiveIntegrity/missing-link (0.00s)
+    --- FAIL: TestTagRecreationArchiveIntegrity/reused-uuid (0.00s)
+    --- FAIL: TestTagRecreationArchiveIntegrity/foreign-owner (0.00s)
+    --- FAIL: TestTagRecreationArchiveIntegrity/foreign-name (0.00s)
+    --- FAIL: TestTagRecreationArchiveIntegrity/wrong-section (0.00s)
+    --- FAIL: TestTagRecreationArchiveIntegrity/early-child (0.00s)
+    --- FAIL: TestTagRecreationArchiveIntegrity/duplicate-operation (0.00s)
+    --- FAIL: TestTagRecreationArchiveIntegrity/orphan (0.00s)
+=== RUN   TestTagRecreationPublicCycles
+=== RUN   TestTagRecreationPublicCycles/inventory/recreate
+=== RUN   TestTagRecreationPublicCycles/inventory/recreate-twice
+=== RUN   TestTagRecreationPublicCycles/inventory/recreate-foreign
+=== RUN   TestTagRecreationPublicCycles/inventory/recreate-resurrected
+=== RUN   TestTagRecreationPublicCycles/inventory/recreate-reused-id
+=== RUN   TestTagRecreationPublicCycles/inventory/recreate-missing-cohort
+=== RUN   TestTagRecreationPublicCycles/inventory/recreate-missing-archive
+=== RUN   TestTagRecreationPublicCycles/inventory/recreate-tampered-archive
+=== RUN   TestTagRecreationPublicCycles/templates/recreate
+=== RUN   TestTagRecreationPublicCycles/templates/recreate-twice
+=== RUN   TestTagRecreationPublicCycles/templates/recreate-foreign
+=== RUN   TestTagRecreationPublicCycles/templates/recreate-resurrected
+=== RUN   TestTagRecreationPublicCycles/templates/recreate-reused-id
+=== RUN   TestTagRecreationPublicCycles/templates/recreate-missing-cohort
+=== RUN   TestTagRecreationPublicCycles/templates/recreate-missing-archive
+=== RUN   TestTagRecreationPublicCycles/templates/recreate-tampered-archive
+=== RUN   TestTagRecreationPublicCycles/combined/recreate
+=== RUN   TestTagRecreationPublicCycles/combined/recreate-twice
+=== RUN   TestTagRecreationPublicCycles/combined/recreate-foreign
+=== RUN   TestTagRecreationPublicCycles/combined/recreate-resurrected
+=== RUN   TestTagRecreationPublicCycles/combined/recreate-reused-id
+=== RUN   TestTagRecreationPublicCycles/combined/recreate-missing-cohort
+=== RUN   TestTagRecreationPublicCycles/combined/recreate-missing-archive
+=== RUN   TestTagRecreationPublicCycles/combined/recreate-tampered-archive
+--- PASS: TestTagRecreationPublicCycles (14.54s)
+    --- PASS: TestTagRecreationPublicCycles/inventory/recreate (1.22s)
+    --- PASS: TestTagRecreationPublicCycles/inventory/recreate-twice (1.01s)
+    --- PASS: TestTagRecreationPublicCycles/inventory/recreate-foreign (0.53s)
+    --- PASS: TestTagRecreationPublicCycles/inventory/recreate-resurrected (0.57s)
+    --- PASS: TestTagRecreationPublicCycles/inventory/recreate-reused-id (0.66s)
+    --- PASS: TestTagRecreationPublicCycles/inventory/recreate-missing-cohort (0.46s)
+    --- PASS: TestTagRecreationPublicCycles/inventory/recreate-missing-archive (0.43s)
+    --- PASS: TestTagRecreationPublicCycles/inventory/recreate-tampered-archive (0.43s)
+    --- PASS: TestTagRecreationPublicCycles/templates/recreate (0.59s)
+    --- PASS: TestTagRecreationPublicCycles/templates/recreate-twice (0.98s)
+    --- PASS: TestTagRecreationPublicCycles/templates/recreate-foreign (0.50s)
+    --- PASS: TestTagRecreationPublicCycles/templates/recreate-resurrected (0.55s)
+    --- PASS: TestTagRecreationPublicCycles/templates/recreate-reused-id (0.62s)
+    --- PASS: TestTagRecreationPublicCycles/templates/recreate-missing-cohort (0.41s)
+    --- PASS: TestTagRecreationPublicCycles/templates/recreate-missing-archive (0.41s)
+    --- PASS: TestTagRecreationPublicCycles/templates/recreate-tampered-archive (0.41s)
+    --- PASS: TestTagRecreationPublicCycles/combined/recreate (0.63s)
+    --- PASS: TestTagRecreationPublicCycles/combined/recreate-twice (1.03s)
+    --- PASS: TestTagRecreationPublicCycles/combined/recreate-foreign (0.55s)
+    --- PASS: TestTagRecreationPublicCycles/combined/recreate-resurrected (0.58s)
+    --- PASS: TestTagRecreationPublicCycles/combined/recreate-reused-id (0.66s)
+    --- PASS: TestTagRecreationPublicCycles/combined/recreate-missing-cohort (0.45s)
+    --- PASS: TestTagRecreationPublicCycles/combined/recreate-missing-archive (0.43s)
+    --- PASS: TestTagRecreationPublicCycles/combined/recreate-tampered-archive (0.44s)
+FAIL
+FAIL	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	15.863s
+FAIL

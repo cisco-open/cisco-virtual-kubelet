@@ -1,0 +1,18 @@
+=== RUN   TestEnvtestTagPrunePublicLifecycle
+=== RUN   TestEnvtestTagPrunePublicLifecycle/inventory/late-consumer
+=== RUN   TestEnvtestTagPrunePublicLifecycle/templates/late-consumer
+=== RUN   TestEnvtestTagPrunePublicLifecycle/combined/late-consumer
+--- PASS: TestEnvtestTagPrunePublicLifecycle (11.29s)
+    --- PASS: TestEnvtestTagPrunePublicLifecycle/inventory/late-consumer (4.27s)
+    --- PASS: TestEnvtestTagPrunePublicLifecycle/templates/late-consumer (1.64s)
+    --- PASS: TestEnvtestTagPrunePublicLifecycle/combined/late-consumer (1.67s)
+=== RUN   TestTagPrunePublicLifecycle
+=== RUN   TestTagPrunePublicLifecycle/inventory/late-consumer
+=== RUN   TestTagPrunePublicLifecycle/templates/late-consumer
+=== RUN   TestTagPrunePublicLifecycle/combined/late-consumer
+--- PASS: TestTagPrunePublicLifecycle (1.63s)
+    --- PASS: TestTagPrunePublicLifecycle/inventory/late-consumer (0.54s)
+    --- PASS: TestTagPrunePublicLifecycle/templates/late-consumer (0.53s)
+    --- PASS: TestTagPrunePublicLifecycle/combined/late-consumer (0.56s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	15.379s

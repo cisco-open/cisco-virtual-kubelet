@@ -1,0 +1,23 @@
+=== RUN   TestLiveCatalystCenterAAAOwnedReset
+    aaa_settings_manifest_live_test.go:109: isolated dual-protocol registration verified 23ed69a8-230b-4dd0-8730-2b994c6f06b0
+    aaa_settings_manifest_live_test.go:109: isolated dual-protocol registration verified 830d14bc-3c68-41c3-95fa-0e526bb9f648
+    aaa_settings_manifest_live_test.go:110: assignment fixture area task Global/CVK-Cred-20261015-132453-000000000 01a13fbc-b467-712d-b199-aea5d167d248
+    aaa_settings_manifest_live_test.go:95: isolated site AAA response HTTP 202 transportError false
+    aaa_settings_manifest_live_test.go:312: AAA public manifest reached InSync with receipt, simulated restart and no-op phase 1 credentialVersion 1 secondaryServers false
+    aaa_settings_manifest_live_test.go:280: AAA version projection lag refused without a native write
+    aaa_settings_manifest_live_test.go:95: isolated site AAA response HTTP 202 transportError false
+    aaa_settings_manifest_live_test.go:312: AAA public manifest reached InSync with receipt, simulated restart and no-op phase 2 credentialVersion 2 secondaryServers false
+    aaa_settings_manifest_live_test.go:95: isolated site AAA response HTTP 202 transportError false
+    aaa_settings_manifest_live_test.go:312: AAA public manifest reached InSync with receipt, simulated restart and no-op phase 3 credentialVersion 2 secondaryServers true
+    aaa_settings_manifest_live_test.go:95: isolated site AAA response HTTP 202 transportError false
+    aaa_settings_manifest_live_test.go:312: AAA public manifest reached InSync with receipt, simulated restart and no-op phase 4 credentialVersion 2 secondaryServers false
+    aaa_settings_manifest_live_test.go:334: owned reset child created Global/CVK-Cred-20261015-132453-000000000/AAA-Reset-Child 66c64170-c6cd-44c9-8512-a31bcdaf2e1c
+    aaa_settings_manifest_live_test.go:95: isolated site AAA response HTTP 202 transportError false
+    aaa_settings_manifest_live_test.go:334: child AAA ownership did not converge without parent replay
+    aaa_settings_reset_live_test.go:130: reset child retained Global/CVK-Cred-20261015-132453-000000000/AAA-Reset-Child 66c64170-c6cd-44c9-8512-a31bcdaf2e1c
+    site_credentials_live_test.go:82: assignment fixture retained for inspection Global/CVK-Cred-20261015-132453-000000000 33d45f4f-d3ae-448c-8d5b-8f3bab558bdc
+    aaa_settings_registration_live_test.go:59: isolated AAA registration prerequisites retained 2
+--- FAIL: TestLiveCatalystCenterAAAOwnedReset (231.08s)
+FAIL
+FAIL	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	231.972s
+FAIL

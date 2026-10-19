@@ -1,0 +1,83 @@
+=== RUN   TestEnvtestPlannedAPKeyedBaselines
+=== RUN   TestEnvtestPlannedAPKeyedBaselines/keyed-private
+=== RUN   TestEnvtestPlannedAPKeyedBaselines/keyed-recover-private
+=== RUN   TestEnvtestPlannedAPKeyedBaselines/keyed-recover-refuse-private
+=== RUN   TestEnvtestPlannedAPKeyedBaselines/image-keyed-private
+=== RUN   TestEnvtestPlannedAPKeyedBaselines/keyed-native-sensor-private
+=== RUN   TestEnvtestPlannedAPKeyedBaselines/keyed-native-late-private
+=== RUN   TestEnvtestPlannedAPKeyedBaselines/keyed-drift-private
+=== RUN   TestEnvtestPlannedAPKeyedBaselines/keyed-geometry-private
+=== RUN   TestEnvtestPlannedAPKeyedBaselines/keyed-geometry-removed-private
+=== RUN   TestEnvtestPlannedAPKeyedBaselines/keyed-disable-private
+=== RUN   TestEnvtestPlannedAPKeyedBaselines/keyed-pruned-private
+=== RUN   TestEnvtestPlannedAPKeyedBaselines/keyed-result-drift-private
+--- PASS: TestEnvtestPlannedAPKeyedBaselines (26.29s)
+    --- PASS: TestEnvtestPlannedAPKeyedBaselines/keyed-private (4.87s)
+    --- PASS: TestEnvtestPlannedAPKeyedBaselines/keyed-recover-private (2.56s)
+    --- PASS: TestEnvtestPlannedAPKeyedBaselines/keyed-recover-refuse-private (2.48s)
+    --- PASS: TestEnvtestPlannedAPKeyedBaselines/image-keyed-private (3.82s)
+    --- PASS: TestEnvtestPlannedAPKeyedBaselines/keyed-native-sensor-private (2.40s)
+    --- PASS: TestEnvtestPlannedAPKeyedBaselines/keyed-native-late-private (1.13s)
+    --- PASS: TestEnvtestPlannedAPKeyedBaselines/keyed-drift-private (0.96s)
+    --- PASS: TestEnvtestPlannedAPKeyedBaselines/keyed-geometry-private (0.97s)
+    --- PASS: TestEnvtestPlannedAPKeyedBaselines/keyed-geometry-removed-private (0.93s)
+    --- PASS: TestEnvtestPlannedAPKeyedBaselines/keyed-disable-private (0.79s)
+    --- PASS: TestEnvtestPlannedAPKeyedBaselines/keyed-pruned-private (0.88s)
+    --- PASS: TestEnvtestPlannedAPKeyedBaselines/keyed-result-drift-private (1.21s)
+=== RUN   TestEnvtestPlannedAPTypeUpdates
+=== RUN   TestEnvtestPlannedAPTypeUpdates/model-type
+=== RUN   TestEnvtestPlannedAPTypeUpdates/model-type-recover
+=== RUN   TestEnvtestPlannedAPTypeUpdates/model-type-omitted
+=== RUN   TestEnvtestPlannedAPTypeUpdates/model-type-ignored
+=== RUN   TestEnvtestPlannedAPTypeUpdates/model-type-incompatible
+=== RUN   TestEnvtestPlannedAPTypeUpdates/model-type-keyed-private
+=== RUN   TestEnvtestPlannedAPTypeUpdates/model-type-keyed-recover-private
+=== RUN   TestEnvtestPlannedAPTypeUpdates/image-model-type-keyed-private
+=== RUN   TestEnvtestPlannedAPTypeUpdates/model-type-keyed-ignored-private
+--- PASS: TestEnvtestPlannedAPTypeUpdates (19.12s)
+    --- PASS: TestEnvtestPlannedAPTypeUpdates/model-type (2.80s)
+    --- PASS: TestEnvtestPlannedAPTypeUpdates/model-type-recover (0.77s)
+    --- PASS: TestEnvtestPlannedAPTypeUpdates/model-type-omitted (0.76s)
+    --- PASS: TestEnvtestPlannedAPTypeUpdates/model-type-ignored (0.66s)
+    --- PASS: TestEnvtestPlannedAPTypeUpdates/model-type-incompatible (0.60s)
+    --- PASS: TestEnvtestPlannedAPTypeUpdates/model-type-keyed-private (2.27s)
+    --- PASS: TestEnvtestPlannedAPTypeUpdates/model-type-keyed-recover-private (2.22s)
+    --- PASS: TestEnvtestPlannedAPTypeUpdates/image-model-type-keyed-private (3.66s)
+    --- PASS: TestEnvtestPlannedAPTypeUpdates/model-type-keyed-ignored-private (1.22s)
+=== RUN   TestEnvtestPlannedAPRetainedBoundaries
+[controller-runtime] log.SetLogger(...) was never called; logs will not be displayed.
+Detected at:
+	>  goroutine 14159 [running]:
+	>  runtime/debug.Stack()
+	>  	/Users/johalley/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.9.darwin-arm64/src/runtime/debug/stack.go:26 +0x6c
+	>  sigs.k8s.io/controller-runtime/pkg/log.eventuallyFulfillRoot()
+	>  	/Users/johalley/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.23.3/pkg/log/log.go:60 +0xc4
+	>  sigs.k8s.io/controller-runtime/pkg/log.(*delegatingLogSink).Enabled(0xc0007a36c0, 0x1)
+	>  	/Users/johalley/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.23.3/pkg/log/deleg.go:111 +0x30
+	>  github.com/go-logr/logr.Logger.Info({{0x1062e75e8?, 0xc0007a36c0?}, 0xc000052120?}, {0x103ab225b, 0x16}, {0x0, 0x0, 0x0})
+	>  	/Users/johalley/go/pkg/mod/github.com/go-logr/logr@v1.4.4/logr.go:276 +0x60
+	>  sigs.k8s.io/controller-runtime/pkg/envtest.(*Environment).Start(0xc0010982c8)
+	>  	/Users/johalley/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.23.3/pkg/envtest/server.go:303 +0x934
+	>  github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter.qualificationAPIServerClient(0xc00118eb48, {0xc000997e38, 0x1, 0x0?})
+	>  	/Users/johalley/Git/cisco-virtual-kubelet/internal/controlleradapter/catalystcenter/configuration_envtest_test.go:22 +0x1ac
+	>  github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter.TestEnvtestPlannedAPRetainedBoundaries(0xc00118eb48)
+	>  	/Users/johalley/Git/cisco-virtual-kubelet/internal/controlleradapter/catalystcenter/site_design_envtest_test.go:55 +0x58
+	>  testing.tRunner(0xc00118eb48, 0x10628e210)
+	>  	/Users/johalley/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.9.darwin-arm64/src/testing/testing.go:2036 +0x168
+	>  created by testing.(*T).Run in goroutine 1
+	>  	/Users/johalley/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.9.darwin-arm64/src/testing/testing.go:2101 +0x7c0
+=== RUN   TestEnvtestPlannedAPRetainedBoundaries/same
+=== RUN   TestEnvtestPlannedAPRetainedBoundaries/drift
+=== RUN   TestEnvtestPlannedAPRetainedBoundaries/missing
+=== RUN   TestEnvtestPlannedAPRetainedBoundaries/replaced
+=== RUN   TestEnvtestPlannedAPRetainedBoundaries/renamed
+=== RUN   TestEnvtestPlannedAPRetainedBoundaries/dispatch
+--- PASS: TestEnvtestPlannedAPRetainedBoundaries (16.85s)
+    --- PASS: TestEnvtestPlannedAPRetainedBoundaries/same (3.86s)
+    --- PASS: TestEnvtestPlannedAPRetainedBoundaries/drift (2.27s)
+    --- PASS: TestEnvtestPlannedAPRetainedBoundaries/missing (1.95s)
+    --- PASS: TestEnvtestPlannedAPRetainedBoundaries/replaced (1.83s)
+    --- PASS: TestEnvtestPlannedAPRetainedBoundaries/renamed (1.97s)
+    --- PASS: TestEnvtestPlannedAPRetainedBoundaries/dispatch (1.82s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	64.629s

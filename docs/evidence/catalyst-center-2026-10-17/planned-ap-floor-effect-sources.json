@@ -1,0 +1,9 @@
+{
+  "branch": "pr/johalley/catc-support",
+  "scope": "Expected-state calculation and native contract characterization only. Protected keyed floor/AP handoff publication is not enabled.",
+  "sourceSha256": {
+    "internal/controlleradapter/catalystcenter/planned_ap_floor_effect.go": "500f3dafc123a1dcd2b76b1ba5989d17f2de4422064d8fd280ac0dc636c3ebeb",
+    "internal/controlleradapter/catalystcenter/planned_ap_floor_effect_test.go": "2b7efca7d0309792bb2ecd6178b832e6bcddc1d615f50f04264e304c0f35a366",
+    "internal/controlleradapter/catalystcenter/site_design_live_test.go": "5587f63f4a929147140dbfcff7136a4adf126f59df6792025cd8db87b655ce27"
+  }
+}

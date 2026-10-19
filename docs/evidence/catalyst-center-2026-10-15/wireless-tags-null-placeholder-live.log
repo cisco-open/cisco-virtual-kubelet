@@ -1,0 +1,19 @@
+=== RUN   TestLiveWirelessProfileSiteTagsExecution
+    wireless_profile_execution_live_test.go:53: isolated names CVK_N_47a0d62b1752b332 CVK_S_2ff62c61ea8aecea
+    wireless_profile_execution_live_test.go:191: task ssid:8995b7da-5b82-40fd-a706-82150affe92d:CVK_S_2ff62c61ea8aecea Create 01a13e3b-7a59-7c9a-ac61-96fb8363f805
+    wireless_profile_execution_live_test.go:200: owned SSID CVK_S_2ff62c61ea8aecea mdiYq1zl-x1nF-mMzM-nJjJ-nJfLytHHzwnLyumWvJflmL8ZuZrF
+    wireless_profile_execution_live_test.go:228: task wireless/wireless-profile:CVK_N_47a0d62b1752b332:6c015954e673899e3a5aa105bdd4043a3c4d2a8b71445453c139abc2f5e23d2d Create 01a13e3b-8533-73b3-9c27-6127544bc01c
+    wireless_profile_execution_live_test.go:237: owned profile CVK_N_47a0d62b1752b332 a128d984-c0b2-419e-a861-f38001f34dbd
+    wireless_profile_execution_live_test.go:248: task wireless/wireless-profile:CVK_N_47a0d62b1752b332:6c015954e673899e3a5aa105bdd4043a3c4d2a8b71445453c139abc2f5e23d2d Update 01a13e3b-9425-7808-8882-aff670c0485b
+    wireless_profile_execution_live_test.go:271: task Global/CVK_N_47a0d62b1752b332_A Create 01a13e3b-a039-7b4c-baa3-83328f6b3205
+    wireless_profile_execution_live_test.go:284: owned empty area Global/CVK_N_47a0d62b1752b332_A 1d9284b3-6204-4418-b69e-f90e2a81ab61
+    wireless_profile_execution_live_test.go:292: task wireless-sites/CVK_N_47a0d62b1752b332/ca2604ca4d1e504e61e4a48446d2c00a4c1b1459413e994dea8c42a41974d0bb Update 01a13e3b-a78f-7129-9be2-b90d3197f6af
+    wireless_profile_execution_live_test.go:271: task Global/CVK_N_47a0d62b1752b332_B Create 01a13e3b-afc0-7844-88f7-039360e93ded
+    wireless_profile_execution_live_test.go:284: owned empty area Global/CVK_N_47a0d62b1752b332_B 78e3e7c1-687b-4ca9-89b5-b70c58b35c37
+    wireless_profile_execution_live_test.go:292: task wireless-sites/CVK_N_47a0d62b1752b332/2bd1df391d9a818e6e66e07f717ab6373231a4a0986e7e0db68e09420d1c00d3 Update 01a13e3b-bbf0-72ee-813e-44757ebfae7c
+    wireless_profile_execution_live_test.go:325: task wireless-site-tags/site-tag:bbb4ca0eab2937b10a7991479b1013ed7b3111f9f088d0175a61be802173d86d:08457c7bb99e446f6d4cc6c577f3c7bd25c3e1005e6e0e4d3d64d1ef13fa4715 Create 01a13e3b-cd52-793d-ae6e-97f1b0c21fc8
+    wireless_profile_execution_live_test.go:325: readback incomplete; retain wireless-site-tags/site-tag:bbb4ca0eab2937b10a7991479b1013ed7b3111f9f088d0175a61be802173d86d:08457c7bb99e446f6d4cc6c577f3c7bd25c3e1005e6e0e4d3d64d1ef13fa4715 controller section is owned by another config identity
+--- FAIL: TestLiveWirelessProfileSiteTagsExecution (24.04s)
+FAIL
+FAIL	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	24.905s
+FAIL

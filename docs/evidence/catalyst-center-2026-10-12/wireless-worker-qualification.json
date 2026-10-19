@@ -1,0 +1,911 @@
+{
+  "result": "PASS_WITH_SUPERVISED_FRA_RECEIPT_RECOVERY",
+  "image": {
+    "image": "cvk-catc-nac:20261012-f291b578f34d",
+    "sha256": "f291b578f34d1b9af3f10af583a011c2be7c8424b958417da452a954a3f5747e"
+  },
+  "definitions": {
+    "interface": "CVKDB5B35840",
+    "acl": "CVKDB5B35841",
+    "power": "CVKDB5B35842",
+    "be": "CVKDB5B35843",
+    "fra": "CVKDB5B35844",
+    "cleanair": "CVKDB5B35845"
+  },
+  "resourceIDs": {
+    "interface": "mdeYq1zl-rei1-qJm1-odqW-qZbwmuSYrdncndu1qJyZnZu4odK0",
+    "acl": "mdeYq1zl-rei1-qJm1-odqX-qZbwmuSYrdncndu1qJyZnZu4odK0",
+    "power": "mdeYq1zl-rei1-qJm1-odqY-qZbwmuSYrdncndu1qJyZnZu4odK0",
+    "be": "43ba4ce6-621a-389a-ac43-082cb60d37da",
+    "fra": "86f6c9d2-0cad-449f-bb63-767db25a82da",
+    "cleanair": "15dfcf44-362a-4a83-b12c-e0cc3cd823db"
+  },
+  "configs": {
+    "wireless": {
+      "name": "catc-wireless-qualification",
+      "uid": "cffa4b5a-4403-4cf0-b9c2-8825b8daa5f1",
+      "mode": "report",
+      "generation": 3,
+      "phase": "Drifted",
+      "retainedSource": {
+        "catalyst_center": {
+          "wireless": {
+            "dot11be_profiles": [
+              {
+                "name": "CVKDB5B35843",
+                "ofdma_multi_ru": true
+              }
+            ],
+            "interfaces": [
+              {
+                "name": "CVKDB5B35840",
+                "vlan_id": 3999
+              }
+            ],
+            "power_profiles": [
+              {
+                "name": "CVKDB5B35842",
+                "rules": [
+                  {
+                    "interface_id": "GIGABITETHERNET0",
+                    "interface_type": "ETHERNET",
+                    "parameter_type": "SPEED",
+                    "parameter_value": "1000MBPS"
+                  }
+                ]
+              }
+            ],
+            "security_settings": {
+              "pre_auth_acls": [
+                {
+                  "name": "CVKDB5B35841",
+                  "rules": [
+                    {
+                      "destination_address": "198.51.100.1",
+                      "destination_ports": "8443",
+                      "protocol": "TCP",
+                      "source_address": "192.0.2.1",
+                      "source_ports": "1-65535"
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        }
+      }
+    },
+    "feature_templates": {
+      "name": "catc-wireless-features-qualification",
+      "uid": "f1e12128-6587-4436-8e53-02600399e97b",
+      "mode": "report",
+      "generation": 3,
+      "phase": "InSync",
+      "retainedSource": {
+        "catalyst_center": {
+          "feature_templates": {
+            "wireless": {
+              "cleanair": [
+                {
+                  "enable": true,
+                  "name": "CVKDB5B35845",
+                  "radio_band": "2.4GHz"
+                }
+              ],
+              "rrm_fra": [
+                {
+                  "fra_interval": 6,
+                  "name": "CVKDB5B35844",
+                  "radio_band": "2.4GHz_5GHz"
+                }
+              ]
+            }
+          }
+        }
+      }
+    }
+  },
+  "runs": {
+    "wireless-create": {
+      "events": [
+        {
+          "phase": null,
+          "operation": "9b7561091f5fa325c23ceb35ba24edfc",
+          "resource": "interfaces/interface:CVKDB5B35840",
+          "operationPhase": "Accepted",
+          "task": "01a131f6-4264-7d56-9fc2-3bf1c7cb3b73",
+          "target": null
+        },
+        {
+          "phase": "Waiting",
+          "operation": "9b7561091f5fa325c23ceb35ba24edfc",
+          "resource": "interfaces/interface:CVKDB5B35840",
+          "operationPhase": "Accepted",
+          "task": "01a131f6-4264-7d56-9fc2-3bf1c7cb3b73",
+          "target": null
+        },
+        {
+          "phase": "Waiting",
+          "operation": "9b7561091f5fa325c23ceb35ba24edfc",
+          "resource": "interfaces/interface:CVKDB5B35840",
+          "operationPhase": "Verifying",
+          "task": "01a131f6-4264-7d56-9fc2-3bf1c7cb3b73",
+          "target": null
+        },
+        {
+          "phase": "Verifying",
+          "operation": "9b7561091f5fa325c23ceb35ba24edfc",
+          "resource": "interfaces/interface:CVKDB5B35840",
+          "operationPhase": "Verified",
+          "task": "01a131f6-4264-7d56-9fc2-3bf1c7cb3b73",
+          "target": null
+        },
+        {
+          "phase": "Waiting",
+          "operation": null,
+          "resource": null,
+          "operationPhase": null,
+          "task": null,
+          "target": null
+        },
+        {
+          "phase": "Waiting",
+          "operation": "ad2b9da9be9f5759fe71a3e18e38c0c0",
+          "resource": "security_settings/pre-auth-acl:CVKDB5B35841",
+          "operationPhase": "Accepted",
+          "task": "01a131f6-93fa-7a1f-84fb-6c99b61e8466",
+          "target": null
+        },
+        {
+          "phase": "Waiting",
+          "operation": "ad2b9da9be9f5759fe71a3e18e38c0c0",
+          "resource": "security_settings/pre-auth-acl:CVKDB5B35841",
+          "operationPhase": "Verifying",
+          "task": "01a131f6-93fa-7a1f-84fb-6c99b61e8466",
+          "target": null
+        },
+        {
+          "phase": "Waiting",
+          "operation": "ad2b9da9be9f5759fe71a3e18e38c0c0",
+          "resource": "security_settings/pre-auth-acl:CVKDB5B35841",
+          "operationPhase": "Verified",
+          "task": "01a131f6-93fa-7a1f-84fb-6c99b61e8466",
+          "target": null
+        },
+        {
+          "phase": "Verifying",
+          "operation": "ad2b9da9be9f5759fe71a3e18e38c0c0",
+          "resource": "security_settings/pre-auth-acl:CVKDB5B35841",
+          "operationPhase": "Verified",
+          "task": "01a131f6-93fa-7a1f-84fb-6c99b61e8466",
+          "target": null
+        },
+        {
+          "phase": "Verifying",
+          "operation": null,
+          "resource": null,
+          "operationPhase": null,
+          "task": null,
+          "target": null
+        },
+        {
+          "phase": "Waiting",
+          "operation": null,
+          "resource": null,
+          "operationPhase": null,
+          "task": null,
+          "target": null
+        },
+        {
+          "phase": "Waiting",
+          "operation": "7416e4515ebb927ac93f03b8ae627146",
+          "resource": "power_profiles/power-profile:CVKDB5B35842",
+          "operationPhase": "Accepted",
+          "task": "01a131f6-e681-7689-aa10-9ab6f1d764d2",
+          "target": null
+        },
+        {
+          "phase": "Waiting",
+          "operation": "7416e4515ebb927ac93f03b8ae627146",
+          "resource": "power_profiles/power-profile:CVKDB5B35842",
+          "operationPhase": "Verifying",
+          "task": "01a131f6-e681-7689-aa10-9ab6f1d764d2",
+          "target": null
+        },
+        {
+          "phase": "Verifying",
+          "operation": "7416e4515ebb927ac93f03b8ae627146",
+          "resource": "power_profiles/power-profile:CVKDB5B35842",
+          "operationPhase": "Verified",
+          "task": "01a131f6-e681-7689-aa10-9ab6f1d764d2",
+          "target": null
+        },
+        {
+          "phase": "Verifying",
+          "operation": null,
+          "resource": null,
+          "operationPhase": null,
+          "task": null,
+          "target": null
+        },
+        {
+          "phase": "Waiting",
+          "operation": null,
+          "resource": null,
+          "operationPhase": null,
+          "task": null,
+          "target": null
+        },
+        {
+          "phase": "Waiting",
+          "operation": "6ead3c43beffb9c835cd346c0e0d0126",
+          "resource": "dot11be_profiles/dot11be-profile:CVKDB5B35843",
+          "operationPhase": "Prepared",
+          "task": null,
+          "target": null
+        },
+        {
+          "phase": "Waiting",
+          "operation": "6ead3c43beffb9c835cd346c0e0d0126",
+          "resource": "dot11be_profiles/dot11be-profile:CVKDB5B35843",
+          "operationPhase": "Accepted",
+          "task": "01a131f7-3890-7dbb-a5b0-2595b75164a3",
+          "target": null
+        },
+        {
+          "phase": "Waiting",
+          "operation": "6ead3c43beffb9c835cd346c0e0d0126",
+          "resource": "dot11be_profiles/dot11be-profile:CVKDB5B35843",
+          "operationPhase": "Verifying",
+          "task": "01a131f7-3890-7dbb-a5b0-2595b75164a3",
+          "target": null
+        },
+        {
+          "phase": "Waiting",
+          "operation": "6ead3c43beffb9c835cd346c0e0d0126",
+          "resource": "dot11be_profiles/dot11be-profile:CVKDB5B35843",
+          "operationPhase": "Verified",
+          "task": "01a131f7-3890-7dbb-a5b0-2595b75164a3",
+          "target": null
+        },
+        {
+          "phase": "Verifying",
+          "operation": "6ead3c43beffb9c835cd346c0e0d0126",
+          "resource": "dot11be_profiles/dot11be-profile:CVKDB5B35843",
+          "operationPhase": "Verified",
+          "task": "01a131f7-3890-7dbb-a5b0-2595b75164a3",
+          "target": null
+        },
+        {
+          "phase": "Verifying",
+          "operation": null,
+          "resource": null,
+          "operationPhase": null,
+          "task": null,
+          "target": null
+        },
+        {
+          "phase": "Waiting",
+          "operation": null,
+          "resource": null,
+          "operationPhase": null,
+          "task": null,
+          "target": null
+        },
+        {
+          "phase": "InSync",
+          "operation": null,
+          "resource": null,
+          "operationPhase": null,
+          "task": null,
+          "target": null
+        }
+      ],
+      "tasks": [
+        "01a131f6-4264-7d56-9fc2-3bf1c7cb3b73",
+        "01a131f6-93fa-7a1f-84fb-6c99b61e8466",
+        "01a131f6-e681-7689-aa10-9ab6f1d764d2",
+        "01a131f7-3890-7dbb-a5b0-2595b75164a3"
+      ],
+      "restarted": true,
+      "restartOperation": "9b7561091f5fa325c23ceb35ba24edfc",
+      "restartTask": "01a131f6-4264-7d56-9fc2-3bf1c7cb3b73",
+      "oldPodUID": "dbd98ac3-d0d7-4024-b1f3-f6843d77d894",
+      "newPodUID": "c19b62ed-fe59-478d-8661-99c7d169efc0",
+      "generation": 1,
+      "completed": true
+    },
+    "wireless-update": {
+      "events": [
+        {
+          "phase": "InSync",
+          "operation": "8ba49847293404f4ad0e12021c1b3e97",
+          "resource": "interfaces/interface:CVKDB5B35840",
+          "operationPhase": "Accepted",
+          "task": "01a131f7-9aea-76bc-9778-8f1d45461c0f",
+          "target": "mdeYq1zl-rei1-qJm1-odqW-qZbwmuSYrdncndu1qJyZnZu4odK0"
+        },
+        {
+          "phase": "Waiting",
+          "operation": "8ba49847293404f4ad0e12021c1b3e97",
+          "resource": "interfaces/interface:CVKDB5B35840",
+          "operationPhase": "Accepted",
+          "task": "01a131f7-9aea-76bc-9778-8f1d45461c0f",
+          "target": "mdeYq1zl-rei1-qJm1-odqW-qZbwmuSYrdncndu1qJyZnZu4odK0"
+        },
+        {
+          "phase": "Waiting",
+          "operation": "8ba49847293404f4ad0e12021c1b3e97",
+          "resource": "interfaces/interface:CVKDB5B35840",
+          "operationPhase": "Verifying",
+          "task": "01a131f7-9aea-76bc-9778-8f1d45461c0f",
+          "target": "mdeYq1zl-rei1-qJm1-odqW-qZbwmuSYrdncndu1qJyZnZu4odK0"
+        },
+        {
+          "phase": "Verifying",
+          "operation": "8ba49847293404f4ad0e12021c1b3e97",
+          "resource": "interfaces/interface:CVKDB5B35840",
+          "operationPhase": "Verified",
+          "task": "01a131f7-9aea-76bc-9778-8f1d45461c0f",
+          "target": "mdeYq1zl-rei1-qJm1-odqW-qZbwmuSYrdncndu1qJyZnZu4odK0"
+        },
+        {
+          "phase": "Verifying",
+          "operation": null,
+          "resource": null,
+          "operationPhase": null,
+          "task": null,
+          "target": null
+        },
+        {
+          "phase": "Waiting",
+          "operation": null,
+          "resource": null,
+          "operationPhase": null,
+          "task": null,
+          "target": null
+        },
+        {
+          "phase": "Waiting",
+          "operation": "521733b919ce02fbbfa339952bb1e5e7",
+          "resource": "security_settings/pre-auth-acl:CVKDB5B35841",
+          "operationPhase": "Accepted",
+          "task": "01a131f7-f1fa-72ac-bdd8-81c4eb161c27",
+          "target": "mdeYq1zl-rei1-qJm1-odqX-qZbwmuSYrdncndu1qJyZnZu4odK0"
+        },
+        {
+          "phase": "Waiting",
+          "operation": "521733b919ce02fbbfa339952bb1e5e7",
+          "resource": "security_settings/pre-auth-acl:CVKDB5B35841",
+          "operationPhase": "Verifying",
+          "task": "01a131f7-f1fa-72ac-bdd8-81c4eb161c27",
+          "target": "mdeYq1zl-rei1-qJm1-odqX-qZbwmuSYrdncndu1qJyZnZu4odK0"
+        },
+        {
+          "phase": "Waiting",
+          "operation": "521733b919ce02fbbfa339952bb1e5e7",
+          "resource": "security_settings/pre-auth-acl:CVKDB5B35841",
+          "operationPhase": "Verified",
+          "task": "01a131f7-f1fa-72ac-bdd8-81c4eb161c27",
+          "target": "mdeYq1zl-rei1-qJm1-odqX-qZbwmuSYrdncndu1qJyZnZu4odK0"
+        },
+        {
+          "phase": "Verifying",
+          "operation": "521733b919ce02fbbfa339952bb1e5e7",
+          "resource": "security_settings/pre-auth-acl:CVKDB5B35841",
+          "operationPhase": "Verified",
+          "task": "01a131f7-f1fa-72ac-bdd8-81c4eb161c27",
+          "target": "mdeYq1zl-rei1-qJm1-odqX-qZbwmuSYrdncndu1qJyZnZu4odK0"
+        },
+        {
+          "phase": "Waiting",
+          "operation": null,
+          "resource": null,
+          "operationPhase": null,
+          "task": null,
+          "target": null
+        },
+        {
+          "phase": "Waiting",
+          "operation": "6a6f5966690aeb6b62475e2549831d3d",
+          "resource": "power_profiles/power-profile:CVKDB5B35842",
+          "operationPhase": "Submitting",
+          "task": null,
+          "target": "mdeYq1zl-rei1-qJm1-odqY-qZbwmuSYrdncndu1qJyZnZu4odK0"
+        },
+        {
+          "phase": "Waiting",
+          "operation": "6a6f5966690aeb6b62475e2549831d3d",
+          "resource": "power_profiles/power-profile:CVKDB5B35842",
+          "operationPhase": "Accepted",
+          "task": "01a131f8-4418-7213-a370-1691696e04cc",
+          "target": "mdeYq1zl-rei1-qJm1-odqY-qZbwmuSYrdncndu1qJyZnZu4odK0"
+        },
+        {
+          "phase": "Waiting",
+          "operation": "6a6f5966690aeb6b62475e2549831d3d",
+          "resource": "power_profiles/power-profile:CVKDB5B35842",
+          "operationPhase": "Verifying",
+          "task": "01a131f8-4418-7213-a370-1691696e04cc",
+          "target": "mdeYq1zl-rei1-qJm1-odqY-qZbwmuSYrdncndu1qJyZnZu4odK0"
+        },
+        {
+          "phase": "Verifying",
+          "operation": "6a6f5966690aeb6b62475e2549831d3d",
+          "resource": "power_profiles/power-profile:CVKDB5B35842",
+          "operationPhase": "Verified",
+          "task": "01a131f8-4418-7213-a370-1691696e04cc",
+          "target": "mdeYq1zl-rei1-qJm1-odqY-qZbwmuSYrdncndu1qJyZnZu4odK0"
+        },
+        {
+          "phase": "Verifying",
+          "operation": null,
+          "resource": null,
+          "operationPhase": null,
+          "task": null,
+          "target": null
+        },
+        {
+          "phase": "Waiting",
+          "operation": null,
+          "resource": null,
+          "operationPhase": null,
+          "task": null,
+          "target": null
+        },
+        {
+          "phase": "Waiting",
+          "operation": "5d9a26974702c292dce95f086d465c4d",
+          "resource": "dot11be_profiles/dot11be-profile:CVKDB5B35843",
+          "operationPhase": "Accepted",
+          "task": "01a131f8-97cc-7b7d-b4a5-985c48176b31",
+          "target": "43ba4ce6-621a-389a-ac43-082cb60d37da"
+        },
+        {
+          "phase": "Waiting",
+          "operation": "5d9a26974702c292dce95f086d465c4d",
+          "resource": "dot11be_profiles/dot11be-profile:CVKDB5B35843",
+          "operationPhase": "Verifying",
+          "task": "01a131f8-97cc-7b7d-b4a5-985c48176b31",
+          "target": "43ba4ce6-621a-389a-ac43-082cb60d37da"
+        },
+        {
+          "phase": "Waiting",
+          "operation": "5d9a26974702c292dce95f086d465c4d",
+          "resource": "dot11be_profiles/dot11be-profile:CVKDB5B35843",
+          "operationPhase": "Verified",
+          "task": "01a131f8-97cc-7b7d-b4a5-985c48176b31",
+          "target": "43ba4ce6-621a-389a-ac43-082cb60d37da"
+        },
+        {
+          "phase": "Verifying",
+          "operation": "5d9a26974702c292dce95f086d465c4d",
+          "resource": "dot11be_profiles/dot11be-profile:CVKDB5B35843",
+          "operationPhase": "Verified",
+          "task": "01a131f8-97cc-7b7d-b4a5-985c48176b31",
+          "target": "43ba4ce6-621a-389a-ac43-082cb60d37da"
+        },
+        {
+          "phase": "Waiting",
+          "operation": null,
+          "resource": null,
+          "operationPhase": null,
+          "task": null,
+          "target": null
+        },
+        {
+          "phase": "InSync",
+          "operation": null,
+          "resource": null,
+          "operationPhase": null,
+          "task": null,
+          "target": null
+        }
+      ],
+      "tasks": [
+        "01a131f7-9aea-76bc-9778-8f1d45461c0f",
+        "01a131f7-f1fa-72ac-bdd8-81c4eb161c27",
+        "01a131f8-4418-7213-a370-1691696e04cc",
+        "01a131f8-97cc-7b7d-b4a5-985c48176b31"
+      ],
+      "generation": 2,
+      "completed": true
+    },
+    "feature_templates-create": {
+      "events": [
+        {
+          "phase": "Applying",
+          "operation": "e36c8640871ecee2cdd39199ae3de129",
+          "resource": "rrm_fra/rrm-fra:CVKDB5B35844",
+          "operationPhase": "Submitting",
+          "task": null,
+          "target": null
+        },
+        {
+          "phase": "Waiting",
+          "operation": "e36c8640871ecee2cdd39199ae3de129",
+          "resource": "rrm_fra/rrm-fra:CVKDB5B35844",
+          "operationPhase": "Submitting",
+          "task": null,
+          "target": null
+        },
+        {
+          "phase": "Waiting",
+          "operation": "e36c8640871ecee2cdd39199ae3de129",
+          "resource": "rrm_fra/rrm-fra:CVKDB5B35844",
+          "operationPhase": "Accepted",
+          "task": "01a131f9-0ed3-72f4-b428-51e94a2fe8ea",
+          "target": null
+        },
+        {
+          "phase": "Waiting",
+          "operation": "e36c8640871ecee2cdd39199ae3de129",
+          "resource": "rrm_fra/rrm-fra:CVKDB5B35844",
+          "operationPhase": "Verifying",
+          "task": "01a131f9-0ed3-72f4-b428-51e94a2fe8ea",
+          "target": null
+        },
+        {
+          "phase": "Verifying",
+          "operation": "e36c8640871ecee2cdd39199ae3de129",
+          "resource": "rrm_fra/rrm-fra:CVKDB5B35844",
+          "operationPhase": "Verified",
+          "task": "01a131f9-0ed3-72f4-b428-51e94a2fe8ea",
+          "target": null
+        },
+        {
+          "phase": "Verifying",
+          "operation": null,
+          "resource": null,
+          "operationPhase": null,
+          "task": null,
+          "target": null
+        },
+        {
+          "phase": "Waiting",
+          "operation": null,
+          "resource": null,
+          "operationPhase": null,
+          "task": null,
+          "target": null
+        },
+        {
+          "phase": "Waiting",
+          "operation": "45bf9ac83b767f99691579e21d8e49d7",
+          "resource": "cleanair/cleanair:CVKDB5B35845",
+          "operationPhase": "Accepted",
+          "task": "01a13201-30ee-7da2-ab65-1f46e4d15b4a",
+          "target": null
+        },
+        {
+          "phase": "Waiting",
+          "operation": "45bf9ac83b767f99691579e21d8e49d7",
+          "resource": "cleanair/cleanair:CVKDB5B35845",
+          "operationPhase": "Verifying",
+          "task": "01a13201-30ee-7da2-ab65-1f46e4d15b4a",
+          "target": null
+        },
+        {
+          "phase": "Waiting",
+          "operation": "45bf9ac83b767f99691579e21d8e49d7",
+          "resource": "cleanair/cleanair:CVKDB5B35845",
+          "operationPhase": "Verified",
+          "task": "01a13201-30ee-7da2-ab65-1f46e4d15b4a",
+          "target": null
+        },
+        {
+          "phase": "Verifying",
+          "operation": "45bf9ac83b767f99691579e21d8e49d7",
+          "resource": "cleanair/cleanair:CVKDB5B35845",
+          "operationPhase": "Verified",
+          "task": "01a13201-30ee-7da2-ab65-1f46e4d15b4a",
+          "target": null
+        },
+        {
+          "phase": "Verifying",
+          "operation": null,
+          "resource": null,
+          "operationPhase": null,
+          "task": null,
+          "target": null
+        },
+        {
+          "phase": "Waiting",
+          "operation": null,
+          "resource": null,
+          "operationPhase": null,
+          "task": null,
+          "target": null
+        },
+        {
+          "phase": "InSync",
+          "operation": null,
+          "resource": null,
+          "operationPhase": null,
+          "task": null,
+          "target": null
+        }
+      ],
+      "tasks": [
+        "01a131f9-0ed3-72f4-b428-51e94a2fe8ea",
+        "01a13201-30ee-7da2-ab65-1f46e4d15b4a"
+      ],
+      "restarted": true,
+      "restartOperation": "e36c8640871ecee2cdd39199ae3de129",
+      "restartTask": "01a131f9-0ed3-72f4-b428-51e94a2fe8ea",
+      "oldPodUID": "c19b62ed-fe59-478d-8661-99c7d169efc0",
+      "newPodUID": "bce99a15-6953-4c7f-b999-ba38ba750ef6",
+      "generation": 1,
+      "completed": true
+    },
+    "feature_templates-update": {
+      "events": [
+        {
+          "phase": "InSync",
+          "operation": "4d44d7c711cca70970afcf9561c70707",
+          "resource": "rrm_fra/rrm-fra:CVKDB5B35844",
+          "operationPhase": "Accepted",
+          "task": "01a13201-983c-769d-9082-ed082443b911",
+          "target": "86f6c9d2-0cad-449f-bb63-767db25a82da"
+        },
+        {
+          "phase": "Waiting",
+          "operation": "4d44d7c711cca70970afcf9561c70707",
+          "resource": "rrm_fra/rrm-fra:CVKDB5B35844",
+          "operationPhase": "Accepted",
+          "task": "01a13201-983c-769d-9082-ed082443b911",
+          "target": "86f6c9d2-0cad-449f-bb63-767db25a82da"
+        },
+        {
+          "phase": "Waiting",
+          "operation": "4d44d7c711cca70970afcf9561c70707",
+          "resource": "rrm_fra/rrm-fra:CVKDB5B35844",
+          "operationPhase": "Verifying",
+          "task": "01a13201-983c-769d-9082-ed082443b911",
+          "target": "86f6c9d2-0cad-449f-bb63-767db25a82da"
+        },
+        {
+          "phase": "Waiting",
+          "operation": "4d44d7c711cca70970afcf9561c70707",
+          "resource": "rrm_fra/rrm-fra:CVKDB5B35844",
+          "operationPhase": "Verified",
+          "task": "01a13201-983c-769d-9082-ed082443b911",
+          "target": "86f6c9d2-0cad-449f-bb63-767db25a82da"
+        },
+        {
+          "phase": "Verifying",
+          "operation": "4d44d7c711cca70970afcf9561c70707",
+          "resource": "rrm_fra/rrm-fra:CVKDB5B35844",
+          "operationPhase": "Verified",
+          "task": "01a13201-983c-769d-9082-ed082443b911",
+          "target": "86f6c9d2-0cad-449f-bb63-767db25a82da"
+        },
+        {
+          "phase": "Verifying",
+          "operation": null,
+          "resource": null,
+          "operationPhase": null,
+          "task": null,
+          "target": null
+        },
+        {
+          "phase": "Waiting",
+          "operation": null,
+          "resource": null,
+          "operationPhase": null,
+          "task": null,
+          "target": null
+        },
+        {
+          "phase": "Waiting",
+          "operation": "8288f01d4d97ec9132dc5cd2f552f61d",
+          "resource": "cleanair/cleanair:CVKDB5B35845",
+          "operationPhase": "Accepted",
+          "task": "01a13201-eaec-74e5-8629-b4f8db31c0d8",
+          "target": "15dfcf44-362a-4a83-b12c-e0cc3cd823db"
+        },
+        {
+          "phase": "Waiting",
+          "operation": "8288f01d4d97ec9132dc5cd2f552f61d",
+          "resource": "cleanair/cleanair:CVKDB5B35845",
+          "operationPhase": "Verifying",
+          "task": "01a13201-eaec-74e5-8629-b4f8db31c0d8",
+          "target": "15dfcf44-362a-4a83-b12c-e0cc3cd823db"
+        },
+        {
+          "phase": "Verifying",
+          "operation": "8288f01d4d97ec9132dc5cd2f552f61d",
+          "resource": "cleanair/cleanair:CVKDB5B35845",
+          "operationPhase": "Verified",
+          "task": "01a13201-eaec-74e5-8629-b4f8db31c0d8",
+          "target": "15dfcf44-362a-4a83-b12c-e0cc3cd823db"
+        },
+        {
+          "phase": "Waiting",
+          "operation": null,
+          "resource": null,
+          "operationPhase": null,
+          "task": null,
+          "target": null
+        },
+        {
+          "phase": "InSync",
+          "operation": null,
+          "resource": null,
+          "operationPhase": null,
+          "task": null,
+          "target": null
+        }
+      ],
+      "tasks": [
+        "01a13201-983c-769d-9082-ed082443b911",
+        "01a13201-eaec-74e5-8629-b4f8db31c0d8"
+      ],
+      "generation": 2,
+      "completed": true
+    }
+  },
+  "cleanupTasks": {
+    "interface": "01a131f8-fdaf-7d4a-a483-1b4aa538fef6",
+    "acl": "01a131f9-009b-74e4-976a-8700fe337e5c",
+    "power": "01a131f9-03d9-7eef-8700-8121d4aaa35c",
+    "be": "01a131f9-0719-7bc5-9236-45d4f4a087d2",
+    "fra": "01a13202-566f-7f8f-98e4-75c4075ed45e",
+    "cleanair": "01a13202-5a7c-764f-9fe1-49cae6a25c8c"
+  },
+  "baselineRestored": true,
+  "health": {
+    "image": "cvk-catc-nac:20261012-f291b578f34d",
+    "deployments": [
+      {
+        "namespace": "cisco-vk-system",
+        "name": "cisco-vk-cisco-virtual-kubelet-controller",
+        "image": "cvk-catc-nac:20261012-f291b578f34d",
+        "ready": 1
+      },
+      {
+        "namespace": "cvk-live",
+        "name": "cat9k-lab-101-vk",
+        "image": "cvk-catc-handoff:20261009-merge-admission",
+        "ready": 1
+      },
+      {
+        "namespace": "cvk-live",
+        "name": "cat9k-lab-103-vk",
+        "image": "cvk-catc-handoff:20261009-merge-admission",
+        "ready": 1
+      },
+      {
+        "namespace": "cvk-live",
+        "name": "cat9k-live-vk",
+        "image": "cvk-catc-handoff:20261009-merge-admission",
+        "ready": 1
+      },
+      {
+        "namespace": "cvk-live",
+        "name": "catc-controller-worker",
+        "image": "cvk-catc-nac:20261012-f291b578f34d",
+        "ready": 1
+      },
+      {
+        "namespace": "cvk-live",
+        "name": "u20f3e68e-b127-4f2e-9a36-b66945135051-network",
+        "image": "cvk-catc-handoff:20261009-merge-admission",
+        "ready": 1
+      },
+      {
+        "namespace": "cvk-live",
+        "name": "u6afd6bd0-284d-4ee2-a6e4-638ca07976b4-network",
+        "image": "cvk-catc-handoff:20261009-merge-admission",
+        "ready": 1
+      },
+      {
+        "namespace": "cvk-live",
+        "name": "u782dc4b2-7e43-4188-8436-87633f0bf4fb-network",
+        "image": "cvk-catc-handoff:20261009-merge-admission",
+        "ready": 1
+      }
+    ],
+    "nodes": [
+      {
+        "name": "cat9k-lab-101",
+        "ready": "True"
+      },
+      {
+        "name": "cat9k-lab-103",
+        "ready": "True"
+      },
+      {
+        "name": "cat9k-live",
+        "ready": "True"
+      }
+    ],
+    "configuration": {
+      "name": "catc-nac-journal-qualification",
+      "uid": "5c9724f7-af1a-4fe2-8b9c-724f996f2470",
+      "generation": 6,
+      "phase": "InSync",
+      "owners": [
+        {
+          "configName": "catc-wireless-features-qualification",
+          "configUID": "f1e12128-6587-4436-8e53-02600399e97b",
+          "section": "feature_templates"
+        },
+        {
+          "configName": "catc-nac-journal-qualification",
+          "configUID": "5c9724f7-af1a-4fe2-8b9c-724f996f2470",
+          "section": "inventory"
+        },
+        {
+          "configName": "catc-global-credential-qualification",
+          "configUID": "3ca01713-4714-48ad-9fe2-b7ad5c39b305",
+          "section": "network_settings"
+        },
+        {
+          "configName": "catc-aaa-qualification",
+          "configUID": "4510b61d-d0e3-41a9-a7b5-72f104d51c4d",
+          "section": "system_settings"
+        },
+        {
+          "configName": "catc-nac-journal-qualification",
+          "configUID": "5c9724f7-af1a-4fe2-8b9c-724f996f2470",
+          "section": "templates"
+        },
+        {
+          "configName": "catc-wireless-qualification",
+          "configUID": "cffa4b5a-4403-4cf0-b9c2-8825b8daa5f1",
+          "section": "wireless"
+        }
+      ]
+    }
+  },
+  "limits": [
+    "No wireless controller or AP in lab; no device provisioning or radio behavior qualified",
+    "Additional attribute transitions and fabric components remain outside this worker qualification",
+    "Report-only owners are retained after fixture deletion; their missing definitions may appear as Add drift",
+    "FRA create required supervised restoration of its successful task receipt; this run does not prove unattended receipt recovery or qualification of the later conflict-retry fix"
+  ],
+  "supervisedRecovery": {
+    "operation": {
+      "action": "Create",
+      "configGeneration": 1,
+      "configName": "catc-wireless-features-qualification",
+      "configUID": "f1e12128-6587-4436-8e53-02600399e97b",
+      "controllerGeneration": 10,
+      "id": "e36c8640871ecee2cdd39199ae3de129",
+      "phase": "Submitting",
+      "resource": "rrm_fra/rrm-fra:CVKDB5B35844",
+      "section": "feature_templates",
+      "submittedAt": "2026-10-12T21:14:51Z"
+    },
+    "task": {
+      "data": "86f6c9d2-0cad-449f-bb63-767db25a82da",
+      "endTime": 1791839768289,
+      "startTime": 1791839768275,
+      "version": 1791839768289,
+      "progress": "Successfully created model config design with name CVKDB5B35844",
+      "isError": false,
+      "serviceType": "NCNC",
+      "username": "system",
+      "instanceTenantId": "TNT0",
+      "id": "01a131f9-0ed3-72f4-b428-51e94a2fe8ea"
+    },
+    "target": {
+      "designName": "CVKDB5B35844",
+      "featureAttributes": {
+        "radioBand": "2_4GHZ_5GHZ",
+        "fraFreeze": false,
+        "fraStatus": false,
+        "fraInterval": 3,
+        "fraSensitivity": "Medium"
+      },
+      "id": "86f6c9d2-0cad-449f-bb63-767db25a82da",
+      "unlockedAttributes": []
+    },
+    "recovery": "supervised receipt restoration from authoritative completed task and UUID/name read-back; no API replay"
+  },
+  "nxosWorker": {
+    "image": "docker.io/library/cisco-vk:pr194-ee3b18f",
+    "ready": 1
+  }
+}

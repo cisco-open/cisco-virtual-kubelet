@@ -1,0 +1,12 @@
+[
+  {
+    "case": "missing-recreate-gate",
+    "result": "both singleton and bulk entry points refused before client/fixture initialization",
+    "expectedExit": 1
+  },
+  {
+    "case": "conflicting-association-removal",
+    "result": "both singleton and bulk entry points refused before client/fixture initialization",
+    "expectedExit": 1
+  }
+]

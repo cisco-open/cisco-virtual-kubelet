@@ -1,0 +1,9 @@
+=== RUN   TestLiveSDATransitInventoryAliases
+    fabric_sda_transit_alias_live_test.go:98: live alias resolves exact native identity 198.51.100.100 provisionedRecord false preflightReady false
+    fabric_sda_transit_alias_live_test.go:98: live alias resolves exact native identity 198.51.100.101 provisionedRecord false preflightReady false
+    fabric_sda_transit_alias_live_test.go:98: live alias resolves exact native identity 198.51.100.103 provisionedRecord false preflightReady false
+    fabric_sda_transit_alias_live_test.go:113: three-declaration native source preflight assessed missingProvisioning true sourceReady false
+    fabric_sda_transit_alias_live_test.go:117: three live model aliases resolved; native provisioning prerequisites enforced; zero product writes, no CLI/worker/SDA execution claim
+--- PASS: TestLiveSDATransitInventoryAliases (8.58s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	10.748s

@@ -1,0 +1,8 @@
+--- FAIL: TestTagMembershipPlansRevalidateWholeSelection (0.04s)
+    --- FAIL: TestTagMembershipPlansRevalidateWholeSelection/template/during-reobserve-protection (0.02s)
+        tag_membership_guard_test.go:118: unexpected membership guard outcome <nil>
+    --- FAIL: TestTagMembershipPlansRevalidateWholeSelection/networkdevice/during-reobserve-protection (0.01s)
+        tag_membership_guard_test.go:118: unexpected membership guard outcome <nil>
+FAIL
+FAIL	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	1.135s
+FAIL

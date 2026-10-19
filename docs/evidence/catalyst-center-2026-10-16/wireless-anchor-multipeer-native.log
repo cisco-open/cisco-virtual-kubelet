@@ -1,0 +1,11 @@
+=== RUN   TestLiveWirelessAnchor
+    wireless_anchor_live_test.go:50: create CVK_16063733 01a1436e-2310-7c3f-a607-c65a80d4a496
+    wireless_anchor_live_test.go:138: single-priority mdeYq1zl-xZe2-mdyZ-nZmZ-qZbwmuSYxZmXndy1mdy2nZm4nZKZ 01a1436e-2b62-7444-b3a3-36a16fe81385
+    wireless_anchor_live_test.go:138: add-peer mdeYq1zl-xZe2-mdyZ-nZmZ-qZbwmuSYxZmXndy1mdy2nZm4nZKZ 01a1436e-32cb-77d0-8428-a6c2b947f10e
+    wireless_anchor_live_test.go:138: swap-priorities mdeYq1zl-xZe2-mdyZ-nZmZ-qZbwmuSYxZmXndy1mdy2nZm4nZKZ 01a1436e-3a3e-73c1-a1f1-6205235ed634
+    wireless_anchor_live_test.go:138: remove-peer mdeYq1zl-xZe2-mdyZ-nZmZ-qZbwmuSYxZmXndy1mdy2nZm4nZKZ 01a1436e-41a7-7537-b162-b30d9209e026
+    wireless_anchor_live_test.go:113: stale-plan alternate mdeYq1zl-xZe2-mdyZ-nZmZ-qZbwmuSYxZmXndy1mdy2nZm4nZKZ 01a1436e-49d8-7021-8915-c54d11bafc32
+    wireless_anchor_live_test.go:178: delete mdeYq1zl-xZe2-mdyZ-nZmZ-qZbwmuSYxZmXndy1mdy2nZm4nZKZ 01a1436e-518c-7921-b97e-687b0fe550b0
+--- PASS: TestLiveWirelessAnchor (14.01s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	16.151s

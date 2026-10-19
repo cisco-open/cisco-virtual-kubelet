@@ -1,0 +1,5 @@
+=== RUN   TestLiveCatalystCenterManagementAddressPlanning
+    management_address_live_test.go:56: PASS: 3 live device no-ops and local synthetic address changes; UUID/serial/baseline preserved; no writes
+--- PASS: TestLiveCatalystCenterManagementAddressPlanning (0.58s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	1.280s

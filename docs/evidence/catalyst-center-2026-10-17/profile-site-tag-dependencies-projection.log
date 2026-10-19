@@ -1,0 +1,22 @@
+=== RUN   TestProfileSiteTagProjectionScope
+=== RUN   TestProfileSiteTagProjectionScope/complete
+=== RUN   TestProfileSiteTagProjectionScope/other-candidate-device
+=== RUN   TestProfileSiteTagProjectionScope/other-candidate-pnp
+=== RUN   TestProfileSiteTagProjectionScope/other-candidate-error
+=== RUN   TestProfileSiteTagProjectionScope/foreign-tag
+=== RUN   TestProfileSiteTagProjectionScope/changed-projected-fields
+=== RUN   TestProfileSiteTagProjectionScope/replaced-tag
+=== RUN   TestProfileSiteTagProjectionScope/ancestor-reference
+=== RUN   TestProfileSiteTagProjectionScope/unknown-projection
+--- PASS: TestProfileSiteTagProjectionScope (0.12s)
+    --- PASS: TestProfileSiteTagProjectionScope/complete (0.02s)
+    --- PASS: TestProfileSiteTagProjectionScope/other-candidate-device (0.01s)
+    --- PASS: TestProfileSiteTagProjectionScope/other-candidate-pnp (0.01s)
+    --- PASS: TestProfileSiteTagProjectionScope/other-candidate-error (0.01s)
+    --- PASS: TestProfileSiteTagProjectionScope/foreign-tag (0.01s)
+    --- PASS: TestProfileSiteTagProjectionScope/changed-projected-fields (0.01s)
+    --- PASS: TestProfileSiteTagProjectionScope/replaced-tag (0.01s)
+    --- PASS: TestProfileSiteTagProjectionScope/ancestor-reference (0.01s)
+    --- PASS: TestProfileSiteTagProjectionScope/unknown-projection (0.01s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	2.520s

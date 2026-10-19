@@ -1,0 +1,9 @@
+=== RUN   TestLiveCatalystCenterTags
+    template_tags_live_test.go:209: tag operation 0 Create 01a13f3b-bd9b-748a-a131-ac7c035f342c
+    template_tags_live_test.go:209: tag operation 1 Update 01a13f3b-c553-7389-8a4c-930fa3051505
+    template_tags_live_test.go:262: combined inventory/template tag precedence verified against one live tag
+    template_tags_live_test.go:269: native dynamic tag LIKE create, same-UUID rule update and empty membership verified
+    template_tags_live_test.go:145: tag cleanup verified d80f3c99-3fcd-441e-8049-aec8150283f9
+--- PASS: TestLiveCatalystCenterTags (4.64s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	6.606s

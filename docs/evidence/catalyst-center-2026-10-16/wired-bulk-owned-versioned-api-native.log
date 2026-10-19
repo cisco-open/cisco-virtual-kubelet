@@ -1,0 +1,33 @@
+=== RUN   TestLivePrivateAPIOwnedVersionedComposition
+    wired_bulk_owned_versioned_api_live_test.go:363: real API applied receipt device_credentials/cli_credentials/CVK-Owned-2ba3e7cf678af5c9a9f1e13a-clicredential 7cddc0ed-3993-4925-b76c-c13bda4b34e3 phase 1
+    wired_bulk_owned_versioned_api_live_test.go:363: real API applied receipt device_credentials/https_read_credentials/CVK-Owned-2ba3e7cf678af5c9a9f1e13a-httpsread 0aeca467-8f9f-4cde-acda-702df1983949 phase 1
+    wired_bulk_owned_versioned_api_live_test.go:363: real API applied receipt device_credentials/https_write_credentials/CVK-Owned-2ba3e7cf678af5c9a9f1e13a-httpswrite e291dd77-4c23-430c-aeec-f7b8a87c2817 phase 1
+    wired_bulk_owned_versioned_api_live_test.go:363: real API applied receipt device_credentials/snmpv2_read_credentials/CVK-Owned-2ba3e7cf678af5c9a9f1e13a-snmpv2cread 42e3c3a5-96b1-4d76-891a-3daa43a24d67 phase 1
+    wired_bulk_owned_versioned_api_live_test.go:363: real API applied receipt device_credentials/snmpv2_write_credentials/CVK-Owned-2ba3e7cf678af5c9a9f1e13a-snmpv2cwrite b6729b1c-5ac6-43ed-9242-3aa5944e6e46 phase 1
+    wired_bulk_owned_versioned_api_live_test.go:363: real API applied receipt device_credentials/snmpv3_credentials/CVK-Owned-2ba3e7cf678af5c9a9f1e13a-snmpv3 cc5ac301-9cd6-49f0-8864-7b30e00a55fb phase 1
+    wired_bulk_owned_versioned_api_live_test.go:455: native owner phase composed with real API bulk dependency without consumer projection reads 1
+    wired_bulk_owned_versioned_api_live_test.go:347: stale and partial projection rollout refused with zero native rotations
+    wired_bulk_owned_versioned_api_live_test.go:363: real API applied receipt device_credentials/cli_credentials/CVK-Owned-2ba3e7cf678af5c9a9f1e13a-clicredential 7cddc0ed-3993-4925-b76c-c13bda4b34e3 phase 2
+    wired_bulk_owned_versioned_api_live_test.go:363: real API applied receipt device_credentials/https_read_credentials/CVK-Owned-2ba3e7cf678af5c9a9f1e13a-httpsread 0aeca467-8f9f-4cde-acda-702df1983949 phase 2
+    wired_bulk_owned_versioned_api_live_test.go:363: real API applied receipt device_credentials/https_write_credentials/CVK-Owned-2ba3e7cf678af5c9a9f1e13a-httpswrite e291dd77-4c23-430c-aeec-f7b8a87c2817 phase 2
+    wired_bulk_owned_versioned_api_live_test.go:363: real API applied receipt device_credentials/snmpv2_read_credentials/CVK-Owned-2ba3e7cf678af5c9a9f1e13a-snmpv2cread 42e3c3a5-96b1-4d76-891a-3daa43a24d67 phase 2
+    wired_bulk_owned_versioned_api_live_test.go:363: real API applied receipt device_credentials/snmpv2_write_credentials/CVK-Owned-2ba3e7cf678af5c9a9f1e13a-snmpv2cwrite b6729b1c-5ac6-43ed-9242-3aa5944e6e46 phase 2
+    wired_bulk_owned_versioned_api_live_test.go:363: real API applied receipt device_credentials/snmpv3_credentials/CVK-Owned-2ba3e7cf678af5c9a9f1e13a-snmpv3 cc5ac301-9cd6-49f0-8864-7b30e00a55fb phase 2
+    wired_bulk_owned_versioned_api_live_test.go:363: real API applied receipt device_credentials/cli_credentials/CVK-Owned-2ba3e7cf678af5c9a9f1e13a-clicredential 7cddc0ed-3993-4925-b76c-c13bda4b34e3 phase 2
+    wired_bulk_owned_versioned_api_live_test.go:363: real API applied receipt device_credentials/https_read_credentials/CVK-Owned-2ba3e7cf678af5c9a9f1e13a-httpsread 0aeca467-8f9f-4cde-acda-702df1983949 phase 2
+    wired_bulk_owned_versioned_api_live_test.go:363: real API applied receipt device_credentials/https_write_credentials/CVK-Owned-2ba3e7cf678af5c9a9f1e13a-httpswrite e291dd77-4c23-430c-aeec-f7b8a87c2817 phase 2
+    wired_bulk_owned_versioned_api_live_test.go:363: real API applied receipt device_credentials/snmpv2_read_credentials/CVK-Owned-2ba3e7cf678af5c9a9f1e13a-snmpv2cread 42e3c3a5-96b1-4d76-891a-3daa43a24d67 phase 2
+    wired_bulk_owned_versioned_api_live_test.go:363: real API applied receipt device_credentials/snmpv2_write_credentials/CVK-Owned-2ba3e7cf678af5c9a9f1e13a-snmpv2cwrite b6729b1c-5ac6-43ed-9242-3aa5944e6e46 phase 2
+    wired_bulk_owned_versioned_api_live_test.go:363: real API applied receipt device_credentials/snmpv3_credentials/CVK-Owned-2ba3e7cf678af5c9a9f1e13a-snmpv3 cc5ac301-9cd6-49f0-8864-7b30e00a55fb phase 2
+    wired_bulk_owned_versioned_api_live_test.go:455: native owner phase composed with real API bulk dependency without consumer projection reads 2
+    wired_bulk_owned_versioned_api_live_test.go:461: six native create/rotation UUIDs and real API task/version receipts verified; source projection, stale/partial refusal, restart no replay and secret exclusion passed; no device authentication or installed workers claimed
+    wired_bulk_owned_versioned_api_live_test.go:252: generated credential removed cli_credentials 7cddc0ed-3993-4925-b76c-c13bda4b34e3 01a14468-7aad-7cdd-9893-be36601a3710
+    wired_bulk_owned_versioned_api_live_test.go:252: generated credential removed https_read_credentials 0aeca467-8f9f-4cde-acda-702df1983949 01a14468-808d-784f-8a06-039ad96c5243
+    wired_bulk_owned_versioned_api_live_test.go:252: generated credential removed https_write_credentials e291dd77-4c23-430c-aeec-f7b8a87c2817 01a14468-8665-7940-8919-839d8eb11590
+    wired_bulk_owned_versioned_api_live_test.go:252: generated credential removed snmpv2_read_credentials 42e3c3a5-96b1-4d76-891a-3daa43a24d67 01a14468-8c41-770b-a27a-bd92a3032547
+    wired_bulk_owned_versioned_api_live_test.go:252: generated credential removed snmpv2_write_credentials b6729b1c-5ac6-43ed-9242-3aa5944e6e46 01a14468-921e-7fb7-a199-e02386fa6391
+    wired_bulk_owned_versioned_api_live_test.go:252: generated credential removed snmpv3_credentials cc5ac301-9cd6-49f0-8864-7b30e00a55fb 01a14468-97f8-7dae-8069-cb94725d059b
+    wired_bulk_owned_versioned_api_live_test.go:259: six generated unassigned credentials removed; complete non-secret native baseline restored
+--- PASS: TestLivePrivateAPIOwnedVersionedComposition (89.47s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	91.872s

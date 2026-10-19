@@ -1,0 +1,19 @@
+{
+  "branch": "pr/johalley/catc-support",
+  "moduleVersion": "0.5.0",
+  "moduleCommit": "a435555fe828f03cf3311d52fe1ab6572a247916",
+  "providerVersion": "0.6.1",
+  "providerCommit": "01058637dd5ed4fca93e1b2a96dd7032aec2d3a1",
+  "scope": "Complete in-memory native planned-AP state, exact-number shared decoding, preflight/publication reobservation and unmapped-update protection. No durable keyed baseline, exclusive creator or deletion authority claimed. Final test-only publication faults and descriptive catalog changes have separate focused/API/catalog checks; runtime code is unchanged from the native/broad cycles.",
+  "sourceSha256": {
+    "internal/controlleradapter/catalystcenter/template_native_comparison.go": "37fa048af1afc6642d1b1e040f424405d08e82a7d4732234116a2a451bd18b54",
+    "internal/controlleradapter/catalystcenter/planned_ap_observation.go": "0752613c6b35ca13d06ed3e260addb1671bc2b11286c35868342ccb75827ac86",
+    "internal/controlleradapter/catalystcenter/planned_ap_execution.go": "544d8cf762cef9f48c38f8ba50892180453073ccdd99b5de6e680c3d6d664b66",
+    "internal/controlleradapter/catalystcenter/planned_ap_native.go": "5c7fd5365389da60efcefb2fa0304ee6457e9c81e3896f73c1d5fc909b2a24aa",
+    "internal/controlleradapter/catalystcenter/planned_ap_native_test.go": "6c5e7505b32e96716d1054c6fe4153385149119246066524795ab01cdba1dc62",
+    "internal/controlleradapter/catalystcenter/planned_ap_manifest_test.go": "fb30aada87869501d1c2293defc94877ee654fd34b0e42a8f50fe1fdcdfcdbc2",
+    "internal/controlleradapter/catalystcenter/site_design_envtest_test.go": "b8fff7043a10e3ded4d60d39b1717dbe98b723f0e71f589385961f1ed48dc6ff",
+    "internal/controlleradapter/catalystcenter/site_design_live_test.go": "654183b558845ee2f95d7b69c2c10a42445fa5ae1fa2b2a4ef2db5e8396c3d7a",
+    "internal/controlleradapter/catalystcenter/nacmodel/catalog.go": "19203661677c330792c0dce593d805b5f8b8bebb5a9ccccdda69f156ed303085"
+  }
+}

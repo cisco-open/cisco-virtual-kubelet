@@ -52,6 +52,12 @@ nav:
 - Topology Roadmap Execution: 'topology-roadmap-execution.md'
 - November Topology Handoff: 'topology-november-handoff.md'
 - Network Controller Extensions: 'controller-extension-guide.md'
+- Catalyst Center:
+  - Alpha Scope and Merge Gates: 'controllers/catalyst-center-alpha.md'
+  - Roadmap to Full Parity: 'controllers/catalyst-center-roadmap.md'
+  - Runtime Guide: 'controllers/catalyst-center.md'
+  - Resource Parity Ledger: 'controllers/catalyst-center-resource-parity.md'
+  - Parity Reference: 'controllers/catalyst-center-parity.md'
 - CLI Reference: 'cisco-vk-cli.md'
 - Configuration:
   - CiscoDevice Reference: 'CONFIGURATION.md'

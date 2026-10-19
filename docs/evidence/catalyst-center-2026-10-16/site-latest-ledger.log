@@ -1,0 +1,5 @@
+Pinned NetAsCode Catalyst Center 0.5.0 cc_*.tf inventory: 93 distinct resource types.
+Ledger: 93 matching unique rows; missing/extra resource types: none.
+Includes 91 Catalyst Center types plus terraform_data/time_sleep.
+Private latest-applied support in this phase covers singular site metadata only.
+This inventory audit is not proof of full model or destructive lifecycle parity.

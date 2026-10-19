@@ -1,0 +1,101 @@
+=== RUN   TestEnvtestDiscoveryInitialNoAuthLifecycle
+=== RUN   TestEnvtestDiscoveryInitialNoAuthLifecycle/inline
+=== RUN   TestEnvtestDiscoveryInitialNoAuthLifecycle/configmap
+=== RUN   TestEnvtestDiscoveryInitialNoAuthLifecycle/unknown
+=== RUN   TestEnvtestDiscoveryInitialNoAuthLifecycle/prepared
+=== RUN   TestEnvtestDiscoveryInitialNoAuthLifecycle/prepared-configmap
+=== RUN   TestEnvtestDiscoveryInitialNoAuthLifecycle/prepared-source-loss
+=== RUN   TestEnvtestDiscoveryInitialNoAuthLifecycle/prepared-committed-source-loss
+=== RUN   TestEnvtestDiscoveryInitialNoAuthLifecycle/prepared-native-conflict
+=== RUN   TestEnvtestDiscoveryInitialNoAuthLifecycle/prepared-scope-loss
+=== RUN   TestEnvtestDiscoveryInitialNoAuthLifecycle/handoff
+=== RUN   TestEnvtestDiscoveryInitialNoAuthLifecycle/handoff-configmap
+=== RUN   TestEnvtestDiscoveryInitialNoAuthLifecycle/prepared-handoff
+=== RUN   TestEnvtestDiscoveryInitialNoAuthLifecycle/prepared-committed-source-loss-handoff
+=== RUN   TestEnvtestDiscoveryInitialNoAuthLifecycle/projected
+=== RUN   TestEnvtestDiscoveryInitialNoAuthLifecycle/projected-configmap
+=== RUN   TestEnvtestDiscoveryInitialNoAuthLifecycle/projected-return-to-metadata
+--- PASS: TestEnvtestDiscoveryInitialNoAuthLifecycle (26.13s)
+    --- PASS: TestEnvtestDiscoveryInitialNoAuthLifecycle/inline (3.27s)
+    --- PASS: TestEnvtestDiscoveryInitialNoAuthLifecycle/configmap (0.75s)
+    --- PASS: TestEnvtestDiscoveryInitialNoAuthLifecycle/unknown (0.68s)
+    --- PASS: TestEnvtestDiscoveryInitialNoAuthLifecycle/prepared (0.24s)
+    --- PASS: TestEnvtestDiscoveryInitialNoAuthLifecycle/prepared-configmap (0.25s)
+    --- PASS: TestEnvtestDiscoveryInitialNoAuthLifecycle/prepared-source-loss (1.18s)
+    --- PASS: TestEnvtestDiscoveryInitialNoAuthLifecycle/prepared-committed-source-loss (0.24s)
+    --- PASS: TestEnvtestDiscoveryInitialNoAuthLifecycle/prepared-native-conflict (1.18s)
+    --- PASS: TestEnvtestDiscoveryInitialNoAuthLifecycle/prepared-scope-loss (0.87s)
+    --- PASS: TestEnvtestDiscoveryInitialNoAuthLifecycle/handoff (2.48s)
+    --- PASS: TestEnvtestDiscoveryInitialNoAuthLifecycle/handoff-configmap (2.57s)
+    --- PASS: TestEnvtestDiscoveryInitialNoAuthLifecycle/prepared-handoff (1.75s)
+    --- PASS: TestEnvtestDiscoveryInitialNoAuthLifecycle/prepared-committed-source-loss-handoff (1.82s)
+    --- PASS: TestEnvtestDiscoveryInitialNoAuthLifecycle/projected (1.53s)
+    --- PASS: TestEnvtestDiscoveryInitialNoAuthLifecycle/projected-configmap (1.64s)
+    --- PASS: TestEnvtestDiscoveryInitialNoAuthLifecycle/projected-return-to-metadata (2.31s)
+=== RUN   TestDiscoveryInitialNoAuthLifecycle
+=== RUN   TestDiscoveryInitialNoAuthLifecycle/inline
+=== RUN   TestDiscoveryInitialNoAuthLifecycle/configmap
+=== RUN   TestDiscoveryInitialNoAuthLifecycle/unknown
+=== RUN   TestDiscoveryInitialNoAuthLifecycle/prepared
+=== RUN   TestDiscoveryInitialNoAuthLifecycle/prepared-configmap
+=== RUN   TestDiscoveryInitialNoAuthLifecycle/prepared-source-loss
+=== RUN   TestDiscoveryInitialNoAuthLifecycle/prepared-committed-source-loss
+=== RUN   TestDiscoveryInitialNoAuthLifecycle/prepared-native-conflict
+=== RUN   TestDiscoveryInitialNoAuthLifecycle/prepared-scope-loss
+=== RUN   TestDiscoveryInitialNoAuthLifecycle/handoff
+=== RUN   TestDiscoveryInitialNoAuthLifecycle/handoff-configmap
+[controller-runtime] log.SetLogger(...) was never called; logs will not be displayed.
+Detected at:
+	>  goroutine 7649 [running]:
+	>  runtime/debug.Stack()
+	>  	/Users/johalley/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.9.darwin-arm64/src/runtime/debug/stack.go:26 +0x6c
+	>  sigs.k8s.io/controller-runtime/pkg/log.eventuallyFulfillRoot()
+	>  	/Users/johalley/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.23.3/pkg/log/log.go:60 +0xc4
+	>  sigs.k8s.io/controller-runtime/pkg/log.(*delegatingLogSink).WithValues(0xc000608940, {0x0, 0x0, 0x0})
+	>  	/Users/johalley/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.23.3/pkg/log/deleg.go:168 +0x3c
+	>  github.com/go-logr/logr.Logger.WithValues(...)
+	>  	/Users/johalley/go/pkg/mod/github.com/go-logr/logr@v1.4.4/logr.go:332
+	>  sigs.k8s.io/controller-runtime/pkg/log.FromContext({0x1083b27e8, 0x109507040}, {0x0, 0x0, 0x0})
+	>  	/Users/johalley/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.23.3/pkg/log/log.go:98 +0xb8
+	>  github.com/cisco/virtual-kubelet-cisco/internal/controller.(*NetworkControllerReconciler).Reconcile(0xc00056c1c0, {0x1083b27e8, 0x109507040}, {{{0x1058f7b25, 0x3}, {0x1058f851e, 0x4}}})
+	>  	/Users/johalley/Git/cisco-virtual-kubelet/internal/controller/networkcontroller_controller.go:101 +0x5c
+	>  github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter.exerciseDiscoveryCredentialCustodyCleanup(0xc000025688, 0xc00090eb00, 0xc000e08608, {0x1059142ad, 0x6}, 0x0, {0x1586b08a0, 0xc001100480}, {0xc0006b9191, 0xf}, ...)
+	>  	/Users/johalley/Git/cisco-virtual-kubelet/internal/controlleradapter/catalystcenter/discovery_credential_custody_cleanup_test.go:353 +0x33f4
+	>  github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter.exerciseDiscoveryCredentialCustodyExecution(0xc000025688, 0xc00090eb00, 0xc000e08608, {0x1059142a5, 0xe}, 0x0, {0x1586b08a0, 0xc001100480}, 0x0)
+	>  	/Users/johalley/Git/cisco-virtual-kubelet/internal/controlleradapter/catalystcenter/discovery_credential_custody_execution_test.go:269 +0x30fc
+	>  github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter.exerciseDiscoveryCredentialPublicHandoff(0xc000025688, 0xc00090eb00, 0xc000e08608, {0x10595d89b, 0xe}, 0x0, {0xc0005862c0, 0xa7}, {0x1586b08a0, 0xc001100480}, ...)
+	>  	/Users/johalley/Git/cisco-virtual-kubelet/internal/controlleradapter/catalystcenter/discovery_credential_public_handoff_test.go:237 +0x1dc0
+	>  github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter.exerciseDiscoveryCredentialHandoffObservation(0xc000025688, 0xc00090eb00, 0xc001034008, {0x10595d88c, 0x1d}, 0x0, {0xc000645d28, 0x1, 0xc001034008?})
+	>  	/Users/johalley/Git/cisco-virtual-kubelet/internal/controlleradapter/catalystcenter/discovery_credential_handoff_observation_test.go:322 +0x3410
+	>  github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter.initialNoAuthScenario(0xc000025688, {0x10592274f, 0x11}, 0x0)
+	>  	/Users/johalley/Git/cisco-virtual-kubelet/internal/controlleradapter/catalystcenter/discovery_initial_noauth_test.go:340 +0x3464
+	>  github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter.TestDiscoveryInitialNoAuthLifecycle.func1(0xc000025688)
+	>  	/Users/johalley/Git/cisco-virtual-kubelet/internal/controlleradapter/catalystcenter/discovery_initial_noauth_test.go:31 +0x44
+	>  testing.tRunner(0xc000025688, 0xc0011200f0)
+	>  	/Users/johalley/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.9.darwin-arm64/src/testing/testing.go:2036 +0x168
+	>  created by testing.(*T).Run in goroutine 7487
+	>  	/Users/johalley/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.9.darwin-arm64/src/testing/testing.go:2101 +0x7c0
+=== RUN   TestDiscoveryInitialNoAuthLifecycle/prepared-handoff
+=== RUN   TestDiscoveryInitialNoAuthLifecycle/prepared-committed-source-loss-handoff
+=== RUN   TestDiscoveryInitialNoAuthLifecycle/projected
+=== RUN   TestDiscoveryInitialNoAuthLifecycle/projected-configmap
+=== RUN   TestDiscoveryInitialNoAuthLifecycle/projected-return-to-metadata
+--- PASS: TestDiscoveryInitialNoAuthLifecycle (7.58s)
+    --- PASS: TestDiscoveryInitialNoAuthLifecycle/inline (0.22s)
+    --- PASS: TestDiscoveryInitialNoAuthLifecycle/configmap (0.23s)
+    --- PASS: TestDiscoveryInitialNoAuthLifecycle/unknown (0.22s)
+    --- PASS: TestDiscoveryInitialNoAuthLifecycle/prepared (0.08s)
+    --- PASS: TestDiscoveryInitialNoAuthLifecycle/prepared-configmap (0.08s)
+    --- PASS: TestDiscoveryInitialNoAuthLifecycle/prepared-source-loss (0.30s)
+    --- PASS: TestDiscoveryInitialNoAuthLifecycle/prepared-committed-source-loss (0.09s)
+    --- PASS: TestDiscoveryInitialNoAuthLifecycle/prepared-native-conflict (0.36s)
+    --- PASS: TestDiscoveryInitialNoAuthLifecycle/prepared-scope-loss (0.24s)
+    --- PASS: TestDiscoveryInitialNoAuthLifecycle/handoff (1.12s)
+    --- PASS: TestDiscoveryInitialNoAuthLifecycle/handoff-configmap (1.13s)
+    --- PASS: TestDiscoveryInitialNoAuthLifecycle/prepared-handoff (0.76s)
+    --- PASS: TestDiscoveryInitialNoAuthLifecycle/prepared-committed-source-loss-handoff (0.79s)
+    --- PASS: TestDiscoveryInitialNoAuthLifecycle/projected (0.54s)
+    --- PASS: TestDiscoveryInitialNoAuthLifecycle/projected-configmap (0.57s)
+    --- PASS: TestDiscoveryInitialNoAuthLifecycle/projected-return-to-metadata (0.85s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	36.057s

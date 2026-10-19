@@ -1,0 +1,107 @@
+{
+  "date": "2026-10-19",
+  "branch": "pr/johalley/catc-support",
+  "productionRuntimeHooksWired": true,
+  "newExecutionDefaultEnabled": false,
+  "fullModelComplete": false,
+  "installedMutationQualified": false,
+  "finalVerification": "local-and-api-gates-passed-installed-gate-pending",
+  "sourceFingerprints": {
+    "cmd/cisco-vk": {
+      "files": 51,
+      "sha256": "b81d16c72fcb5e71d612244b9beda34e9fc64bb38a90105e6bda780afca1f23c"
+    },
+    "internal/controller": {
+      "files": 94,
+      "sha256": "0b06e0a67a7ed4f4cb7f74f5a3fb9c421430a42b6e8768d6d557e4cfd6e384eb"
+    },
+    "internal/controllerconfiguration": {
+      "files": 164,
+      "sha256": "28563a5da8b8797e298aef7cd4aa032fb613e5ca347a92407436bd0b81bf0c6b"
+    },
+    "internal/controlleradapter": {
+      "files": 14,
+      "sha256": "56a3957004389d72271d3d7f1dc62492b372f77b594fbc448817840baaf9b52d"
+    },
+    "internal/controlleradapter/catalystcenter": {
+      "files": 1701,
+      "sha256": "82f98a39b19ca2e0794ae444c36580feb7c2587fab54ed525717a16b25c5f857"
+    },
+    "internal/managedprotocol": {
+      "files": 4,
+      "sha256": "3219ec496e993710e5d2cffa3c7ff7156daab082e656642a1ac55b2c5d912e89"
+    },
+    "internal/aggregator": {
+      "files": 11,
+      "sha256": "137bc460cb8794a00d09429e5291a0736a783f60389e6da00ebdf8f5b0631083"
+    },
+    "chart": {
+      "charts/cisco-virtual-kubelet/values.yaml": "6d6f3cb673d4be3f78b01e34c644baa884e0543d7f3bb5cf469e953c1c5b4542",
+      "charts/cisco-virtual-kubelet/values.schema.json": "ca70d935b6cc187cf36de326fa5134efc36b6ea7bc2ea549e9f23824951d7712",
+      "charts/cisco-virtual-kubelet/templates/_helpers.tpl": "ec06e116b92f410514bad0be10e3710bbc9d7ae256e98be08d3f01d37f403c88",
+      "charts/cisco-virtual-kubelet/templates/deployment.yaml": "80e9f4ca569e6225020bce8faf5bd61ede5e94a9db156ad9982ee88890927171",
+      "charts/cisco-virtual-kubelet/templates/topology-rbac.yaml": "ab2e3ab11b90e7af7faf28b557e771b41c1232c39d6da47383814810c4c351e3",
+      "charts/cisco-virtual-kubelet/tests/topology-render-test.sh": "dfa318668cb3fe8af086da9f154516a08a00d651b6626d7703661659942a59af",
+      "charts/cisco-virtual-kubelet/tests/metadata-protocol-render-test.sh": "bbe456e28b7c0f80361955580f72bdb057e654675e51e239f22961a6875004b0"
+    }
+  },
+  "regression": {
+    "log": "/private/tmp/cvk-metadata-runtime-final-regression.log",
+    "exitCode": 0,
+    "passingTestEvents": 19272,
+    "passingPackages": [
+      "github.com/cisco/virtual-kubelet-cisco/api/config/v1alpha1",
+      "github.com/cisco/virtual-kubelet-cisco/api/v1alpha1",
+      "github.com/cisco/virtual-kubelet-cisco/api/ops/v1alpha1",
+      "github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter",
+      "github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter/nacmodel",
+      "github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/nexusdashboard",
+      "github.com/cisco/virtual-kubelet-cisco/internal/managedprotocol",
+      "github.com/cisco/virtual-kubelet-cisco/internal/softwarelifecycle",
+      "github.com/cisco/virtual-kubelet-cisco/internal/aggregator",
+      "github.com/cisco/virtual-kubelet-cisco/internal/provider/maintenance",
+      "github.com/cisco/virtual-kubelet-cisco/internal/provider/softwareupgrade",
+      "github.com/cisco/virtual-kubelet-cisco/cmd/cisco-vk",
+      "github.com/cisco/virtual-kubelet-cisco/internal/controller",
+      "github.com/cisco/virtual-kubelet-cisco/internal/controllerconfiguration",
+      "github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter"
+    ]
+  },
+  "actualAPIServerTests": {
+    "log": "/private/tmp/cvk-metadata-runtime-final-api.log",
+    "exitCode": 0,
+    "passingTestEvents": 6,
+    "passingPackages": [
+      "github.com/cisco/virtual-kubelet-cisco/internal/controllerconfiguration",
+      "github.com/cisco/virtual-kubelet-cisco/cmd/cisco-vk",
+      "github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter"
+    ]
+  },
+  "chart": {
+    "log": "/private/tmp/cvk-metadata-runtime-full-chart.log",
+    "exitCode": 0
+  },
+  "binary": {
+    "path": "/private/tmp/cvk-metadata-runtime-qualified-cisco-vk",
+    "sha256": "288099d6a8fec00fb8b26979508167f99dd34337c99800be2100d9f8950bcb88"
+  },
+  "labReadOnly": {
+    "log": "/private/tmp/cvk-metadata-runtime-lab-readonly.log",
+    "freshTokenSucceeded": true,
+    "reachableManagedSwitches": 3,
+    "pnpRecordCount": 0,
+    "nativeMutationPerformed": false
+  },
+  "installedBlocker": {
+    "kind": "docker-daemon-unresponsive",
+    "diagnosticLog": "/private/tmp/cvk-metadata-runtime-docker-final.log",
+    "cluster": "cvk-catc-qualification-20261017",
+    "dockerRestarted": false
+  },
+  "limitations": [
+    "API-server readiness/image status is staged; no kubelet or installed process qualification",
+    "No installed new-mode native mutation qualified",
+    "Generation/domain transitions, cancellation and source-lost/deletion finalization unfinished",
+    "Full pinned 93-resource execution/hardware parity incomplete"
+  ]
+}

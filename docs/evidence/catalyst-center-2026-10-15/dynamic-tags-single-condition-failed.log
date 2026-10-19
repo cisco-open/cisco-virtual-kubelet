@@ -1,0 +1,8 @@
+=== RUN   TestLiveCatalystCenterTags
+    template_tags_live_test.go:181: tag operation Create 01a13f29-2977-73d6-8b43-d5f8ccb19618
+    template_tags_live_test.go:183: Catalyst Center configuration task failed; operation remains fenced for read-back recovery
+    template_tags_live_test.go:86: retained uncertain tag CVK-Q-Tag-20261015-104344-9a903f94c4925620 
+--- FAIL: TestLiveCatalystCenterTags (1.92s)
+FAIL
+FAIL	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	3.052s
+FAIL

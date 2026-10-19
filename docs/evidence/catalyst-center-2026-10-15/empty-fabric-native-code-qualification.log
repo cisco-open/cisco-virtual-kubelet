@@ -1,0 +1,5 @@
+=== RUN   TestLiveConfigurationFailedTaskRead
+    config_task_error_live_test.go:56: Catalyst Center configuration task failed (NCSP11008); required controller application unavailable; operation remains fenced for read-back recovery
+--- PASS: TestLiveConfigurationFailedTaskRead (0.43s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	2.544s

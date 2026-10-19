@@ -1,0 +1,5 @@
+Authentication succeeded; token withheld.
+Isolated public template qualification exit: 0
+/dna/intent/api/v1/sda/fabricSites HTTP 200 rows 0
+/dna/intent/api/v1/sda/multicast HTTP 200 rows 0
+/dna/intent/api/v1/sda/multicast/virtualNetworks HTTP 200 rows 0

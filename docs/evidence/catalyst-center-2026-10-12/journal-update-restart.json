@@ -1,0 +1,97 @@
+{
+  "tasks": [
+    "01a1308f-6c03-7004-9aec-b24c1d5e1b7b"
+  ],
+  "managerRestarted": true,
+  "events": [
+    {
+      "phase": "Waiting",
+      "operation": "801db2159fd42a5656b66fbfcb0008ef",
+      "operationPhase": "Accepted",
+      "task": "01a1308f-6c03-7004-9aec-b24c1d5e1b7b"
+    },
+    {
+      "phase": "Waiting",
+      "operation": "801db2159fd42a5656b66fbfcb0008ef",
+      "operationPhase": "Verifying",
+      "task": "01a1308f-6c03-7004-9aec-b24c1d5e1b7b"
+    },
+    {
+      "phase": "Verifying",
+      "operation": "801db2159fd42a5656b66fbfcb0008ef",
+      "operationPhase": "Verified",
+      "task": "01a1308f-6c03-7004-9aec-b24c1d5e1b7b"
+    },
+    {
+      "phase": "Waiting",
+      "operation": null,
+      "operationPhase": null,
+      "task": null
+    },
+    {
+      "phase": "InSync",
+      "operation": null,
+      "operationPhase": null,
+      "task": null
+    }
+  ],
+  "result": "passed",
+  "status": {
+    "conditions": [
+      {
+        "lastTransitionTime": "2026-10-12T14:35:53Z",
+        "message": "Catalyst Center configuration adapter is available",
+        "observedGeneration": 3,
+        "reason": "AdapterAvailable",
+        "status": "True",
+        "type": "AdapterAvailable"
+      },
+      {
+        "lastTransitionTime": "2026-10-12T14:35:53Z",
+        "message": "Owned configuration attributes match authoritative controller state",
+        "observedGeneration": 3,
+        "reason": "ApplyVerified",
+        "status": "True",
+        "type": "IntentValid"
+      },
+      {
+        "lastTransitionTime": "2026-10-12T14:40:12Z",
+        "message": "Owned configuration attributes match authoritative controller state",
+        "observedGeneration": 3,
+        "reason": "ApplyVerified",
+        "status": "True",
+        "type": "Ready"
+      }
+    ],
+    "controllerAPIVersion": "v1/v2",
+    "lastAppliedTime": "2026-10-12T14:40:12Z",
+    "lastControllerCheck": "2026-10-12T14:40:12Z",
+    "observedGeneration": 3,
+    "phase": "InSync",
+    "sectionStatus": [
+      {
+        "name": "templates",
+        "state": "InSync"
+      },
+      {
+        "name": "inventory",
+        "resourceCount": 1,
+        "state": "InSync"
+      }
+    ]
+  },
+  "journal": {
+    "owners": [
+      {
+        "configName": "catc-nac-journal-qualification",
+        "configUID": "5c9724f7-af1a-4fe2-8b9c-724f996f2470",
+        "section": "inventory"
+      },
+      {
+        "configName": "catc-nac-journal-qualification",
+        "configUID": "5c9724f7-af1a-4fe2-8b9c-724f996f2470",
+        "section": "templates"
+      }
+    ]
+  }
+}

@@ -1,0 +1,55 @@
+=== RUN   TestEnvtestConfigurationDeviceEvidence
+    config_group_device_evidence_envtest_test.go:24: private API retained one pending request, assigned real UID/timestamps/generation, separated worker status, and refused redaction/spec replacement; actor writes simulated
+--- PASS: TestEnvtestConfigurationDeviceEvidence (5.63s)
+=== RUN   TestEnvtestConfigurationScalarDeviceEvidence
+    config_group_device_evidence_envtest_test.go:28: private API retained one pending request, assigned real UID/timestamps/generation, separated worker status, and refused redaction/spec replacement; actor writes simulated
+--- PASS: TestEnvtestConfigurationScalarDeviceEvidence (5.35s)
+=== RUN   TestEnvtestConfigurationFabricDeviceEvidence
+    config_group_device_evidence_envtest_test.go:32: private API retained one pending request, assigned real UID/timestamps/generation, separated worker status, and refused redaction/spec replacement; actor writes simulated
+--- PASS: TestEnvtestConfigurationFabricDeviceEvidence (5.66s)
+=== RUN   TestEnvtestSDATransitApplicationEnvelope
+    fabric_sda_transit_application_envtest_test.go:75: actual API preserves generated Verified operation and complete task/source/group/claim receipt without raw device output; physical actors, native mutation and semantic proof remain simulated
+--- PASS: TestEnvtestSDATransitApplicationEnvelope (6.88s)
+=== RUN   TestEnvtestSDATransitEvidenceEnvelope
+    fabric_sda_transit_device_evidence_envtest_test.go:97: fresh API UID/generation, one stable SDA request, separate simulated manager metadata and worker status, chassis identity, truncation and query-spec rejection verified; no semantic convergence or installed worker claim
+--- PASS: TestEnvtestSDATransitEvidenceEnvelope (6.01s)
+=== RUN   TestEnvtestSDATransitJournalPreparation
+=== RUN   TestEnvtestSDATransitJournalPreparation/source-bound
+[controller-runtime] log.SetLogger(...) was never called; logs will not be displayed.
+Detected at:
+	>  goroutine 1391 [running]:
+	>  runtime/debug.Stack()
+	>  	/Users/johalley/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.9.darwin-arm64/src/runtime/debug/stack.go:26 +0x6c
+	>  sigs.k8s.io/controller-runtime/pkg/log.eventuallyFulfillRoot()
+	>  	/Users/johalley/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.23.3/pkg/log/log.go:60 +0xc4
+	>  sigs.k8s.io/controller-runtime/pkg/log.(*delegatingLogSink).Enabled(0xc00047abc0, 0x1)
+	>  	/Users/johalley/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.23.3/pkg/log/deleg.go:111 +0x30
+	>  github.com/go-logr/logr.Logger.Info({{0x109f33388?, 0xc00047abc0?}, 0x5?}, {0x1075a94e9, 0xf}, {0x0, 0x0, 0x0})
+	>  	/Users/johalley/go/pkg/mod/github.com/go-logr/logr@v1.4.4/logr.go:276 +0x60
+	>  sigs.k8s.io/controller-runtime/pkg/envtest.(*Environment).Start(0xc000c182c8)
+	>  	/Users/johalley/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.23.3/pkg/envtest/server.go:348 +0xfd8
+	>  github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter.qualificationAPIServerClientEnvironment(0xc00004b8c8, 0xc000c182c8)
+	>  	/Users/johalley/Git/cisco-virtual-kubelet/internal/controlleradapter/catalystcenter/configuration_envtest_test.go:27 +0x44
+	>  github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter.qualificationAPIServerClient(0xc00004b8c8, {0xc0003bbb20, 0x2, 0x0?})
+	>  	/Users/johalley/Git/cisco-virtual-kubelet/internal/controlleradapter/catalystcenter/configuration_envtest_test.go:22 +0x1ac
+	>  github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter.TestEnvtestSDATransitJournalPreparation.func1(0xc00004b8c8)
+	>  	/Users/johalley/Git/cisco-virtual-kubelet/internal/controlleradapter/catalystcenter/fabric_sda_transit_journal_envtest_test.go:25 +0x90
+	>  testing.tRunner(0xc00004b8c8, 0xc00147ac30)
+	>  	/Users/johalley/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.9.darwin-arm64/src/testing/testing.go:2036 +0x168
+	>  created by testing.(*T).Run in goroutine 1390
+	>  	/Users/johalley/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.9.darwin-arm64/src/testing/testing.go:2101 +0x7c0
+=== RUN   TestEnvtestSDATransitJournalPreparation/alias-bound
+=== RUN   TestEnvtestSDATransitJournalPreparation/whole-source-bound
+=== RUN   TestEnvtestSDATransitJournalPreparation/whole-source-invalid
+=== RUN   TestEnvtestSDATransitJournalPreparation/pruned-group
+--- PASS: TestEnvtestSDATransitJournalPreparation (31.93s)
+    --- PASS: TestEnvtestSDATransitJournalPreparation/source-bound (6.45s)
+    --- PASS: TestEnvtestSDATransitJournalPreparation/alias-bound (6.41s)
+    --- PASS: TestEnvtestSDATransitJournalPreparation/whole-source-bound (6.53s)
+    --- PASS: TestEnvtestSDATransitJournalPreparation/whole-source-invalid (6.48s)
+    --- PASS: TestEnvtestSDATransitJournalPreparation/pruned-group (6.07s)
+=== RUN   TestEnvtestSDATransitManagedIdentity
+    fabric_sda_transits_envtest_test.go:125: real API identities, late Node replacement refusal, immutable rebind rejection, explicit fixture re-enrolment and cross-namespace alias rejection verified; one HTTP-fixture write, no public admission or convergence claim
+--- PASS: TestEnvtestSDATransitManagedIdentity (6.02s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	69.947s

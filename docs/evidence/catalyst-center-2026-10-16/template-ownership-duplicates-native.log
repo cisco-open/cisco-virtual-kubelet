@@ -1,0 +1,10 @@
+=== RUN   TestLiveCatalystCenterTemplateDuplicateCreate
+    template_duplicate_live_test.go:44: generated duplicate qualification fixture CVK-Q-Duplicate-20261016-130657
+    template_duplicate_live_test.go:251: duplicate Create refused before task project HTTP 400
+    template_duplicate_live_test.go:251: duplicate Create refused before task regular HTTP 400
+    template_duplicate_live_test.go:251: duplicate Create refused before task composite HTTP 400
+    template_duplicate_live_test.go:281: project/regular/composite duplicate Creates refused; no successful task UUID could authorize adoption
+    template_duplicate_live_test.go:188: duplicate qualification exact template/project cleanup verified CVK-Q-Duplicate-20261016-130657
+--- PASS: TestLiveCatalystCenterTemplateDuplicateCreate (33.37s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	35.822s

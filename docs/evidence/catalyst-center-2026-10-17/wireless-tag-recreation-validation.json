@@ -1,0 +1,40 @@
+{
+  "branch": "pr/johalley/catc-support",
+  "scope": "Complete producer history and repeated native absence validation helpers only. Planner recreation remains disabled; no archive/publication or native recreation qualification claimed.",
+  "gates": [
+    {
+      "name": "local",
+      "log": "wireless-tag-recreation-local.log",
+      "goSeconds": 9.207,
+      "topLevelPassingTests": 2,
+      "historyScenarios": 84
+    },
+    {
+      "name": "api",
+      "log": "wireless-tag-recreation-api.log",
+      "goSeconds": 21.624,
+      "topLevelPassingTests": 1,
+      "historyScenarios": 84
+    },
+    {
+      "name": "regression",
+      "log": "wireless-tag-recreation-regression.log",
+      "goSeconds": 2.387,
+      "topLevelPassingTests": 22,
+      "historyScenarios": 0
+    }
+  ],
+  "sourceSha256": {
+    "internal/controlleradapter/catalystcenter/wireless_tag_recreate.go": "06b0e9142efd76d420c084d6992feb1d6e1198594357b69af69cd615fb8c9b68",
+    "internal/controlleradapter/catalystcenter/wireless_tag_recreate_test.go": "1961a188534173b5f6e0a59577f5ff53679aa3240b956df521a6a6a42649067a",
+    "internal/controlleradapter/catalystcenter/wireless_tag_prune_test.go": "4afc13057125049274c97072e094be3b6f8778a9d185c3d2def044ae2b0d5cf9",
+    "internal/controlleradapter/catalystcenter/wireless_tag_prune_envtest_test.go": "021988c8c72c41a59973cd6345e4aa3437a6e0afc5e5943e2eb7b7a9a2523c17",
+    "internal/controlleradapter/catalystcenter/wireless_tag_bindings_readback_test.go": "1e61e9a74c519a2d32527059b89a8ef1f52caae0d396b99f2550589cc3dc3288"
+  },
+  "remaining": [
+    "Versioned recreate operation and predecessor-chain validation",
+    "Capacity and final dispatch/recovery integration",
+    "Atomic archive plus new-creator publication",
+    "Repeated native lab recreation and installed-worker qualification"
+  ]
+}

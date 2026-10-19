@@ -1,0 +1,72 @@
+{
+  "scope": "Metadata-only SNMPv3 NOAUTHNOPRIV acknowledged Unknown recovery; no receipt-family migration, installed recovery, device authentication or declarative pruning qualification",
+  "source_sha256": {
+    "internal/controlleradapter/catalystcenter/global_credential_metadata.go": "232df641fdcdc15a14c5210474ce9f2d3ddaf6010ee9a79fd13b9dc639910813",
+    "internal/controlleradapter/catalystcenter/global_credential_recovery.go": "14de875eefe833acac81a4a4e39420390ab27fc1fcadaa53c0e3ea8de3c9b4af",
+    "internal/controlleradapter/catalystcenter/global_credential_metadata_test.go": "0e7d7339175610117410cd28a0f07e825ccd2bfb7768f1cf344c7e7471d77f8c",
+    "internal/controlleradapter/catalystcenter/global_credential_metadata_recovery_test.go": "db26b257d08b17ba83dcc4870504f193d96746df29b085eabe5fb4b88942f0bc",
+    "internal/controlleradapter/catalystcenter/global_credential_recovery_test.go": "cdbabe5f352ad0b15f8e332822dc9642c0b11bd5a652802c1f06bbfb1b99e8e7",
+    "internal/controlleradapter/catalystcenter/global_credential_recovery_envtest_test.go": "54a5bedcfaaf7f8a62e9333d6d55e079fec8d7342cafb5d376f60f5d82c2f7d7",
+    "internal/controlleradapter/catalystcenter/global_credential_metadata_live_test.go": "96d4b834f8b2e316b2df07eeff6608d7f81978b848b285dcf395c4274fe13796"
+  },
+  "gates": {
+    "regression": {
+      "exit_code": 0,
+      "log_sha256": "d703bf16dede5a271bff47be011275c0facb68a724b5c12e41a6c57220555a99",
+      "seconds": 11.313,
+      "families": 13,
+      "subcases": 149
+    },
+    "api": {
+      "exit_code": 0,
+      "log_sha256": "038c08e9e6df13ba6fa257407272dfa38cb1aebddb8db39eb30e7605f7ad7b97",
+      "seconds": 25.88,
+      "families": 2,
+      "subcases": 12
+    },
+    "native": {
+      "exit_code": 0,
+      "log_sha256": "cba3dd4a87c62884b45b8f40d9f6a9bf6a4b1ed3ea83fd5069821bae94f14cff",
+      "seconds": 15.579,
+      "families": 1,
+      "subcases": 0
+    },
+    "nd": {
+      "exit_code": 0,
+      "log_sha256": "da3422c26afc5ba52b4ee737520a44e45926a1cfcaf98cf4eecbd211cf5d4215",
+      "seconds": 4.601
+    },
+    "upgrades": {
+      "exit_code": 0,
+      "log_sha256": "018c350163fba1f82f5dd5ddf091adab7b6c93c99d53892231edef663c14c1a4",
+      "seconds": 6.332
+    },
+    "build": {
+      "exit_code": 0,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  },
+  "native": {
+    "checkpoint": "/private/tmp/cvk-metadata-task-recovery-3358106782",
+    "target_uuid": "00e22613-0e55-48af-a9b9-8a9662e63639",
+    "original_tasks": [
+      "01a14bf4-f4e6-732b-9be0-e4522be5270f",
+      "01a14bf5-09de-72e0-828c-013f3e8a129c"
+    ],
+    "cleanup_task": "01a14bf5-1e04-7315-b3cb-690c12f5981c",
+    "writes": 2,
+    "known_task_recoveries": 2,
+    "supervised_exact_uuid_deletes": 1,
+    "non_secret_baseline_restored": true,
+    "kubernetes_persistence": "simulated",
+    "installed": false,
+    "device_authentication_tested": false,
+    "terminal_simulated_receipt_retained": true
+  },
+  "production_build": {
+    "path": "/private/tmp/cvk-global-metadata-recovery",
+    "sha256": "dc60d3b606345c67211e86e6fd138b1300b4760a82b758ba0619cea6cc9ab209",
+    "target": "darwin/arm64",
+    "installed": false
+  }
+}

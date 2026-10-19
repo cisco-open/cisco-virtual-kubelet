@@ -1,0 +1,1322 @@
+=== RUN   TestCreatedResourceReceiptSurvivesRestartWithoutReplay
+=== RUN   TestCreatedResourceReceiptSurvivesRestartWithoutReplay/valid
+=== RUN   TestCreatedResourceReceiptSurvivesRestartWithoutReplay/conflict
+=== RUN   TestCreatedResourceReceiptSurvivesRestartWithoutReplay/replaced
+=== RUN   TestCreatedResourceReceiptSurvivesRestartWithoutReplay/stripped
+=== RUN   TestCreatedResourceReceiptSurvivesRestartWithoutReplay/lost
+=== RUN   TestCreatedResourceReceiptSurvivesRestartWithoutReplay/invalid
+--- PASS: TestCreatedResourceReceiptSurvivesRestartWithoutReplay (0.71s)
+    --- PASS: TestCreatedResourceReceiptSurvivesRestartWithoutReplay/valid (0.61s)
+    --- PASS: TestCreatedResourceReceiptSurvivesRestartWithoutReplay/conflict (0.03s)
+    --- PASS: TestCreatedResourceReceiptSurvivesRestartWithoutReplay/replaced (0.03s)
+    --- PASS: TestCreatedResourceReceiptSurvivesRestartWithoutReplay/stripped (0.02s)
+    --- PASS: TestCreatedResourceReceiptSurvivesRestartWithoutReplay/lost (0.01s)
+    --- PASS: TestCreatedResourceReceiptSurvivesRestartWithoutReplay/invalid (0.01s)
+=== RUN   TestCreatedResourceReceiptCannotUsePhysicalOrUpdatePath
+=== RUN   TestCreatedResourceReceiptCannotUsePhysicalOrUpdatePath/physical
+=== RUN   TestCreatedResourceReceiptCannotUsePhysicalOrUpdatePath/update
+=== RUN   TestCreatedResourceReceiptCannotUsePhysicalOrUpdatePath/existing-target
+=== RUN   TestCreatedResourceReceiptCannotUsePhysicalOrUpdatePath/two-callbacks
+--- PASS: TestCreatedResourceReceiptCannotUsePhysicalOrUpdatePath (0.04s)
+    --- PASS: TestCreatedResourceReceiptCannotUsePhysicalOrUpdatePath/physical (0.01s)
+    --- PASS: TestCreatedResourceReceiptCannotUsePhysicalOrUpdatePath/update (0.01s)
+    --- PASS: TestCreatedResourceReceiptCannotUsePhysicalOrUpdatePath/existing-target (0.01s)
+    --- PASS: TestCreatedResourceReceiptCannotUsePhysicalOrUpdatePath/two-callbacks (0.01s)
+=== RUN   TestConfigurationNoDispatchProof
+=== RUN   TestConfigurationNoDispatchProof/wireless/refuse
+=== RUN   TestConfigurationNoDispatchProof/wireless/read-error
+=== RUN   TestConfigurationNoDispatchProof/wireless/unknown-phase
+=== RUN   TestConfigurationNoDispatchProof/wireless/cancel
+=== RUN   TestConfigurationNoDispatchProof/wireless/conflict
+=== RUN   TestConfigurationNoDispatchProof/wireless/conflict-exhausted
+=== RUN   TestConfigurationNoDispatchProof/wireless/ordinary-error
+=== RUN   TestConfigurationNoDispatchProof/wireless/lost-ack
+=== RUN   TestConfigurationNoDispatchProof/wireless/foreign-proof
+=== RUN   TestConfigurationNoDispatchProof/wireless/replayed-proof
+=== RUN   TestConfigurationNoDispatchProof/wireless/changed-operation
+=== RUN   TestConfigurationNoDispatchProof/wireless/changed-owner
+=== RUN   TestConfigurationNoDispatchProof/wireless/changed-generation
+=== RUN   TestConfigurationNoDispatchProof/wireless/recorded-task
+=== RUN   TestConfigurationNoDispatchProof/wireless/recorded-receipt
+=== RUN   TestConfigurationNoDispatchProof/wireless/feature-scope
+=== RUN   TestConfigurationNoDispatchProof/wireless/changed-parent
+=== RUN   TestConfigurationNoDispatchProof/wireless/changed-preparation
+=== RUN   TestConfigurationNoDispatchProof/network-ntp/refuse
+=== RUN   TestConfigurationNoDispatchProof/network-ntp/read-error
+=== RUN   TestConfigurationNoDispatchProof/network-ntp/unknown-phase
+=== RUN   TestConfigurationNoDispatchProof/network-ntp/cancel
+=== RUN   TestConfigurationNoDispatchProof/network-ntp/conflict
+=== RUN   TestConfigurationNoDispatchProof/network-ntp/conflict-exhausted
+=== RUN   TestConfigurationNoDispatchProof/network-ntp/ordinary-error
+=== RUN   TestConfigurationNoDispatchProof/network-ntp/lost-ack
+=== RUN   TestConfigurationNoDispatchProof/network-ntp/foreign-proof
+=== RUN   TestConfigurationNoDispatchProof/network-ntp/replayed-proof
+=== RUN   TestConfigurationNoDispatchProof/network-ntp/changed-operation
+=== RUN   TestConfigurationNoDispatchProof/network-ntp/changed-owner
+=== RUN   TestConfigurationNoDispatchProof/network-ntp/changed-generation
+=== RUN   TestConfigurationNoDispatchProof/network-ntp/recorded-task
+=== RUN   TestConfigurationNoDispatchProof/network-ntp/recorded-receipt
+=== RUN   TestConfigurationNoDispatchProof/network-ntp/changed-parent
+=== RUN   TestConfigurationNoDispatchProof/network-ntp/changed-preparation
+=== RUN   TestConfigurationNoDispatchProof/network-dhcp/refuse
+=== RUN   TestConfigurationNoDispatchProof/network-dhcp/read-error
+=== RUN   TestConfigurationNoDispatchProof/network-dhcp/unknown-phase
+=== RUN   TestConfigurationNoDispatchProof/network-dhcp/cancel
+=== RUN   TestConfigurationNoDispatchProof/network-dhcp/conflict
+=== RUN   TestConfigurationNoDispatchProof/network-dhcp/conflict-exhausted
+=== RUN   TestConfigurationNoDispatchProof/network-dhcp/ordinary-error
+=== RUN   TestConfigurationNoDispatchProof/network-dhcp/lost-ack
+=== RUN   TestConfigurationNoDispatchProof/network-dhcp/foreign-proof
+=== RUN   TestConfigurationNoDispatchProof/network-dhcp/replayed-proof
+=== RUN   TestConfigurationNoDispatchProof/network-dhcp/changed-operation
+=== RUN   TestConfigurationNoDispatchProof/network-dhcp/changed-owner
+=== RUN   TestConfigurationNoDispatchProof/network-dhcp/changed-generation
+=== RUN   TestConfigurationNoDispatchProof/network-dhcp/recorded-task
+=== RUN   TestConfigurationNoDispatchProof/network-dhcp/recorded-receipt
+=== RUN   TestConfigurationNoDispatchProof/network-dhcp/changed-parent
+=== RUN   TestConfigurationNoDispatchProof/network-dhcp/changed-preparation
+=== RUN   TestConfigurationNoDispatchProof/network-dns/refuse
+=== RUN   TestConfigurationNoDispatchProof/network-dns/read-error
+=== RUN   TestConfigurationNoDispatchProof/network-dns/unknown-phase
+=== RUN   TestConfigurationNoDispatchProof/network-dns/cancel
+=== RUN   TestConfigurationNoDispatchProof/network-dns/conflict
+=== RUN   TestConfigurationNoDispatchProof/network-dns/conflict-exhausted
+=== RUN   TestConfigurationNoDispatchProof/network-dns/ordinary-error
+=== RUN   TestConfigurationNoDispatchProof/network-dns/lost-ack
+=== RUN   TestConfigurationNoDispatchProof/network-dns/foreign-proof
+=== RUN   TestConfigurationNoDispatchProof/network-dns/replayed-proof
+=== RUN   TestConfigurationNoDispatchProof/network-dns/changed-operation
+=== RUN   TestConfigurationNoDispatchProof/network-dns/changed-owner
+=== RUN   TestConfigurationNoDispatchProof/network-dns/changed-generation
+=== RUN   TestConfigurationNoDispatchProof/network-dns/recorded-task
+=== RUN   TestConfigurationNoDispatchProof/network-dns/recorded-receipt
+=== RUN   TestConfigurationNoDispatchProof/network-dns/changed-parent
+=== RUN   TestConfigurationNoDispatchProof/network-dns/changed-preparation
+=== RUN   TestConfigurationNoDispatchProof/network-timezone/refuse
+=== RUN   TestConfigurationNoDispatchProof/network-timezone/read-error
+=== RUN   TestConfigurationNoDispatchProof/network-timezone/unknown-phase
+=== RUN   TestConfigurationNoDispatchProof/network-timezone/cancel
+=== RUN   TestConfigurationNoDispatchProof/network-timezone/conflict
+=== RUN   TestConfigurationNoDispatchProof/network-timezone/conflict-exhausted
+=== RUN   TestConfigurationNoDispatchProof/network-timezone/ordinary-error
+=== RUN   TestConfigurationNoDispatchProof/network-timezone/lost-ack
+=== RUN   TestConfigurationNoDispatchProof/network-timezone/foreign-proof
+=== RUN   TestConfigurationNoDispatchProof/network-timezone/replayed-proof
+=== RUN   TestConfigurationNoDispatchProof/network-timezone/changed-operation
+=== RUN   TestConfigurationNoDispatchProof/network-timezone/changed-owner
+=== RUN   TestConfigurationNoDispatchProof/network-timezone/changed-generation
+=== RUN   TestConfigurationNoDispatchProof/network-timezone/recorded-task
+=== RUN   TestConfigurationNoDispatchProof/network-timezone/recorded-receipt
+=== RUN   TestConfigurationNoDispatchProof/network-timezone/changed-parent
+=== RUN   TestConfigurationNoDispatchProof/network-timezone/changed-preparation
+=== RUN   TestConfigurationNoDispatchProof/network-banner/refuse
+=== RUN   TestConfigurationNoDispatchProof/network-banner/read-error
+=== RUN   TestConfigurationNoDispatchProof/network-banner/unknown-phase
+=== RUN   TestConfigurationNoDispatchProof/network-banner/cancel
+=== RUN   TestConfigurationNoDispatchProof/network-banner/conflict
+=== RUN   TestConfigurationNoDispatchProof/network-banner/conflict-exhausted
+=== RUN   TestConfigurationNoDispatchProof/network-banner/ordinary-error
+=== RUN   TestConfigurationNoDispatchProof/network-banner/lost-ack
+=== RUN   TestConfigurationNoDispatchProof/network-banner/foreign-proof
+=== RUN   TestConfigurationNoDispatchProof/network-banner/replayed-proof
+=== RUN   TestConfigurationNoDispatchProof/network-banner/changed-operation
+=== RUN   TestConfigurationNoDispatchProof/network-banner/changed-owner
+=== RUN   TestConfigurationNoDispatchProof/network-banner/changed-generation
+=== RUN   TestConfigurationNoDispatchProof/network-banner/recorded-task
+=== RUN   TestConfigurationNoDispatchProof/network-banner/recorded-receipt
+=== RUN   TestConfigurationNoDispatchProof/network-banner/changed-parent
+=== RUN   TestConfigurationNoDispatchProof/network-banner/changed-preparation
+=== RUN   TestConfigurationNoDispatchProof/network-telemetry/refuse
+=== RUN   TestConfigurationNoDispatchProof/network-telemetry/read-error
+=== RUN   TestConfigurationNoDispatchProof/network-telemetry/unknown-phase
+=== RUN   TestConfigurationNoDispatchProof/network-telemetry/cancel
+=== RUN   TestConfigurationNoDispatchProof/network-telemetry/conflict
+=== RUN   TestConfigurationNoDispatchProof/network-telemetry/conflict-exhausted
+=== RUN   TestConfigurationNoDispatchProof/network-telemetry/ordinary-error
+=== RUN   TestConfigurationNoDispatchProof/network-telemetry/lost-ack
+=== RUN   TestConfigurationNoDispatchProof/network-telemetry/foreign-proof
+=== RUN   TestConfigurationNoDispatchProof/network-telemetry/replayed-proof
+=== RUN   TestConfigurationNoDispatchProof/network-telemetry/changed-operation
+=== RUN   TestConfigurationNoDispatchProof/network-telemetry/changed-owner
+=== RUN   TestConfigurationNoDispatchProof/network-telemetry/changed-generation
+=== RUN   TestConfigurationNoDispatchProof/network-telemetry/recorded-task
+=== RUN   TestConfigurationNoDispatchProof/network-telemetry/recorded-receipt
+=== RUN   TestConfigurationNoDispatchProof/network-telemetry/changed-parent
+=== RUN   TestConfigurationNoDispatchProof/network-telemetry/changed-preparation
+=== RUN   TestConfigurationNoDispatchProof/pnp-registration/refuse
+=== RUN   TestConfigurationNoDispatchProof/pnp-registration/read-error
+=== RUN   TestConfigurationNoDispatchProof/pnp-registration/unknown-phase
+=== RUN   TestConfigurationNoDispatchProof/pnp-registration/cancel
+=== RUN   TestConfigurationNoDispatchProof/pnp-registration/conflict
+=== RUN   TestConfigurationNoDispatchProof/pnp-registration/conflict-exhausted
+=== RUN   TestConfigurationNoDispatchProof/pnp-registration/ordinary-error
+=== RUN   TestConfigurationNoDispatchProof/pnp-registration/lost-ack
+=== RUN   TestConfigurationNoDispatchProof/pnp-registration/foreign-proof
+=== RUN   TestConfigurationNoDispatchProof/pnp-registration/replayed-proof
+=== RUN   TestConfigurationNoDispatchProof/pnp-registration/changed-operation
+=== RUN   TestConfigurationNoDispatchProof/pnp-registration/changed-owner
+=== RUN   TestConfigurationNoDispatchProof/pnp-registration/changed-generation
+=== RUN   TestConfigurationNoDispatchProof/pnp-registration/recorded-task
+=== RUN   TestConfigurationNoDispatchProof/pnp-registration/recorded-receipt
+=== RUN   TestConfigurationNoDispatchProof/pnp-registration/changed-parent
+=== RUN   TestConfigurationNoDispatchProof/pnp-registration/changed-preparation
+=== RUN   TestConfigurationNoDispatchProof/project-create/refuse
+=== RUN   TestConfigurationNoDispatchProof/project-create/read-error
+=== RUN   TestConfigurationNoDispatchProof/project-create/unknown-phase
+=== RUN   TestConfigurationNoDispatchProof/project-create/cancel
+=== RUN   TestConfigurationNoDispatchProof/project-create/conflict
+=== RUN   TestConfigurationNoDispatchProof/project-create/conflict-exhausted
+=== RUN   TestConfigurationNoDispatchProof/project-create/ordinary-error
+=== RUN   TestConfigurationNoDispatchProof/project-create/lost-ack
+=== RUN   TestConfigurationNoDispatchProof/project-create/foreign-proof
+=== RUN   TestConfigurationNoDispatchProof/project-create/replayed-proof
+=== RUN   TestConfigurationNoDispatchProof/project-create/changed-operation
+=== RUN   TestConfigurationNoDispatchProof/project-create/changed-owner
+=== RUN   TestConfigurationNoDispatchProof/project-create/changed-generation
+=== RUN   TestConfigurationNoDispatchProof/project-create/recorded-task
+=== RUN   TestConfigurationNoDispatchProof/project-create/recorded-receipt
+=== RUN   TestConfigurationNoDispatchProof/project-create/changed-parent
+=== RUN   TestConfigurationNoDispatchProof/project-create/changed-preparation
+=== RUN   TestConfigurationNoDispatchProof/project-update/refuse
+=== RUN   TestConfigurationNoDispatchProof/project-update/read-error
+=== RUN   TestConfigurationNoDispatchProof/project-update/unknown-phase
+=== RUN   TestConfigurationNoDispatchProof/project-update/cancel
+=== RUN   TestConfigurationNoDispatchProof/project-update/conflict
+=== RUN   TestConfigurationNoDispatchProof/project-update/conflict-exhausted
+=== RUN   TestConfigurationNoDispatchProof/project-update/ordinary-error
+=== RUN   TestConfigurationNoDispatchProof/project-update/lost-ack
+=== RUN   TestConfigurationNoDispatchProof/project-update/foreign-proof
+=== RUN   TestConfigurationNoDispatchProof/project-update/replayed-proof
+=== RUN   TestConfigurationNoDispatchProof/project-update/changed-operation
+=== RUN   TestConfigurationNoDispatchProof/project-update/changed-owner
+=== RUN   TestConfigurationNoDispatchProof/project-update/changed-generation
+=== RUN   TestConfigurationNoDispatchProof/project-update/recorded-task
+=== RUN   TestConfigurationNoDispatchProof/project-update/recorded-receipt
+=== RUN   TestConfigurationNoDispatchProof/project-update/changed-parent
+=== RUN   TestConfigurationNoDispatchProof/project-update/changed-preparation
+=== RUN   TestConfigurationNoDispatchProof/draft-create/refuse
+=== RUN   TestConfigurationNoDispatchProof/draft-create/read-error
+=== RUN   TestConfigurationNoDispatchProof/draft-create/unknown-phase
+=== RUN   TestConfigurationNoDispatchProof/draft-create/cancel
+=== RUN   TestConfigurationNoDispatchProof/draft-create/conflict
+=== RUN   TestConfigurationNoDispatchProof/draft-create/conflict-exhausted
+=== RUN   TestConfigurationNoDispatchProof/draft-create/ordinary-error
+=== RUN   TestConfigurationNoDispatchProof/draft-create/lost-ack
+=== RUN   TestConfigurationNoDispatchProof/draft-create/foreign-proof
+=== RUN   TestConfigurationNoDispatchProof/draft-create/replayed-proof
+=== RUN   TestConfigurationNoDispatchProof/draft-create/changed-operation
+=== RUN   TestConfigurationNoDispatchProof/draft-create/changed-owner
+=== RUN   TestConfigurationNoDispatchProof/draft-create/changed-generation
+=== RUN   TestConfigurationNoDispatchProof/draft-create/recorded-task
+=== RUN   TestConfigurationNoDispatchProof/draft-create/recorded-receipt
+=== RUN   TestConfigurationNoDispatchProof/draft-create/changed-parent
+=== RUN   TestConfigurationNoDispatchProof/draft-create/changed-preparation
+=== RUN   TestConfigurationNoDispatchProof/draft-update/refuse
+=== RUN   TestConfigurationNoDispatchProof/draft-update/read-error
+=== RUN   TestConfigurationNoDispatchProof/draft-update/unknown-phase
+=== RUN   TestConfigurationNoDispatchProof/draft-update/cancel
+=== RUN   TestConfigurationNoDispatchProof/draft-update/conflict
+=== RUN   TestConfigurationNoDispatchProof/draft-update/conflict-exhausted
+=== RUN   TestConfigurationNoDispatchProof/draft-update/ordinary-error
+=== RUN   TestConfigurationNoDispatchProof/draft-update/lost-ack
+=== RUN   TestConfigurationNoDispatchProof/draft-update/foreign-proof
+=== RUN   TestConfigurationNoDispatchProof/draft-update/replayed-proof
+=== RUN   TestConfigurationNoDispatchProof/draft-update/changed-operation
+=== RUN   TestConfigurationNoDispatchProof/draft-update/changed-owner
+=== RUN   TestConfigurationNoDispatchProof/draft-update/changed-generation
+=== RUN   TestConfigurationNoDispatchProof/draft-update/recorded-task
+=== RUN   TestConfigurationNoDispatchProof/draft-update/recorded-receipt
+=== RUN   TestConfigurationNoDispatchProof/draft-update/changed-parent
+=== RUN   TestConfigurationNoDispatchProof/draft-update/changed-preparation
+=== RUN   TestConfigurationNoDispatchProof/commit/refuse
+=== RUN   TestConfigurationNoDispatchProof/commit/read-error
+=== RUN   TestConfigurationNoDispatchProof/commit/unknown-phase
+=== RUN   TestConfigurationNoDispatchProof/commit/cancel
+=== RUN   TestConfigurationNoDispatchProof/commit/conflict
+=== RUN   TestConfigurationNoDispatchProof/commit/conflict-exhausted
+=== RUN   TestConfigurationNoDispatchProof/commit/ordinary-error
+=== RUN   TestConfigurationNoDispatchProof/commit/lost-ack
+=== RUN   TestConfigurationNoDispatchProof/commit/foreign-proof
+=== RUN   TestConfigurationNoDispatchProof/commit/replayed-proof
+=== RUN   TestConfigurationNoDispatchProof/commit/changed-operation
+=== RUN   TestConfigurationNoDispatchProof/commit/changed-owner
+=== RUN   TestConfigurationNoDispatchProof/commit/changed-generation
+=== RUN   TestConfigurationNoDispatchProof/commit/recorded-task
+=== RUN   TestConfigurationNoDispatchProof/commit/recorded-receipt
+=== RUN   TestConfigurationNoDispatchProof/commit/changed-parent
+=== RUN   TestConfigurationNoDispatchProof/commit/changed-preparation
+=== RUN   TestConfigurationNoDispatchProof/prepared-draft/refuse
+=== RUN   TestConfigurationNoDispatchProof/prepared-draft/read-error
+=== RUN   TestConfigurationNoDispatchProof/prepared-draft/unknown-phase
+=== RUN   TestConfigurationNoDispatchProof/prepared-draft/cancel
+=== RUN   TestConfigurationNoDispatchProof/prepared-draft/conflict
+=== RUN   TestConfigurationNoDispatchProof/prepared-draft/conflict-exhausted
+=== RUN   TestConfigurationNoDispatchProof/prepared-draft/ordinary-error
+=== RUN   TestConfigurationNoDispatchProof/prepared-draft/lost-ack
+=== RUN   TestConfigurationNoDispatchProof/prepared-draft/foreign-proof
+=== RUN   TestConfigurationNoDispatchProof/prepared-draft/replayed-proof
+=== RUN   TestConfigurationNoDispatchProof/prepared-draft/changed-operation
+=== RUN   TestConfigurationNoDispatchProof/prepared-draft/changed-owner
+=== RUN   TestConfigurationNoDispatchProof/prepared-draft/changed-generation
+=== RUN   TestConfigurationNoDispatchProof/prepared-draft/recorded-task
+=== RUN   TestConfigurationNoDispatchProof/prepared-draft/recorded-receipt
+=== RUN   TestConfigurationNoDispatchProof/prepared-draft/changed-parent
+=== RUN   TestConfigurationNoDispatchProof/prepared-draft/changed-preparation
+=== RUN   TestConfigurationNoDispatchProof/prepared-commit/refuse
+=== RUN   TestConfigurationNoDispatchProof/prepared-commit/read-error
+=== RUN   TestConfigurationNoDispatchProof/prepared-commit/unknown-phase
+=== RUN   TestConfigurationNoDispatchProof/prepared-commit/cancel
+=== RUN   TestConfigurationNoDispatchProof/prepared-commit/conflict
+=== RUN   TestConfigurationNoDispatchProof/prepared-commit/conflict-exhausted
+=== RUN   TestConfigurationNoDispatchProof/prepared-commit/ordinary-error
+=== RUN   TestConfigurationNoDispatchProof/prepared-commit/lost-ack
+=== RUN   TestConfigurationNoDispatchProof/prepared-commit/foreign-proof
+=== RUN   TestConfigurationNoDispatchProof/prepared-commit/replayed-proof
+=== RUN   TestConfigurationNoDispatchProof/prepared-commit/changed-operation
+=== RUN   TestConfigurationNoDispatchProof/prepared-commit/changed-owner
+=== RUN   TestConfigurationNoDispatchProof/prepared-commit/changed-generation
+=== RUN   TestConfigurationNoDispatchProof/prepared-commit/recorded-task
+=== RUN   TestConfigurationNoDispatchProof/prepared-commit/recorded-receipt
+=== RUN   TestConfigurationNoDispatchProof/prepared-commit/changed-parent
+=== RUN   TestConfigurationNoDispatchProof/prepared-commit/changed-preparation
+--- PASS: TestConfigurationNoDispatchProof (9.13s)
+    --- PASS: TestConfigurationNoDispatchProof/wireless/refuse (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/wireless/read-error (0.01s)
+    --- PASS: TestConfigurationNoDispatchProof/wireless/unknown-phase (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/wireless/cancel (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/wireless/conflict (0.03s)
+    --- PASS: TestConfigurationNoDispatchProof/wireless/conflict-exhausted (0.35s)
+    --- PASS: TestConfigurationNoDispatchProof/wireless/ordinary-error (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/wireless/lost-ack (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/wireless/foreign-proof (0.01s)
+    --- PASS: TestConfigurationNoDispatchProof/wireless/replayed-proof (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/wireless/changed-operation (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/wireless/changed-owner (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/wireless/changed-generation (0.01s)
+    --- PASS: TestConfigurationNoDispatchProof/wireless/recorded-task (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/wireless/recorded-receipt (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/wireless/feature-scope (0.01s)
+    --- PASS: TestConfigurationNoDispatchProof/wireless/changed-parent (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/wireless/changed-preparation (0.01s)
+    --- PASS: TestConfigurationNoDispatchProof/network-ntp/refuse (0.01s)
+    --- PASS: TestConfigurationNoDispatchProof/network-ntp/read-error (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-ntp/unknown-phase (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-ntp/cancel (0.01s)
+    --- PASS: TestConfigurationNoDispatchProof/network-ntp/conflict (0.03s)
+    --- PASS: TestConfigurationNoDispatchProof/network-ntp/conflict-exhausted (0.34s)
+    --- PASS: TestConfigurationNoDispatchProof/network-ntp/ordinary-error (0.01s)
+    --- PASS: TestConfigurationNoDispatchProof/network-ntp/lost-ack (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-ntp/foreign-proof (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-ntp/replayed-proof (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-ntp/changed-operation (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-ntp/changed-owner (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-ntp/changed-generation (0.01s)
+    --- PASS: TestConfigurationNoDispatchProof/network-ntp/recorded-task (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-ntp/recorded-receipt (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-ntp/changed-parent (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-ntp/changed-preparation (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-dhcp/refuse (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-dhcp/read-error (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-dhcp/unknown-phase (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-dhcp/cancel (0.01s)
+    --- PASS: TestConfigurationNoDispatchProof/network-dhcp/conflict (0.04s)
+    --- PASS: TestConfigurationNoDispatchProof/network-dhcp/conflict-exhausted (0.35s)
+    --- PASS: TestConfigurationNoDispatchProof/network-dhcp/ordinary-error (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-dhcp/lost-ack (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-dhcp/foreign-proof (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-dhcp/replayed-proof (0.01s)
+    --- PASS: TestConfigurationNoDispatchProof/network-dhcp/changed-operation (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-dhcp/changed-owner (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-dhcp/changed-generation (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-dhcp/recorded-task (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-dhcp/recorded-receipt (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-dhcp/changed-parent (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-dhcp/changed-preparation (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-dns/refuse (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-dns/read-error (0.01s)
+    --- PASS: TestConfigurationNoDispatchProof/network-dns/unknown-phase (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-dns/cancel (0.01s)
+    --- PASS: TestConfigurationNoDispatchProof/network-dns/conflict (0.03s)
+    --- PASS: TestConfigurationNoDispatchProof/network-dns/conflict-exhausted (0.35s)
+    --- PASS: TestConfigurationNoDispatchProof/network-dns/ordinary-error (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-dns/lost-ack (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-dns/foreign-proof (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-dns/replayed-proof (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-dns/changed-operation (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-dns/changed-owner (0.01s)
+    --- PASS: TestConfigurationNoDispatchProof/network-dns/changed-generation (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-dns/recorded-task (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-dns/recorded-receipt (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-dns/changed-parent (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-dns/changed-preparation (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-timezone/refuse (0.01s)
+    --- PASS: TestConfigurationNoDispatchProof/network-timezone/read-error (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-timezone/unknown-phase (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-timezone/cancel (0.01s)
+    --- PASS: TestConfigurationNoDispatchProof/network-timezone/conflict (0.03s)
+    --- PASS: TestConfigurationNoDispatchProof/network-timezone/conflict-exhausted (0.35s)
+    --- PASS: TestConfigurationNoDispatchProof/network-timezone/ordinary-error (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-timezone/lost-ack (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-timezone/foreign-proof (0.01s)
+    --- PASS: TestConfigurationNoDispatchProof/network-timezone/replayed-proof (0.01s)
+    --- PASS: TestConfigurationNoDispatchProof/network-timezone/changed-operation (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-timezone/changed-owner (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-timezone/changed-generation (0.01s)
+    --- PASS: TestConfigurationNoDispatchProof/network-timezone/recorded-task (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-timezone/recorded-receipt (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-timezone/changed-parent (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-timezone/changed-preparation (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-banner/refuse (0.01s)
+    --- PASS: TestConfigurationNoDispatchProof/network-banner/read-error (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-banner/unknown-phase (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-banner/cancel (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-banner/conflict (0.03s)
+    --- PASS: TestConfigurationNoDispatchProof/network-banner/conflict-exhausted (0.34s)
+    --- PASS: TestConfigurationNoDispatchProof/network-banner/ordinary-error (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-banner/lost-ack (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-banner/foreign-proof (0.01s)
+    --- PASS: TestConfigurationNoDispatchProof/network-banner/replayed-proof (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-banner/changed-operation (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-banner/changed-owner (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-banner/changed-generation (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-banner/recorded-task (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-banner/recorded-receipt (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-banner/changed-parent (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-banner/changed-preparation (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-telemetry/refuse (0.01s)
+    --- PASS: TestConfigurationNoDispatchProof/network-telemetry/read-error (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-telemetry/unknown-phase (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-telemetry/cancel (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-telemetry/conflict (0.03s)
+    --- PASS: TestConfigurationNoDispatchProof/network-telemetry/conflict-exhausted (0.33s)
+    --- PASS: TestConfigurationNoDispatchProof/network-telemetry/ordinary-error (0.01s)
+    --- PASS: TestConfigurationNoDispatchProof/network-telemetry/lost-ack (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-telemetry/foreign-proof (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-telemetry/replayed-proof (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-telemetry/changed-operation (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-telemetry/changed-owner (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-telemetry/changed-generation (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-telemetry/recorded-task (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-telemetry/recorded-receipt (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-telemetry/changed-parent (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-telemetry/changed-preparation (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/pnp-registration/refuse (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/pnp-registration/read-error (0.01s)
+    --- PASS: TestConfigurationNoDispatchProof/pnp-registration/unknown-phase (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/pnp-registration/cancel (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/pnp-registration/conflict (0.03s)
+    --- PASS: TestConfigurationNoDispatchProof/pnp-registration/conflict-exhausted (0.34s)
+    --- PASS: TestConfigurationNoDispatchProof/pnp-registration/ordinary-error (0.03s)
+    --- PASS: TestConfigurationNoDispatchProof/pnp-registration/lost-ack (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/pnp-registration/foreign-proof (0.01s)
+    --- PASS: TestConfigurationNoDispatchProof/pnp-registration/replayed-proof (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/pnp-registration/changed-operation (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/pnp-registration/changed-owner (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/pnp-registration/changed-generation (0.01s)
+    --- PASS: TestConfigurationNoDispatchProof/pnp-registration/recorded-task (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/pnp-registration/recorded-receipt (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/pnp-registration/changed-parent (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/pnp-registration/changed-preparation (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/project-create/refuse (0.01s)
+    --- PASS: TestConfigurationNoDispatchProof/project-create/read-error (0.01s)
+    --- PASS: TestConfigurationNoDispatchProof/project-create/unknown-phase (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/project-create/cancel (0.01s)
+    --- PASS: TestConfigurationNoDispatchProof/project-create/conflict (0.03s)
+    --- PASS: TestConfigurationNoDispatchProof/project-create/conflict-exhausted (0.36s)
+    --- PASS: TestConfigurationNoDispatchProof/project-create/ordinary-error (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/project-create/lost-ack (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/project-create/foreign-proof (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/project-create/replayed-proof (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/project-create/changed-operation (0.01s)
+    --- PASS: TestConfigurationNoDispatchProof/project-create/changed-owner (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/project-create/changed-generation (0.01s)
+    --- PASS: TestConfigurationNoDispatchProof/project-create/recorded-task (0.01s)
+    --- PASS: TestConfigurationNoDispatchProof/project-create/recorded-receipt (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/project-create/changed-parent (0.01s)
+    --- PASS: TestConfigurationNoDispatchProof/project-create/changed-preparation (0.01s)
+    --- PASS: TestConfigurationNoDispatchProof/project-update/refuse (0.01s)
+    --- PASS: TestConfigurationNoDispatchProof/project-update/read-error (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/project-update/unknown-phase (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/project-update/cancel (0.01s)
+    --- PASS: TestConfigurationNoDispatchProof/project-update/conflict (0.03s)
+    --- PASS: TestConfigurationNoDispatchProof/project-update/conflict-exhausted (0.35s)
+    --- PASS: TestConfigurationNoDispatchProof/project-update/ordinary-error (0.01s)
+    --- PASS: TestConfigurationNoDispatchProof/project-update/lost-ack (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/project-update/foreign-proof (0.01s)
+    --- PASS: TestConfigurationNoDispatchProof/project-update/replayed-proof (0.01s)
+    --- PASS: TestConfigurationNoDispatchProof/project-update/changed-operation (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/project-update/changed-owner (0.01s)
+    --- PASS: TestConfigurationNoDispatchProof/project-update/changed-generation (0.01s)
+    --- PASS: TestConfigurationNoDispatchProof/project-update/recorded-task (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/project-update/recorded-receipt (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/project-update/changed-parent (0.01s)
+    --- PASS: TestConfigurationNoDispatchProof/project-update/changed-preparation (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/draft-create/refuse (0.01s)
+    --- PASS: TestConfigurationNoDispatchProof/draft-create/read-error (0.01s)
+    --- PASS: TestConfigurationNoDispatchProof/draft-create/unknown-phase (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/draft-create/cancel (0.01s)
+    --- PASS: TestConfigurationNoDispatchProof/draft-create/conflict (0.03s)
+    --- PASS: TestConfigurationNoDispatchProof/draft-create/conflict-exhausted (0.35s)
+    --- PASS: TestConfigurationNoDispatchProof/draft-create/ordinary-error (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/draft-create/lost-ack (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/draft-create/foreign-proof (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/draft-create/replayed-proof (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/draft-create/changed-operation (0.01s)
+    --- PASS: TestConfigurationNoDispatchProof/draft-create/changed-owner (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/draft-create/changed-generation (0.01s)
+    --- PASS: TestConfigurationNoDispatchProof/draft-create/recorded-task (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/draft-create/recorded-receipt (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/draft-create/changed-parent (0.01s)
+    --- PASS: TestConfigurationNoDispatchProof/draft-create/changed-preparation (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/draft-update/refuse (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/draft-update/read-error (0.01s)
+    --- PASS: TestConfigurationNoDispatchProof/draft-update/unknown-phase (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/draft-update/cancel (0.01s)
+    --- PASS: TestConfigurationNoDispatchProof/draft-update/conflict (0.03s)
+    --- PASS: TestConfigurationNoDispatchProof/draft-update/conflict-exhausted (0.34s)
+    --- PASS: TestConfigurationNoDispatchProof/draft-update/ordinary-error (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/draft-update/lost-ack (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/draft-update/foreign-proof (0.01s)
+    --- PASS: TestConfigurationNoDispatchProof/draft-update/replayed-proof (0.01s)
+    --- PASS: TestConfigurationNoDispatchProof/draft-update/changed-operation (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/draft-update/changed-owner (0.01s)
+    --- PASS: TestConfigurationNoDispatchProof/draft-update/changed-generation (0.01s)
+    --- PASS: TestConfigurationNoDispatchProof/draft-update/recorded-task (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/draft-update/recorded-receipt (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/draft-update/changed-parent (0.01s)
+    --- PASS: TestConfigurationNoDispatchProof/draft-update/changed-preparation (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/commit/refuse (0.01s)
+    --- PASS: TestConfigurationNoDispatchProof/commit/read-error (0.01s)
+    --- PASS: TestConfigurationNoDispatchProof/commit/unknown-phase (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/commit/cancel (0.01s)
+    --- PASS: TestConfigurationNoDispatchProof/commit/conflict (0.03s)
+    --- PASS: TestConfigurationNoDispatchProof/commit/conflict-exhausted (0.34s)
+    --- PASS: TestConfigurationNoDispatchProof/commit/ordinary-error (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/commit/lost-ack (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/commit/foreign-proof (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/commit/replayed-proof (0.01s)
+    --- PASS: TestConfigurationNoDispatchProof/commit/changed-operation (0.01s)
+    --- PASS: TestConfigurationNoDispatchProof/commit/changed-owner (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/commit/changed-generation (0.01s)
+    --- PASS: TestConfigurationNoDispatchProof/commit/recorded-task (0.01s)
+    --- PASS: TestConfigurationNoDispatchProof/commit/recorded-receipt (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/commit/changed-parent (0.01s)
+    --- PASS: TestConfigurationNoDispatchProof/commit/changed-preparation (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/prepared-draft/refuse (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/prepared-draft/read-error (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/prepared-draft/unknown-phase (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/prepared-draft/cancel (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/prepared-draft/conflict (0.03s)
+    --- PASS: TestConfigurationNoDispatchProof/prepared-draft/conflict-exhausted (0.34s)
+    --- PASS: TestConfigurationNoDispatchProof/prepared-draft/ordinary-error (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/prepared-draft/lost-ack (0.01s)
+    --- PASS: TestConfigurationNoDispatchProof/prepared-draft/foreign-proof (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/prepared-draft/replayed-proof (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/prepared-draft/changed-operation (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/prepared-draft/changed-owner (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/prepared-draft/changed-generation (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/prepared-draft/recorded-task (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/prepared-draft/recorded-receipt (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/prepared-draft/changed-parent (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/prepared-draft/changed-preparation (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/prepared-commit/refuse (0.01s)
+    --- PASS: TestConfigurationNoDispatchProof/prepared-commit/read-error (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/prepared-commit/unknown-phase (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/prepared-commit/cancel (0.01s)
+    --- PASS: TestConfigurationNoDispatchProof/prepared-commit/conflict (0.03s)
+    --- PASS: TestConfigurationNoDispatchProof/prepared-commit/conflict-exhausted (0.35s)
+    --- PASS: TestConfigurationNoDispatchProof/prepared-commit/ordinary-error (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/prepared-commit/lost-ack (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/prepared-commit/foreign-proof (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/prepared-commit/replayed-proof (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/prepared-commit/changed-operation (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/prepared-commit/changed-owner (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/prepared-commit/changed-generation (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/prepared-commit/recorded-task (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/prepared-commit/recorded-receipt (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/prepared-commit/changed-parent (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/prepared-commit/changed-preparation (0.02s)
+=== RUN   TestPnPAccessPointClaim
+=== RUN   TestPnPAccessPointClaim/floor
+=== RUN   TestPnPAccessPointClaim/building
+=== RUN   TestPnPAccessPointClaim/area
+=== RUN   TestPnPAccessPointClaim/missing-floor
+=== RUN   TestPnPAccessPointClaim/missing-rf
+=== RUN   TestPnPAccessPointClaim/late-floor
+=== RUN   TestPnPAccessPointClaim/late-rf
+--- PASS: TestPnPAccessPointClaim (0.09s)
+    --- PASS: TestPnPAccessPointClaim/floor (0.02s)
+    --- PASS: TestPnPAccessPointClaim/building (0.01s)
+    --- PASS: TestPnPAccessPointClaim/area (0.01s)
+    --- PASS: TestPnPAccessPointClaim/missing-floor (0.01s)
+    --- PASS: TestPnPAccessPointClaim/missing-rf (0.01s)
+    --- PASS: TestPnPAccessPointClaim/late-floor (0.01s)
+    --- PASS: TestPnPAccessPointClaim/late-rf (0.01s)
+=== RUN   TestPnPClaimDependencies
+=== RUN   TestPnPClaimDependencies/stable
+=== RUN   TestPnPClaimDependencies/rf
+=== RUN   TestPnPClaimDependencies/missing-rf
+=== RUN   TestPnPClaimDependencies/late-rf
+=== RUN   TestPnPClaimDependencies/ambiguous-template
+=== RUN   TestPnPClaimDependencies/image-name-alias
+=== RUN   TestPnPClaimDependencies/explicit-image
+=== RUN   TestPnPClaimDependencies/external-template
+=== RUN   TestPnPClaimDependencies/no-template
+=== RUN   TestPnPClaimDependencies/missing-site
+=== RUN   TestPnPClaimDependencies/missing-image
+=== RUN   TestPnPClaimDependencies/ambiguous-image
+=== RUN   TestPnPClaimDependencies/missing-project
+=== RUN   TestPnPClaimDependencies/missing-template
+=== RUN   TestPnPClaimDependencies/draft-only
+=== RUN   TestPnPClaimDependencies/composite
+=== RUN   TestPnPClaimDependencies/missing-parameter
+=== RUN   TestPnPClaimDependencies/unknown-parameter
+=== RUN   TestPnPClaimDependencies/late-site
+=== RUN   TestPnPClaimDependencies/late-image
+=== RUN   TestPnPClaimDependencies/late-template
+=== RUN   TestPnPClaimDependencies/late-version
+=== RUN   TestPnPClaimDependencies/late-content
+--- PASS: TestPnPClaimDependencies (0.31s)
+    --- PASS: TestPnPClaimDependencies/stable (0.02s)
+    --- PASS: TestPnPClaimDependencies/rf (0.02s)
+    --- PASS: TestPnPClaimDependencies/missing-rf (0.01s)
+    --- PASS: TestPnPClaimDependencies/late-rf (0.02s)
+    --- PASS: TestPnPClaimDependencies/ambiguous-template (0.01s)
+    --- PASS: TestPnPClaimDependencies/image-name-alias (0.01s)
+    --- PASS: TestPnPClaimDependencies/explicit-image (0.02s)
+    --- PASS: TestPnPClaimDependencies/external-template (0.02s)
+    --- PASS: TestPnPClaimDependencies/no-template (0.01s)
+    --- PASS: TestPnPClaimDependencies/missing-site (0.01s)
+    --- PASS: TestPnPClaimDependencies/missing-image (0.01s)
+    --- PASS: TestPnPClaimDependencies/ambiguous-image (0.01s)
+    --- PASS: TestPnPClaimDependencies/missing-project (0.01s)
+    --- PASS: TestPnPClaimDependencies/missing-template (0.01s)
+    --- PASS: TestPnPClaimDependencies/draft-only (0.01s)
+    --- PASS: TestPnPClaimDependencies/composite (0.01s)
+    --- PASS: TestPnPClaimDependencies/missing-parameter (0.01s)
+    --- PASS: TestPnPClaimDependencies/unknown-parameter (0.01s)
+    --- PASS: TestPnPClaimDependencies/late-site (0.01s)
+    --- PASS: TestPnPClaimDependencies/late-image (0.01s)
+    --- PASS: TestPnPClaimDependencies/late-template (0.01s)
+    --- PASS: TestPnPClaimDependencies/late-version (0.01s)
+    --- PASS: TestPnPClaimDependencies/late-content (0.01s)
+=== RUN   TestPnPSiteClaimRejectsIncompletePlatformInputs
+=== RUN   TestPnPSiteClaimRejectsIncompletePlatformInputs/AccessPoint
+=== RUN   TestPnPSiteClaimRejectsIncompletePlatformInputs/Sensor
+=== RUN   TestPnPSiteClaimRejectsIncompletePlatformInputs/CatalystWLC
+=== RUN   TestPnPSiteClaimRejectsIncompletePlatformInputs/MobilityExpress
+--- PASS: TestPnPSiteClaimRejectsIncompletePlatformInputs (0.00s)
+    --- PASS: TestPnPSiteClaimRejectsIncompletePlatformInputs/AccessPoint (0.00s)
+    --- PASS: TestPnPSiteClaimRejectsIncompletePlatformInputs/Sensor (0.00s)
+    --- PASS: TestPnPSiteClaimRejectsIncompletePlatformInputs/CatalystWLC (0.00s)
+    --- PASS: TestPnPSiteClaimRejectsIncompletePlatformInputs/MobilityExpress (0.00s)
+=== RUN   TestPnPSiteClaimSubmission
+=== RUN   TestPnPSiteClaimSubmission/observed
+=== RUN   TestPnPSiteClaimSubmission/frozen-input
+=== RUN   TestPnPSiteClaimSubmission/lost
+=== RUN   TestPnPSiteClaimSubmission/async
+=== RUN   TestPnPSiteClaimSubmission/auth
+=== RUN   TestPnPSiteClaimSubmission/conflict
+=== RUN   TestPnPSiteClaimSubmission/missing-response
+=== RUN   TestPnPSiteClaimSubmission/empty-response
+=== RUN   TestPnPSiteClaimSubmission/task-object
+=== RUN   TestPnPSiteClaimSubmission/late-state
+=== RUN   TestPnPSiteClaimSubmission/late-image
+=== RUN   TestPnPSiteClaimSubmission/late-version
+--- PASS: TestPnPSiteClaimSubmission (0.21s)
+    --- PASS: TestPnPSiteClaimSubmission/observed (0.02s)
+    --- PASS: TestPnPSiteClaimSubmission/frozen-input (0.02s)
+    --- PASS: TestPnPSiteClaimSubmission/lost (0.02s)
+    --- PASS: TestPnPSiteClaimSubmission/async (0.02s)
+    --- PASS: TestPnPSiteClaimSubmission/auth (0.02s)
+    --- PASS: TestPnPSiteClaimSubmission/conflict (0.02s)
+    --- PASS: TestPnPSiteClaimSubmission/missing-response (0.02s)
+    --- PASS: TestPnPSiteClaimSubmission/empty-response (0.02s)
+    --- PASS: TestPnPSiteClaimSubmission/task-object (0.02s)
+    --- PASS: TestPnPSiteClaimSubmission/late-state (0.02s)
+    --- PASS: TestPnPSiteClaimSubmission/late-image (0.02s)
+    --- PASS: TestPnPSiteClaimSubmission/late-version (0.02s)
+=== RUN   TestPnPClaimImageEvidence
+=== RUN   TestPnPClaimImageEvidence/exact
+=== RUN   TestPnPClaimImageEvidence/build-suffix
+=== RUN   TestPnPClaimImageEvidence/wrong-version
+=== RUN   TestPnPClaimImageEvidence/version-prefix
+=== RUN   TestPnPClaimImageEvidence/no-version
+=== RUN   TestPnPClaimImageEvidence/unreachable
+=== RUN   TestPnPClaimImageEvidence/no-inventory
+=== RUN   TestPnPClaimImageEvidence/skip
+=== RUN   TestPnPClaimImageEvidence/default-skip
+=== RUN   TestPnPClaimImageEvidence/missing-image-version
+=== RUN   TestPnPClaimImageEvidence/unbound-activation
+=== RUN   TestPnPClaimImageEvidence/foreign-pnp
+=== RUN   TestPnPClaimImageEvidence/foreign-site
+--- PASS: TestPnPClaimImageEvidence (0.00s)
+    --- PASS: TestPnPClaimImageEvidence/exact (0.00s)
+    --- PASS: TestPnPClaimImageEvidence/build-suffix (0.00s)
+    --- PASS: TestPnPClaimImageEvidence/wrong-version (0.00s)
+    --- PASS: TestPnPClaimImageEvidence/version-prefix (0.00s)
+    --- PASS: TestPnPClaimImageEvidence/no-version (0.00s)
+    --- PASS: TestPnPClaimImageEvidence/unreachable (0.00s)
+    --- PASS: TestPnPClaimImageEvidence/no-inventory (0.00s)
+    --- PASS: TestPnPClaimImageEvidence/skip (0.00s)
+    --- PASS: TestPnPClaimImageEvidence/default-skip (0.00s)
+    --- PASS: TestPnPClaimImageEvidence/missing-image-version (0.00s)
+    --- PASS: TestPnPClaimImageEvidence/unbound-activation (0.00s)
+    --- PASS: TestPnPClaimImageEvidence/foreign-pnp (0.00s)
+    --- PASS: TestPnPClaimImageEvidence/foreign-site (0.00s)
+=== RUN   TestPnPClaimInventoryObservation
+=== RUN   TestPnPClaimInventoryObservation/stable
+=== RUN   TestPnPClaimInventoryObservation/missing-inventory
+=== RUN   TestPnPClaimInventoryObservation/unassigned
+=== RUN   TestPnPClaimInventoryObservation/wrong-pnp-id
+=== RUN   TestPnPClaimInventoryObservation/wrong-pnp-site
+=== RUN   TestPnPClaimInventoryObservation/wrong-site-id
+=== RUN   TestPnPClaimInventoryObservation/network-alias
+=== RUN   TestPnPClaimInventoryObservation/late-network-id
+=== RUN   TestPnPClaimInventoryObservation/late-assignment
+=== RUN   TestPnPClaimInventoryObservation/late-state
+=== RUN   TestPnPClaimInventoryObservation/late-software
+--- PASS: TestPnPClaimInventoryObservation (0.14s)
+    --- PASS: TestPnPClaimInventoryObservation/stable (0.01s)
+    --- PASS: TestPnPClaimInventoryObservation/missing-inventory (0.01s)
+    --- PASS: TestPnPClaimInventoryObservation/unassigned (0.01s)
+    --- PASS: TestPnPClaimInventoryObservation/wrong-pnp-id (0.01s)
+    --- PASS: TestPnPClaimInventoryObservation/wrong-pnp-site (0.01s)
+    --- PASS: TestPnPClaimInventoryObservation/wrong-site-id (0.01s)
+    --- PASS: TestPnPClaimInventoryObservation/network-alias (0.01s)
+    --- PASS: TestPnPClaimInventoryObservation/late-network-id (0.01s)
+    --- PASS: TestPnPClaimInventoryObservation/late-assignment (0.01s)
+    --- PASS: TestPnPClaimInventoryObservation/late-state (0.01s)
+    --- PASS: TestPnPClaimInventoryObservation/late-software (0.02s)
+=== RUN   TestPnPClaimNetworkStackIdentity
+=== RUN   TestPnPClaimNetworkStackIdentity/exact
+=== RUN   TestPnPClaimNetworkStackIdentity/reverse
+=== RUN   TestPnPClaimNetworkStackIdentity/partial
+=== RUN   TestPnPClaimNetworkStackIdentity/extra
+=== RUN   TestPnPClaimNetworkStackIdentity/duplicate-member
+=== RUN   TestPnPClaimNetworkStackIdentity/duplicate-record
+=== RUN   TestPnPClaimNetworkStackIdentity/split-records
+=== RUN   TestPnPClaimNetworkStackIdentity/malformed-member
+=== RUN   TestPnPClaimNetworkStackIdentity/empty
+--- PASS: TestPnPClaimNetworkStackIdentity (0.00s)
+    --- PASS: TestPnPClaimNetworkStackIdentity/exact (0.00s)
+    --- PASS: TestPnPClaimNetworkStackIdentity/reverse (0.00s)
+    --- PASS: TestPnPClaimNetworkStackIdentity/partial (0.00s)
+    --- PASS: TestPnPClaimNetworkStackIdentity/extra (0.00s)
+    --- PASS: TestPnPClaimNetworkStackIdentity/duplicate-member (0.00s)
+    --- PASS: TestPnPClaimNetworkStackIdentity/duplicate-record (0.00s)
+    --- PASS: TestPnPClaimNetworkStackIdentity/split-records (0.00s)
+    --- PASS: TestPnPClaimNetworkStackIdentity/malformed-member (0.00s)
+    --- PASS: TestPnPClaimNetworkStackIdentity/empty (0.00s)
+=== RUN   TestPnPSiteClaimJournal
+=== RUN   TestPnPSiteClaimJournal/observed
+=== RUN   TestPnPSiteClaimJournal/pruned-receipt
+=== RUN   TestPnPSiteClaimJournal/lost
+=== RUN   TestPnPSiteClaimJournal/auth
+=== RUN   TestPnPSiteClaimJournal/nil-admission
+=== RUN   TestPnPSiteClaimJournal/denied-permit
+=== RUN   TestPnPSiteClaimJournal/stack
+--- PASS: TestPnPSiteClaimJournal (0.35s)
+    --- PASS: TestPnPSiteClaimJournal/observed (0.06s)
+    --- PASS: TestPnPSiteClaimJournal/pruned-receipt (0.06s)
+    --- PASS: TestPnPSiteClaimJournal/lost (0.06s)
+    --- PASS: TestPnPSiteClaimJournal/auth (0.06s)
+    --- PASS: TestPnPSiteClaimJournal/nil-admission (0.03s)
+    --- PASS: TestPnPSiteClaimJournal/denied-permit (0.06s)
+    --- PASS: TestPnPSiteClaimJournal/stack (0.04s)
+=== RUN   TestPnPPreparedClaimHandoff
+=== RUN   TestPnPPreparedClaimHandoff/valid
+=== RUN   TestPnPPreparedClaimHandoff/ignored-native-output
+=== RUN   TestPnPPreparedClaimHandoff/state
+=== RUN   TestPnPPreparedClaimHandoff/workflow-state
+=== RUN   TestPnPPreparedClaimHandoff/work-item
+=== RUN   TestPnPPreparedClaimHandoff/replaced-id
+=== RUN   TestPnPPreparedClaimHandoff/legacy-prepared
+=== RUN   TestPnPPreparedClaimHandoff/future-version
+=== RUN   TestPnPPreparedClaimHandoff/corrupt-binding
+=== RUN   TestPnPPreparedClaimHandoff/source
+=== RUN   TestPnPPreparedClaimHandoff/owner
+=== RUN   TestPnPPreparedClaimHandoff/missing-receipt
+=== RUN   TestPnPPreparedClaimHandoff/wrong-operation
+=== RUN   TestPnPPreparedClaimHandoff/no-admission
+=== RUN   TestPnPPreparedClaimHandoff/late-state
+=== RUN   TestPnPPreparedClaimHandoff/late-source
+=== RUN   TestPnPPreparedClaimHandoff/denied-permit
+=== RUN   TestPnPPreparedClaimHandoff/lost-response
+=== RUN   TestPnPPreparedClaimHandoff/submitting
+=== RUN   TestPnPPreparedClaimHandoff/unknown
+=== RUN   TestPnPPreparedClaimHandoff/verifying
+--- PASS: TestPnPPreparedClaimHandoff (1.07s)
+    --- PASS: TestPnPPreparedClaimHandoff/valid (0.06s)
+    --- PASS: TestPnPPreparedClaimHandoff/ignored-native-output (0.06s)
+    --- PASS: TestPnPPreparedClaimHandoff/state (0.05s)
+    --- PASS: TestPnPPreparedClaimHandoff/workflow-state (0.05s)
+    --- PASS: TestPnPPreparedClaimHandoff/work-item (0.05s)
+    --- PASS: TestPnPPreparedClaimHandoff/replaced-id (0.05s)
+    --- PASS: TestPnPPreparedClaimHandoff/legacy-prepared (0.05s)
+    --- PASS: TestPnPPreparedClaimHandoff/future-version (0.05s)
+    --- PASS: TestPnPPreparedClaimHandoff/corrupt-binding (0.05s)
+    --- PASS: TestPnPPreparedClaimHandoff/source (0.05s)
+    --- PASS: TestPnPPreparedClaimHandoff/owner (0.05s)
+    --- PASS: TestPnPPreparedClaimHandoff/missing-receipt (0.05s)
+    --- PASS: TestPnPPreparedClaimHandoff/wrong-operation (0.05s)
+    --- PASS: TestPnPPreparedClaimHandoff/no-admission (0.05s)
+    --- PASS: TestPnPPreparedClaimHandoff/late-state (0.06s)
+    --- PASS: TestPnPPreparedClaimHandoff/late-source (0.06s)
+    --- PASS: TestPnPPreparedClaimHandoff/denied-permit (0.06s)
+    --- PASS: TestPnPPreparedClaimHandoff/lost-response (0.06s)
+    --- PASS: TestPnPPreparedClaimHandoff/submitting (0.05s)
+    --- PASS: TestPnPPreparedClaimHandoff/unknown (0.05s)
+    --- PASS: TestPnPPreparedClaimHandoff/verifying (0.05s)
+=== RUN   TestPnPClaimVersionBinding
+=== RUN   TestPnPClaimVersionBinding/stable
+=== RUN   TestPnPClaimVersionBinding/image-version
+=== RUN   TestPnPClaimVersionBinding/image-id
+=== RUN   TestPnPClaimVersionBinding/template-version-id
+=== RUN   TestPnPClaimVersionBinding/template-version-number
+=== RUN   TestPnPClaimVersionBinding/project-id
+=== RUN   TestPnPClaimVersionBinding/secrets-excluded
+=== RUN   TestPnPClaimVersionBinding/missing-image-version
+=== RUN   TestPnPClaimVersionBinding/missing-template-version
+=== RUN   TestPnPClaimVersionBinding/mismatched-image
+=== RUN   TestPnPClaimVersionBinding/extra-template
+--- PASS: TestPnPClaimVersionBinding (0.01s)
+    --- PASS: TestPnPClaimVersionBinding/stable (0.00s)
+    --- PASS: TestPnPClaimVersionBinding/image-version (0.00s)
+    --- PASS: TestPnPClaimVersionBinding/image-id (0.00s)
+    --- PASS: TestPnPClaimVersionBinding/template-version-id (0.00s)
+    --- PASS: TestPnPClaimVersionBinding/template-version-number (0.00s)
+    --- PASS: TestPnPClaimVersionBinding/project-id (0.00s)
+    --- PASS: TestPnPClaimVersionBinding/secrets-excluded (0.00s)
+    --- PASS: TestPnPClaimVersionBinding/missing-image-version (0.00s)
+    --- PASS: TestPnPClaimVersionBinding/missing-template-version (0.00s)
+    --- PASS: TestPnPClaimVersionBinding/mismatched-image (0.00s)
+    --- PASS: TestPnPClaimVersionBinding/extra-template (0.00s)
+=== RUN   TestPnPClaimTargetFootprint
+=== RUN   TestPnPClaimTargetFootprint/single
+=== RUN   TestPnPClaimTargetFootprint/stack
+=== RUN   TestPnPClaimTargetFootprint/missing-member
+=== RUN   TestPnPClaimTargetFootprint/extra-member
+=== RUN   TestPnPClaimTargetFootprint/split-records
+=== RUN   TestPnPClaimTargetFootprint/foreign-id
+=== RUN   TestPnPClaimTargetFootprint/wrong-primary
+=== RUN   TestPnPClaimTargetFootprint/wrong-pid
+=== RUN   TestPnPClaimTargetFootprint/wrong-name
+=== RUN   TestPnPClaimTargetFootprint/managed-member
+=== RUN   TestPnPClaimTargetFootprint/native-alias
+--- PASS: TestPnPClaimTargetFootprint (0.13s)
+    --- PASS: TestPnPClaimTargetFootprint/single (0.02s)
+    --- PASS: TestPnPClaimTargetFootprint/stack (0.01s)
+    --- PASS: TestPnPClaimTargetFootprint/missing-member (0.01s)
+    --- PASS: TestPnPClaimTargetFootprint/extra-member (0.01s)
+    --- PASS: TestPnPClaimTargetFootprint/split-records (0.01s)
+    --- PASS: TestPnPClaimTargetFootprint/foreign-id (0.01s)
+    --- PASS: TestPnPClaimTargetFootprint/wrong-primary (0.01s)
+    --- PASS: TestPnPClaimTargetFootprint/wrong-pid (0.01s)
+    --- PASS: TestPnPClaimTargetFootprint/wrong-name (0.01s)
+    --- PASS: TestPnPClaimTargetFootprint/managed-member (0.01s)
+    --- PASS: TestPnPClaimTargetFootprint/native-alias (0.01s)
+=== RUN   TestPnPClaimWorkflowReferences
+=== RUN   TestPnPClaimWorkflowReferences/task-only
+=== RUN   TestPnPClaimWorkflowReferences/task-duplicate
+=== RUN   TestPnPClaimWorkflowReferences/task-conflict
+=== RUN   TestPnPClaimWorkflowReferences/task-foreign-pending-image
+=== RUN   TestPnPClaimWorkflowReferences/task-malformed
+=== RUN   TestPnPClaimWorkflowReferences/task-empty
+=== RUN   TestPnPClaimWorkflowReferences/match
+=== RUN   TestPnPClaimWorkflowReferences/foreign-image
+=== RUN   TestPnPClaimWorkflowReferences/foreign-template
+=== RUN   TestPnPClaimWorkflowReferences/missing-image
+=== RUN   TestPnPClaimWorkflowReferences/missing-template
+=== RUN   TestPnPClaimWorkflowReferences/missing-workflow
+=== RUN   TestPnPClaimWorkflowReferences/missing-workflow-id
+=== RUN   TestPnPClaimWorkflowReferences/system-only
+=== RUN   TestPnPClaimWorkflowReferences/reset-only
+=== RUN   TestPnPClaimWorkflowReferences/foreign-template-pending-image
+=== RUN   TestPnPClaimWorkflowReferences/foreign-image-pending-template
+=== RUN   TestPnPClaimWorkflowReferences/skip-image
+=== RUN   TestPnPClaimWorkflowReferences/default-skip-image
+=== RUN   TestPnPClaimWorkflowReferences/no-template
+=== RUN   TestPnPClaimWorkflowReferences/not-requested
+=== RUN   TestPnPClaimWorkflowReferences/foreign-pnp
+=== RUN   TestPnPClaimWorkflowReferences/foreign-site
+=== RUN   TestPnPClaimWorkflowReferences/malformed-workflow
+=== RUN   TestPnPClaimWorkflowReferences/completed-native-state
+=== RUN   TestPnPClaimWorkflowReferences/failed-native-state
+--- PASS: TestPnPClaimWorkflowReferences (0.00s)
+    --- PASS: TestPnPClaimWorkflowReferences/task-only (0.00s)
+    --- PASS: TestPnPClaimWorkflowReferences/task-duplicate (0.00s)
+    --- PASS: TestPnPClaimWorkflowReferences/task-conflict (0.00s)
+    --- PASS: TestPnPClaimWorkflowReferences/task-foreign-pending-image (0.00s)
+    --- PASS: TestPnPClaimWorkflowReferences/task-malformed (0.00s)
+    --- PASS: TestPnPClaimWorkflowReferences/task-empty (0.00s)
+    --- PASS: TestPnPClaimWorkflowReferences/match (0.00s)
+    --- PASS: TestPnPClaimWorkflowReferences/foreign-image (0.00s)
+    --- PASS: TestPnPClaimWorkflowReferences/foreign-template (0.00s)
+    --- PASS: TestPnPClaimWorkflowReferences/missing-image (0.00s)
+    --- PASS: TestPnPClaimWorkflowReferences/missing-template (0.00s)
+    --- PASS: TestPnPClaimWorkflowReferences/missing-workflow (0.00s)
+    --- PASS: TestPnPClaimWorkflowReferences/missing-workflow-id (0.00s)
+    --- PASS: TestPnPClaimWorkflowReferences/system-only (0.00s)
+    --- PASS: TestPnPClaimWorkflowReferences/reset-only (0.00s)
+    --- PASS: TestPnPClaimWorkflowReferences/foreign-template-pending-image (0.00s)
+    --- PASS: TestPnPClaimWorkflowReferences/foreign-image-pending-template (0.00s)
+    --- PASS: TestPnPClaimWorkflowReferences/skip-image (0.00s)
+    --- PASS: TestPnPClaimWorkflowReferences/default-skip-image (0.00s)
+    --- PASS: TestPnPClaimWorkflowReferences/no-template (0.00s)
+    --- PASS: TestPnPClaimWorkflowReferences/not-requested (0.00s)
+    --- PASS: TestPnPClaimWorkflowReferences/foreign-pnp (0.00s)
+    --- PASS: TestPnPClaimWorkflowReferences/foreign-site (0.00s)
+    --- PASS: TestPnPClaimWorkflowReferences/malformed-workflow (0.00s)
+    --- PASS: TestPnPClaimWorkflowReferences/completed-native-state (0.00s)
+    --- PASS: TestPnPClaimWorkflowReferences/failed-native-state (0.00s)
+=== RUN   TestPnPIntentAndPayloads
+--- PASS: TestPnPIntentAndPayloads (0.00s)
+=== RUN   TestPnPIntentValidation
+--- PASS: TestPnPIntentValidation (0.01s)
+=== RUN   TestPnPClaimDefaultsAndStackEmptyReferences
+--- PASS: TestPnPClaimDefaultsAndStackEmptyReferences (0.00s)
+=== RUN   TestPnPDeviceInventory
+=== RUN   TestPnPDeviceInventory/valid
+=== RUN   TestPnPDeviceInventory/empty
+=== RUN   TestPnPDeviceInventory/paged
+=== RUN   TestPnPDeviceInventory/repeat
+=== RUN   TestPnPDeviceInventory/oversized
+=== RUN   TestPnPDeviceInventory/missing-id
+=== RUN   TestPnPDeviceInventory/missing-info
+=== RUN   TestPnPDeviceInventory/duplicate-serial
+=== RUN   TestPnPDeviceInventory/stack
+=== RUN   TestPnPDeviceInventory/stack-alias
+=== RUN   TestPnPDeviceInventory/bad-member
+=== RUN   TestPnPDeviceInventory/conflicting-site
+=== RUN   TestPnPDeviceInventory/null
+=== RUN   TestPnPDeviceInventory/envelope
+=== RUN   TestPnPDeviceInventory/partial
+=== RUN   TestPnPDeviceInventory/no-content
+--- PASS: TestPnPDeviceInventory (0.26s)
+    --- PASS: TestPnPDeviceInventory/valid (0.01s)
+    --- PASS: TestPnPDeviceInventory/empty (0.01s)
+    --- PASS: TestPnPDeviceInventory/paged (0.04s)
+    --- PASS: TestPnPDeviceInventory/repeat (0.06s)
+    --- PASS: TestPnPDeviceInventory/oversized (0.04s)
+    --- PASS: TestPnPDeviceInventory/missing-id (0.01s)
+    --- PASS: TestPnPDeviceInventory/missing-info (0.01s)
+    --- PASS: TestPnPDeviceInventory/duplicate-serial (0.01s)
+    --- PASS: TestPnPDeviceInventory/stack (0.01s)
+    --- PASS: TestPnPDeviceInventory/stack-alias (0.01s)
+    --- PASS: TestPnPDeviceInventory/bad-member (0.01s)
+    --- PASS: TestPnPDeviceInventory/conflicting-site (0.01s)
+    --- PASS: TestPnPDeviceInventory/null (0.01s)
+    --- PASS: TestPnPDeviceInventory/envelope (0.01s)
+    --- PASS: TestPnPDeviceInventory/partial (0.01s)
+    --- PASS: TestPnPDeviceInventory/no-content (0.01s)
+=== RUN   TestPnPPreview
+=== RUN   TestPnPPreview/complete
+=== RUN   TestPnPPreview/pending
+=== RUN   TestPnPPreview/failed
+=== RUN   TestPnPPreview/lost
+=== RUN   TestPnPPreview/auth
+=== RUN   TestPnPPreview/async
+=== RUN   TestPnPPreview/conflict
+=== RUN   TestPnPPreview/empty
+=== RUN   TestPnPPreview/missing-flags
+=== RUN   TestPnPPreview/wrong-site
+=== RUN   TestPnPPreview/bad-task
+=== RUN   TestPnPPreview/late-identity
+=== RUN   TestPnPPreview/late-workflow
+=== RUN   TestPnPPreview/unclaimed
+--- PASS: TestPnPPreview (0.18s)
+    --- PASS: TestPnPPreview/complete (0.01s)
+    --- PASS: TestPnPPreview/pending (0.01s)
+    --- PASS: TestPnPPreview/failed (0.01s)
+    --- PASS: TestPnPPreview/lost (0.01s)
+    --- PASS: TestPnPPreview/auth (0.01s)
+    --- PASS: TestPnPPreview/async (0.01s)
+    --- PASS: TestPnPPreview/conflict (0.01s)
+    --- PASS: TestPnPPreview/empty (0.01s)
+    --- PASS: TestPnPPreview/missing-flags (0.01s)
+    --- PASS: TestPnPPreview/wrong-site (0.01s)
+    --- PASS: TestPnPPreview/bad-task (0.01s)
+    --- PASS: TestPnPPreview/late-identity (0.01s)
+    --- PASS: TestPnPPreview/late-workflow (0.01s)
+    --- PASS: TestPnPPreview/unclaimed (0.01s)
+=== RUN   TestPnPPreviewTypes
+=== RUN   TestPnPPreviewTypes/#00
+=== RUN   TestPnPPreviewTypes/Default
+=== RUN   TestPnPPreviewTypes/StackSwitch
+=== RUN   TestPnPPreviewTypes/AccessPoint
+=== RUN   TestPnPPreviewTypes/Sensor
+=== RUN   TestPnPPreviewTypes/MobilityExpress
+=== RUN   TestPnPPreviewTypes/CatalystWLC
+--- PASS: TestPnPPreviewTypes (0.00s)
+    --- PASS: TestPnPPreviewTypes/#00 (0.00s)
+    --- PASS: TestPnPPreviewTypes/Default (0.00s)
+    --- PASS: TestPnPPreviewTypes/StackSwitch (0.00s)
+    --- PASS: TestPnPPreviewTypes/AccessPoint (0.00s)
+    --- PASS: TestPnPPreviewTypes/Sensor (0.00s)
+    --- PASS: TestPnPPreviewTypes/MobilityExpress (0.00s)
+    --- PASS: TestPnPPreviewTypes/CatalystWLC (0.00s)
+=== RUN   TestPnPRegistrationCapacity
+=== RUN   TestPnPRegistrationCapacity/full
+=== RUN   TestPnPRegistrationCapacity/cohort
+=== RUN   TestPnPRegistrationCapacity/bytes
+=== RUN   TestPnPRegistrationCapacity/edge
+=== RUN   TestPnPRegistrationCapacity/late-count
+=== RUN   TestPnPRegistrationCapacity/late-bytes
+=== RUN   TestPnPRegistrationCapacity/publication-count
+=== RUN   TestPnPRegistrationCapacity/publication-bytes
+--- PASS: TestPnPRegistrationCapacity (14.13s)
+    --- PASS: TestPnPRegistrationCapacity/full (1.16s)
+    --- PASS: TestPnPRegistrationCapacity/cohort (1.17s)
+    --- PASS: TestPnPRegistrationCapacity/bytes (1.17s)
+    --- PASS: TestPnPRegistrationCapacity/edge (2.59s)
+    --- PASS: TestPnPRegistrationCapacity/late-count (1.92s)
+    --- PASS: TestPnPRegistrationCapacity/late-bytes (1.23s)
+    --- PASS: TestPnPRegistrationCapacity/publication-count (2.92s)
+    --- PASS: TestPnPRegistrationCapacity/publication-bytes (1.98s)
+=== RUN   TestPnPPrivateRegistrationCapacity
+=== RUN   TestPnPPrivateRegistrationCapacity/full
+=== RUN   TestPnPPrivateRegistrationCapacity/cohort
+=== RUN   TestPnPPrivateRegistrationCapacity/bytes
+=== RUN   TestPnPPrivateRegistrationCapacity/edge
+=== RUN   TestPnPPrivateRegistrationCapacity/late-count
+=== RUN   TestPnPPrivateRegistrationCapacity/late-bytes
+=== RUN   TestPnPPrivateRegistrationCapacity/publication-count
+=== RUN   TestPnPPrivateRegistrationCapacity/publication-bytes
+--- PASS: TestPnPPrivateRegistrationCapacity (13.58s)
+    --- PASS: TestPnPPrivateRegistrationCapacity/full (1.08s)
+    --- PASS: TestPnPPrivateRegistrationCapacity/cohort (1.10s)
+    --- PASS: TestPnPPrivateRegistrationCapacity/bytes (1.11s)
+    --- PASS: TestPnPPrivateRegistrationCapacity/edge (2.54s)
+    --- PASS: TestPnPPrivateRegistrationCapacity/late-count (1.86s)
+    --- PASS: TestPnPPrivateRegistrationCapacity/late-bytes (1.21s)
+    --- PASS: TestPnPPrivateRegistrationCapacity/publication-count (2.79s)
+    --- PASS: TestPnPPrivateRegistrationCapacity/publication-bytes (1.88s)
+=== RUN   TestPnPRegistrationPrivatePlannerScope
+=== RUN   TestPnPRegistrationPrivatePlannerScope/report
+=== RUN   TestPnPRegistrationPrivatePlannerScope/prune-delete
+=== RUN   TestPnPRegistrationPrivatePlannerScope/deletion-delete
+=== RUN   TestPnPRegistrationPrivatePlannerScope/secrets
+=== RUN   TestPnPRegistrationPrivatePlannerScope/sections
+=== RUN   TestPnPRegistrationPrivatePlannerScope/version
+=== RUN   TestPnPRegistrationPrivatePlannerScope/format
+=== RUN   TestPnPRegistrationPrivatePlannerScope/unresolved
+--- PASS: TestPnPRegistrationPrivatePlannerScope (0.08s)
+    --- PASS: TestPnPRegistrationPrivatePlannerScope/report (0.01s)
+    --- PASS: TestPnPRegistrationPrivatePlannerScope/prune-delete (0.01s)
+    --- PASS: TestPnPRegistrationPrivatePlannerScope/deletion-delete (0.01s)
+    --- PASS: TestPnPRegistrationPrivatePlannerScope/secrets (0.01s)
+    --- PASS: TestPnPRegistrationPrivatePlannerScope/sections (0.01s)
+    --- PASS: TestPnPRegistrationPrivatePlannerScope/version (0.01s)
+    --- PASS: TestPnPRegistrationPrivatePlannerScope/format (0.01s)
+    --- PASS: TestPnPRegistrationPrivatePlannerScope/unresolved (0.01s)
+=== RUN   TestPnPPrivatePlannerFrozenSource
+--- PASS: TestPnPPrivatePlannerFrozenSource (0.03s)
+=== RUN   TestPnPRegistrationCreatedJournalRecovery
+=== RUN   TestPnPRegistrationCreatedJournalRecovery/verified
+=== RUN   TestPnPRegistrationCreatedJournalRecovery/lost
+=== RUN   TestPnPRegistrationCreatedJournalRecovery/foreign-readback
+=== RUN   TestPnPRegistrationCreatedJournalRecovery/pruned-receipt
+=== RUN   TestPnPRegistrationCreatedJournalRecovery/foreign-owner
+=== RUN   TestPnPRegistrationCreatedJournalRecovery/changed-source
+=== RUN   TestPnPRegistrationCreatedJournalRecovery/late-source
+=== RUN   TestPnPRegistrationCreatedJournalRecovery/undeclared-intent
+--- PASS: TestPnPRegistrationCreatedJournalRecovery (0.34s)
+    --- PASS: TestPnPRegistrationCreatedJournalRecovery/verified (0.06s)
+    --- PASS: TestPnPRegistrationCreatedJournalRecovery/lost (0.04s)
+    --- PASS: TestPnPRegistrationCreatedJournalRecovery/foreign-readback (0.04s)
+    --- PASS: TestPnPRegistrationCreatedJournalRecovery/pruned-receipt (0.04s)
+    --- PASS: TestPnPRegistrationCreatedJournalRecovery/foreign-owner (0.04s)
+    --- PASS: TestPnPRegistrationCreatedJournalRecovery/changed-source (0.04s)
+    --- PASS: TestPnPRegistrationCreatedJournalRecovery/late-source (0.04s)
+    --- PASS: TestPnPRegistrationCreatedJournalRecovery/undeclared-intent (0.04s)
+=== RUN   TestPnPRegistrationNoDispatchReplan
+=== RUN   TestPnPRegistrationNoDispatchReplan/read-error
+=== RUN   TestPnPRegistrationNoDispatchReplan/cohort
+=== RUN   TestPnPRegistrationNoDispatchReplan/source
+=== RUN   TestPnPRegistrationNoDispatchReplan/configmap
+=== RUN   TestPnPRegistrationNoDispatchReplan/owner
+=== RUN   TestPnPRegistrationNoDispatchReplan/operation
+=== RUN   TestPnPRegistrationNoDispatchReplan/inner-read-error
+=== RUN   TestPnPRegistrationNoDispatchReplan/inner-cohort
+=== RUN   TestPnPRegistrationNoDispatchReplan/inner-owner
+=== RUN   TestPnPRegistrationNoDispatchReplan/inner-operation
+=== RUN   TestPnPRegistrationNoDispatchReplan/inner-managed
+=== RUN   TestPnPRegistrationNoDispatchReplan/inner-network-error
+--- PASS: TestPnPRegistrationNoDispatchReplan (1.59s)
+    --- PASS: TestPnPRegistrationNoDispatchReplan/read-error (0.17s)
+    --- PASS: TestPnPRegistrationNoDispatchReplan/cohort (0.17s)
+    --- PASS: TestPnPRegistrationNoDispatchReplan/source (0.17s)
+    --- PASS: TestPnPRegistrationNoDispatchReplan/configmap (0.18s)
+    --- PASS: TestPnPRegistrationNoDispatchReplan/owner (0.05s)
+    --- PASS: TestPnPRegistrationNoDispatchReplan/operation (0.05s)
+    --- PASS: TestPnPRegistrationNoDispatchReplan/inner-read-error (0.17s)
+    --- PASS: TestPnPRegistrationNoDispatchReplan/inner-cohort (0.17s)
+    --- PASS: TestPnPRegistrationNoDispatchReplan/inner-owner (0.05s)
+    --- PASS: TestPnPRegistrationNoDispatchReplan/inner-operation (0.05s)
+    --- PASS: TestPnPRegistrationNoDispatchReplan/inner-managed (0.20s)
+    --- PASS: TestPnPRegistrationNoDispatchReplan/inner-network-error (0.17s)
+=== RUN   TestPnPNoDispatchScope
+=== RUN   TestPnPNoDispatchScope/valid
+=== RUN   TestPnPNoDispatchScope/uppercase
+=== RUN   TestPnPNoDispatchScope/short
+=== RUN   TestPnPNoDispatchScope/claim
+=== RUN   TestPnPNoDispatchScope/update
+=== RUN   TestPnPNoDispatchScope/target
+=== RUN   TestPnPNoDispatchScope/serial
+=== RUN   TestPnPNoDispatchScope/parent
+=== RUN   TestPnPNoDispatchScope/task-writer
+=== RUN   TestPnPNoDispatchScope/completed-writer
+--- PASS: TestPnPNoDispatchScope (0.00s)
+    --- PASS: TestPnPNoDispatchScope/valid (0.00s)
+    --- PASS: TestPnPNoDispatchScope/uppercase (0.00s)
+    --- PASS: TestPnPNoDispatchScope/short (0.00s)
+    --- PASS: TestPnPNoDispatchScope/claim (0.00s)
+    --- PASS: TestPnPNoDispatchScope/update (0.00s)
+    --- PASS: TestPnPNoDispatchScope/target (0.00s)
+    --- PASS: TestPnPNoDispatchScope/serial (0.00s)
+    --- PASS: TestPnPNoDispatchScope/parent (0.00s)
+    --- PASS: TestPnPNoDispatchScope/task-writer (0.00s)
+    --- PASS: TestPnPNoDispatchScope/completed-writer (0.00s)
+=== RUN   TestPnPPrimitiveProofIsolation
+--- PASS: TestPnPPrimitiveProofIsolation (0.01s)
+=== RUN   TestPnPRegistrationPublicReconciler
+=== RUN   TestPnPRegistrationPublicReconciler/inline
+=== RUN   TestPnPRegistrationPublicReconciler/example
+=== RUN   TestPnPRegistrationPublicReconciler/configmap
+=== RUN   TestPnPRegistrationPublicReconciler/lost
+=== RUN   TestPnPRegistrationPublicReconciler/unowned-later
+=== RUN   TestPnPRegistrationPublicReconciler/managed-later
+=== RUN   TestPnPRegistrationPublicReconciler/mixed-state
+=== RUN   TestPnPRegistrationPublicReconciler/unknown-later
+=== RUN   TestPnPRegistrationPublicReconciler/extra-section
+=== RUN   TestPnPRegistrationPublicReconciler/report
+=== RUN   TestPnPRegistrationPublicReconciler/delete
+=== RUN   TestPnPRegistrationPublicReconciler/wrong-version
+=== RUN   TestPnPRegistrationPublicReconciler/pruned-source
+=== RUN   TestPnPRegistrationPublicReconciler/pruned-uuid
+=== RUN   TestPnPRegistrationPublicReconciler/late-source
+--- PASS: TestPnPRegistrationPublicReconciler (1.06s)
+    --- PASS: TestPnPRegistrationPublicReconciler/inline (0.23s)
+    --- PASS: TestPnPRegistrationPublicReconciler/example (0.21s)
+    --- PASS: TestPnPRegistrationPublicReconciler/configmap (0.24s)
+    --- PASS: TestPnPRegistrationPublicReconciler/lost (0.06s)
+    --- PASS: TestPnPRegistrationPublicReconciler/unowned-later (0.03s)
+    --- PASS: TestPnPRegistrationPublicReconciler/managed-later (0.03s)
+    --- PASS: TestPnPRegistrationPublicReconciler/mixed-state (0.02s)
+    --- PASS: TestPnPRegistrationPublicReconciler/unknown-later (0.02s)
+    --- PASS: TestPnPRegistrationPublicReconciler/extra-section (0.02s)
+    --- PASS: TestPnPRegistrationPublicReconciler/report (0.02s)
+    --- PASS: TestPnPRegistrationPublicReconciler/delete (0.02s)
+    --- PASS: TestPnPRegistrationPublicReconciler/wrong-version (0.02s)
+    --- PASS: TestPnPRegistrationPublicReconciler/pruned-source (0.05s)
+    --- PASS: TestPnPRegistrationPublicReconciler/pruned-uuid (0.06s)
+    --- PASS: TestPnPRegistrationPublicReconciler/late-source (0.05s)
+=== RUN   TestPnPRegistrationReuse
+=== RUN   TestPnPRegistrationReuse/valid
+=== RUN   TestPnPRegistrationReuse/late-footprint
+=== RUN   TestPnPRegistrationReuse/later-revision
+=== RUN   TestPnPRegistrationReuse/absent
+=== RUN   TestPnPRegistrationReuse/foreign-owner
+=== RUN   TestPnPRegistrationReuse/missing-owner
+=== RUN   TestPnPRegistrationReuse/duplicate-owner
+=== RUN   TestPnPRegistrationReuse/duplicate-receipt
+=== RUN   TestPnPRegistrationReuse/pruned-id
+=== RUN   TestPnPRegistrationReuse/foreign-config
+=== RUN   TestPnPRegistrationReuse/future-generation
+=== RUN   TestPnPRegistrationReuse/changed-controller
+=== RUN   TestPnPRegistrationReuse/active-operation
+=== RUN   TestPnPRegistrationReuse/missing-native
+=== RUN   TestPnPRegistrationReuse/replaced-native
+=== RUN   TestPnPRegistrationReuse/changed-native
+=== RUN   TestPnPRegistrationReuse/late-owner
+=== RUN   TestPnPRegistrationReuse/late-source
+--- PASS: TestPnPRegistrationReuse (0.68s)
+    --- PASS: TestPnPRegistrationReuse/valid (0.04s)
+    --- PASS: TestPnPRegistrationReuse/late-footprint (0.04s)
+    --- PASS: TestPnPRegistrationReuse/later-revision (0.05s)
+    --- PASS: TestPnPRegistrationReuse/absent (0.04s)
+    --- PASS: TestPnPRegistrationReuse/foreign-owner (0.04s)
+    --- PASS: TestPnPRegistrationReuse/missing-owner (0.04s)
+    --- PASS: TestPnPRegistrationReuse/duplicate-owner (0.04s)
+    --- PASS: TestPnPRegistrationReuse/duplicate-receipt (0.04s)
+    --- PASS: TestPnPRegistrationReuse/pruned-id (0.04s)
+    --- PASS: TestPnPRegistrationReuse/foreign-config (0.03s)
+    --- PASS: TestPnPRegistrationReuse/future-generation (0.04s)
+    --- PASS: TestPnPRegistrationReuse/changed-controller (0.04s)
+    --- PASS: TestPnPRegistrationReuse/active-operation (0.04s)
+    --- PASS: TestPnPRegistrationReuse/missing-native (0.04s)
+    --- PASS: TestPnPRegistrationReuse/replaced-native (0.04s)
+    --- PASS: TestPnPRegistrationReuse/changed-native (0.04s)
+    --- PASS: TestPnPRegistrationReuse/late-owner (0.04s)
+    --- PASS: TestPnPRegistrationReuse/late-source (0.04s)
+=== RUN   TestPnPRegistrationStageLifecycle
+=== RUN   TestPnPRegistrationStageLifecycle/cycle
+=== RUN   TestPnPRegistrationStageLifecycle/stack-registration
+=== RUN   TestPnPRegistrationStageLifecycle/configmap
+=== RUN   TestPnPRegistrationStageLifecycle/late-configmap
+=== RUN   TestPnPRegistrationStageLifecycle/later-existing
+=== RUN   TestPnPRegistrationStageLifecycle/later-managed
+=== RUN   TestPnPRegistrationStageLifecycle/later-managed-stack
+=== RUN   TestPnPRegistrationStageLifecycle/later-invalid
+=== RUN   TestPnPRegistrationStageLifecycle/late-cohort
+=== RUN   TestPnPRegistrationStageLifecycle/last-cohort
+=== RUN   TestPnPRegistrationStageLifecycle/lost
+=== RUN   TestPnPRegistrationStageLifecycle/async
+=== RUN   TestPnPRegistrationStageLifecycle/replaced
+=== RUN   TestPnPRegistrationStageLifecycle/pruned-uuid
+=== RUN   TestPnPRegistrationStageLifecycle/missing-receipt
+=== RUN   TestPnPRegistrationStageLifecycle/foreign-operation
+=== RUN   TestPnPRegistrationStageLifecycle/prepared
+=== RUN   TestPnPRegistrationStageLifecycle/prepared-receipt
+=== RUN   TestPnPRegistrationStageLifecycle/prepared-target
+=== RUN   TestPnPRegistrationStageLifecycle/foreign-parent
+=== RUN   TestPnPRegistrationStageLifecycle/changed-source
+=== RUN   TestPnPRegistrationStageLifecycle/late-source
+=== RUN   TestPnPRegistrationStageLifecycle/later-revision
+=== RUN   TestPnPRegistrationStageLifecycle/report
+=== RUN   TestPnPRegistrationStageLifecycle/delete
+--- PASS: TestPnPRegistrationStageLifecycle (1.24s)
+    --- PASS: TestPnPRegistrationStageLifecycle/cycle (0.11s)
+    --- PASS: TestPnPRegistrationStageLifecycle/stack-registration (0.11s)
+    --- PASS: TestPnPRegistrationStageLifecycle/configmap (0.12s)
+    --- PASS: TestPnPRegistrationStageLifecycle/late-configmap (0.05s)
+    --- PASS: TestPnPRegistrationStageLifecycle/later-existing (0.02s)
+    --- PASS: TestPnPRegistrationStageLifecycle/later-managed (0.02s)
+    --- PASS: TestPnPRegistrationStageLifecycle/later-managed-stack (0.02s)
+    --- PASS: TestPnPRegistrationStageLifecycle/later-invalid (0.02s)
+    --- PASS: TestPnPRegistrationStageLifecycle/late-cohort (0.02s)
+    --- PASS: TestPnPRegistrationStageLifecycle/last-cohort (0.05s)
+    --- PASS: TestPnPRegistrationStageLifecycle/lost (0.04s)
+    --- PASS: TestPnPRegistrationStageLifecycle/async (0.04s)
+    --- PASS: TestPnPRegistrationStageLifecycle/replaced (0.04s)
+    --- PASS: TestPnPRegistrationStageLifecycle/pruned-uuid (0.05s)
+    --- PASS: TestPnPRegistrationStageLifecycle/missing-receipt (0.05s)
+    --- PASS: TestPnPRegistrationStageLifecycle/foreign-operation (0.02s)
+    --- PASS: TestPnPRegistrationStageLifecycle/prepared (0.12s)
+    --- PASS: TestPnPRegistrationStageLifecycle/prepared-receipt (0.02s)
+    --- PASS: TestPnPRegistrationStageLifecycle/prepared-target (0.02s)
+    --- PASS: TestPnPRegistrationStageLifecycle/foreign-parent (0.05s)
+    --- PASS: TestPnPRegistrationStageLifecycle/changed-source (0.04s)
+    --- PASS: TestPnPRegistrationStageLifecycle/late-source (0.06s)
+    --- PASS: TestPnPRegistrationStageLifecycle/later-revision (0.11s)
+    --- PASS: TestPnPRegistrationStageLifecycle/report (0.01s)
+    --- PASS: TestPnPRegistrationStageLifecycle/delete (0.01s)
+=== RUN   TestPnPRegistrationCohortInventoryReadBudget
+=== RUN   TestPnPRegistrationCohortInventoryReadBudget/256
+=== RUN   TestPnPRegistrationCohortInventoryReadBudget/1000
+--- PASS: TestPnPRegistrationCohortInventoryReadBudget (0.20s)
+    --- PASS: TestPnPRegistrationCohortInventoryReadBudget/256 (0.06s)
+    --- PASS: TestPnPRegistrationCohortInventoryReadBudget/1000 (0.14s)
+=== RUN   TestPnPRegistrationNativeLifecycle
+=== RUN   TestPnPRegistrationNativeLifecycle/valid
+=== RUN   TestPnPRegistrationNativeLifecycle/id-only
+=== RUN   TestPnPRegistrationNativeLifecycle/existing
+=== RUN   TestPnPRegistrationNativeLifecycle/managed
+=== RUN   TestPnPRegistrationNativeLifecycle/managed-stack-member
+=== RUN   TestPnPRegistrationNativeLifecycle/late-existing
+=== RUN   TestPnPRegistrationNativeLifecycle/lost
+=== RUN   TestPnPRegistrationNativeLifecycle/async
+=== RUN   TestPnPRegistrationNativeLifecycle/unauthorized
+=== RUN   TestPnPRegistrationNativeLifecycle/conflict
+=== RUN   TestPnPRegistrationNativeLifecycle/wrong-response
+=== RUN   TestPnPRegistrationNativeLifecycle/replaced-readback
+=== RUN   TestPnPRegistrationNativeLifecycle/pending-readback
+--- PASS: TestPnPRegistrationNativeLifecycle (0.14s)
+    --- PASS: TestPnPRegistrationNativeLifecycle/valid (0.01s)
+    --- PASS: TestPnPRegistrationNativeLifecycle/id-only (0.01s)
+    --- PASS: TestPnPRegistrationNativeLifecycle/existing (0.01s)
+    --- PASS: TestPnPRegistrationNativeLifecycle/managed (0.01s)
+    --- PASS: TestPnPRegistrationNativeLifecycle/managed-stack-member (0.01s)
+    --- PASS: TestPnPRegistrationNativeLifecycle/late-existing (0.01s)
+    --- PASS: TestPnPRegistrationNativeLifecycle/lost (0.01s)
+    --- PASS: TestPnPRegistrationNativeLifecycle/async (0.01s)
+    --- PASS: TestPnPRegistrationNativeLifecycle/unauthorized (0.01s)
+    --- PASS: TestPnPRegistrationNativeLifecycle/conflict (0.01s)
+    --- PASS: TestPnPRegistrationNativeLifecycle/wrong-response (0.01s)
+    --- PASS: TestPnPRegistrationNativeLifecycle/replaced-readback (0.01s)
+    --- PASS: TestPnPRegistrationNativeLifecycle/pending-readback (0.01s)
+=== RUN   TestPnPWorkflowMetadataProjection
+=== RUN   TestPnPWorkflowMetadataProjection/valid
+=== RUN   TestPnPWorkflowMetadataProjection/unknown-state
+=== RUN   TestPnPWorkflowMetadataProjection/unfinished
+=== RUN   TestPnPWorkflowMetadataProjection/absent-times
+=== RUN   TestPnPWorkflowMetadataProjection/bad-image-id
+=== RUN   TestPnPWorkflowMetadataProjection/bad-config-id
+=== RUN   TestPnPWorkflowMetadataProjection/negative-time
+=== RUN   TestPnPWorkflowMetadataProjection/fractional-time
+=== RUN   TestPnPWorkflowMetadataProjection/unsafe-integer
+=== RUN   TestPnPWorkflowMetadataProjection/inverted-times
+=== RUN   TestPnPWorkflowMetadataProjection/duplicate-sequence
+=== RUN   TestPnPWorkflowMetadataProjection/oversized
+=== RUN   TestPnPWorkflowMetadataProjection/string-time
+=== RUN   TestPnPWorkflowMetadataProjection/work-item-state
+=== RUN   TestPnPWorkflowMetadataProjection/work-item-inverted
+=== RUN   TestPnPWorkflowMetadataProjection/work-item-fractional
+=== RUN   TestPnPWorkflowMetadataProjection/work-item-string-time
+=== RUN   TestPnPWorkflowMetadataProjection/work-item-limit
+=== RUN   TestPnPWorkflowMetadataProjection/work-item-total-limit
+--- PASS: TestPnPWorkflowMetadataProjection (0.63s)
+    --- PASS: TestPnPWorkflowMetadataProjection/valid (0.01s)
+    --- PASS: TestPnPWorkflowMetadataProjection/unknown-state (0.01s)
+    --- PASS: TestPnPWorkflowMetadataProjection/unfinished (0.01s)
+    --- PASS: TestPnPWorkflowMetadataProjection/absent-times (0.01s)
+    --- PASS: TestPnPWorkflowMetadataProjection/bad-image-id (0.01s)
+    --- PASS: TestPnPWorkflowMetadataProjection/bad-config-id (0.01s)
+    --- PASS: TestPnPWorkflowMetadataProjection/negative-time (0.01s)
+    --- PASS: TestPnPWorkflowMetadataProjection/fractional-time (0.02s)
+    --- PASS: TestPnPWorkflowMetadataProjection/unsafe-integer (0.01s)
+    --- PASS: TestPnPWorkflowMetadataProjection/inverted-times (0.01s)
+    --- PASS: TestPnPWorkflowMetadataProjection/duplicate-sequence (0.01s)
+    --- PASS: TestPnPWorkflowMetadataProjection/oversized (0.06s)
+    --- PASS: TestPnPWorkflowMetadataProjection/string-time (0.01s)
+    --- PASS: TestPnPWorkflowMetadataProjection/work-item-state (0.01s)
+    --- PASS: TestPnPWorkflowMetadataProjection/work-item-inverted (0.01s)
+    --- PASS: TestPnPWorkflowMetadataProjection/work-item-fractional (0.01s)
+    --- PASS: TestPnPWorkflowMetadataProjection/work-item-string-time (0.01s)
+    --- PASS: TestPnPWorkflowMetadataProjection/work-item-limit (0.04s)
+    --- PASS: TestPnPWorkflowMetadataProjection/work-item-total-limit (0.34s)
+=== RUN   TestPnPWorkflowReferenceInventory
+=== RUN   TestPnPWorkflowReferenceInventory/empty
+=== RUN   TestPnPWorkflowReferenceInventory/one
+=== RUN   TestPnPWorkflowReferenceInventory/paged
+=== RUN   TestPnPWorkflowReferenceInventory/repeat
+=== RUN   TestPnPWorkflowReferenceInventory/short-count
+=== RUN   TestPnPWorkflowReferenceInventory/changed-count
+=== RUN   TestPnPWorkflowReferenceInventory/missing-count
+=== RUN   TestPnPWorkflowReferenceInventory/null-count
+=== RUN   TestPnPWorkflowReferenceInventory/fractional-count
+=== RUN   TestPnPWorkflowReferenceInventory/negative-count
+=== RUN   TestPnPWorkflowReferenceInventory/too-large-count
+=== RUN   TestPnPWorkflowReferenceInventory/native-id
+=== RUN   TestPnPWorkflowReferenceInventory/equal-ids
+=== RUN   TestPnPWorkflowReferenceInventory/conflicting-ids
+=== RUN   TestPnPWorkflowReferenceInventory/bad-task-config
+=== RUN   TestPnPWorkflowReferenceInventory/bad-id
+=== RUN   TestPnPWorkflowReferenceInventory/bad-config
+=== RUN   TestPnPWorkflowReferenceInventory/private-values
+=== RUN   TestPnPWorkflowReferenceInventory/unavailable
+=== RUN   TestPnPWorkflowReferenceInventory/enveloped-list
+--- PASS: TestPnPWorkflowReferenceInventory (0.26s)
+    --- PASS: TestPnPWorkflowReferenceInventory/empty (0.01s)
+    --- PASS: TestPnPWorkflowReferenceInventory/one (0.01s)
+    --- PASS: TestPnPWorkflowReferenceInventory/paged (0.03s)
+    --- PASS: TestPnPWorkflowReferenceInventory/repeat (0.05s)
+    --- PASS: TestPnPWorkflowReferenceInventory/short-count (0.01s)
+    --- PASS: TestPnPWorkflowReferenceInventory/changed-count (0.01s)
+    --- PASS: TestPnPWorkflowReferenceInventory/missing-count (0.01s)
+    --- PASS: TestPnPWorkflowReferenceInventory/null-count (0.01s)
+    --- PASS: TestPnPWorkflowReferenceInventory/fractional-count (0.01s)
+    --- PASS: TestPnPWorkflowReferenceInventory/negative-count (0.01s)
+    --- PASS: TestPnPWorkflowReferenceInventory/too-large-count (0.01s)
+    --- PASS: TestPnPWorkflowReferenceInventory/native-id (0.01s)
+    --- PASS: TestPnPWorkflowReferenceInventory/equal-ids (0.01s)
+    --- PASS: TestPnPWorkflowReferenceInventory/conflicting-ids (0.01s)
+    --- PASS: TestPnPWorkflowReferenceInventory/bad-task-config (0.01s)
+    --- PASS: TestPnPWorkflowReferenceInventory/bad-id (0.01s)
+    --- PASS: TestPnPWorkflowReferenceInventory/bad-config (0.01s)
+    --- PASS: TestPnPWorkflowReferenceInventory/private-values (0.01s)
+    --- PASS: TestPnPWorkflowReferenceInventory/unavailable (0.01s)
+    --- PASS: TestPnPWorkflowReferenceInventory/enveloped-list (0.01s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	49.088s

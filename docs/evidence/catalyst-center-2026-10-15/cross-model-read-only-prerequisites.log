@@ -1,0 +1,9 @@
+=== RUN   TestLiveCatalystCenterAnycastBulkPrerequisites
+    anycast_gateway_bulk_live_test.go:21: read-only native fabric site count=0; no fabric or gateway was created
+    anycast_gateway_bulk_live_test.go:23: no lab fabric site exists: accepted anycast bulk execution remains unqualified
+--- SKIP: TestLiveCatalystCenterAnycastBulkPrerequisites (0.33s)
+=== RUN   TestLiveWirelessAPMetadata
+    wireless_ap_model_live_test.go:27: AP metadata inventory count 2 no configuration submitted
+--- PASS: TestLiveWirelessAPMetadata (0.36s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	2.604s

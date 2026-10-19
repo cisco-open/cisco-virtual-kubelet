@@ -1,0 +1,23 @@
+{
+  "result": "PASS",
+  "scope": "Native isolated pinned 802.11be profile definition; no WLC provisioning",
+  "fixture": "CVK_12205348",
+  "targetID": "198bb73d-2348-354d-8f8d-cb23efe90ced",
+  "createTask": "01a131e5-c663-78c4-8b58-20919f914e89",
+  "updateTask": "01a131e5-cb40-75a7-b468-340d07b30643",
+  "deleteTask": "01a131e5-d028-7366-9966-7a659c4c5330",
+  "update": "ofdmaMultiRu false to true",
+  "uuidPreserved": true,
+  "noOpVerified": true,
+  "baselineRestored": true,
+  "workerRollout": false,
+  "labDeviceFamilies": [
+    "Switches and Hubs"
+  ],
+  "wirelessControllerCount": 0,
+  "limits": [
+    "Other boolean transitions not live-qualified",
+    "Newer default/MLO preservation fixture-tested",
+    "Worker and WLC/radio behavior unqualified"
+  ]
+}

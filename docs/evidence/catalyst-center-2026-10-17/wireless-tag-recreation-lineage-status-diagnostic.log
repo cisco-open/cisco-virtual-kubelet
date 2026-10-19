@@ -1,0 +1,10 @@
+=== RUN   TestWirelessTagRecreationCohorts
+=== RUN   TestWirelessTagRecreationCohorts/cohort-false
+=== RUN   TestWirelessTagRecreationCohorts/cohort-false/retired/wireless-site-tags/valid
+    wireless_tag_retired_test.go:230: archived fixture did not survive status round trip <nil> public JSON equal true receipt present true
+--- FAIL: TestWirelessTagRecreationCohorts (2.75s)
+    --- FAIL: TestWirelessTagRecreationCohorts/cohort-false (2.75s)
+        --- FAIL: TestWirelessTagRecreationCohorts/cohort-false/retired/wireless-site-tags/valid (0.03s)
+FAIL
+FAIL	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	4.143s
+FAIL

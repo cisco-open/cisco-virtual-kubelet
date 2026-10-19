@@ -1,0 +1,11 @@
+=== RUN   TestLivePrivateAPIOwnedMetadataComposition
+    wired_bulk_owned_metadata_api_live_test.go:20: metadata native producer uses private real API-server objects 9f68a7ef-4a84-4044-8d1a-3a6d117ba840 45e69ed1-693b-4ecb-87be-dfcea728a5d2
+    wired_bulk_owned_metadata_api_live_test.go:20: real native public metadata create/update receipt composed with private bulk dependency; missing receipt refused and restored without extra native writes; Kubernetes actors simulated
+    wired_bulk_owned_metadata_api_live_test.go:20: NOAUTHNOPRIV public manifest phase verified step 0 target 4627ae51-b7a6-46e8-8093-b530207717d9 task 01a14459-db97-7065-9528-72ae838eddcc
+    wired_bulk_owned_metadata_api_live_test.go:20: real native public metadata create/update receipt composed with private bulk dependency; missing receipt refused and restored without extra native writes; Kubernetes actors simulated
+    wired_bulk_owned_metadata_api_live_test.go:20: NOAUTHNOPRIV public manifest phase verified step 1 target 4627ae51-b7a6-46e8-8093-b530207717d9 task 01a1445a-0fbc-7228-840b-18d5e3853884
+    wired_bulk_owned_metadata_api_live_test.go:21: actual private API persistence and native public-manifest producer/dependency receipt consumption composed; reconciler is invoked by test process, not installed workers
+    global_credential_metadata_live_test.go:183: isolated SNMP credential removed; complete non-secret baseline restored target 4627ae51-b7a6-46e8-8093-b530207717d9 cleanupTask 01a1445a-473e-73d5-b354-8b33c57c3757
+--- PASS: TestLivePrivateAPIOwnedMetadataComposition (37.14s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	39.479s

@@ -1,0 +1,204 @@
+=== RUN   TestNetworkDefaultsExpressions
+=== RUN   TestNetworkDefaultsExpressions/pinned-and-false
+=== RUN   TestNetworkDefaultsExpressions/null-is-not-missing
+=== RUN   TestNetworkDefaultsExpressions/override
+=== RUN   TestNetworkDefaultsExpressions/selection-before-defaults
+=== RUN   TestNetworkDefaultsExpressions/selected-dns
+=== RUN   TestNetworkDefaultsExpressions/dns-null
+=== RUN   TestNetworkDefaultsExpressions/builtin-conditional
+=== RUN   TestNetworkDefaultsExpressions/external-fallback
+--- PASS: TestNetworkDefaultsExpressions (0.08s)
+    --- PASS: TestNetworkDefaultsExpressions/pinned-and-false (0.01s)
+    --- PASS: TestNetworkDefaultsExpressions/null-is-not-missing (0.01s)
+    --- PASS: TestNetworkDefaultsExpressions/override (0.01s)
+    --- PASS: TestNetworkDefaultsExpressions/selection-before-defaults (0.01s)
+    --- PASS: TestNetworkDefaultsExpressions/selected-dns (0.01s)
+    --- PASS: TestNetworkDefaultsExpressions/dns-null (0.01s)
+    --- PASS: TestNetworkDefaultsExpressions/builtin-conditional (0.01s)
+    --- PASS: TestNetworkDefaultsExpressions/external-fallback (0.01s)
+=== RUN   TestNetworkDefaultsRefusesAmbiguity
+=== RUN   TestNetworkDefaultsRefusesAmbiguity/null-collector
+=== RUN   TestNetworkDefaultsRefusesAmbiguity/unresolved-external
+=== RUN   TestNetworkDefaultsRefusesAmbiguity/other-section
+=== RUN   TestNetworkDefaultsRefusesAmbiguity/credentials
+=== RUN   TestNetworkDefaultsRefusesAmbiguity/duplicate
+=== RUN   TestNetworkDefaultsRefusesAmbiguity/null-default
+=== RUN   TestNetworkDefaultsRefusesAmbiguity/wrong-default-category
+=== RUN   TestNetworkDefaultsRefusesAmbiguity/other-default-section
+=== RUN   TestNetworkDefaultsRefusesAmbiguity/duplicate-default
+=== RUN   TestNetworkDefaultsRefusesAmbiguity/alias-default
+=== RUN   TestNetworkDefaultsRefusesAmbiguity/multi-doc-default
+=== RUN   TestNetworkDefaultsRefusesAmbiguity/too-large
+--- PASS: TestNetworkDefaultsRefusesAmbiguity (0.09s)
+    --- PASS: TestNetworkDefaultsRefusesAmbiguity/null-collector (0.01s)
+    --- PASS: TestNetworkDefaultsRefusesAmbiguity/unresolved-external (0.01s)
+    --- PASS: TestNetworkDefaultsRefusesAmbiguity/other-section (0.00s)
+    --- PASS: TestNetworkDefaultsRefusesAmbiguity/credentials (0.00s)
+    --- PASS: TestNetworkDefaultsRefusesAmbiguity/duplicate (0.00s)
+    --- PASS: TestNetworkDefaultsRefusesAmbiguity/null-default (0.01s)
+    --- PASS: TestNetworkDefaultsRefusesAmbiguity/wrong-default-category (0.01s)
+    --- PASS: TestNetworkDefaultsRefusesAmbiguity/other-default-section (0.01s)
+    --- PASS: TestNetworkDefaultsRefusesAmbiguity/duplicate-default (0.01s)
+    --- PASS: TestNetworkDefaultsRefusesAmbiguity/alias-default (0.01s)
+    --- PASS: TestNetworkDefaultsRefusesAmbiguity/multi-doc-default (0.01s)
+    --- PASS: TestNetworkDefaultsRefusesAmbiguity/too-large (0.00s)
+=== RUN   TestPinnedSiteSelection
+=== RUN   TestPinnedSiteSelection/all
+=== RUN   TestPinnedSiteSelection/global
+=== RUN   TestPinnedSiteSelection/prefix
+=== RUN   TestPinnedSiteSelection/exact
+=== RUN   TestPinnedSiteSelection/both
+=== RUN   TestPinnedSiteSelection/empty-exact
+=== RUN   TestPinnedSiteSelection/missing-prefix
+=== RUN   TestPinnedSiteSelection/global-not-yaml-site
+=== RUN   TestPinnedSiteSelection/duplicate
+--- PASS: TestPinnedSiteSelection (0.00s)
+    --- PASS: TestPinnedSiteSelection/all (0.00s)
+    --- PASS: TestPinnedSiteSelection/global (0.00s)
+    --- PASS: TestPinnedSiteSelection/prefix (0.00s)
+    --- PASS: TestPinnedSiteSelection/exact (0.00s)
+    --- PASS: TestPinnedSiteSelection/both (0.00s)
+    --- PASS: TestPinnedSiteSelection/empty-exact (0.00s)
+    --- PASS: TestPinnedSiteSelection/missing-prefix (0.00s)
+    --- PASS: TestPinnedSiteSelection/global-not-yaml-site (0.00s)
+    --- PASS: TestPinnedSiteSelection/duplicate (0.00s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter/nacmodel	1.588s
+=== RUN   TestControllerExportNetworkPrivateArtifact
+--- PASS: TestControllerExportNetworkPrivateArtifact (0.02s)
+=== RUN   TestControllerExportNetworkRefusalAndSymlinks
+--- PASS: TestControllerExportNetworkRefusalAndSymlinks (0.04s)
+=== RUN   TestControllerExportNetworkDefaultsFile
+--- PASS: TestControllerExportNetworkDefaultsFile (0.01s)
+=== RUN   TestControllerExportNetworkSiteSelection
+=== RUN   TestControllerExportNetworkSiteSelection/exact
+=== RUN   TestControllerExportNetworkSiteSelection/repeated
+=== RUN   TestControllerExportNetworkSiteSelection/empty
+=== RUN   TestControllerExportNetworkSiteSelection/false-is-explicit
+=== RUN   TestControllerExportNetworkSiteSelection/missing
+=== RUN   TestControllerExportNetworkSiteSelection/root
+=== RUN   TestControllerExportNetworkSiteSelection/null
+=== RUN   TestControllerExportNetworkSiteSelection/empty-string
+=== RUN   TestControllerExportNetworkSiteSelection/no-exact-sites
+--- PASS: TestControllerExportNetworkSiteSelection (0.08s)
+    --- PASS: TestControllerExportNetworkSiteSelection/exact (0.01s)
+    --- PASS: TestControllerExportNetworkSiteSelection/repeated (0.01s)
+    --- PASS: TestControllerExportNetworkSiteSelection/empty (0.01s)
+    --- PASS: TestControllerExportNetworkSiteSelection/false-is-explicit (0.01s)
+    --- PASS: TestControllerExportNetworkSiteSelection/missing (0.01s)
+    --- PASS: TestControllerExportNetworkSiteSelection/root (0.01s)
+    --- PASS: TestControllerExportNetworkSiteSelection/null (0.00s)
+    --- PASS: TestControllerExportNetworkSiteSelection/empty-string (0.00s)
+    --- PASS: TestControllerExportNetworkSiteSelection/no-exact-sites (0.01s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/tools/cvk-netascode-migrate	1.931s
+=== RUN   TestNetworkExportSiteSelection
+=== RUN   TestNetworkExportSiteSelection/default
+=== RUN   TestNetworkExportSiteSelection/global
+=== RUN   TestNetworkExportSiteSelection/prefix
+=== RUN   TestNetworkExportSiteSelection/exact
+=== RUN   TestNetworkExportSiteSelection/floor
+=== RUN   TestNetworkExportSiteSelection/combined
+--- PASS: TestNetworkExportSiteSelection (0.07s)
+    --- PASS: TestNetworkExportSiteSelection/default (0.01s)
+    --- PASS: TestNetworkExportSiteSelection/global (0.01s)
+    --- PASS: TestNetworkExportSiteSelection/prefix (0.01s)
+    --- PASS: TestNetworkExportSiteSelection/exact (0.01s)
+    --- PASS: TestNetworkExportSiteSelection/floor (0.01s)
+    --- PASS: TestNetworkExportSiteSelection/combined (0.01s)
+=== RUN   TestNetworkExportSiteSelectionZeroAndRefusal
+--- PASS: TestNetworkExportSiteSelectionZeroAndRefusal (0.05s)
+=== RUN   TestNetworkExportSelectionRetainedLifecycle
+=== RUN   TestNetworkExportSelectionRetainedLifecycle/ntp/reselect
+=== RUN   TestNetworkExportSelectionRetainedLifecycle/ntp/accepted-null
+=== RUN   TestNetworkExportSelectionRetainedLifecycle/ntp/unknown-null
+=== RUN   TestNetworkExportSelectionRetainedLifecycle/ntp/verified-null
+=== RUN   TestNetworkExportSelectionRetainedLifecycle/ntp/corrupt-history
+=== RUN   TestNetworkExportSelectionRetainedLifecycle/ntp/missing-site
+=== RUN   TestNetworkExportSelectionRetainedLifecycle/dhcp/reselect
+=== RUN   TestNetworkExportSelectionRetainedLifecycle/dhcp/accepted-null
+=== RUN   TestNetworkExportSelectionRetainedLifecycle/dhcp/unknown-null
+=== RUN   TestNetworkExportSelectionRetainedLifecycle/dhcp/verified-null
+=== RUN   TestNetworkExportSelectionRetainedLifecycle/dhcp/corrupt-history
+=== RUN   TestNetworkExportSelectionRetainedLifecycle/dhcp/missing-site
+=== RUN   TestNetworkExportSelectionRetainedLifecycle/dns/reselect
+=== RUN   TestNetworkExportSelectionRetainedLifecycle/dns/accepted-null
+=== RUN   TestNetworkExportSelectionRetainedLifecycle/dns/unknown-null
+=== RUN   TestNetworkExportSelectionRetainedLifecycle/dns/verified-null
+=== RUN   TestNetworkExportSelectionRetainedLifecycle/dns/corrupt-history
+=== RUN   TestNetworkExportSelectionRetainedLifecycle/dns/missing-site
+=== RUN   TestNetworkExportSelectionRetainedLifecycle/timezone/reselect
+=== RUN   TestNetworkExportSelectionRetainedLifecycle/timezone/accepted-null
+=== RUN   TestNetworkExportSelectionRetainedLifecycle/timezone/unknown-null
+=== RUN   TestNetworkExportSelectionRetainedLifecycle/timezone/verified-null
+=== RUN   TestNetworkExportSelectionRetainedLifecycle/timezone/corrupt-history
+=== RUN   TestNetworkExportSelectionRetainedLifecycle/timezone/missing-site
+=== RUN   TestNetworkExportSelectionRetainedLifecycle/banner/reselect
+=== RUN   TestNetworkExportSelectionRetainedLifecycle/banner/accepted-null
+=== RUN   TestNetworkExportSelectionRetainedLifecycle/banner/unknown-null
+=== RUN   TestNetworkExportSelectionRetainedLifecycle/banner/verified-null
+=== RUN   TestNetworkExportSelectionRetainedLifecycle/banner/corrupt-history
+=== RUN   TestNetworkExportSelectionRetainedLifecycle/banner/missing-site
+=== RUN   TestNetworkExportSelectionRetainedLifecycle/telemetry/reselect
+=== RUN   TestNetworkExportSelectionRetainedLifecycle/telemetry/accepted-null
+=== RUN   TestNetworkExportSelectionRetainedLifecycle/telemetry/unknown-null
+=== RUN   TestNetworkExportSelectionRetainedLifecycle/telemetry/verified-null
+=== RUN   TestNetworkExportSelectionRetainedLifecycle/telemetry/corrupt-history
+=== RUN   TestNetworkExportSelectionRetainedLifecycle/telemetry/missing-site
+--- PASS: TestNetworkExportSelectionRetainedLifecycle (4.62s)
+    --- PASS: TestNetworkExportSelectionRetainedLifecycle/ntp/reselect (0.79s)
+    --- PASS: TestNetworkExportSelectionRetainedLifecycle/ntp/accepted-null (0.07s)
+    --- PASS: TestNetworkExportSelectionRetainedLifecycle/ntp/unknown-null (0.07s)
+    --- PASS: TestNetworkExportSelectionRetainedLifecycle/ntp/verified-null (0.10s)
+    --- PASS: TestNetworkExportSelectionRetainedLifecycle/ntp/corrupt-history (0.11s)
+    --- PASS: TestNetworkExportSelectionRetainedLifecycle/ntp/missing-site (0.11s)
+    --- PASS: TestNetworkExportSelectionRetainedLifecycle/dhcp/reselect (0.19s)
+    --- PASS: TestNetworkExportSelectionRetainedLifecycle/dhcp/accepted-null (0.07s)
+    --- PASS: TestNetworkExportSelectionRetainedLifecycle/dhcp/unknown-null (0.07s)
+    --- PASS: TestNetworkExportSelectionRetainedLifecycle/dhcp/verified-null (0.10s)
+    --- PASS: TestNetworkExportSelectionRetainedLifecycle/dhcp/corrupt-history (0.11s)
+    --- PASS: TestNetworkExportSelectionRetainedLifecycle/dhcp/missing-site (0.11s)
+    --- PASS: TestNetworkExportSelectionRetainedLifecycle/dns/reselect (0.19s)
+    --- PASS: TestNetworkExportSelectionRetainedLifecycle/dns/accepted-null (0.07s)
+    --- PASS: TestNetworkExportSelectionRetainedLifecycle/dns/unknown-null (0.07s)
+    --- PASS: TestNetworkExportSelectionRetainedLifecycle/dns/verified-null (0.10s)
+    --- PASS: TestNetworkExportSelectionRetainedLifecycle/dns/corrupt-history (0.12s)
+    --- PASS: TestNetworkExportSelectionRetainedLifecycle/dns/missing-site (0.12s)
+    --- PASS: TestNetworkExportSelectionRetainedLifecycle/timezone/reselect (0.19s)
+    --- PASS: TestNetworkExportSelectionRetainedLifecycle/timezone/accepted-null (0.07s)
+    --- PASS: TestNetworkExportSelectionRetainedLifecycle/timezone/unknown-null (0.08s)
+    --- PASS: TestNetworkExportSelectionRetainedLifecycle/timezone/verified-null (0.10s)
+    --- PASS: TestNetworkExportSelectionRetainedLifecycle/timezone/corrupt-history (0.11s)
+    --- PASS: TestNetworkExportSelectionRetainedLifecycle/timezone/missing-site (0.12s)
+    --- PASS: TestNetworkExportSelectionRetainedLifecycle/banner/reselect (0.19s)
+    --- PASS: TestNetworkExportSelectionRetainedLifecycle/banner/accepted-null (0.07s)
+    --- PASS: TestNetworkExportSelectionRetainedLifecycle/banner/unknown-null (0.07s)
+    --- PASS: TestNetworkExportSelectionRetainedLifecycle/banner/verified-null (0.10s)
+    --- PASS: TestNetworkExportSelectionRetainedLifecycle/banner/corrupt-history (0.11s)
+    --- PASS: TestNetworkExportSelectionRetainedLifecycle/banner/missing-site (0.11s)
+    --- PASS: TestNetworkExportSelectionRetainedLifecycle/telemetry/reselect (0.21s)
+    --- PASS: TestNetworkExportSelectionRetainedLifecycle/telemetry/accepted-null (0.08s)
+    --- PASS: TestNetworkExportSelectionRetainedLifecycle/telemetry/unknown-null (0.08s)
+    --- PASS: TestNetworkExportSelectionRetainedLifecycle/telemetry/verified-null (0.10s)
+    --- PASS: TestNetworkExportSelectionRetainedLifecycle/telemetry/corrupt-history (0.12s)
+    --- PASS: TestNetworkExportSelectionRetainedLifecycle/telemetry/missing-site (0.13s)
+=== RUN   TestNetworkSettingsModel
+=== RUN   TestNetworkSettingsModel/valid
+=== RUN   TestNetworkSettingsModel/undefined
+=== RUN   TestNetworkSettingsModel/unsupported
+=== RUN   TestNetworkSettingsModel/null
+=== RUN   TestNetworkSettingsModel/duplicate
+=== RUN   TestNetworkSettingsModel/dns-unselected
+=== RUN   TestNetworkSettingsModel/dns
+=== RUN   TestNetworkSettingsModel/unused
+--- PASS: TestNetworkSettingsModel (0.00s)
+    --- PASS: TestNetworkSettingsModel/valid (0.00s)
+    --- PASS: TestNetworkSettingsModel/undefined (0.00s)
+    --- PASS: TestNetworkSettingsModel/unsupported (0.00s)
+    --- PASS: TestNetworkSettingsModel/null (0.00s)
+    --- PASS: TestNetworkSettingsModel/duplicate (0.00s)
+    --- PASS: TestNetworkSettingsModel/dns-unselected (0.00s)
+    --- PASS: TestNetworkSettingsModel/dns (0.00s)
+    --- PASS: TestNetworkSettingsModel/unused (0.00s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	6.919s

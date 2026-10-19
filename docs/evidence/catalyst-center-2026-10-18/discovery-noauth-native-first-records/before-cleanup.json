@@ -1,0 +1,76 @@
+{
+  "attempts": 1,
+  "configStatus": {
+    "phase": "Verifying",
+    "observedGeneration": 2,
+    "sectionStatus": [
+      {
+        "name": "inventory",
+        "state": "Applying",
+        "resourceCount": 1
+      }
+    ],
+    "conditions": [
+      {
+        "type": "AdapterAvailable",
+        "status": "True",
+        "observedGeneration": 2,
+        "lastTransitionTime": "2026-10-18T21:40:15Z",
+        "reason": "AdapterAvailable",
+        "message": "Catalyst Center configuration adapter is available"
+      },
+      {
+        "type": "IntentValid",
+        "status": "True",
+        "observedGeneration": 2,
+        "lastTransitionTime": "2026-10-18T21:40:15Z",
+        "reason": "VerificationPending",
+        "message": "Authoritative configuration and its retained completion receipt could not be verified"
+      },
+      {
+        "type": "Ready",
+        "status": "False",
+        "observedGeneration": 2,
+        "lastTransitionTime": "2026-10-18T21:40:15Z",
+        "reason": "VerificationPending",
+        "message": "Authoritative configuration and its retained completion receipt could not be verified"
+      },
+      {
+        "type": "DiscoveryCredentialSourceScope",
+        "status": "True",
+        "observedGeneration": 2,
+        "lastTransitionTime": "2026-10-18T21:40:15Z",
+        "reason": "CredentialDiscoverySource",
+        "message": "{\"ControllerUID\":\"175c554d-53f6-4665-b756-0ccdf8eab965\",\"ConfigUID\":\"6a927a9d-0d5f-4447-a056-4502de2ae5d1\",\"SpecDigest\":\"5b7ff39acdddc4d24c3f7975b84dffc27a0d5d224cf1c5174f1c563101dba7bc\",\"SourceUID\":\"\",\"SourceVersion\":\"\",\"ModelDigest\":\"a2f00f662fc673232bbeb0d5d5a2c6c2fa4e481a960d5f75c74bf949fea0953c\",\"ControllerGeneration\":2,\"ConfigGeneration\":2}"
+      }
+    ]
+  },
+  "deletes": 0,
+  "issue": "native execution did not reach InSync within bounded observation",
+  "journal": {
+    "owners": [
+      {
+        "section": "inventory",
+        "configName": "sites",
+        "configUID": "6a927a9d-0d5f-4447-a056-4502de2ae5d1"
+      }
+    ],
+    "operation": {
+      "id": "766ddb0cb3fe10c51830ba1d821b2562",
+      "configName": "sites",
+      "configUID": "6a927a9d-0d5f-4447-a056-4502de2ae5d1",
+      "configGeneration": 2,
+      "controllerGeneration": 2,
+      "section": "inventory",
+      "resource": "discovery-credential-input:v4:0badf3bbe514fe3532afc497856bfba04acee21336470ae8a43d0a7c3bb8ea31:34b6a1cff5f7cbf138b2663fed81daff14a7b583d4fa960fc1e7d943a0fa3ae5:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945:e00f:a13aa195cc2534ce44eb9a744fea7a0934fdd70e63d582727b1108131cf44362:-",
+      "action": "Create",
+      "phase": "Verifying",
+      "submittedAt": "2026-10-18T21:40:16Z",
+      "taskID": "01a150f5-50da-7498-b161-b558628b16b2"
+    }
+  },
+  "nativeID": "",
+  "originalUnknownRecovered": true,
+  "posts": 1,
+  "success": false
+}

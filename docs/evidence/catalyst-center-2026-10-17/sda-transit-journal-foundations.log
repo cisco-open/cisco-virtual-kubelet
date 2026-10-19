@@ -1,0 +1,7 @@
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controllerconfiguration	(cached)
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter	2.131s
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/nexusdashboard	(cached)
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/softwarelifecycle	(cached)
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/provider/softwareupgrade	(cached)
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/gnoi	(cached)
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/gnoiruntime	(cached)

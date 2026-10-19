@@ -1,0 +1,8 @@
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/aggregator	3.302s
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/provider	5.180s
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controller	33.884s
+ok  	github.com/cisco/virtual-kubelet-cisco/cmd/cisco-vk	10.658s
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controllerconfiguration	33.925s
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/provider/configurationreservation	3.875s
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/nexusdashboard	(cached)
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter/nacmodel	(cached)

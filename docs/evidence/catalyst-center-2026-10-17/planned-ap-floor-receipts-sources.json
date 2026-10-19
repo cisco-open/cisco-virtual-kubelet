@@ -1,0 +1,21 @@
+{
+  "branch": "pr/johalley/catc-support",
+  "scope": "Bounded related-effect receipt storage and strict decoding; canonical/Helm schema preservation and pruning-safe atomic bookkeeping. No protected floor writer, checkpoint consumer or native handoff execution enabled.",
+  "sourceSha256": {
+    "api/v1alpha1/networkcontroller_configuration_types.go": "d108fde7081cfebf219265c4d179efa4dab126de1a7930dd2f5bd27182083d02",
+    "api/v1alpha1/networkcontroller_effect_receipts_test.go": "d386f50623467f93905f0e7a954dcd582df57e85297bf52e522bd99896e6433d",
+    "api/v1alpha1/zz_generated.deepcopy.go": "56766b4ae1a13f299715dca0deb362e5707cffe3e524cdea99e983e56405dc06",
+    "config/crd/cisco.vk_networkcontrollers.yaml": "04930f56edac0666167479ce10fa6735992dd32e9de203ffae16f845d6cc9f48",
+    "charts/cisco-virtual-kubelet/crds/cisco.vk_networkcontrollers.yaml": "04930f56edac0666167479ce10fa6735992dd32e9de203ffae16f845d6cc9f48",
+    "internal/controlleradapter/catalystcenter/site_floor_effect_receipts.go": "ec35091682ae633f083d54d79cb7fccc27f21f4dd00861f095f855abb87a428b",
+    "internal/controlleradapter/catalystcenter/site_floor_effect_receipts_test.go": "bcf791a5ac85fb946f8ee97061df3d063be82822cb358e0875e240830428ab14",
+    "internal/controlleradapter/catalystcenter/site_floor_effect_envtest_test.go": "56e7ce6a881f0aa1ee60aaa8ca1603075e8fb2496ba39dff7223ab104ff123b6",
+    "internal/controlleradapter/catalystcenter/configuration_envtest_test.go": "e7f3e72f4736e0cf3023854a9742cbd14609d7d95ffd2c36c819e706ac1d0b2d",
+    "internal/controlleradapter/catalystcenter/site_applied.go": "856edc251a9dd3d0ad312812918672669c427a1f0811535bf5a0d6d384f08d85",
+    "internal/controlleradapter/catalystcenter/site_dispatch_binding.go": "92aefc9a9a6f72ea1f5d313c435a0772e0b8e617d2c2ab6de007a8be61289f7a",
+    "internal/controlleradapter/catalystcenter/site_ownership.go": "4d2b11d8f7d5360899c85743c474e25c9c412431585bce386ad56d2f6b6d0611",
+    "internal/controlleradapter/catalystcenter/planned_ap_identity.go": "6ad09ddbda19a6dc4ae487e5922fc8d5100bfae3f548d24b76b5ca0dbde67199",
+    "internal/controlleradapter/catalystcenter/planned_ap_baseline.go": "ca2989919658d8668957d97a68510539864f2c81d6f112d3ed5577809d06f863",
+    "internal/controlleradapter/catalystcenter/config_action_receipt.go": "0a11037d4d98188bafb9c49c56655d7059dbdbba5845c641b05a0355fd525c66"
+  }
+}

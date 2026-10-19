@@ -1,0 +1,11 @@
+=== RUN   TestLivePnPRemovalCohort
+    pnp_removal_cohort_live_test.go:145: private cohort recovery directory /private/tmp/cvk-pnp-cohort-1206642498
+    pnp_removal_cohort_live_test.go:193: owned generated record 6ad58e9b0bc0186771cb11cb CVKAD2BBA98
+    pnp_removal_cohort_live_test.go:193: owned generated record 6ad58e9d0bc0186771cb11cc CVKAD2BBA99
+    pnp_removal_cohort_live_test.go:245: whole cohort pre-HTTP refusal retired with zero Deletes; fresh plan required
+    pnp_removal_cohort_live_test.go:268: ordered receipt-gated removal completed 6ad58e9b0bc0186771cb11cb
+    pnp_removal_cohort_live_test.go:268: ordered receipt-gated removal completed 6ad58e9d0bc0186771cb11cc
+    pnp_removal_cohort_live_test.go:289: two generated registrations and two exact Deletes; original creators plus tombstones retained; native baselines restored; Kubernetes persistence simulated JSON
+--- PASS: TestLivePnPRemovalCohort (22.06s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	24.420s

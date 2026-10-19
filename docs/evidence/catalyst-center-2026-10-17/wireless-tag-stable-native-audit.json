@@ -1,0 +1,40 @@
+{
+  "status": "passed",
+  "distinctOriginalTasks": 40,
+  "workflows": [
+    {
+      "test": "TestLiveWirelessTagRecreationPublicRecovery",
+      "seconds": 1142.66,
+      "distinctOriginalTasks": 18,
+      "membershipReductions": 2,
+      "predecessorTagDeletes": 2,
+      "recreateProducerTasks": 2,
+      "newIncarnationTagDeletes": 2,
+      "associationDeletes": 2,
+      "archivedCompleteCohorts": 2,
+      "authenticatedNewIncarnations": true,
+      "stableNativeIDs": 2,
+      "producerDigestsScopesEpochContinuityAndOrderingVerified": true,
+      "finalPrivateRows": 4,
+      "finalPrivateMemberProofs": 4,
+      "baselinesRestored": true
+    },
+    {
+      "test": "TestLiveWirelessTagCohortRecreationPublicRecovery",
+      "seconds": 2293.52,
+      "distinctOriginalTasks": 22,
+      "membershipReductions": 3,
+      "predecessorTagDeletes": 3,
+      "recreateProducerTasks": 2,
+      "newIncarnationTagDeletes": 3,
+      "associationDeletes": 2,
+      "archivedCompleteCohorts": 2,
+      "authenticatedNewIncarnations": true,
+      "stableNativeIDs": 3,
+      "producerDigestsScopesEpochContinuityAndOrderingVerified": true,
+      "finalPrivateRows": 5,
+      "finalPrivateMemberProofs": 6,
+      "baselinesRestored": true
+    }
+  ]
+}

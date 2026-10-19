@@ -1,0 +1,58 @@
+=== RUN   TestSitePruneManifestAdmission
+=== RUN   TestSitePruneManifestAdmission/private
+=== RUN   TestSitePruneManifestAdmission/default-retain
+=== RUN   TestSitePruneManifestAdmission/no-key
+=== RUN   TestSitePruneManifestAdmission/bulk
+=== RUN   TestSitePruneManifestAdmission/delete-config
+=== RUN   TestSitePruneManifestAdmission/report
+=== RUN   TestSitePruneManifestAdmission/mixed-sections
+--- PASS: TestSitePruneManifestAdmission (0.68s)
+    --- PASS: TestSitePruneManifestAdmission/private (0.61s)
+    --- PASS: TestSitePruneManifestAdmission/default-retain (0.01s)
+    --- PASS: TestSitePruneManifestAdmission/no-key (0.01s)
+    --- PASS: TestSitePruneManifestAdmission/bulk (0.01s)
+    --- PASS: TestSitePruneManifestAdmission/delete-config (0.01s)
+    --- PASS: TestSitePruneManifestAdmission/report (0.01s)
+    --- PASS: TestSitePruneManifestAdmission/mixed-sections (0.01s)
+=== RUN   TestSitePruneManifestLifecycle
+=== RUN   TestSitePruneManifestLifecycle/cm-false/complete
+=== RUN   TestSitePruneManifestLifecycle/cm-false/consumer
+=== RUN   TestSitePruneManifestLifecycle/cm-false/foreign-child
+=== RUN   TestSitePruneManifestLifecycle/cm-false/missing-owned
+=== RUN   TestSitePruneManifestLifecycle/cm-false/replaced-owned
+=== RUN   TestSitePruneManifestLifecycle/cm-false/reappeared-retired
+=== RUN   TestSitePruneManifestLifecycle/cm-false/lost-ack
+=== RUN   TestSitePruneManifestLifecycle/cm-false/failed-task
+=== RUN   TestSitePruneManifestLifecycle/cm-true/complete
+=== RUN   TestSitePruneManifestLifecycle/cm-true/consumer
+=== RUN   TestSitePruneManifestLifecycle/cm-true/foreign-child
+=== RUN   TestSitePruneManifestLifecycle/cm-true/missing-owned
+=== RUN   TestSitePruneManifestLifecycle/cm-true/replaced-owned
+=== RUN   TestSitePruneManifestLifecycle/cm-true/reappeared-retired
+=== RUN   TestSitePruneManifestLifecycle/cm-true/lost-ack
+=== RUN   TestSitePruneManifestLifecycle/cm-true/failed-task
+--- PASS: TestSitePruneManifestLifecycle (7.89s)
+    --- PASS: TestSitePruneManifestLifecycle/cm-false/complete (1.81s)
+    --- PASS: TestSitePruneManifestLifecycle/cm-false/consumer (0.33s)
+    --- PASS: TestSitePruneManifestLifecycle/cm-false/foreign-child (0.26s)
+    --- PASS: TestSitePruneManifestLifecycle/cm-false/missing-owned (0.26s)
+    --- PASS: TestSitePruneManifestLifecycle/cm-false/replaced-owned (0.27s)
+    --- PASS: TestSitePruneManifestLifecycle/cm-false/reappeared-retired (0.76s)
+    --- PASS: TestSitePruneManifestLifecycle/cm-false/lost-ack (0.08s)
+    --- PASS: TestSitePruneManifestLifecycle/cm-false/failed-task (0.09s)
+    --- PASS: TestSitePruneManifestLifecycle/cm-true/complete (1.93s)
+    --- PASS: TestSitePruneManifestLifecycle/cm-true/consumer (0.35s)
+    --- PASS: TestSitePruneManifestLifecycle/cm-true/foreign-child (0.28s)
+    --- PASS: TestSitePruneManifestLifecycle/cm-true/missing-owned (0.28s)
+    --- PASS: TestSitePruneManifestLifecycle/cm-true/replaced-owned (0.28s)
+    --- PASS: TestSitePruneManifestLifecycle/cm-true/reappeared-retired (0.71s)
+    --- PASS: TestSitePruneManifestLifecycle/cm-true/lost-ack (0.09s)
+    --- PASS: TestSitePruneManifestLifecycle/cm-true/failed-task (0.09s)
+=== RUN   TestSitePruneHierarchyManifestLifecycle
+=== RUN   TestSitePruneHierarchyManifestLifecycle/cm-false
+=== RUN   TestSitePruneHierarchyManifestLifecycle/cm-true
+--- PASS: TestSitePruneHierarchyManifestLifecycle (7.76s)
+    --- PASS: TestSitePruneHierarchyManifestLifecycle/cm-false (3.79s)
+    --- PASS: TestSitePruneHierarchyManifestLifecycle/cm-true (3.97s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	18.495s

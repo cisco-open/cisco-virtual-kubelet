@@ -1,0 +1,120 @@
+{
+  "scope": "public PnP whole-cohort ownership receipt row/byte admission and publication",
+  "sourceSHA256": {
+    "internal/controlleradapter/catalystcenter/pnp_registration_capacity.go": "b1147a0f00216d90625fb0649c8a2ad06b1f55b948be041de9760eb18185cb69",
+    "internal/controlleradapter/catalystcenter/pnp_registration_capacity_test.go": "b9e31bbed45ede5506e8b93f1e7c5a40bceaf3f0d1959fb90506574f3203ed7f",
+    "internal/controlleradapter/catalystcenter/pnp_registration_capacity_envtest_test.go": "ce51d1dd2f7c3fcaba6e9effbd246fbf35d3a00dd3cbad079e3df0149cbb6df2",
+    "internal/controlleradapter/catalystcenter/pnp_registration_stage.go": "d26c6a1fcfb61739c8375b28dc822f3a89c48d1b305fb6064ada8764402b7ccd",
+    "internal/controlleradapter/catalystcenter/pnp_registration_stage_test.go": "05d1913b90f9cb430d18b3fce080f246acaf79f957c3513da824cb7181f1d58b",
+    "internal/controlleradapter/catalystcenter/pnp_registration_ownership.go": "47fed5b828f1449120c6733d402d617113725fcd60bd063628df39e4c79c2945",
+    "internal/controlleradapter/catalystcenter/pnp_registration_public.go": "c6d3ef0bd8f72e7da8e08619269aaa160f67d60a6db30917677f2e3bf7063302",
+    "internal/controlleradapter/catalystcenter/pnp_registration_stage_live_test.go": "cca2bb8f44b5352b87715d5d59e923dfaee0244516b6c9268f633595e7dbbd44",
+    "internal/controlleradapter/catalystcenter/pnp_registration.go": "2139eecb807b5423cd40e5b77106aa0d5a83a7c82e45c367054597fdcaaf24de",
+    "internal/controlleradapter/catalystcenter/pnp_registration_journal.go": "a125163cbde7971f595a990d1ae988d8b7aa06a56bf479724b1e3ef16c685996"
+  },
+  "budget": {
+    "rows": 256,
+    "serializedReceiptBytes": 262144,
+    "prospectiveNativeIDBytes": 128,
+    "wholeRemainingCohort": true,
+    "eviction": false
+  },
+  "gates": {
+    "regression": {
+      "families": 34,
+      "subcases": 626,
+      "seconds": 36.437
+    },
+    "api": {
+      "cases": 8,
+      "seconds": 56.036
+    },
+    "native": {
+      "seconds": 14.705,
+      "capacityCases": 3,
+      "ordinaryPublicCycle": true
+    },
+    "nd": {
+      "seconds": 4.847
+    },
+    "providerUpgrades": {
+      "seconds": 14.387
+    },
+    "controllerUpgrades": {
+      "seconds": 6.452
+    }
+  },
+  "native": {
+    "checkpoints": [
+      {
+        "checkpoint": "/private/tmp/cvk-pnp-registration-3512047737",
+        "retainedReceipts": 1,
+        "retainedOwners": 1
+      },
+      {
+        "checkpoint": "/private/tmp/cvk-pnp-registration-305834995",
+        "retainedReceipts": 256,
+        "retainedOwners": 1
+      },
+      {
+        "checkpoint": "/private/tmp/cvk-pnp-registration-2494030214",
+        "retainedReceipts": 2,
+        "retainedOwners": 1
+      },
+      {
+        "checkpoint": "/private/tmp/cvk-pnp-registration-2088090353",
+        "retainedReceipts": 255,
+        "retainedOwners": 1
+      }
+    ],
+    "generatedRecordUUID": "6ad416770bc0186771caf129",
+    "exactCleanupAndBaselinesVerified": true,
+    "capacityCasesPOSTs": 0,
+    "capacityCasesDELETEs": 0,
+    "occupancy": "synthetic simulated-Kubernetes receipts only",
+    "realInstalledLedgerModified": false,
+    "kubernetesPersistence": "simulated",
+    "installed": false
+  },
+  "productionBuild": {
+    "path": "/private/tmp/cvk-pnp-capacity",
+    "sha256": "fb5e16fecdeb982e5c20639a4d43821e3685ccfaed737abc813662632d67e33f",
+    "installed": false
+  },
+  "logs": {
+    "regression": {
+      "file": "pnp-capacity-regression.log",
+      "sha256": "693bbe873cfd891a45b929cccfba6febc4a3ce16fb8352a3da1e2a9861166414"
+    },
+    "api": {
+      "file": "pnp-capacity-api.log",
+      "sha256": "ea2a31e08fab186abc87e63a0f6e977ae2754930709991c5765b0a5e9e3b053c"
+    },
+    "native": {
+      "file": "pnp-capacity-native.log",
+      "sha256": "6714e3e79962e0f6b7bdd4257c5b90dcfc8bdb79ec81059c79b485f41c7261ec"
+    },
+    "nd": {
+      "file": "pnp-capacity-nd.log",
+      "sha256": "302b9f7d3fe7b2936a4767029e114d11e74a910698b4cf9ecb9b507af751fdf6"
+    },
+    "provider-upgrades": {
+      "file": "pnp-capacity-provider-upgrades.log",
+      "sha256": "04d82f9c5395859858dac8c14a4d1642418c3da8d0eabb4d8bd0bfef1380bde1"
+    },
+    "controller-upgrades": {
+      "file": "pnp-capacity-controller-upgrades.log",
+      "sha256": "d8e5446298a76dd47efdf094792081565349303ee0d076d4e3952c4c7a202b80"
+    },
+    "build": {
+      "file": "pnp-capacity-build.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  },
+  "limits": [
+    "This guards the public whole-cohort registration stage and shared owned-registration publication. The raw native primitive has no Kubernetes capacity context.",
+    "Controller-wide row/byte limits can refuse large valid models; 1000 new declarations are syntax-valid but not executable in the current ledger. No receipt eviction or ownership sharding is added.",
+    "Native qualification uses simulated ledger occupancy/persistence with real inventory reads and one real ordinary registration/cleanup. Real API tests use simulated native responses.",
+    "Installed workers, physical claiming/workflow/preview completion, mixed-state composition, public prune/delete and full model parity remain pending."
+  ]
+}

@@ -1,0 +1,4 @@
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter	2.667s
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/nexusdashboard	5.362s
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/provider/softwareupgrade	15.294s
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/provider/maintenance	7.216s

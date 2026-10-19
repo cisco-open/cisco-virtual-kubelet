@@ -1,0 +1,105 @@
+{
+  "branch": "pr/johalley/catc-support",
+  "modelVersion": "0.5.0",
+  "pinnedModelCommit": "a435555fe828f03cf3311d52fe1ab6572a247916",
+  "fullModelComplete": false,
+  "installedMutationQualified": false,
+  "scope": "Public owned PnP source pruning through original metadata claim, native guarded submission, independent absence receipt and manager settlement/retirement",
+  "source": {
+    "internal/controlleradapter/catalystcenter": {
+      "files": 1701,
+      "sha256": "352bfc265299738e7c056332dc9d0fe665604eccbd7e24b19552331fe408284a"
+    },
+    "internal/controllerconfiguration": {
+      "files": 157,
+      "sha256": "c480ed0a816e02e626d6dbae3f9fa6922b920e4c09c5bb24d1b7d2fdef0bee8b"
+    },
+    "internal/controlleradapter": {
+      "files": 14,
+      "sha256": "56a3957004389d72271d3d7f1dc62492b372f77b594fbc448817840baaf9b52d"
+    },
+    "internal/controller": {
+      "files": 93,
+      "sha256": "5807e3a4b677409a5286eb35f17bfc0731252b90b09ac3d1ceef71a92d876bd8"
+    },
+    "api/v1alpha1": {
+      "files": 27,
+      "sha256": "768f409f8ae7f17180077aa6e74c59f87d692dc3ea5de35233eaad73ebb9ab9a"
+    }
+  },
+  "nativePublicCycle": {
+    "result": "PASS",
+    "test": "TestLivePnPRemovalPublicMetadataCycle",
+    "testSeconds": 26.92,
+    "packageSeconds": 27.831,
+    "registrationPOSTs": 2,
+    "exactCreatorDELETEs": 2,
+    "privateEvidenceDirectory": "/private/tmp/cvk-pnp-cohort-1713719313",
+    "records": [
+      {
+        "uuid": "6ad5bf700bc0186771cb1616",
+        "serial": "CVK7BA44A70"
+      },
+      {
+        "uuid": "6ad5bf730bc0186771cb1617",
+        "serial": "CVK7BA44A71"
+      }
+    ],
+    "finalOperation": null,
+    "finalHandoff": null,
+    "creatorRows": 2,
+    "verifiedAbsenceRows": 2,
+    "emptyPnPCatalog": true,
+    "unchangedNetworkInventory": true,
+    "kubernetesAuthority": "simulated/JSON-persisted; separate real-API gates",
+    "completedEvidenceMustNotBeReplayed": true
+  },
+  "gates": {
+    "publicMetadataRealAPIInitial": {
+      "result": "PASS",
+      "passingEvents": 5,
+      "packages": 1,
+      "packageSeconds": 31.881,
+      "log": "/private/tmp/cvk-pnp-public-cycle-api.log"
+    },
+    "PnPJournalSWIMInitial": {
+      "result": "PASS",
+      "passingEvents": 931,
+      "packages": 1,
+      "packageSeconds": 19.957,
+      "log": "/private/tmp/cvk-pnp-public-regression.log"
+    },
+    "publicMetadataRealAPIFinal": {
+      "result": "PASS",
+      "passingEvents": 5,
+      "packages": 1,
+      "packageSecondsSum": 32.7,
+      "log": "/private/tmp/cvk-pnp-public-final-api.log"
+    },
+    "fullCatalystCenterSharedNDDirectUpgrade": {
+      "result": "PASS",
+      "passingEvents": 18699,
+      "packages": 12,
+      "packageSecondsSum": 438.256,
+      "log": "/private/tmp/cvk-pnp-public-final-regression.log"
+    }
+  },
+  "mainBuild": {
+    "result": "PASS",
+    "path": "/private/tmp/cvk-pnp-public-qualified-cisco-vk",
+    "sha256": "efcdbc8e9cac87544d565368f633360af5ef21e327b2d698d167b5c02ee4d2e7"
+  },
+  "remaining": [
+    "Installed compatibility and runtime authorization composition",
+    "Complete consumer census and shared fence protection",
+    "Controller generation/domain and deletion lifecycle",
+    "Configuration deletion and missing-source finalization",
+    "Physical PnP claim completion",
+    "Other pinned resource execution/hardware gaps"
+  ],
+  "documentationBuild": "PASS (strict)",
+  "sourceFrozen": "PASS",
+  "uniqueResourceRows": 93,
+  "formatting": "PASS",
+  "scopedWhitespaceCheck": "PASS"
+}

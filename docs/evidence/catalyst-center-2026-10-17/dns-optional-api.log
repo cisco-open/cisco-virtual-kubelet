@@ -1,0 +1,14 @@
+=== RUN   TestEnvtestNetworkDNSOptional
+=== RUN   TestEnvtestNetworkDNSOptional/omitted
+=== RUN   TestEnvtestNetworkDNSOptional/null
+=== RUN   TestEnvtestNetworkDNSOptional/clear
+=== RUN   TestEnvtestNetworkDNSOptional/inherited
+=== RUN   TestEnvtestNetworkDNSOptional/match
+--- PASS: TestEnvtestNetworkDNSOptional (7.64s)
+    --- PASS: TestEnvtestNetworkDNSOptional/omitted (2.91s)
+    --- PASS: TestEnvtestNetworkDNSOptional/null (0.36s)
+    --- PASS: TestEnvtestNetworkDNSOptional/clear (0.29s)
+    --- PASS: TestEnvtestNetworkDNSOptional/inherited (0.28s)
+    --- PASS: TestEnvtestNetworkDNSOptional/match (0.10s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	10.040s

@@ -1,0 +1,80 @@
+=== RUN   TestTemplateVersionCohortOwnership
+=== RUN   TestTemplateVersionCohortOwnership/valid
+=== RUN   TestTemplateVersionCohortOwnership/old-private-edit
+=== RUN   TestTemplateVersionCohortOwnership/unknown-number-edit
+=== RUN   TestTemplateVersionCohortOwnership/metadata-only-edit
+=== RUN   TestTemplateVersionCohortOwnership/missing-metadata
+=== RUN   TestTemplateVersionCohortOwnership/external-version
+=== RUN   TestTemplateVersionCohortOwnership/missing-native-version
+=== RUN   TestTemplateVersionCohortOwnership/lost-history
+=== RUN   TestTemplateVersionCohortOwnership/lost-creator
+=== RUN   TestTemplateVersionCohortOwnership/duplicate-version
+=== RUN   TestTemplateVersionCohortOwnership/duplicate-operation
+=== RUN   TestTemplateVersionCohortOwnership/lost-operation-marker
+=== RUN   TestTemplateVersionCohortOwnership/lost-result-marker
+=== RUN   TestTemplateVersionCohortOwnership/history-kind-pruned
+=== RUN   TestTemplateVersionCohortOwnership/key-change
+=== RUN   TestTemplateVersionCohortOwnership/foreign-comment
+=== RUN   TestTemplateVersionCohortOwnership/legacy-no-adoption
+--- PASS: TestTemplateVersionCohortOwnership (0.05s)
+    --- PASS: TestTemplateVersionCohortOwnership/valid (0.00s)
+    --- PASS: TestTemplateVersionCohortOwnership/old-private-edit (0.00s)
+    --- PASS: TestTemplateVersionCohortOwnership/unknown-number-edit (0.00s)
+    --- PASS: TestTemplateVersionCohortOwnership/metadata-only-edit (0.00s)
+    --- PASS: TestTemplateVersionCohortOwnership/missing-metadata (0.00s)
+    --- PASS: TestTemplateVersionCohortOwnership/external-version (0.00s)
+    --- PASS: TestTemplateVersionCohortOwnership/missing-native-version (0.00s)
+    --- PASS: TestTemplateVersionCohortOwnership/lost-history (0.00s)
+    --- PASS: TestTemplateVersionCohortOwnership/lost-creator (0.00s)
+    --- PASS: TestTemplateVersionCohortOwnership/duplicate-version (0.00s)
+    --- PASS: TestTemplateVersionCohortOwnership/duplicate-operation (0.00s)
+    --- PASS: TestTemplateVersionCohortOwnership/lost-operation-marker (0.00s)
+    --- PASS: TestTemplateVersionCohortOwnership/lost-result-marker (0.00s)
+    --- PASS: TestTemplateVersionCohortOwnership/history-kind-pruned (0.00s)
+    --- PASS: TestTemplateVersionCohortOwnership/key-change (0.00s)
+    --- PASS: TestTemplateVersionCohortOwnership/foreign-comment (0.00s)
+    --- PASS: TestTemplateVersionCohortOwnership/legacy-no-adoption (0.00s)
+=== RUN   TestTemplateVersionArchiveAndCapacity
+--- PASS: TestTemplateVersionArchiveAndCapacity (0.02s)
+=== RUN   TestTemplateVersionCommentIdentity
+--- PASS: TestTemplateVersionCommentIdentity (0.00s)
+=== RUN   TestTemplateVersionPublicOwnership
+=== RUN   TestTemplateVersionPublicOwnership/commit/known
+=== RUN   TestTemplateVersionPublicOwnership/commit/version-missing-nonce
+=== RUN   TestTemplateVersionPublicOwnership/commit/version-wrong-nonce
+=== RUN   TestTemplateVersionPublicOwnership/commit/version-noncanonical
+=== RUN   TestTemplateVersionPublicOwnership/commit/version-duplicate-nonce
+=== RUN   TestTemplateVersionPublicOwnership/commit/receipt-version-pruned
+=== RUN   TestTemplateVersionPublicOwnership/commit/receipt-version-noncanonical
+=== RUN   TestTemplateVersionPublicOwnership/commit/version-body-comment-omitted
+=== RUN   TestTemplateVersionPublicOwnership/commit/version-meta-missing
+=== RUN   TestTemplateVersionPublicOwnership/composite-commit/known
+=== RUN   TestTemplateVersionPublicOwnership/composite-commit/version-missing-nonce
+=== RUN   TestTemplateVersionPublicOwnership/composite-commit/version-wrong-nonce
+=== RUN   TestTemplateVersionPublicOwnership/composite-commit/version-noncanonical
+=== RUN   TestTemplateVersionPublicOwnership/composite-commit/version-duplicate-nonce
+=== RUN   TestTemplateVersionPublicOwnership/composite-commit/receipt-version-pruned
+=== RUN   TestTemplateVersionPublicOwnership/composite-commit/receipt-version-noncanonical
+=== RUN   TestTemplateVersionPublicOwnership/composite-commit/version-body-comment-omitted
+=== RUN   TestTemplateVersionPublicOwnership/composite-commit/version-meta-missing
+--- PASS: TestTemplateVersionPublicOwnership (16.47s)
+    --- PASS: TestTemplateVersionPublicOwnership/commit/known (0.79s)
+    --- PASS: TestTemplateVersionPublicOwnership/commit/version-missing-nonce (1.20s)
+    --- PASS: TestTemplateVersionPublicOwnership/commit/version-wrong-nonce (1.17s)
+    --- PASS: TestTemplateVersionPublicOwnership/commit/version-noncanonical (1.15s)
+    --- PASS: TestTemplateVersionPublicOwnership/commit/version-duplicate-nonce (1.22s)
+    --- PASS: TestTemplateVersionPublicOwnership/commit/receipt-version-pruned (0.46s)
+    --- PASS: TestTemplateVersionPublicOwnership/commit/receipt-version-noncanonical (0.46s)
+    --- PASS: TestTemplateVersionPublicOwnership/commit/version-body-comment-omitted (0.19s)
+    --- PASS: TestTemplateVersionPublicOwnership/commit/version-meta-missing (1.19s)
+    --- PASS: TestTemplateVersionPublicOwnership/composite-commit/known (0.29s)
+    --- PASS: TestTemplateVersionPublicOwnership/composite-commit/version-missing-nonce (1.41s)
+    --- PASS: TestTemplateVersionPublicOwnership/composite-commit/version-wrong-nonce (1.41s)
+    --- PASS: TestTemplateVersionPublicOwnership/composite-commit/version-noncanonical (1.40s)
+    --- PASS: TestTemplateVersionPublicOwnership/composite-commit/version-duplicate-nonce (1.46s)
+    --- PASS: TestTemplateVersionPublicOwnership/composite-commit/receipt-version-pruned (0.57s)
+    --- PASS: TestTemplateVersionPublicOwnership/composite-commit/receipt-version-noncanonical (0.57s)
+    --- PASS: TestTemplateVersionPublicOwnership/composite-commit/version-body-comment-omitted (0.29s)
+    --- PASS: TestTemplateVersionPublicOwnership/composite-commit/version-meta-missing (1.22s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	19.002s

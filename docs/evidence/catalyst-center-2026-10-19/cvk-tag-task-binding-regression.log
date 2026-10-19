@@ -1,0 +1,2699 @@
+=== RUN   TestCombinedTagApplyAcrossReconcilerRestarts
+--- PASS: TestCombinedTagApplyAcrossReconcilerRestarts (0.75s)
+=== RUN   TestCombinedDynamicTagApplyAcrossReconcilerRestarts
+--- PASS: TestCombinedDynamicTagApplyAcrossReconcilerRestarts (0.17s)
+=== RUN   TestCombinedDiscoveryPreflightsBeforeTagWrites
+--- PASS: TestCombinedDiscoveryPreflightsBeforeTagWrites (0.01s)
+=== RUN   TestCombinedDiscoveryDoesNotRequireInventoryTags
+--- PASS: TestCombinedDiscoveryDoesNotRequireInventoryTags (0.00s)
+=== RUN   TestTagNamespaceOwnershipAcrossSections
+--- PASS: TestTagNamespaceOwnershipAcrossSections (0.05s)
+=== RUN   TestCombinedTagsUseInventoryPrecedence
+--- PASS: TestCombinedTagsUseInventoryPrecedence (0.02s)
+=== RUN   TestCombinedTagsRetainUnshadowedAndValidateBothLists
+--- PASS: TestCombinedTagsRetainUnshadowedAndValidateBothLists (0.00s)
+=== RUN   TestDiscoveryActiveOwnershipReplacementAndPruning
+--- PASS: TestDiscoveryActiveOwnershipReplacementAndPruning (0.29s)
+=== RUN   TestDiscoveryActiveCreationStillRequiresNativeFingerprint
+--- PASS: TestDiscoveryActiveCreationStillRequiresNativeFingerprint (0.30s)
+=== RUN   TestDiscoveryCohortProgressWhileRetainedJobActive
+--- PASS: TestDiscoveryCohortProgressWhileRetainedJobActive (0.36s)
+=== RUN   TestDiscoveryCohortActivePeerDoesNotMaskDrift
+=== RUN   TestDiscoveryCohortActivePeerDoesNotMaskDrift/initial-drift
+=== RUN   TestDiscoveryCohortActivePeerDoesNotMaskDrift/late-drift
+=== RUN   TestDiscoveryCohortActivePeerDoesNotMaskDrift/late-identity
+--- PASS: TestDiscoveryCohortActivePeerDoesNotMaskDrift (0.10s)
+    --- PASS: TestDiscoveryCohortActivePeerDoesNotMaskDrift/initial-drift (0.04s)
+    --- PASS: TestDiscoveryCohortActivePeerDoesNotMaskDrift/late-drift (0.03s)
+    --- PASS: TestDiscoveryCohortActivePeerDoesNotMaskDrift/late-identity (0.03s)
+=== RUN   TestDiscoveryConfigCleanupCompletion
+=== RUN   TestDiscoveryConfigCleanupCompletion/closed
+=== RUN   TestDiscoveryConfigCleanupCompletion/closed/config-uid
+=== RUN   TestDiscoveryConfigCleanupCompletion/closed/generation
+=== RUN   TestDiscoveryConfigCleanupCompletion/closed/spec
+=== RUN   TestDiscoveryConfigCleanupCompletion/closed/finalizer
+=== RUN   TestDiscoveryConfigCleanupCompletion/closed/message
+=== RUN   TestDiscoveryConfigCleanupCompletion/closed/controller-uid
+=== RUN   TestDiscoveryConfigCleanupCompletion/closed/controller-generation
+=== RUN   TestDiscoveryConfigCleanupCompletion/closed/evidence
+=== RUN   TestDiscoveryConfigCleanupCompletion/nil-state
+=== RUN   TestDiscoveryConfigCleanupCompletion/nil-state/config-uid
+=== RUN   TestDiscoveryConfigCleanupCompletion/nil-state/generation
+=== RUN   TestDiscoveryConfigCleanupCompletion/nil-state/spec
+=== RUN   TestDiscoveryConfigCleanupCompletion/nil-state/finalizer
+=== RUN   TestDiscoveryConfigCleanupCompletion/nil-state/message
+=== RUN   TestDiscoveryConfigCleanupCompletion/nil-state/controller-uid
+=== RUN   TestDiscoveryConfigCleanupCompletion/nil-state/controller-generation
+=== RUN   TestDiscoveryConfigCleanupCompletion/nil-state/evidence
+=== RUN   TestDiscoveryConfigCleanupCompletion/empty-state
+=== RUN   TestDiscoveryConfigCleanupCompletion/empty-state/config-uid
+=== RUN   TestDiscoveryConfigCleanupCompletion/empty-state/generation
+=== RUN   TestDiscoveryConfigCleanupCompletion/empty-state/spec
+=== RUN   TestDiscoveryConfigCleanupCompletion/empty-state/finalizer
+=== RUN   TestDiscoveryConfigCleanupCompletion/empty-state/message
+=== RUN   TestDiscoveryConfigCleanupCompletion/empty-state/controller-uid
+=== RUN   TestDiscoveryConfigCleanupCompletion/empty-state/controller-generation
+=== RUN   TestDiscoveryConfigCleanupCompletion/empty-state/evidence
+=== RUN   TestDiscoveryConfigCleanupCompletion/owner-empty
+=== RUN   TestDiscoveryConfigCleanupCompletion/owner-empty/config-uid
+=== RUN   TestDiscoveryConfigCleanupCompletion/owner-empty/generation
+=== RUN   TestDiscoveryConfigCleanupCompletion/owner-empty/spec
+=== RUN   TestDiscoveryConfigCleanupCompletion/owner-empty/finalizer
+=== RUN   TestDiscoveryConfigCleanupCompletion/owner-empty/message
+=== RUN   TestDiscoveryConfigCleanupCompletion/owner-empty/controller-uid
+=== RUN   TestDiscoveryConfigCleanupCompletion/owner-empty/controller-generation
+=== RUN   TestDiscoveryConfigCleanupCompletion/owner-empty/evidence
+=== RUN   TestDiscoveryConfigCleanupCompletion/unowned-name
+=== RUN   TestDiscoveryConfigCleanupCompletion/unowned-name/config-uid
+=== RUN   TestDiscoveryConfigCleanupCompletion/unowned-name/generation
+=== RUN   TestDiscoveryConfigCleanupCompletion/unowned-name/spec
+=== RUN   TestDiscoveryConfigCleanupCompletion/unowned-name/finalizer
+=== RUN   TestDiscoveryConfigCleanupCompletion/unowned-name/message
+=== RUN   TestDiscoveryConfigCleanupCompletion/unowned-name/controller-uid
+=== RUN   TestDiscoveryConfigCleanupCompletion/unowned-name/controller-generation
+=== RUN   TestDiscoveryConfigCleanupCompletion/unowned-name/evidence
+=== RUN   TestDiscoveryConfigCleanupCompletion/foreign-owner
+=== RUN   TestDiscoveryConfigCleanupCompletion/foreign-owner/config-uid
+=== RUN   TestDiscoveryConfigCleanupCompletion/foreign-owner/generation
+=== RUN   TestDiscoveryConfigCleanupCompletion/foreign-owner/spec
+=== RUN   TestDiscoveryConfigCleanupCompletion/foreign-owner/finalizer
+=== RUN   TestDiscoveryConfigCleanupCompletion/foreign-owner/message
+=== RUN   TestDiscoveryConfigCleanupCompletion/foreign-owner/controller-uid
+=== RUN   TestDiscoveryConfigCleanupCompletion/foreign-owner/controller-generation
+=== RUN   TestDiscoveryConfigCleanupCompletion/foreign-owner/evidence
+=== RUN   TestDiscoveryConfigCleanupCompletion/configmap
+=== RUN   TestDiscoveryConfigCleanupCompletion/configmap/config-uid
+=== RUN   TestDiscoveryConfigCleanupCompletion/configmap/generation
+=== RUN   TestDiscoveryConfigCleanupCompletion/configmap/spec
+=== RUN   TestDiscoveryConfigCleanupCompletion/configmap/finalizer
+=== RUN   TestDiscoveryConfigCleanupCompletion/configmap/message
+=== RUN   TestDiscoveryConfigCleanupCompletion/configmap/controller-uid
+=== RUN   TestDiscoveryConfigCleanupCompletion/configmap/controller-generation
+=== RUN   TestDiscoveryConfigCleanupCompletion/configmap/evidence
+=== RUN   TestDiscoveryConfigCleanupCompletion/create-left
+=== RUN   TestDiscoveryConfigCleanupCompletion/reappeared
+=== RUN   TestDiscoveryConfigCleanupCompletion/malformed
+=== RUN   TestDiscoveryConfigCleanupCompletion/duplicate
+=== RUN   TestDiscoveryConfigCleanupCompletion/foreign-alias
+=== RUN   TestDiscoveryConfigCleanupCompletion/active-operation
+=== RUN   TestDiscoveryConfigCleanupCompletion/foreign-section
+=== RUN   TestDiscoveryConfigCleanupCompletion/missing-source
+=== RUN   TestDiscoveryConfigCleanupCompletion/mixed-source
+=== RUN   TestDiscoveryConfigCleanupCompletion/evidence-race
+=== RUN   TestDiscoveryConfigCleanupCompletion/native-race
+=== RUN   TestDiscoveryConfigCleanupCompletion/spec-race
+=== RUN   TestDiscoveryConfigCleanupCompletion/source-race
+--- PASS: TestDiscoveryConfigCleanupCompletion (0.68s)
+    --- PASS: TestDiscoveryConfigCleanupCompletion/closed (0.04s)
+        --- PASS: TestDiscoveryConfigCleanupCompletion/closed/config-uid (0.00s)
+        --- PASS: TestDiscoveryConfigCleanupCompletion/closed/generation (0.00s)
+        --- PASS: TestDiscoveryConfigCleanupCompletion/closed/spec (0.00s)
+        --- PASS: TestDiscoveryConfigCleanupCompletion/closed/finalizer (0.00s)
+        --- PASS: TestDiscoveryConfigCleanupCompletion/closed/message (0.00s)
+        --- PASS: TestDiscoveryConfigCleanupCompletion/closed/controller-uid (0.00s)
+        --- PASS: TestDiscoveryConfigCleanupCompletion/closed/controller-generation (0.00s)
+        --- PASS: TestDiscoveryConfigCleanupCompletion/closed/evidence (0.00s)
+    --- PASS: TestDiscoveryConfigCleanupCompletion/nil-state (0.04s)
+        --- PASS: TestDiscoveryConfigCleanupCompletion/nil-state/config-uid (0.00s)
+        --- PASS: TestDiscoveryConfigCleanupCompletion/nil-state/generation (0.00s)
+        --- PASS: TestDiscoveryConfigCleanupCompletion/nil-state/spec (0.00s)
+        --- PASS: TestDiscoveryConfigCleanupCompletion/nil-state/finalizer (0.00s)
+        --- PASS: TestDiscoveryConfigCleanupCompletion/nil-state/message (0.00s)
+        --- PASS: TestDiscoveryConfigCleanupCompletion/nil-state/controller-uid (0.00s)
+        --- PASS: TestDiscoveryConfigCleanupCompletion/nil-state/controller-generation (0.00s)
+        --- PASS: TestDiscoveryConfigCleanupCompletion/nil-state/evidence (0.00s)
+    --- PASS: TestDiscoveryConfigCleanupCompletion/empty-state (0.04s)
+        --- PASS: TestDiscoveryConfigCleanupCompletion/empty-state/config-uid (0.00s)
+        --- PASS: TestDiscoveryConfigCleanupCompletion/empty-state/generation (0.00s)
+        --- PASS: TestDiscoveryConfigCleanupCompletion/empty-state/spec (0.00s)
+        --- PASS: TestDiscoveryConfigCleanupCompletion/empty-state/finalizer (0.00s)
+        --- PASS: TestDiscoveryConfigCleanupCompletion/empty-state/message (0.00s)
+        --- PASS: TestDiscoveryConfigCleanupCompletion/empty-state/controller-uid (0.00s)
+        --- PASS: TestDiscoveryConfigCleanupCompletion/empty-state/controller-generation (0.00s)
+        --- PASS: TestDiscoveryConfigCleanupCompletion/empty-state/evidence (0.00s)
+    --- PASS: TestDiscoveryConfigCleanupCompletion/owner-empty (0.04s)
+        --- PASS: TestDiscoveryConfigCleanupCompletion/owner-empty/config-uid (0.00s)
+        --- PASS: TestDiscoveryConfigCleanupCompletion/owner-empty/generation (0.00s)
+        --- PASS: TestDiscoveryConfigCleanupCompletion/owner-empty/spec (0.00s)
+        --- PASS: TestDiscoveryConfigCleanupCompletion/owner-empty/finalizer (0.00s)
+        --- PASS: TestDiscoveryConfigCleanupCompletion/owner-empty/message (0.00s)
+        --- PASS: TestDiscoveryConfigCleanupCompletion/owner-empty/controller-uid (0.00s)
+        --- PASS: TestDiscoveryConfigCleanupCompletion/owner-empty/controller-generation (0.00s)
+        --- PASS: TestDiscoveryConfigCleanupCompletion/owner-empty/evidence (0.00s)
+    --- PASS: TestDiscoveryConfigCleanupCompletion/unowned-name (0.04s)
+        --- PASS: TestDiscoveryConfigCleanupCompletion/unowned-name/config-uid (0.00s)
+        --- PASS: TestDiscoveryConfigCleanupCompletion/unowned-name/generation (0.00s)
+        --- PASS: TestDiscoveryConfigCleanupCompletion/unowned-name/spec (0.00s)
+        --- PASS: TestDiscoveryConfigCleanupCompletion/unowned-name/finalizer (0.00s)
+        --- PASS: TestDiscoveryConfigCleanupCompletion/unowned-name/message (0.00s)
+        --- PASS: TestDiscoveryConfigCleanupCompletion/unowned-name/controller-uid (0.00s)
+        --- PASS: TestDiscoveryConfigCleanupCompletion/unowned-name/controller-generation (0.00s)
+        --- PASS: TestDiscoveryConfigCleanupCompletion/unowned-name/evidence (0.00s)
+    --- PASS: TestDiscoveryConfigCleanupCompletion/foreign-owner (0.04s)
+        --- PASS: TestDiscoveryConfigCleanupCompletion/foreign-owner/config-uid (0.00s)
+        --- PASS: TestDiscoveryConfigCleanupCompletion/foreign-owner/generation (0.00s)
+        --- PASS: TestDiscoveryConfigCleanupCompletion/foreign-owner/spec (0.00s)
+        --- PASS: TestDiscoveryConfigCleanupCompletion/foreign-owner/finalizer (0.00s)
+        --- PASS: TestDiscoveryConfigCleanupCompletion/foreign-owner/message (0.00s)
+        --- PASS: TestDiscoveryConfigCleanupCompletion/foreign-owner/controller-uid (0.00s)
+        --- PASS: TestDiscoveryConfigCleanupCompletion/foreign-owner/controller-generation (0.00s)
+        --- PASS: TestDiscoveryConfigCleanupCompletion/foreign-owner/evidence (0.00s)
+    --- PASS: TestDiscoveryConfigCleanupCompletion/configmap (0.04s)
+        --- PASS: TestDiscoveryConfigCleanupCompletion/configmap/config-uid (0.00s)
+        --- PASS: TestDiscoveryConfigCleanupCompletion/configmap/generation (0.00s)
+        --- PASS: TestDiscoveryConfigCleanupCompletion/configmap/spec (0.00s)
+        --- PASS: TestDiscoveryConfigCleanupCompletion/configmap/finalizer (0.00s)
+        --- PASS: TestDiscoveryConfigCleanupCompletion/configmap/message (0.00s)
+        --- PASS: TestDiscoveryConfigCleanupCompletion/configmap/controller-uid (0.00s)
+        --- PASS: TestDiscoveryConfigCleanupCompletion/configmap/controller-generation (0.00s)
+        --- PASS: TestDiscoveryConfigCleanupCompletion/configmap/evidence (0.00s)
+    --- PASS: TestDiscoveryConfigCleanupCompletion/create-left (0.03s)
+    --- PASS: TestDiscoveryConfigCleanupCompletion/reappeared (0.03s)
+    --- PASS: TestDiscoveryConfigCleanupCompletion/malformed (0.03s)
+    --- PASS: TestDiscoveryConfigCleanupCompletion/duplicate (0.03s)
+    --- PASS: TestDiscoveryConfigCleanupCompletion/foreign-alias (0.03s)
+    --- PASS: TestDiscoveryConfigCleanupCompletion/active-operation (0.03s)
+    --- PASS: TestDiscoveryConfigCleanupCompletion/foreign-section (0.03s)
+    --- PASS: TestDiscoveryConfigCleanupCompletion/missing-source (0.03s)
+    --- PASS: TestDiscoveryConfigCleanupCompletion/mixed-source (0.03s)
+    --- PASS: TestDiscoveryConfigCleanupCompletion/evidence-race (0.05s)
+    --- PASS: TestDiscoveryConfigCleanupCompletion/native-race (0.07s)
+    --- PASS: TestDiscoveryConfigCleanupCompletion/spec-race (0.03s)
+    --- PASS: TestDiscoveryConfigCleanupCompletion/source-race (0.03s)
+=== RUN   TestDiscoveryConfigCleanupExecution
+=== RUN   TestDiscoveryConfigCleanupExecution/normal
+=== RUN   TestDiscoveryConfigCleanupExecution/known-task
+=== RUN   TestDiscoveryConfigCleanupExecution/lost-ack
+=== RUN   TestDiscoveryConfigCleanupExecution/backend-error
+=== RUN   TestDiscoveryConfigCleanupExecution/native-drift
+=== RUN   TestDiscoveryConfigCleanupExecution/receipt-race
+=== RUN   TestDiscoveryConfigCleanupExecution/spec-race
+=== RUN   TestDiscoveryConfigCleanupExecution/dispatch-owner-race
+=== RUN   TestDiscoveryConfigCleanupExecution/dispatch-native-race
+=== RUN   TestDiscoveryConfigCleanupExecution/task-running
+=== RUN   TestDiscoveryConfigCleanupExecution/task-failed
+=== RUN   TestDiscoveryConfigCleanupExecution/task-mismatch
+=== RUN   TestDiscoveryConfigCleanupExecution/absence-pending
+=== RUN   TestDiscoveryConfigCleanupExecution/alias
+=== RUN   TestDiscoveryConfigCleanupExecution/receipt-missing
+=== RUN   TestDiscoveryConfigCleanupExecution/malformed-envelope
+--- PASS: TestDiscoveryConfigCleanupExecution (0.72s)
+    --- PASS: TestDiscoveryConfigCleanupExecution/normal (0.07s)
+    --- PASS: TestDiscoveryConfigCleanupExecution/known-task (0.06s)
+    --- PASS: TestDiscoveryConfigCleanupExecution/lost-ack (0.05s)
+    --- PASS: TestDiscoveryConfigCleanupExecution/backend-error (0.05s)
+    --- PASS: TestDiscoveryConfigCleanupExecution/native-drift (0.03s)
+    --- PASS: TestDiscoveryConfigCleanupExecution/receipt-race (0.03s)
+    --- PASS: TestDiscoveryConfigCleanupExecution/spec-race (0.03s)
+    --- PASS: TestDiscoveryConfigCleanupExecution/dispatch-owner-race (0.04s)
+    --- PASS: TestDiscoveryConfigCleanupExecution/dispatch-native-race (0.04s)
+    --- PASS: TestDiscoveryConfigCleanupExecution/task-running (0.04s)
+    --- PASS: TestDiscoveryConfigCleanupExecution/task-failed (0.04s)
+    --- PASS: TestDiscoveryConfigCleanupExecution/task-mismatch (0.04s)
+    --- PASS: TestDiscoveryConfigCleanupExecution/absence-pending (0.05s)
+    --- PASS: TestDiscoveryConfigCleanupExecution/alias (0.05s)
+    --- PASS: TestDiscoveryConfigCleanupExecution/receipt-missing (0.06s)
+    --- PASS: TestDiscoveryConfigCleanupExecution/malformed-envelope (0.03s)
+=== RUN   TestDiscoveryConfigCleanupMalformedSettlement
+--- PASS: TestDiscoveryConfigCleanupMalformedSettlement (0.02s)
+=== RUN   TestDiscoveryConfigCleanupObservation
+=== RUN   TestDiscoveryConfigCleanupObservation/ready
+=== RUN   TestDiscoveryConfigCleanupObservation/active
+=== RUN   TestDiscoveryConfigCleanupObservation/tombstone
+=== RUN   TestDiscoveryConfigCleanupObservation/native-edit
+=== RUN   TestDiscoveryConfigCleanupObservation/native-race
+=== RUN   TestDiscoveryConfigCleanupObservation/owner-race
+=== RUN   TestDiscoveryConfigCleanupObservation/spec-race
+=== RUN   TestDiscoveryConfigCleanupObservation/source-race
+=== RUN   TestDiscoveryConfigCleanupObservation/foreign-alias
+=== RUN   TestDiscoveryConfigCleanupObservation/foreign-malformed
+=== RUN   TestDiscoveryConfigCleanupObservation/missing-owner
+=== RUN   TestDiscoveryConfigCleanupObservation/credential-custody
+=== RUN   TestDiscoveryConfigCleanupObservation/foreign-owned-section
+=== RUN   TestDiscoveryConfigCleanupObservation/pending-operation
+=== RUN   TestDiscoveryConfigCleanupObservation/missing-receipt
+=== RUN   TestDiscoveryConfigCleanupObservation/missing-native
+=== RUN   TestDiscoveryConfigCleanupObservation/wrong-policy
+=== RUN   TestDiscoveryConfigCleanupObservation/mixed-source
+--- PASS: TestDiscoveryConfigCleanupObservation (0.47s)
+    --- PASS: TestDiscoveryConfigCleanupObservation/ready (0.03s)
+    --- PASS: TestDiscoveryConfigCleanupObservation/active (0.03s)
+    --- PASS: TestDiscoveryConfigCleanupObservation/tombstone (0.03s)
+    --- PASS: TestDiscoveryConfigCleanupObservation/native-edit (0.03s)
+    --- PASS: TestDiscoveryConfigCleanupObservation/native-race (0.03s)
+    --- PASS: TestDiscoveryConfigCleanupObservation/owner-race (0.03s)
+    --- PASS: TestDiscoveryConfigCleanupObservation/spec-race (0.03s)
+    --- PASS: TestDiscoveryConfigCleanupObservation/source-race (0.03s)
+    --- PASS: TestDiscoveryConfigCleanupObservation/foreign-alias (0.02s)
+    --- PASS: TestDiscoveryConfigCleanupObservation/foreign-malformed (0.02s)
+    --- PASS: TestDiscoveryConfigCleanupObservation/missing-owner (0.02s)
+    --- PASS: TestDiscoveryConfigCleanupObservation/credential-custody (0.02s)
+    --- PASS: TestDiscoveryConfigCleanupObservation/foreign-owned-section (0.02s)
+    --- PASS: TestDiscoveryConfigCleanupObservation/pending-operation (0.02s)
+    --- PASS: TestDiscoveryConfigCleanupObservation/missing-receipt (0.02s)
+    --- PASS: TestDiscoveryConfigCleanupObservation/missing-native (0.03s)
+    --- PASS: TestDiscoveryConfigCleanupObservation/wrong-policy (0.02s)
+    --- PASS: TestDiscoveryConfigCleanupObservation/mixed-source (0.02s)
+=== RUN   TestDiscoveryConfigCleanupPreparation
+=== RUN   TestDiscoveryConfigCleanupPreparation/deletion
+=== RUN   TestDiscoveryConfigCleanupPreparation/spec
+=== RUN   TestDiscoveryConfigCleanupPreparation/generation
+=== RUN   TestDiscoveryConfigCleanupPreparation/version
+=== RUN   TestDiscoveryConfigCleanupPreparation/uid
+=== RUN   TestDiscoveryConfigCleanupPreparation/target
+=== RUN   TestDiscoveryConfigCleanupPreparation/action
+=== RUN   TestDiscoveryConfigCleanupPreparation/resource
+=== RUN   TestDiscoveryConfigCleanupPreparation/section
+=== RUN   TestDiscoveryConfigCleanupPreparation/extra-identity
+--- PASS: TestDiscoveryConfigCleanupPreparation (0.05s)
+    --- PASS: TestDiscoveryConfigCleanupPreparation/deletion (0.00s)
+    --- PASS: TestDiscoveryConfigCleanupPreparation/spec (0.00s)
+    --- PASS: TestDiscoveryConfigCleanupPreparation/generation (0.00s)
+    --- PASS: TestDiscoveryConfigCleanupPreparation/version (0.00s)
+    --- PASS: TestDiscoveryConfigCleanupPreparation/uid (0.00s)
+    --- PASS: TestDiscoveryConfigCleanupPreparation/target (0.00s)
+    --- PASS: TestDiscoveryConfigCleanupPreparation/action (0.00s)
+    --- PASS: TestDiscoveryConfigCleanupPreparation/resource (0.00s)
+    --- PASS: TestDiscoveryConfigCleanupPreparation/section (0.00s)
+    --- PASS: TestDiscoveryConfigCleanupPreparation/extra-identity (0.00s)
+=== RUN   TestDiscoveryConfigDeletionDrain
+=== RUN   TestDiscoveryConfigDeletionDrain/create
+=== RUN   TestDiscoveryConfigDeletionDrain/known-task
+=== RUN   TestDiscoveryConfigDeletionDrain/prepared
+=== RUN   TestDiscoveryConfigDeletionDrain/delete
+=== RUN   TestDiscoveryConfigDeletionDrain/prune
+=== RUN   TestDiscoveryConfigDeletionDrain/missing-task
+=== RUN   TestDiscoveryConfigDeletionDrain/submitting
+=== RUN   TestDiscoveryConfigDeletionDrain/failed-task
+=== RUN   TestDiscoveryConfigDeletionDrain/wrong-task
+=== RUN   TestDiscoveryConfigDeletionDrain/generation
+=== RUN   TestDiscoveryConfigDeletionDrain/owner
+=== RUN   TestDiscoveryConfigDeletionDrain/source-version
+=== RUN   TestDiscoveryConfigDeletionDrain/foreign-resource
+=== RUN   TestDiscoveryConfigDeletionDrain/native-drift
+=== RUN   TestDiscoveryConfigDeletionDrain/submitted-later
+=== RUN   TestDiscoveryConfigDeletionDrain/missing-receipt
+--- PASS: TestDiscoveryConfigDeletionDrain (0.48s)
+    --- PASS: TestDiscoveryConfigDeletionDrain/create (0.05s)
+    --- PASS: TestDiscoveryConfigDeletionDrain/known-task (0.05s)
+    --- PASS: TestDiscoveryConfigDeletionDrain/prepared (0.02s)
+    --- PASS: TestDiscoveryConfigDeletionDrain/delete (0.04s)
+    --- PASS: TestDiscoveryConfigDeletionDrain/prune (0.05s)
+    --- PASS: TestDiscoveryConfigDeletionDrain/missing-task (0.02s)
+    --- PASS: TestDiscoveryConfigDeletionDrain/submitting (0.02s)
+    --- PASS: TestDiscoveryConfigDeletionDrain/failed-task (0.03s)
+    --- PASS: TestDiscoveryConfigDeletionDrain/wrong-task (0.03s)
+    --- PASS: TestDiscoveryConfigDeletionDrain/generation (0.02s)
+    --- PASS: TestDiscoveryConfigDeletionDrain/owner (0.02s)
+    --- PASS: TestDiscoveryConfigDeletionDrain/source-version (0.02s)
+    --- PASS: TestDiscoveryConfigDeletionDrain/foreign-resource (0.02s)
+    --- PASS: TestDiscoveryConfigDeletionDrain/native-drift (0.03s)
+    --- PASS: TestDiscoveryConfigDeletionDrain/submitted-later (0.02s)
+    --- PASS: TestDiscoveryConfigDeletionDrain/missing-receipt (0.04s)
+=== RUN   TestDiscoveryPublicConfigDeletion
+=== RUN   TestDiscoveryPublicConfigDeletion/owned
+=== RUN   TestDiscoveryPublicConfigDeletion/create
+=== RUN   TestDiscoveryPublicConfigDeletion/inflight-create
+=== RUN   TestDiscoveryPublicConfigDeletion/configmap-create
+=== RUN   TestDiscoveryPublicConfigDeletion/prepared
+=== RUN   TestDiscoveryPublicConfigDeletion/empty
+=== RUN   TestDiscoveryPublicConfigDeletion/unowned
+=== RUN   TestDiscoveryPublicConfigDeletion/lost-ack
+=== RUN   TestDiscoveryPublicConfigDeletion/native-drift
+=== RUN   TestDiscoveryPublicConfigDeletion/source-missing
+=== RUN   TestDiscoveryPublicConfigDeletion/unsupported-source
+=== RUN   TestDiscoveryPublicConfigDeletion/foreign-operation
+=== RUN   TestDiscoveryPublicConfigDeletion/family-conflict
+=== RUN   TestDiscoveryPublicConfigDeletion/task-timeout
+=== RUN   TestDiscoveryPublicConfigDeletion/configmap-gone
+=== RUN   TestDiscoveryPublicConfigDeletion/configmap-gone-inflight
+=== RUN   TestDiscoveryPublicConfigDeletion/configmap-replaced
+=== RUN   TestDiscoveryPublicConfigDeletion/configmap-edited
+=== RUN   TestDiscoveryPublicConfigDeletion/scope-pruned
+=== RUN   TestDiscoveryPublicConfigDeletion/scope-forged
+=== RUN   TestDiscoveryPublicConfigDeletion/scope-spec-edited
+=== RUN   TestDiscoveryPublicConfigDeletion/gone-native-drift
+=== RUN   TestDiscoveryPublicConfigDeletion/gone-lost-ack
+--- PASS: TestDiscoveryPublicConfigDeletion (4.70s)
+    --- PASS: TestDiscoveryPublicConfigDeletion/owned (0.13s)
+    --- PASS: TestDiscoveryPublicConfigDeletion/create (0.19s)
+    --- PASS: TestDiscoveryPublicConfigDeletion/inflight-create (0.18s)
+    --- PASS: TestDiscoveryPublicConfigDeletion/configmap-create (0.21s)
+    --- PASS: TestDiscoveryPublicConfigDeletion/prepared (0.13s)
+    --- PASS: TestDiscoveryPublicConfigDeletion/empty (0.06s)
+    --- PASS: TestDiscoveryPublicConfigDeletion/unowned (0.06s)
+    --- PASS: TestDiscoveryPublicConfigDeletion/lost-ack (0.24s)
+    --- PASS: TestDiscoveryPublicConfigDeletion/native-drift (0.23s)
+    --- PASS: TestDiscoveryPublicConfigDeletion/source-missing (0.19s)
+    --- PASS: TestDiscoveryPublicConfigDeletion/unsupported-source (0.19s)
+    --- PASS: TestDiscoveryPublicConfigDeletion/foreign-operation (0.17s)
+    --- PASS: TestDiscoveryPublicConfigDeletion/family-conflict (0.16s)
+    --- PASS: TestDiscoveryPublicConfigDeletion/task-timeout (0.20s)
+    --- PASS: TestDiscoveryPublicConfigDeletion/configmap-gone (0.21s)
+    --- PASS: TestDiscoveryPublicConfigDeletion/configmap-gone-inflight (0.19s)
+    --- PASS: TestDiscoveryPublicConfigDeletion/configmap-replaced (0.22s)
+    --- PASS: TestDiscoveryPublicConfigDeletion/configmap-edited (0.21s)
+    --- PASS: TestDiscoveryPublicConfigDeletion/scope-pruned (0.27s)
+    --- PASS: TestDiscoveryPublicConfigDeletion/scope-forged (0.30s)
+    --- PASS: TestDiscoveryPublicConfigDeletion/scope-spec-edited (0.31s)
+    --- PASS: TestDiscoveryPublicConfigDeletion/gone-native-drift (0.32s)
+    --- PASS: TestDiscoveryPublicConfigDeletion/gone-lost-ack (0.34s)
+=== RUN   TestDiscoveryCredentialHistoryCohort
+=== RUN   TestDiscoveryCredentialHistoryCohort/complete
+=== RUN   TestDiscoveryCredentialHistoryCohort/complete/same-current
+=== RUN   TestDiscoveryCredentialHistoryCohort/complete/archived-password
+=== RUN   TestDiscoveryCredentialHistoryCohort/complete/removed-field
+=== RUN   TestDiscoveryCredentialHistoryCohort/complete/queued-is-not-delivered
+=== RUN   TestDiscoveryCredentialHistoryCohort/empty-current
+=== RUN   TestDiscoveryCredentialHistoryCohort/empty-current/same-current
+=== RUN   TestDiscoveryCredentialHistoryCohort/empty-current/archived-password
+=== RUN   TestDiscoveryCredentialHistoryCohort/empty-current/removed-field
+=== RUN   TestDiscoveryCredentialHistoryCohort/empty-current/queued-is-not-delivered
+=== RUN   TestDiscoveryCredentialHistoryCohort/reordered
+=== RUN   TestDiscoveryCredentialHistoryCohort/reordered/same-current
+=== RUN   TestDiscoveryCredentialHistoryCohort/reordered/archived-password
+=== RUN   TestDiscoveryCredentialHistoryCohort/reordered/removed-field
+=== RUN   TestDiscoveryCredentialHistoryCohort/reordered/queued-is-not-delivered
+=== RUN   TestDiscoveryCredentialHistoryCohort/open-archive
+=== RUN   TestDiscoveryCredentialHistoryCohort/missing-pair
+=== RUN   TestDiscoveryCredentialHistoryCohort/missing-creator
+=== RUN   TestDiscoveryCredentialHistoryCohort/missing-retirement
+=== RUN   TestDiscoveryCredentialHistoryCohort/unknown-receipt
+=== RUN   TestDiscoveryCredentialHistoryCohort/unknown-application
+=== RUN   TestDiscoveryCredentialHistoryCohort/foreign-pending
+=== RUN   TestDiscoveryCredentialHistoryCohort/group-cancellation
+=== RUN   TestDiscoveryCredentialHistoryCohort/duplicate-operation
+=== RUN   TestDiscoveryCredentialHistoryCohort/foreign-operation-collision
+=== RUN   TestDiscoveryCredentialHistoryCohort/native-id-reuse
+=== RUN   TestDiscoveryCredentialHistoryCohort/owner-name
+=== RUN   TestDiscoveryCredentialHistoryCohort/wrong-reservation
+=== RUN   TestDiscoveryCredentialHistoryCohort/counter-reuse
+=== RUN   TestDiscoveryCredentialHistoryCohort/removed-field-reuse
+--- PASS: TestDiscoveryCredentialHistoryCohort (0.07s)
+    --- PASS: TestDiscoveryCredentialHistoryCohort/complete (0.01s)
+        --- PASS: TestDiscoveryCredentialHistoryCohort/complete/same-current (0.00s)
+        --- PASS: TestDiscoveryCredentialHistoryCohort/complete/archived-password (0.00s)
+        --- PASS: TestDiscoveryCredentialHistoryCohort/complete/removed-field (0.00s)
+        --- PASS: TestDiscoveryCredentialHistoryCohort/complete/queued-is-not-delivered (0.00s)
+    --- PASS: TestDiscoveryCredentialHistoryCohort/empty-current (0.00s)
+        --- PASS: TestDiscoveryCredentialHistoryCohort/empty-current/same-current (0.00s)
+        --- PASS: TestDiscoveryCredentialHistoryCohort/empty-current/archived-password (0.00s)
+        --- PASS: TestDiscoveryCredentialHistoryCohort/empty-current/removed-field (0.00s)
+        --- PASS: TestDiscoveryCredentialHistoryCohort/empty-current/queued-is-not-delivered (0.00s)
+    --- PASS: TestDiscoveryCredentialHistoryCohort/reordered (0.00s)
+        --- PASS: TestDiscoveryCredentialHistoryCohort/reordered/same-current (0.00s)
+        --- PASS: TestDiscoveryCredentialHistoryCohort/reordered/archived-password (0.00s)
+        --- PASS: TestDiscoveryCredentialHistoryCohort/reordered/removed-field (0.00s)
+        --- PASS: TestDiscoveryCredentialHistoryCohort/reordered/queued-is-not-delivered (0.00s)
+    --- PASS: TestDiscoveryCredentialHistoryCohort/open-archive (0.00s)
+    --- PASS: TestDiscoveryCredentialHistoryCohort/missing-pair (0.00s)
+    --- PASS: TestDiscoveryCredentialHistoryCohort/missing-creator (0.00s)
+    --- PASS: TestDiscoveryCredentialHistoryCohort/missing-retirement (0.00s)
+    --- PASS: TestDiscoveryCredentialHistoryCohort/unknown-receipt (0.00s)
+    --- PASS: TestDiscoveryCredentialHistoryCohort/unknown-application (0.00s)
+    --- PASS: TestDiscoveryCredentialHistoryCohort/foreign-pending (0.00s)
+    --- PASS: TestDiscoveryCredentialHistoryCohort/group-cancellation (0.00s)
+    --- PASS: TestDiscoveryCredentialHistoryCohort/duplicate-operation (0.00s)
+    --- PASS: TestDiscoveryCredentialHistoryCohort/foreign-operation-collision (0.00s)
+    --- PASS: TestDiscoveryCredentialHistoryCohort/native-id-reuse (0.00s)
+    --- PASS: TestDiscoveryCredentialHistoryCohort/owner-name (0.00s)
+    --- PASS: TestDiscoveryCredentialHistoryCohort/wrong-reservation (0.00s)
+    --- PASS: TestDiscoveryCredentialHistoryCohort/counter-reuse (0.00s)
+    --- PASS: TestDiscoveryCredentialHistoryCohort/removed-field-reuse (0.00s)
+=== RUN   TestDiscoveryCredentialCohortDigestRequiresAuthority
+--- PASS: TestDiscoveryCredentialCohortDigestRequiresAuthority (0.00s)
+=== RUN   TestDiscoveryCredentialCohortSealAcrossReservation
+--- PASS: TestDiscoveryCredentialCohortSealAcrossReservation (0.00s)
+=== RUN   TestDiscoveryCredentialConfigCleanupCompletion
+=== RUN   TestDiscoveryCredentialConfigCleanupCompletion/inline
+=== RUN   TestDiscoveryCredentialConfigCleanupCompletion/inline/history-seal
+=== RUN   TestDiscoveryCredentialConfigCleanupCompletion/inline/history-seal-version
+=== RUN   TestDiscoveryCredentialConfigCleanupCompletion/inline/owner
+=== RUN   TestDiscoveryCredentialConfigCleanupCompletion/inline/credential-pair
+=== RUN   TestDiscoveryCredentialConfigCleanupCompletion/inline/retirement-receipt
+=== RUN   TestDiscoveryCredentialConfigCleanupCompletion/inline/completion-condition
+=== RUN   TestDiscoveryCredentialConfigCleanupCompletion/inline/retirement-condition
+=== RUN   TestDiscoveryCredentialConfigCleanupCompletion/inline/controller-generation
+=== RUN   TestDiscoveryCredentialConfigCleanupCompletion/inline/config-uid
+=== RUN   TestDiscoveryCredentialConfigCleanupCompletion/inline/family-conflict
+=== RUN   TestDiscoveryCredentialConfigCleanupCompletion/inline/paused
+=== RUN   TestDiscoveryCredentialConfigCleanupCompletion/inline/undeleting
+=== RUN   TestDiscoveryCredentialConfigCleanupCompletion/inline/source-fields
+=== RUN   TestDiscoveryCredentialConfigCleanupCompletion/inline/digest
+=== RUN   TestDiscoveryCredentialConfigCleanupCompletion/configmap
+=== RUN   TestDiscoveryCredentialConfigCleanupCompletion/active
+=== RUN   TestDiscoveryCredentialConfigCleanupCompletion/after-source-loss
+=== RUN   TestDiscoveryCredentialConfigCleanupCompletion/after-source-change
+=== RUN   TestDiscoveryCredentialConfigCleanupCompletion/completion-source-gone
+=== RUN   TestDiscoveryCredentialConfigCleanupCompletion/completion-native-return
+=== RUN   TestDiscoveryCredentialConfigCleanupCompletion/completion-pruned-pair
+=== RUN   TestDiscoveryCredentialConfigCleanupCompletion/completion-pending
+=== RUN   TestDiscoveryCredentialConfigCleanupCompletion/completion-lost-ack
+=== RUN   TestDiscoveryCredentialConfigCleanupCompletion/completion-conflict
+--- PASS: TestDiscoveryCredentialConfigCleanupCompletion (2.95s)
+    --- PASS: TestDiscoveryCredentialConfigCleanupCompletion/inline (0.27s)
+        --- PASS: TestDiscoveryCredentialConfigCleanupCompletion/inline/history-seal (0.00s)
+        --- PASS: TestDiscoveryCredentialConfigCleanupCompletion/inline/history-seal-version (0.00s)
+        --- PASS: TestDiscoveryCredentialConfigCleanupCompletion/inline/owner (0.00s)
+        --- PASS: TestDiscoveryCredentialConfigCleanupCompletion/inline/credential-pair (0.00s)
+        --- PASS: TestDiscoveryCredentialConfigCleanupCompletion/inline/retirement-receipt (0.00s)
+        --- PASS: TestDiscoveryCredentialConfigCleanupCompletion/inline/completion-condition (0.00s)
+        --- PASS: TestDiscoveryCredentialConfigCleanupCompletion/inline/retirement-condition (0.00s)
+        --- PASS: TestDiscoveryCredentialConfigCleanupCompletion/inline/controller-generation (0.00s)
+        --- PASS: TestDiscoveryCredentialConfigCleanupCompletion/inline/config-uid (0.00s)
+        --- PASS: TestDiscoveryCredentialConfigCleanupCompletion/inline/family-conflict (0.00s)
+        --- PASS: TestDiscoveryCredentialConfigCleanupCompletion/inline/paused (0.00s)
+        --- PASS: TestDiscoveryCredentialConfigCleanupCompletion/inline/undeleting (0.00s)
+        --- PASS: TestDiscoveryCredentialConfigCleanupCompletion/inline/source-fields (0.00s)
+        --- PASS: TestDiscoveryCredentialConfigCleanupCompletion/inline/digest (0.00s)
+    --- PASS: TestDiscoveryCredentialConfigCleanupCompletion/configmap (0.28s)
+    --- PASS: TestDiscoveryCredentialConfigCleanupCompletion/active (0.26s)
+    --- PASS: TestDiscoveryCredentialConfigCleanupCompletion/after-source-loss (0.26s)
+    --- PASS: TestDiscoveryCredentialConfigCleanupCompletion/after-source-change (0.28s)
+    --- PASS: TestDiscoveryCredentialConfigCleanupCompletion/completion-source-gone (0.28s)
+    --- PASS: TestDiscoveryCredentialConfigCleanupCompletion/completion-native-return (0.23s)
+    --- PASS: TestDiscoveryCredentialConfigCleanupCompletion/completion-pruned-pair (0.29s)
+    --- PASS: TestDiscoveryCredentialConfigCleanupCompletion/completion-pending (0.24s)
+    --- PASS: TestDiscoveryCredentialConfigCleanupCompletion/completion-lost-ack (0.26s)
+    --- PASS: TestDiscoveryCredentialConfigCleanupCompletion/completion-conflict (0.28s)
+=== RUN   TestDiscoveryCredentialConfigCleanupExecution
+=== RUN   TestDiscoveryCredentialConfigCleanupExecution/inline
+=== RUN   TestDiscoveryCredentialConfigCleanupExecution/configmap
+=== RUN   TestDiscoveryCredentialConfigCleanupExecution/active
+=== RUN   TestDiscoveryCredentialConfigCleanupExecution/known-unknown
+=== RUN   TestDiscoveryCredentialConfigCleanupExecution/lost-permit-ack
+=== RUN   TestDiscoveryCredentialConfigCleanupExecution/lost-accepted-ack
+=== RUN   TestDiscoveryCredentialConfigCleanupExecution/lost-receipt-ack
+=== RUN   TestDiscoveryCredentialConfigCleanupExecution/receipt-conflict
+=== RUN   TestDiscoveryCredentialConfigCleanupExecution/pruned-retirement
+=== RUN   TestDiscoveryCredentialConfigCleanupExecution/ambiguous
+=== RUN   TestDiscoveryCredentialConfigCleanupExecution/network-error
+=== RUN   TestDiscoveryCredentialConfigCleanupExecution/failed-task
+=== RUN   TestDiscoveryCredentialConfigCleanupExecution/pending-task
+=== RUN   TestDiscoveryCredentialConfigCleanupExecution/foreign-task
+=== RUN   TestDiscoveryCredentialConfigCleanupExecution/retained-native
+=== RUN   TestDiscoveryCredentialConfigCleanupExecution/foreign-after-delete
+=== RUN   TestDiscoveryCredentialConfigCleanupExecution/late-native-drift
+=== RUN   TestDiscoveryCredentialConfigCleanupExecution/late-source
+=== RUN   TestDiscoveryCredentialConfigCleanupExecution/after-source-loss
+=== RUN   TestDiscoveryCredentialConfigCleanupExecution/after-source-change
+=== RUN   TestDiscoveryCredentialConfigCleanupExecution/after-config-change
+=== RUN   TestDiscoveryCredentialConfigCleanupExecution/permit-native-drift
+=== RUN   TestDiscoveryCredentialConfigCleanupExecution/permit-source-race
+=== RUN   TestDiscoveryCredentialConfigCleanupExecution/permit-journal-race
+=== RUN   TestDiscoveryCredentialConfigCleanupExecution/projection-return
+=== RUN   TestDiscoveryCredentialConfigCleanupExecution/after-source-identity-change
+=== RUN   TestDiscoveryCredentialConfigCleanupExecution/legacy-preparation
+=== RUN   TestDiscoveryCredentialConfigCleanupExecution/unsupported-version
+--- PASS: TestDiscoveryCredentialConfigCleanupExecution (6.24s)
+    --- PASS: TestDiscoveryCredentialConfigCleanupExecution/inline (0.22s)
+    --- PASS: TestDiscoveryCredentialConfigCleanupExecution/configmap (0.23s)
+    --- PASS: TestDiscoveryCredentialConfigCleanupExecution/active (0.22s)
+    --- PASS: TestDiscoveryCredentialConfigCleanupExecution/known-unknown (0.23s)
+    --- PASS: TestDiscoveryCredentialConfigCleanupExecution/lost-permit-ack (0.19s)
+    --- PASS: TestDiscoveryCredentialConfigCleanupExecution/lost-accepted-ack (0.23s)
+    --- PASS: TestDiscoveryCredentialConfigCleanupExecution/lost-receipt-ack (0.22s)
+    --- PASS: TestDiscoveryCredentialConfigCleanupExecution/receipt-conflict (0.23s)
+    --- PASS: TestDiscoveryCredentialConfigCleanupExecution/pruned-retirement (0.25s)
+    --- PASS: TestDiscoveryCredentialConfigCleanupExecution/ambiguous (0.20s)
+    --- PASS: TestDiscoveryCredentialConfigCleanupExecution/network-error (0.20s)
+    --- PASS: TestDiscoveryCredentialConfigCleanupExecution/failed-task (0.24s)
+    --- PASS: TestDiscoveryCredentialConfigCleanupExecution/pending-task (0.23s)
+    --- PASS: TestDiscoveryCredentialConfigCleanupExecution/foreign-task (0.23s)
+    --- PASS: TestDiscoveryCredentialConfigCleanupExecution/retained-native (0.27s)
+    --- PASS: TestDiscoveryCredentialConfigCleanupExecution/foreign-after-delete (0.27s)
+    --- PASS: TestDiscoveryCredentialConfigCleanupExecution/late-native-drift (0.25s)
+    --- PASS: TestDiscoveryCredentialConfigCleanupExecution/late-source (0.31s)
+    --- PASS: TestDiscoveryCredentialConfigCleanupExecution/after-source-loss (0.22s)
+    --- PASS: TestDiscoveryCredentialConfigCleanupExecution/after-source-change (0.24s)
+    --- PASS: TestDiscoveryCredentialConfigCleanupExecution/after-config-change (0.21s)
+    --- PASS: TestDiscoveryCredentialConfigCleanupExecution/permit-native-drift (0.18s)
+    --- PASS: TestDiscoveryCredentialConfigCleanupExecution/permit-source-race (0.19s)
+    --- PASS: TestDiscoveryCredentialConfigCleanupExecution/permit-journal-race (0.18s)
+    --- PASS: TestDiscoveryCredentialConfigCleanupExecution/projection-return (0.22s)
+    --- PASS: TestDiscoveryCredentialConfigCleanupExecution/after-source-identity-change (0.22s)
+    --- PASS: TestDiscoveryCredentialConfigCleanupExecution/legacy-preparation (0.18s)
+    --- PASS: TestDiscoveryCredentialConfigCleanupExecution/unsupported-version (0.18s)
+=== RUN   TestDiscoveryCredentialConfigCleanupObservation
+=== RUN   TestDiscoveryCredentialConfigCleanupObservation/inline
+=== RUN   TestDiscoveryCredentialConfigCleanupObservation/configmap
+=== RUN   TestDiscoveryCredentialConfigCleanupObservation/active
+=== RUN   TestDiscoveryCredentialConfigCleanupObservation/missing-native
+=== RUN   TestDiscoveryCredentialConfigCleanupObservation/native-drift
+=== RUN   TestDiscoveryCredentialConfigCleanupObservation/foreign-uuid
+=== RUN   TestDiscoveryCredentialConfigCleanupObservation/wrong-name
+=== RUN   TestDiscoveryCredentialConfigCleanupObservation/source-race
+=== RUN   TestDiscoveryCredentialConfigCleanupObservation/config-race
+=== RUN   TestDiscoveryCredentialConfigCleanupObservation/journal-race
+=== RUN   TestDiscoveryCredentialConfigCleanupObservation/projection-lost
+=== RUN   TestDiscoveryCredentialConfigCleanupObservation/owner-revoked
+=== RUN   TestDiscoveryCredentialConfigCleanupObservation/legacy
+=== RUN   TestDiscoveryCredentialConfigCleanupObservation/missing-pair
+=== RUN   TestDiscoveryCredentialConfigCleanupObservation/family-conflict
+=== RUN   TestDiscoveryCredentialConfigCleanupObservation/future-generation
+=== RUN   TestDiscoveryCredentialConfigCleanupObservation/foreign-config-name
+=== RUN   TestDiscoveryCredentialConfigCleanupObservation/unknown-receipt
+--- PASS: TestDiscoveryCredentialConfigCleanupObservation (2.19s)
+    --- PASS: TestDiscoveryCredentialConfigCleanupObservation/inline (0.13s)
+    --- PASS: TestDiscoveryCredentialConfigCleanupObservation/configmap (0.14s)
+    --- PASS: TestDiscoveryCredentialConfigCleanupObservation/active (0.12s)
+    --- PASS: TestDiscoveryCredentialConfigCleanupObservation/missing-native (0.12s)
+    --- PASS: TestDiscoveryCredentialConfigCleanupObservation/native-drift (0.12s)
+    --- PASS: TestDiscoveryCredentialConfigCleanupObservation/foreign-uuid (0.12s)
+    --- PASS: TestDiscoveryCredentialConfigCleanupObservation/wrong-name (0.12s)
+    --- PASS: TestDiscoveryCredentialConfigCleanupObservation/source-race (0.13s)
+    --- PASS: TestDiscoveryCredentialConfigCleanupObservation/config-race (0.12s)
+    --- PASS: TestDiscoveryCredentialConfigCleanupObservation/journal-race (0.12s)
+    --- PASS: TestDiscoveryCredentialConfigCleanupObservation/projection-lost (0.11s)
+    --- PASS: TestDiscoveryCredentialConfigCleanupObservation/owner-revoked (0.12s)
+    --- PASS: TestDiscoveryCredentialConfigCleanupObservation/legacy (0.12s)
+    --- PASS: TestDiscoveryCredentialConfigCleanupObservation/missing-pair (0.12s)
+    --- PASS: TestDiscoveryCredentialConfigCleanupObservation/family-conflict (0.12s)
+    --- PASS: TestDiscoveryCredentialConfigCleanupObservation/future-generation (0.12s)
+    --- PASS: TestDiscoveryCredentialConfigCleanupObservation/foreign-config-name (0.12s)
+    --- PASS: TestDiscoveryCredentialConfigCleanupObservation/unknown-receipt (0.12s)
+=== RUN   TestDiscoveryCredentialConfigCleanupPreparation
+=== RUN   TestDiscoveryCredentialConfigCleanupPreparation/inline
+=== RUN   TestDiscoveryCredentialConfigCleanupPreparation/configmap
+=== RUN   TestDiscoveryCredentialConfigCleanupPreparation/active
+=== RUN   TestDiscoveryCredentialConfigCleanupPreparation/missing-native
+=== RUN   TestDiscoveryCredentialConfigCleanupPreparation/native-drift
+=== RUN   TestDiscoveryCredentialConfigCleanupPreparation/foreign-uuid
+=== RUN   TestDiscoveryCredentialConfigCleanupPreparation/wrong-name
+=== RUN   TestDiscoveryCredentialConfigCleanupPreparation/source-race
+=== RUN   TestDiscoveryCredentialConfigCleanupPreparation/config-race
+=== RUN   TestDiscoveryCredentialConfigCleanupPreparation/journal-race
+=== RUN   TestDiscoveryCredentialConfigCleanupPreparation/projection-lost
+=== RUN   TestDiscoveryCredentialConfigCleanupPreparation/owner-revoked
+=== RUN   TestDiscoveryCredentialConfigCleanupPreparation/legacy
+=== RUN   TestDiscoveryCredentialConfigCleanupPreparation/missing-pair
+=== RUN   TestDiscoveryCredentialConfigCleanupPreparation/family-conflict
+=== RUN   TestDiscoveryCredentialConfigCleanupPreparation/future-generation
+=== RUN   TestDiscoveryCredentialConfigCleanupPreparation/foreign-config-name
+=== RUN   TestDiscoveryCredentialConfigCleanupPreparation/unknown-receipt
+--- PASS: TestDiscoveryCredentialConfigCleanupPreparation (2.35s)
+    --- PASS: TestDiscoveryCredentialConfigCleanupPreparation/inline (0.15s)
+    --- PASS: TestDiscoveryCredentialConfigCleanupPreparation/configmap (0.16s)
+    --- PASS: TestDiscoveryCredentialConfigCleanupPreparation/active (0.16s)
+    --- PASS: TestDiscoveryCredentialConfigCleanupPreparation/missing-native (0.12s)
+    --- PASS: TestDiscoveryCredentialConfigCleanupPreparation/native-drift (0.12s)
+    --- PASS: TestDiscoveryCredentialConfigCleanupPreparation/foreign-uuid (0.13s)
+    --- PASS: TestDiscoveryCredentialConfigCleanupPreparation/wrong-name (0.12s)
+    --- PASS: TestDiscoveryCredentialConfigCleanupPreparation/source-race (0.15s)
+    --- PASS: TestDiscoveryCredentialConfigCleanupPreparation/config-race (0.13s)
+    --- PASS: TestDiscoveryCredentialConfigCleanupPreparation/journal-race (0.13s)
+    --- PASS: TestDiscoveryCredentialConfigCleanupPreparation/projection-lost (0.12s)
+    --- PASS: TestDiscoveryCredentialConfigCleanupPreparation/owner-revoked (0.12s)
+    --- PASS: TestDiscoveryCredentialConfigCleanupPreparation/legacy (0.12s)
+    --- PASS: TestDiscoveryCredentialConfigCleanupPreparation/missing-pair (0.12s)
+    --- PASS: TestDiscoveryCredentialConfigCleanupPreparation/family-conflict (0.12s)
+    --- PASS: TestDiscoveryCredentialConfigCleanupPreparation/future-generation (0.12s)
+    --- PASS: TestDiscoveryCredentialConfigCleanupPreparation/foreign-config-name (0.13s)
+    --- PASS: TestDiscoveryCredentialConfigCleanupPreparation/unknown-receipt (0.12s)
+=== RUN   TestDiscoveryCredentialCustodyCancellation
+=== RUN   TestDiscoveryCredentialCustodyCancellation/drain-prepared
+=== RUN   TestDiscoveryCredentialCustodyCancellation/drain-prepared-handoff
+=== RUN   TestDiscoveryCredentialCustodyCancellation/drain-prepared-retained-source-loss
+=== RUN   TestDiscoveryCredentialCustodyCancellation/drain-prepared-retained-projection-loss
+=== RUN   TestDiscoveryCredentialCustodyCancellation/drain-prepared-configmap
+=== RUN   TestDiscoveryCredentialCustodyCancellation/drain-prepared-source-loss
+=== RUN   TestDiscoveryCredentialCustodyCancellation/drain-prepared-projection-loss
+=== RUN   TestDiscoveryCredentialCustodyCancellation/drain-prepared-scope-loss
+=== RUN   TestDiscoveryCredentialCustodyCancellation/drain-prepared-native-conflict
+=== RUN   TestDiscoveryCredentialCustodyCancellation/drain-prepared-native-error
+=== RUN   TestDiscoveryCredentialCustodyCancellation/drain-prepared-source-race
+[controller-runtime] log.SetLogger(...) was never called; logs will not be displayed.
+Detected at:
+	>  goroutine 4271 [running]:
+	>  runtime/debug.Stack()
+	>  	/Users/johalley/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.9.darwin-arm64/src/runtime/debug/stack.go:26 +0x6c
+	>  sigs.k8s.io/controller-runtime/pkg/log.eventuallyFulfillRoot()
+	>  	/Users/johalley/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.23.3/pkg/log/log.go:60 +0xc4
+	>  sigs.k8s.io/controller-runtime/pkg/log.(*delegatingLogSink).WithValues(0xc0004e68c0, {0x0, 0x0, 0x0})
+	>  	/Users/johalley/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.23.3/pkg/log/deleg.go:168 +0x3c
+	>  github.com/go-logr/logr.Logger.WithValues(...)
+	>  	/Users/johalley/go/pkg/mod/github.com/go-logr/logr@v1.4.4/logr.go:332
+	>  sigs.k8s.io/controller-runtime/pkg/log.FromContext({0x10a4ba168, 0x10b600c00}, {0x0, 0x0, 0x0})
+	>  	/Users/johalley/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.23.3/pkg/log/log.go:98 +0xb8
+	>  github.com/cisco/virtual-kubelet-cisco/internal/controller.(*NetworkControllerReconciler).Reconcile(0xc0004a0460, {0x10a4ba168, 0x10b600c00}, {{{0x107b2593f, 0x3}, {0x107b26329, 0x4}}})
+	>  	/Users/johalley/Git/cisco-virtual-kubelet/internal/controller/networkcontroller_controller.go:101 +0x5c
+	>  github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter.exerciseDiscoveryCredentialCompletion(0xc00066e008, 0xc0004a86e0, 0xc000055b08, {0x107b7abc7, 0x11}, 0xc0006e2e18, 0x0, 0xc0006e2e10)
+	>  	/Users/johalley/Git/cisco-virtual-kubelet/internal/controlleradapter/catalystcenter/discovery_credential_config_cleanup_completion_test.go:250 +0x1840
+	>  github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter.discoveryCredentialCleanupObservationScenario(0xc00066e008, {0xc001008370, 0x41}, 0x0)
+	>  	/Users/johalley/Git/cisco-virtual-kubelet/internal/controlleradapter/catalystcenter/discovery_credential_config_cleanup_observation_test.go:641 +0x602c
+	>  github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter.TestDiscoveryCredentialCustodyCancellation.func1(0xc00066e008)
+	>  	/Users/johalley/Git/cisco-virtual-kubelet/internal/controlleradapter/catalystcenter/discovery_credential_custody_cancellation_test.go:25 +0x60
+	>  testing.tRunner(0xc00066e008, 0xc0011c6138)
+	>  	/Users/johalley/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.9.darwin-arm64/src/testing/testing.go:2036 +0x168
+	>  created by testing.(*T).Run in goroutine 3654
+	>  	/Users/johalley/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.9.darwin-arm64/src/testing/testing.go:2101 +0x7c0
+=== RUN   TestDiscoveryCredentialCustodyCancellation/drain-prepared-config-race
+=== RUN   TestDiscoveryCredentialCustodyCancellation/drain-prepared-journal-race
+=== RUN   TestDiscoveryCredentialCustodyCancellation/drain-prepared-task-contamination
+=== RUN   TestDiscoveryCredentialCustodyCancellation/drain-prepared-credential-contamination
+=== RUN   TestDiscoveryCredentialCustodyCancellation/drain-prepared-lost-retirement-ack
+=== RUN   TestDiscoveryCredentialCustodyCancellation/drain-prepared-conflict-retirement
+=== RUN   TestDiscoveryCredentialCustodyCancellation/drain-prepared-lost-completion-ack
+=== RUN   TestDiscoveryCredentialCustodyCancellation/drain-prepared-conflict-completion
+=== RUN   TestDiscoveryCredentialCustodyCancellation/drain-prepared-returned-archive
+=== RUN   TestDiscoveryCredentialCustodyCancellation/drain-prepared-missing-seal
+=== RUN   TestDiscoveryCredentialCustodyCancellation/drain-prepared-archive-loss
+=== RUN   TestDiscoveryCredentialCustodyCancellation/drain-prepared-secret-replan
+=== RUN   TestDiscoveryCredentialCustodyCancellation/drain-prepared-retained-native-return
+--- PASS: TestDiscoveryCredentialCustodyCancellation (14.76s)
+    --- PASS: TestDiscoveryCredentialCustodyCancellation/drain-prepared (0.54s)
+    --- PASS: TestDiscoveryCredentialCustodyCancellation/drain-prepared-handoff (1.58s)
+    --- PASS: TestDiscoveryCredentialCustodyCancellation/drain-prepared-retained-source-loss (0.55s)
+    --- PASS: TestDiscoveryCredentialCustodyCancellation/drain-prepared-retained-projection-loss (0.55s)
+    --- PASS: TestDiscoveryCredentialCustodyCancellation/drain-prepared-configmap (0.53s)
+    --- PASS: TestDiscoveryCredentialCustodyCancellation/drain-prepared-source-loss (0.63s)
+    --- PASS: TestDiscoveryCredentialCustodyCancellation/drain-prepared-projection-loss (0.63s)
+    --- PASS: TestDiscoveryCredentialCustodyCancellation/drain-prepared-scope-loss (0.53s)
+    --- PASS: TestDiscoveryCredentialCustodyCancellation/drain-prepared-native-conflict (0.66s)
+    --- PASS: TestDiscoveryCredentialCustodyCancellation/drain-prepared-native-error (0.65s)
+    --- PASS: TestDiscoveryCredentialCustodyCancellation/drain-prepared-source-race (0.64s)
+    --- PASS: TestDiscoveryCredentialCustodyCancellation/drain-prepared-config-race (0.55s)
+    --- PASS: TestDiscoveryCredentialCustodyCancellation/drain-prepared-journal-race (0.55s)
+    --- PASS: TestDiscoveryCredentialCustodyCancellation/drain-prepared-task-contamination (0.54s)
+    --- PASS: TestDiscoveryCredentialCustodyCancellation/drain-prepared-credential-contamination (0.54s)
+    --- PASS: TestDiscoveryCredentialCustodyCancellation/drain-prepared-lost-retirement-ack (0.55s)
+    --- PASS: TestDiscoveryCredentialCustodyCancellation/drain-prepared-conflict-retirement (0.56s)
+    --- PASS: TestDiscoveryCredentialCustodyCancellation/drain-prepared-lost-completion-ack (0.52s)
+    --- PASS: TestDiscoveryCredentialCustodyCancellation/drain-prepared-conflict-completion (0.56s)
+    --- PASS: TestDiscoveryCredentialCustodyCancellation/drain-prepared-returned-archive (0.65s)
+    --- PASS: TestDiscoveryCredentialCustodyCancellation/drain-prepared-missing-seal (0.55s)
+    --- PASS: TestDiscoveryCredentialCustodyCancellation/drain-prepared-archive-loss (0.52s)
+    --- PASS: TestDiscoveryCredentialCustodyCancellation/drain-prepared-secret-replan (0.56s)
+    --- PASS: TestDiscoveryCredentialCustodyCancellation/drain-prepared-retained-native-return (0.62s)
+=== RUN   TestDiscoveryCredentialCustodyCleanup
+=== RUN   TestDiscoveryCredentialCustodyCleanup/inline
+=== RUN   TestDiscoveryCredentialCustodyCleanup/drain-accepted
+=== RUN   TestDiscoveryCredentialCustodyCleanup/drain-unknown
+=== RUN   TestDiscoveryCredentialCustodyCleanup/guard-seal-change
+=== RUN   TestDiscoveryCredentialCustodyCleanup/configmap
+=== RUN   TestDiscoveryCredentialCustodyCleanup/configmap-source-loss
+=== RUN   TestDiscoveryCredentialCustodyCleanup/known-unknown
+=== RUN   TestDiscoveryCredentialCustodyCleanup/lost-accepted-ack
+=== RUN   TestDiscoveryCredentialCustodyCleanup/lost-permit-ack
+=== RUN   TestDiscoveryCredentialCustodyCleanup/lost-retirement-ack
+=== RUN   TestDiscoveryCredentialCustodyCleanup/lost-closure-ack
+=== RUN   TestDiscoveryCredentialCustodyCleanup/lost-completion-ack
+=== RUN   TestDiscoveryCredentialCustodyCleanup/ambiguous-delete
+=== RUN   TestDiscoveryCredentialCustodyCleanup/returned-archive
+=== RUN   TestDiscoveryCredentialCustodyCleanup/returned-current
+=== RUN   TestDiscoveryCredentialCustodyCleanup/missing-custody
+=== RUN   TestDiscoveryCredentialCustodyCleanup/changed-seal
+=== RUN   TestDiscoveryCredentialCustodyCleanup/missing-archive
+=== RUN   TestDiscoveryCredentialCustodyCleanup/missing-scope
+=== RUN   TestDiscoveryCredentialCustodyCleanup/changed-spec
+=== RUN   TestDiscoveryCredentialCustodyCleanup/configmap-source-changed
+=== RUN   TestDiscoveryCredentialCustodyCleanup/missing-projection
+=== RUN   TestDiscoveryCredentialCustodyCleanup/missing-scope-after-submit
+=== RUN   TestDiscoveryCredentialCustodyCleanup/later-handoff
+--- PASS: TestDiscoveryCredentialCustodyCleanup (26.12s)
+    --- PASS: TestDiscoveryCredentialCustodyCleanup/inline (1.20s)
+    --- PASS: TestDiscoveryCredentialCustodyCleanup/drain-accepted (1.08s)
+    --- PASS: TestDiscoveryCredentialCustodyCleanup/drain-unknown (1.08s)
+    --- PASS: TestDiscoveryCredentialCustodyCleanup/guard-seal-change (0.99s)
+    --- PASS: TestDiscoveryCredentialCustodyCleanup/configmap (1.18s)
+    --- PASS: TestDiscoveryCredentialCustodyCleanup/configmap-source-loss (1.17s)
+    --- PASS: TestDiscoveryCredentialCustodyCleanup/known-unknown (1.17s)
+    --- PASS: TestDiscoveryCredentialCustodyCleanup/lost-accepted-ack (1.18s)
+    --- PASS: TestDiscoveryCredentialCustodyCleanup/lost-permit-ack (0.93s)
+    --- PASS: TestDiscoveryCredentialCustodyCleanup/lost-retirement-ack (1.19s)
+    --- PASS: TestDiscoveryCredentialCustodyCleanup/lost-closure-ack (1.23s)
+    --- PASS: TestDiscoveryCredentialCustodyCleanup/lost-completion-ack (1.18s)
+    --- PASS: TestDiscoveryCredentialCustodyCleanup/ambiguous-delete (0.95s)
+    --- PASS: TestDiscoveryCredentialCustodyCleanup/returned-archive (1.00s)
+    --- PASS: TestDiscoveryCredentialCustodyCleanup/returned-current (1.09s)
+    --- PASS: TestDiscoveryCredentialCustodyCleanup/missing-custody (0.87s)
+    --- PASS: TestDiscoveryCredentialCustodyCleanup/changed-seal (0.89s)
+    --- PASS: TestDiscoveryCredentialCustodyCleanup/missing-archive (0.83s)
+    --- PASS: TestDiscoveryCredentialCustodyCleanup/missing-scope (0.85s)
+    --- PASS: TestDiscoveryCredentialCustodyCleanup/changed-spec (0.88s)
+    --- PASS: TestDiscoveryCredentialCustodyCleanup/configmap-source-changed (0.94s)
+    --- PASS: TestDiscoveryCredentialCustodyCleanup/missing-projection (0.84s)
+    --- PASS: TestDiscoveryCredentialCustodyCleanup/missing-scope-after-submit (0.97s)
+    --- PASS: TestDiscoveryCredentialCustodyCleanup/later-handoff (2.42s)
+=== RUN   TestDiscoveryCredentialCustodyExecution
+=== RUN   TestDiscoveryCredentialCustodyExecution/complete
+=== RUN   TestDiscoveryCredentialCustodyExecution/configmap
+=== RUN   TestDiscoveryCredentialCustodyExecution/known-unknown
+=== RUN   TestDiscoveryCredentialCustodyExecution/lost-accepted-ack
+=== RUN   TestDiscoveryCredentialCustodyExecution/lost-permit-ack
+=== RUN   TestDiscoveryCredentialCustodyExecution/lost-receipt-ack
+=== RUN   TestDiscoveryCredentialCustodyExecution/ambiguous-create
+=== RUN   TestDiscoveryCredentialCustodyExecution/configmap-source-lost
+=== RUN   TestDiscoveryCredentialCustodyExecution/archive-return
+=== RUN   TestDiscoveryCredentialCustodyExecution/archive-return-after-submit
+=== RUN   TestDiscoveryCredentialCustodyExecution/missing-custody
+=== RUN   TestDiscoveryCredentialCustodyExecution/missing-archive
+=== RUN   TestDiscoveryCredentialCustodyExecution/changed-seal
+=== RUN   TestDiscoveryCredentialCustodyExecution/changed-inputs
+=== RUN   TestDiscoveryCredentialCustodyExecution/missing-scope
+--- PASS: TestDiscoveryCredentialCustodyExecution (9.65s)
+    --- PASS: TestDiscoveryCredentialCustodyExecution/complete (0.65s)
+    --- PASS: TestDiscoveryCredentialCustodyExecution/configmap (0.67s)
+    --- PASS: TestDiscoveryCredentialCustodyExecution/known-unknown (0.68s)
+    --- PASS: TestDiscoveryCredentialCustodyExecution/lost-accepted-ack (0.67s)
+    --- PASS: TestDiscoveryCredentialCustodyExecution/lost-permit-ack (0.59s)
+    --- PASS: TestDiscoveryCredentialCustodyExecution/lost-receipt-ack (0.65s)
+    --- PASS: TestDiscoveryCredentialCustodyExecution/ambiguous-create (0.63s)
+    --- PASS: TestDiscoveryCredentialCustodyExecution/configmap-source-lost (0.57s)
+    --- PASS: TestDiscoveryCredentialCustodyExecution/archive-return (0.67s)
+    --- PASS: TestDiscoveryCredentialCustodyExecution/archive-return-after-submit (0.77s)
+    --- PASS: TestDiscoveryCredentialCustodyExecution/missing-custody (0.60s)
+    --- PASS: TestDiscoveryCredentialCustodyExecution/missing-archive (0.55s)
+    --- PASS: TestDiscoveryCredentialCustodyExecution/changed-seal (0.61s)
+    --- PASS: TestDiscoveryCredentialCustodyExecution/changed-inputs (0.67s)
+    --- PASS: TestDiscoveryCredentialCustodyExecution/missing-scope (0.67s)
+=== RUN   TestDiscoveryCredentialCustodyPublication
+=== RUN   TestDiscoveryCredentialCustodyPublication/complete
+=== RUN   TestDiscoveryCredentialCustodyPublication/configmap
+=== RUN   TestDiscoveryCredentialCustodyPublication/same-name
+=== RUN   TestDiscoveryCredentialCustodyPublication/lost-ack
+=== RUN   TestDiscoveryCredentialCustodyPublication/rejected-write
+=== RUN   TestDiscoveryCredentialCustodyPublication/source-race
+=== RUN   TestDiscoveryCredentialCustodyPublication/config-race
+=== RUN   TestDiscoveryCredentialCustodyPublication/projection-lost
+=== RUN   TestDiscoveryCredentialCustodyPublication/secret-bytes-change
+=== RUN   TestDiscoveryCredentialCustodyPublication/native-return
+=== RUN   TestDiscoveryCredentialCustodyPublication/journal-race
+=== RUN   TestDiscoveryCredentialCustodyPublication/legacy-seal
+=== RUN   TestDiscoveryCredentialCustodyPublication/forged-observation
+=== RUN   TestDiscoveryCredentialCustodyPublication/controller-change
+=== RUN   TestDiscoveryCredentialCustodyPublication/unresolved-snapshot
+--- PASS: TestDiscoveryCredentialCustodyPublication (4.92s)
+    --- PASS: TestDiscoveryCredentialCustodyPublication/complete (0.34s)
+    --- PASS: TestDiscoveryCredentialCustodyPublication/configmap (0.35s)
+    --- PASS: TestDiscoveryCredentialCustodyPublication/same-name (0.35s)
+    --- PASS: TestDiscoveryCredentialCustodyPublication/lost-ack (0.34s)
+    --- PASS: TestDiscoveryCredentialCustodyPublication/rejected-write (0.36s)
+    --- PASS: TestDiscoveryCredentialCustodyPublication/source-race (0.31s)
+    --- PASS: TestDiscoveryCredentialCustodyPublication/config-race (0.31s)
+    --- PASS: TestDiscoveryCredentialCustodyPublication/projection-lost (0.32s)
+    --- PASS: TestDiscoveryCredentialCustodyPublication/secret-bytes-change (0.31s)
+    --- PASS: TestDiscoveryCredentialCustodyPublication/native-return (0.32s)
+    --- PASS: TestDiscoveryCredentialCustodyPublication/journal-race (0.32s)
+    --- PASS: TestDiscoveryCredentialCustodyPublication/legacy-seal (0.34s)
+    --- PASS: TestDiscoveryCredentialCustodyPublication/forged-observation (0.32s)
+    --- PASS: TestDiscoveryCredentialCustodyPublication/controller-change (0.31s)
+    --- PASS: TestDiscoveryCredentialCustodyPublication/unresolved-snapshot (0.31s)
+=== RUN   TestDiscoveryCredentialPublicEffect
+=== RUN   TestDiscoveryCredentialPublicEffect/enable_password_list
+=== RUN   TestDiscoveryCredentialPublicEffect/password_list
+=== RUN   TestDiscoveryCredentialPublicEffect/http_read_credential
+=== RUN   TestDiscoveryCredentialPublicEffect/http_write_credential
+=== RUN   TestDiscoveryCredentialPublicEffect/snmp_auth_passphrase
+=== RUN   TestDiscoveryCredentialPublicEffect/snmp_priv_passphrase
+=== RUN   TestDiscoveryCredentialPublicEffect/snmp_ro_community
+=== RUN   TestDiscoveryCredentialPublicEffect/snmp_rw_community
+=== RUN   TestDiscoveryCredentialPublicEffect/nested-name
+=== RUN   TestDiscoveryCredentialPublicEffect/nested-ipAddressList
+=== RUN   TestDiscoveryCredentialPublicEffect/nested-snmpVersion
+=== RUN   TestDiscoveryCredentialPublicEffect/empty-native-filter
+--- PASS: TestDiscoveryCredentialPublicEffect (0.00s)
+    --- PASS: TestDiscoveryCredentialPublicEffect/enable_password_list (0.00s)
+    --- PASS: TestDiscoveryCredentialPublicEffect/password_list (0.00s)
+    --- PASS: TestDiscoveryCredentialPublicEffect/http_read_credential (0.00s)
+    --- PASS: TestDiscoveryCredentialPublicEffect/http_write_credential (0.00s)
+    --- PASS: TestDiscoveryCredentialPublicEffect/snmp_auth_passphrase (0.00s)
+    --- PASS: TestDiscoveryCredentialPublicEffect/snmp_priv_passphrase (0.00s)
+    --- PASS: TestDiscoveryCredentialPublicEffect/snmp_ro_community (0.00s)
+    --- PASS: TestDiscoveryCredentialPublicEffect/snmp_rw_community (0.00s)
+    --- PASS: TestDiscoveryCredentialPublicEffect/nested-name (0.00s)
+    --- PASS: TestDiscoveryCredentialPublicEffect/nested-ipAddressList (0.00s)
+    --- PASS: TestDiscoveryCredentialPublicEffect/nested-snmpVersion (0.00s)
+    --- PASS: TestDiscoveryCredentialPublicEffect/empty-native-filter (0.00s)
+=== RUN   TestDiscoveryCredentialLegacyEffectPromotion
+=== RUN   TestDiscoveryCredentialLegacyEffectPromotion/complete
+=== RUN   TestDiscoveryCredentialLegacyEffectPromotion/lost-ack
+=== RUN   TestDiscoveryCredentialLegacyEffectPromotion/conflict
+=== RUN   TestDiscoveryCredentialLegacyEffectPromotion/pruned
+=== RUN   TestDiscoveryCredentialLegacyEffectPromotion/native-drift
+=== RUN   TestDiscoveryCredentialLegacyEffectPromotion/foreign-uuid
+=== RUN   TestDiscoveryCredentialLegacyEffectPromotion/active
+=== RUN   TestDiscoveryCredentialLegacyEffectPromotion/missing-versions
+=== RUN   TestDiscoveryCredentialLegacyEffectPromotion/unknown-version
+=== RUN   TestDiscoveryCredentialLegacyEffectPromotion/changed-mask
+=== RUN   TestDiscoveryCredentialLegacyEffectPromotion/changed-digest
+=== RUN   TestDiscoveryCredentialLegacyEffectPromotion/forged-public
+=== RUN   TestDiscoveryCredentialLegacyEffectPromotion/busy
+=== RUN   TestDiscoveryCredentialLegacyEffectPromotion/capacity
+--- PASS: TestDiscoveryCredentialLegacyEffectPromotion (2.83s)
+    --- PASS: TestDiscoveryCredentialLegacyEffectPromotion/complete (0.09s)
+    --- PASS: TestDiscoveryCredentialLegacyEffectPromotion/lost-ack (0.09s)
+    --- PASS: TestDiscoveryCredentialLegacyEffectPromotion/conflict (0.09s)
+    --- PASS: TestDiscoveryCredentialLegacyEffectPromotion/pruned (0.10s)
+    --- PASS: TestDiscoveryCredentialLegacyEffectPromotion/native-drift (0.08s)
+    --- PASS: TestDiscoveryCredentialLegacyEffectPromotion/foreign-uuid (0.08s)
+    --- PASS: TestDiscoveryCredentialLegacyEffectPromotion/active (0.08s)
+    --- PASS: TestDiscoveryCredentialLegacyEffectPromotion/missing-versions (0.08s)
+    --- PASS: TestDiscoveryCredentialLegacyEffectPromotion/unknown-version (0.08s)
+    --- PASS: TestDiscoveryCredentialLegacyEffectPromotion/changed-mask (0.08s)
+    --- PASS: TestDiscoveryCredentialLegacyEffectPromotion/changed-digest (0.08s)
+    --- PASS: TestDiscoveryCredentialLegacyEffectPromotion/forged-public (0.05s)
+    --- PASS: TestDiscoveryCredentialLegacyEffectPromotion/busy (0.07s)
+    --- PASS: TestDiscoveryCredentialLegacyEffectPromotion/capacity (1.78s)
+=== RUN   TestDiscoveryCredentialExecutorCycle
+=== RUN   TestDiscoveryCredentialExecutorCycle/complete
+=== RUN   TestDiscoveryCredentialExecutorCycle/known-unknown
+=== RUN   TestDiscoveryCredentialExecutorCycle/lost-accepted-ack
+=== RUN   TestDiscoveryCredentialExecutorCycle/lost-permit-ack
+=== RUN   TestDiscoveryCredentialExecutorCycle/ambiguous-create
+=== RUN   TestDiscoveryCredentialExecutorCycle/unowned-existing
+=== RUN   TestDiscoveryCredentialExecutorCycle/job-appeared
+=== RUN   TestDiscoveryCredentialExecutorCycle/projection-changed
+=== RUN   TestDiscoveryCredentialExecutorCycle/owner-revoked
+=== RUN   TestDiscoveryCredentialExecutorCycle/global-replaced
+--- PASS: TestDiscoveryCredentialExecutorCycle (0.42s)
+    --- PASS: TestDiscoveryCredentialExecutorCycle/complete (0.06s)
+    --- PASS: TestDiscoveryCredentialExecutorCycle/known-unknown (0.06s)
+    --- PASS: TestDiscoveryCredentialExecutorCycle/lost-accepted-ack (0.06s)
+    --- PASS: TestDiscoveryCredentialExecutorCycle/lost-permit-ack (0.03s)
+    --- PASS: TestDiscoveryCredentialExecutorCycle/ambiguous-create (0.04s)
+    --- PASS: TestDiscoveryCredentialExecutorCycle/unowned-existing (0.02s)
+    --- PASS: TestDiscoveryCredentialExecutorCycle/job-appeared (0.03s)
+    --- PASS: TestDiscoveryCredentialExecutorCycle/projection-changed (0.03s)
+    --- PASS: TestDiscoveryCredentialExecutorCycle/owner-revoked (0.04s)
+    --- PASS: TestDiscoveryCredentialExecutorCycle/global-replaced (0.04s)
+=== RUN   TestDiscoveryCredentialPublicCycle
+=== RUN   TestDiscoveryCredentialPublicCycle/complete
+=== RUN   TestDiscoveryCredentialPublicCycle/configmap
+=== RUN   TestDiscoveryCredentialPublicCycle/mixed
+=== RUN   TestDiscoveryCredentialPublicCycle/known-unknown
+=== RUN   TestDiscoveryCredentialPublicCycle/lost-accepted-ack
+=== RUN   TestDiscoveryCredentialPublicCycle/lost-permit-ack
+=== RUN   TestDiscoveryCredentialPublicCycle/ambiguous-create
+=== RUN   TestDiscoveryCredentialPublicCycle/unowned-existing
+=== RUN   TestDiscoveryCredentialPublicCycle/pruned-pair
+=== RUN   TestDiscoveryCredentialPublicCycle/wrong-native-id
+=== RUN   TestDiscoveryCredentialPublicCycle/metadata-drift
+=== RUN   TestDiscoveryCredentialPublicCycle/rotation
+=== RUN   TestDiscoveryCredentialPublicCycle/controller-alias-addition
+=== RUN   TestDiscoveryCredentialPublicCycle/preflight-replan
+--- PASS: TestDiscoveryCredentialPublicCycle (2.04s)
+    --- PASS: TestDiscoveryCredentialPublicCycle/complete (0.15s)
+    --- PASS: TestDiscoveryCredentialPublicCycle/configmap (0.16s)
+    --- PASS: TestDiscoveryCredentialPublicCycle/mixed (0.15s)
+    --- PASS: TestDiscoveryCredentialPublicCycle/known-unknown (0.16s)
+    --- PASS: TestDiscoveryCredentialPublicCycle/lost-accepted-ack (0.15s)
+    --- PASS: TestDiscoveryCredentialPublicCycle/lost-permit-ack (0.06s)
+    --- PASS: TestDiscoveryCredentialPublicCycle/ambiguous-create (0.07s)
+    --- PASS: TestDiscoveryCredentialPublicCycle/unowned-existing (0.06s)
+    --- PASS: TestDiscoveryCredentialPublicCycle/pruned-pair (0.18s)
+    --- PASS: TestDiscoveryCredentialPublicCycle/wrong-native-id (0.19s)
+    --- PASS: TestDiscoveryCredentialPublicCycle/metadata-drift (0.18s)
+    --- PASS: TestDiscoveryCredentialPublicCycle/rotation (0.17s)
+    --- PASS: TestDiscoveryCredentialPublicCycle/controller-alias-addition (0.18s)
+    --- PASS: TestDiscoveryCredentialPublicCycle/preflight-replan (0.17s)
+=== RUN   TestDiscoveryCredentialHandoffObservation
+=== RUN   TestDiscoveryCredentialHandoffObservation/complete
+=== RUN   TestDiscoveryCredentialHandoffObservation/configmap
+=== RUN   TestDiscoveryCredentialHandoffObservation/same-name
+=== RUN   TestDiscoveryCredentialHandoffObservation/unrelated-native
+=== RUN   TestDiscoveryCredentialHandoffObservation/global-reference
+=== RUN   TestDiscoveryCredentialHandoffObservation/global-id-race
+=== RUN   TestDiscoveryCredentialHandoffObservation/counter-reuse
+=== RUN   TestDiscoveryCredentialHandoffObservation/projection-lag
+=== RUN   TestDiscoveryCredentialHandoffObservation/old-config-present
+=== RUN   TestDiscoveryCredentialHandoffObservation/retired-uuid
+=== RUN   TestDiscoveryCredentialHandoffObservation/same-job-name
+=== RUN   TestDiscoveryCredentialHandoffObservation/native-error
+=== RUN   TestDiscoveryCredentialHandoffObservation/source-race
+=== RUN   TestDiscoveryCredentialHandoffObservation/projection-race
+=== RUN   TestDiscoveryCredentialHandoffObservation/journal-race
+=== RUN   TestDiscoveryCredentialHandoffObservation/config-race
+=== RUN   TestDiscoveryCredentialHandoffObservation/missing-condition
+=== RUN   TestDiscoveryCredentialHandoffObservation/changed-digest
+=== RUN   TestDiscoveryCredentialHandoffObservation/missing-pair
+=== RUN   TestDiscoveryCredentialHandoffObservation/pending-operation
+=== RUN   TestDiscoveryCredentialHandoffObservation/paused
+=== RUN   TestDiscoveryCredentialHandoffObservation/controller-generation
+=== RUN   TestDiscoveryCredentialHandoffObservation/unenrolled
+--- PASS: TestDiscoveryCredentialHandoffObservation (6.83s)
+    --- PASS: TestDiscoveryCredentialHandoffObservation/complete (0.31s)
+    --- PASS: TestDiscoveryCredentialHandoffObservation/configmap (0.31s)
+    --- PASS: TestDiscoveryCredentialHandoffObservation/same-name (0.31s)
+    --- PASS: TestDiscoveryCredentialHandoffObservation/unrelated-native (0.31s)
+    --- PASS: TestDiscoveryCredentialHandoffObservation/global-reference (0.31s)
+    --- PASS: TestDiscoveryCredentialHandoffObservation/global-id-race (0.30s)
+    --- PASS: TestDiscoveryCredentialHandoffObservation/counter-reuse (0.29s)
+    --- PASS: TestDiscoveryCredentialHandoffObservation/projection-lag (0.30s)
+    --- PASS: TestDiscoveryCredentialHandoffObservation/old-config-present (0.29s)
+    --- PASS: TestDiscoveryCredentialHandoffObservation/retired-uuid (0.30s)
+    --- PASS: TestDiscoveryCredentialHandoffObservation/same-job-name (0.29s)
+    --- PASS: TestDiscoveryCredentialHandoffObservation/native-error (0.29s)
+    --- PASS: TestDiscoveryCredentialHandoffObservation/source-race (0.29s)
+    --- PASS: TestDiscoveryCredentialHandoffObservation/projection-race (0.30s)
+    --- PASS: TestDiscoveryCredentialHandoffObservation/journal-race (0.30s)
+    --- PASS: TestDiscoveryCredentialHandoffObservation/config-race (0.31s)
+    --- PASS: TestDiscoveryCredentialHandoffObservation/missing-condition (0.29s)
+    --- PASS: TestDiscoveryCredentialHandoffObservation/changed-digest (0.29s)
+    --- PASS: TestDiscoveryCredentialHandoffObservation/missing-pair (0.29s)
+    --- PASS: TestDiscoveryCredentialHandoffObservation/pending-operation (0.29s)
+    --- PASS: TestDiscoveryCredentialHandoffObservation/paused (0.29s)
+    --- PASS: TestDiscoveryCredentialHandoffObservation/controller-generation (0.29s)
+    --- PASS: TestDiscoveryCredentialHandoffObservation/unenrolled (0.29s)
+=== RUN   TestDiscoveryCredentialSuccessorVersionFloors
+=== RUN   TestDiscoveryCredentialSuccessorVersionFloors/advanced
+=== RUN   TestDiscoveryCredentialSuccessorVersionFloors/same-password
+=== RUN   TestDiscoveryCredentialSuccessorVersionFloors/old-password
+=== RUN   TestDiscoveryCredentialSuccessorVersionFloors/removed-enable-reused
+=== RUN   TestDiscoveryCredentialSuccessorVersionFloors/queued-is-not-delivered
+--- PASS: TestDiscoveryCredentialSuccessorVersionFloors (0.00s)
+    --- PASS: TestDiscoveryCredentialSuccessorVersionFloors/advanced (0.00s)
+    --- PASS: TestDiscoveryCredentialSuccessorVersionFloors/same-password (0.00s)
+    --- PASS: TestDiscoveryCredentialSuccessorVersionFloors/old-password (0.00s)
+    --- PASS: TestDiscoveryCredentialSuccessorVersionFloors/removed-enable-reused (0.00s)
+    --- PASS: TestDiscoveryCredentialSuccessorVersionFloors/queued-is-not-delivered (0.00s)
+=== RUN   TestDiscoveryCredentialRetainedMetadataContract
+=== RUN   TestDiscoveryCredentialRetainedMetadataContract/unauthorized-alias
+=== RUN   TestDiscoveryCredentialRetainedMetadataContract/unsupported-use
+=== RUN   TestDiscoveryCredentialRetainedMetadataContract/unmanaged-section
+=== RUN   TestDiscoveryCredentialRetainedMetadataContract/invalid-pointer
+=== RUN   TestDiscoveryCredentialRetainedMetadataContract/controller-mismatch
+=== RUN   TestDiscoveryCredentialRetainedMetadataContract/paused
+=== RUN   TestDiscoveryCredentialRetainedMetadataContract/model-version
+--- PASS: TestDiscoveryCredentialRetainedMetadataContract (0.01s)
+    --- PASS: TestDiscoveryCredentialRetainedMetadataContract/unauthorized-alias (0.00s)
+    --- PASS: TestDiscoveryCredentialRetainedMetadataContract/unsupported-use (0.00s)
+    --- PASS: TestDiscoveryCredentialRetainedMetadataContract/unmanaged-section (0.00s)
+    --- PASS: TestDiscoveryCredentialRetainedMetadataContract/invalid-pointer (0.00s)
+    --- PASS: TestDiscoveryCredentialRetainedMetadataContract/controller-mismatch (0.00s)
+    --- PASS: TestDiscoveryCredentialRetainedMetadataContract/paused (0.00s)
+    --- PASS: TestDiscoveryCredentialRetainedMetadataContract/model-version (0.00s)
+=== RUN   TestDiscoveryCredentialMetadataInputProtocol
+=== RUN   TestDiscoveryCredentialMetadataInputProtocol/legacy-zero
+=== RUN   TestDiscoveryCredentialMetadataInputProtocol/scope-zero
+=== RUN   TestDiscoveryCredentialMetadataInputProtocol/continuation-zero
+=== RUN   TestDiscoveryCredentialMetadataInputProtocol/metadata-with-versions
+=== RUN   TestDiscoveryCredentialMetadataInputProtocol/scope-with-dropped-versions
+=== RUN   TestDiscoveryCredentialMetadataInputProtocol/unknown-version
+=== RUN   TestDiscoveryCredentialMetadataInputProtocol/wrong-target
+=== RUN   TestDiscoveryCredentialMetadataInputProtocol/queued-scope-change
+--- PASS: TestDiscoveryCredentialMetadataInputProtocol (0.00s)
+    --- PASS: TestDiscoveryCredentialMetadataInputProtocol/legacy-zero (0.00s)
+    --- PASS: TestDiscoveryCredentialMetadataInputProtocol/scope-zero (0.00s)
+    --- PASS: TestDiscoveryCredentialMetadataInputProtocol/continuation-zero (0.00s)
+    --- PASS: TestDiscoveryCredentialMetadataInputProtocol/metadata-with-versions (0.00s)
+    --- PASS: TestDiscoveryCredentialMetadataInputProtocol/scope-with-dropped-versions (0.00s)
+    --- PASS: TestDiscoveryCredentialMetadataInputProtocol/unknown-version (0.00s)
+    --- PASS: TestDiscoveryCredentialMetadataInputProtocol/wrong-target (0.00s)
+    --- PASS: TestDiscoveryCredentialMetadataInputProtocol/queued-scope-change (0.00s)
+=== RUN   TestDiscoveryCredentialMetadataActionHistory
+=== RUN   TestDiscoveryCredentialMetadataActionHistory/fabricated-delivery
+=== RUN   TestDiscoveryCredentialMetadataActionHistory/missing-versioned-pair
+=== RUN   TestDiscoveryCredentialMetadataActionHistory/metadata-version-binding
+=== RUN   TestDiscoveryCredentialMetadataActionHistory/queued-scope-change
+=== RUN   TestDiscoveryCredentialMetadataActionHistory/queued-scope-downgrade
+--- PASS: TestDiscoveryCredentialMetadataActionHistory (0.00s)
+    --- PASS: TestDiscoveryCredentialMetadataActionHistory/fabricated-delivery (0.00s)
+    --- PASS: TestDiscoveryCredentialMetadataActionHistory/missing-versioned-pair (0.00s)
+    --- PASS: TestDiscoveryCredentialMetadataActionHistory/metadata-version-binding (0.00s)
+    --- PASS: TestDiscoveryCredentialMetadataActionHistory/queued-scope-change (0.00s)
+    --- PASS: TestDiscoveryCredentialMetadataActionHistory/queued-scope-downgrade (0.00s)
+=== RUN   TestDiscoveryCredentialPublicMultipleJobs
+=== RUN   TestDiscoveryCredentialPublicMultipleJobs/complete
+=== RUN   TestDiscoveryCredentialPublicMultipleJobs/late-unowned
+=== RUN   TestDiscoveryCredentialPublicMultipleJobs/composition
+=== RUN   TestDiscoveryCredentialPublicMultipleJobs/composition-configmap
+=== RUN   TestDiscoveryCredentialPublicMultipleJobs/composition-unknown
+=== RUN   TestDiscoveryCredentialPublicMultipleJobs/composition-late-unowned
+=== RUN   TestDiscoveryCredentialPublicMultipleJobs/composition-reclassify
+=== RUN   TestDiscoveryCredentialPublicMultipleJobs/composition-replace
+--- PASS: TestDiscoveryCredentialPublicMultipleJobs (2.23s)
+    --- PASS: TestDiscoveryCredentialPublicMultipleJobs/complete (0.31s)
+    --- PASS: TestDiscoveryCredentialPublicMultipleJobs/late-unowned (0.07s)
+    --- PASS: TestDiscoveryCredentialPublicMultipleJobs/composition (0.28s)
+    --- PASS: TestDiscoveryCredentialPublicMultipleJobs/composition-configmap (0.41s)
+    --- PASS: TestDiscoveryCredentialPublicMultipleJobs/composition-unknown (0.30s)
+    --- PASS: TestDiscoveryCredentialPublicMultipleJobs/composition-late-unowned (0.07s)
+    --- PASS: TestDiscoveryCredentialPublicMultipleJobs/composition-reclassify (0.30s)
+    --- PASS: TestDiscoveryCredentialPublicMultipleJobs/composition-replace (0.47s)
+=== RUN   TestDiscoveryCredentialNoDispatchProof
+=== RUN   TestDiscoveryCredentialNoDispatchProof/create/refuse
+=== RUN   TestDiscoveryCredentialNoDispatchProof/create/read-error
+=== RUN   TestDiscoveryCredentialNoDispatchProof/create/conflict
+=== RUN   TestDiscoveryCredentialNoDispatchProof/create/conflict-exhausted
+=== RUN   TestDiscoveryCredentialNoDispatchProof/create/lost-clear-ack
+=== RUN   TestDiscoveryCredentialNoDispatchProof/create/changed-owner
+=== RUN   TestDiscoveryCredentialNoDispatchProof/create/changed-operation
+=== RUN   TestDiscoveryCredentialNoDispatchProof/create/recorded-task
+=== RUN   TestDiscoveryCredentialNoDispatchProof/create/recorded-credential
+=== RUN   TestDiscoveryCredentialNoDispatchProof/create/ordinary-error
+=== RUN   TestDiscoveryCredentialNoDispatchProof/create/ambiguous
+=== RUN   TestDiscoveryCredentialNoDispatchProof/create/accepted
+=== RUN   TestDiscoveryCredentialNoDispatchProof/create/foreign-proof
+=== RUN   TestDiscoveryCredentialNoDispatchProof/metadata-create/refuse
+=== RUN   TestDiscoveryCredentialNoDispatchProof/metadata-create/read-error
+=== RUN   TestDiscoveryCredentialNoDispatchProof/metadata-create/conflict
+=== RUN   TestDiscoveryCredentialNoDispatchProof/metadata-create/conflict-exhausted
+=== RUN   TestDiscoveryCredentialNoDispatchProof/metadata-create/lost-clear-ack
+=== RUN   TestDiscoveryCredentialNoDispatchProof/metadata-create/changed-owner
+=== RUN   TestDiscoveryCredentialNoDispatchProof/metadata-create/changed-operation
+=== RUN   TestDiscoveryCredentialNoDispatchProof/metadata-create/recorded-task
+=== RUN   TestDiscoveryCredentialNoDispatchProof/metadata-create/recorded-credential
+=== RUN   TestDiscoveryCredentialNoDispatchProof/metadata-create/ordinary-error
+=== RUN   TestDiscoveryCredentialNoDispatchProof/metadata-create/ambiguous
+=== RUN   TestDiscoveryCredentialNoDispatchProof/metadata-create/accepted
+=== RUN   TestDiscoveryCredentialNoDispatchProof/metadata-create/foreign-proof
+=== RUN   TestDiscoveryCredentialNoDispatchProof/metadata-retain/refuse
+=== RUN   TestDiscoveryCredentialNoDispatchProof/metadata-retain/read-error
+=== RUN   TestDiscoveryCredentialNoDispatchProof/metadata-retain/conflict
+=== RUN   TestDiscoveryCredentialNoDispatchProof/metadata-retain/conflict-exhausted
+=== RUN   TestDiscoveryCredentialNoDispatchProof/metadata-retain/lost-clear-ack
+=== RUN   TestDiscoveryCredentialNoDispatchProof/metadata-retain/changed-owner
+=== RUN   TestDiscoveryCredentialNoDispatchProof/metadata-retain/changed-operation
+=== RUN   TestDiscoveryCredentialNoDispatchProof/metadata-retain/recorded-task
+=== RUN   TestDiscoveryCredentialNoDispatchProof/metadata-retain/recorded-credential
+=== RUN   TestDiscoveryCredentialNoDispatchProof/metadata-retain/ordinary-error
+=== RUN   TestDiscoveryCredentialNoDispatchProof/metadata-retain/ambiguous
+=== RUN   TestDiscoveryCredentialNoDispatchProof/metadata-retain/accepted
+=== RUN   TestDiscoveryCredentialNoDispatchProof/metadata-retain/foreign-proof
+=== RUN   TestDiscoveryCredentialNoDispatchProof/replacement/refuse
+=== RUN   TestDiscoveryCredentialNoDispatchProof/replacement/read-error
+=== RUN   TestDiscoveryCredentialNoDispatchProof/replacement/conflict
+=== RUN   TestDiscoveryCredentialNoDispatchProof/replacement/conflict-exhausted
+=== RUN   TestDiscoveryCredentialNoDispatchProof/replacement/lost-clear-ack
+=== RUN   TestDiscoveryCredentialNoDispatchProof/replacement/changed-owner
+=== RUN   TestDiscoveryCredentialNoDispatchProof/replacement/changed-operation
+=== RUN   TestDiscoveryCredentialNoDispatchProof/replacement/recorded-task
+=== RUN   TestDiscoveryCredentialNoDispatchProof/replacement/recorded-credential
+=== RUN   TestDiscoveryCredentialNoDispatchProof/replacement/ordinary-error
+=== RUN   TestDiscoveryCredentialNoDispatchProof/replacement/ambiguous
+=== RUN   TestDiscoveryCredentialNoDispatchProof/replacement/accepted
+=== RUN   TestDiscoveryCredentialNoDispatchProof/replacement/foreign-proof
+=== RUN   TestDiscoveryCredentialNoDispatchProof/prune/refuse
+=== RUN   TestDiscoveryCredentialNoDispatchProof/prune/read-error
+=== RUN   TestDiscoveryCredentialNoDispatchProof/prune/conflict
+=== RUN   TestDiscoveryCredentialNoDispatchProof/prune/conflict-exhausted
+=== RUN   TestDiscoveryCredentialNoDispatchProof/prune/lost-clear-ack
+=== RUN   TestDiscoveryCredentialNoDispatchProof/prune/changed-owner
+=== RUN   TestDiscoveryCredentialNoDispatchProof/prune/changed-operation
+=== RUN   TestDiscoveryCredentialNoDispatchProof/prune/recorded-task
+=== RUN   TestDiscoveryCredentialNoDispatchProof/prune/recorded-credential
+=== RUN   TestDiscoveryCredentialNoDispatchProof/prune/ordinary-error
+=== RUN   TestDiscoveryCredentialNoDispatchProof/prune/ambiguous
+=== RUN   TestDiscoveryCredentialNoDispatchProof/prune/accepted
+=== RUN   TestDiscoveryCredentialNoDispatchProof/prune/foreign-proof
+=== RUN   TestDiscoveryCredentialNoDispatchProof/config-cleanup/refuse
+=== RUN   TestDiscoveryCredentialNoDispatchProof/config-cleanup/read-error
+=== RUN   TestDiscoveryCredentialNoDispatchProof/config-cleanup/conflict
+=== RUN   TestDiscoveryCredentialNoDispatchProof/config-cleanup/conflict-exhausted
+=== RUN   TestDiscoveryCredentialNoDispatchProof/config-cleanup/lost-clear-ack
+=== RUN   TestDiscoveryCredentialNoDispatchProof/config-cleanup/changed-owner
+=== RUN   TestDiscoveryCredentialNoDispatchProof/config-cleanup/changed-operation
+=== RUN   TestDiscoveryCredentialNoDispatchProof/config-cleanup/recorded-task
+=== RUN   TestDiscoveryCredentialNoDispatchProof/config-cleanup/recorded-credential
+=== RUN   TestDiscoveryCredentialNoDispatchProof/config-cleanup/ordinary-error
+=== RUN   TestDiscoveryCredentialNoDispatchProof/config-cleanup/ambiguous
+=== RUN   TestDiscoveryCredentialNoDispatchProof/config-cleanup/accepted
+=== RUN   TestDiscoveryCredentialNoDispatchProof/config-cleanup/foreign-proof
+--- PASS: TestDiscoveryCredentialNoDispatchProof (4.26s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/create/refuse (0.02s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/create/read-error (0.02s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/create/conflict (0.04s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/create/conflict-exhausted (0.35s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/create/lost-clear-ack (0.02s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/create/changed-owner (0.02s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/create/changed-operation (0.02s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/create/recorded-task (0.02s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/create/recorded-credential (0.02s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/create/ordinary-error (0.02s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/create/ambiguous (0.02s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/create/accepted (0.02s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/create/foreign-proof (0.02s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/metadata-create/refuse (0.03s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/metadata-create/read-error (0.03s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/metadata-create/conflict (0.04s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/metadata-create/conflict-exhausted (0.35s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/metadata-create/lost-clear-ack (0.03s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/metadata-create/changed-owner (0.03s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/metadata-create/changed-operation (0.03s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/metadata-create/recorded-task (0.03s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/metadata-create/recorded-credential (0.03s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/metadata-create/ordinary-error (0.03s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/metadata-create/ambiguous (0.03s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/metadata-create/accepted (0.03s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/metadata-create/foreign-proof (0.03s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/metadata-retain/refuse (0.02s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/metadata-retain/read-error (0.02s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/metadata-retain/conflict (0.03s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/metadata-retain/conflict-exhausted (0.36s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/metadata-retain/lost-clear-ack (0.02s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/metadata-retain/changed-owner (0.02s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/metadata-retain/changed-operation (0.02s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/metadata-retain/recorded-task (0.02s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/metadata-retain/recorded-credential (0.02s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/metadata-retain/ordinary-error (0.02s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/metadata-retain/ambiguous (0.02s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/metadata-retain/accepted (0.02s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/metadata-retain/foreign-proof (0.02s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/replacement/refuse (0.03s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/replacement/read-error (0.03s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/replacement/conflict (0.05s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/replacement/conflict-exhausted (0.35s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/replacement/lost-clear-ack (0.03s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/replacement/changed-owner (0.04s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/replacement/changed-operation (0.03s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/replacement/recorded-task (0.03s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/replacement/recorded-credential (0.03s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/replacement/ordinary-error (0.03s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/replacement/ambiguous (0.03s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/replacement/accepted (0.03s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/replacement/foreign-proof (0.03s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/prune/refuse (0.03s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/prune/read-error (0.03s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/prune/conflict (0.04s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/prune/conflict-exhausted (0.36s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/prune/lost-clear-ack (0.03s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/prune/changed-owner (0.03s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/prune/changed-operation (0.03s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/prune/recorded-task (0.03s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/prune/recorded-credential (0.03s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/prune/ordinary-error (0.03s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/prune/ambiguous (0.03s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/prune/accepted (0.03s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/prune/foreign-proof (0.03s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/config-cleanup/refuse (0.03s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/config-cleanup/read-error (0.03s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/config-cleanup/conflict (0.04s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/config-cleanup/conflict-exhausted (0.36s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/config-cleanup/lost-clear-ack (0.03s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/config-cleanup/changed-owner (0.03s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/config-cleanup/changed-operation (0.03s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/config-cleanup/recorded-task (0.03s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/config-cleanup/recorded-credential (0.03s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/config-cleanup/ordinary-error (0.03s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/config-cleanup/ambiguous (0.03s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/config-cleanup/accepted (0.03s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/config-cleanup/foreign-proof (0.03s)
+=== RUN   TestDiscoveryCredentialCreateObservation
+=== RUN   TestDiscoveryCredentialCreateObservation/complete
+=== RUN   TestDiscoveryCredentialCreateObservation/mixed
+=== RUN   TestDiscoveryCredentialCreateObservation/pending-task
+=== RUN   TestDiscoveryCredentialCreateObservation/failed-task
+=== RUN   TestDiscoveryCredentialCreateObservation/wrong-task
+=== RUN   TestDiscoveryCredentialCreateObservation/future-task
+=== RUN   TestDiscoveryCredentialCreateObservation/missing-result
+=== RUN   TestDiscoveryCredentialCreateObservation/wrong-job
+=== RUN   TestDiscoveryCredentialCreateObservation/missing-job
+=== RUN   TestDiscoveryCredentialCreateObservation/duplicate-job
+=== RUN   TestDiscoveryCredentialCreateObservation/pending-job
+=== RUN   TestDiscoveryCredentialCreateObservation/wrong-user
+=== RUN   TestDiscoveryCredentialCreateObservation/duplicate-user
+=== RUN   TestDiscoveryCredentialCreateObservation/version-mismatch
+=== RUN   TestDiscoveryCredentialCreateObservation/wrong-input
+=== RUN   TestDiscoveryCredentialCreateObservation/wrong-action
+=== RUN   TestDiscoveryCredentialCreateObservation/unknown-phase
+=== RUN   TestDiscoveryCredentialCreateObservation/foreign-owner
+=== RUN   TestDiscoveryCredentialCreateObservation/journal-changed
+=== RUN   TestDiscoveryCredentialCreateObservation/source-changed
+=== RUN   TestDiscoveryCredentialCreateObservation/projection-changed
+=== RUN   TestDiscoveryCredentialCreateObservation/global-replaced
+=== RUN   TestDiscoveryCredentialCreateObservation/global-missing
+=== RUN   TestDiscoveryCredentialCreateObservation/native-error
+--- PASS: TestDiscoveryCredentialCreateObservation (0.64s)
+    --- PASS: TestDiscoveryCredentialCreateObservation/complete (0.03s)
+    --- PASS: TestDiscoveryCredentialCreateObservation/mixed (0.03s)
+    --- PASS: TestDiscoveryCredentialCreateObservation/pending-task (0.03s)
+    --- PASS: TestDiscoveryCredentialCreateObservation/failed-task (0.03s)
+    --- PASS: TestDiscoveryCredentialCreateObservation/wrong-task (0.03s)
+    --- PASS: TestDiscoveryCredentialCreateObservation/future-task (0.03s)
+    --- PASS: TestDiscoveryCredentialCreateObservation/missing-result (0.03s)
+    --- PASS: TestDiscoveryCredentialCreateObservation/wrong-job (0.03s)
+    --- PASS: TestDiscoveryCredentialCreateObservation/missing-job (0.03s)
+    --- PASS: TestDiscoveryCredentialCreateObservation/duplicate-job (0.03s)
+    --- PASS: TestDiscoveryCredentialCreateObservation/pending-job (0.03s)
+    --- PASS: TestDiscoveryCredentialCreateObservation/wrong-user (0.03s)
+    --- PASS: TestDiscoveryCredentialCreateObservation/duplicate-user (0.03s)
+    --- PASS: TestDiscoveryCredentialCreateObservation/version-mismatch (0.02s)
+    --- PASS: TestDiscoveryCredentialCreateObservation/wrong-input (0.02s)
+    --- PASS: TestDiscoveryCredentialCreateObservation/wrong-action (0.02s)
+    --- PASS: TestDiscoveryCredentialCreateObservation/unknown-phase (0.02s)
+    --- PASS: TestDiscoveryCredentialCreateObservation/foreign-owner (0.02s)
+    --- PASS: TestDiscoveryCredentialCreateObservation/journal-changed (0.03s)
+    --- PASS: TestDiscoveryCredentialCreateObservation/source-changed (0.03s)
+    --- PASS: TestDiscoveryCredentialCreateObservation/projection-changed (0.03s)
+    --- PASS: TestDiscoveryCredentialCreateObservation/global-replaced (0.03s)
+    --- PASS: TestDiscoveryCredentialCreateObservation/global-missing (0.03s)
+    --- PASS: TestDiscoveryCredentialCreateObservation/native-error (0.03s)
+=== RUN   TestDiscoveryCredentialPublicReadback
+=== RUN   TestDiscoveryCredentialPublicReadback/cli
+=== RUN   TestDiscoveryCredentialPublicReadback/cli/userNameList
+=== RUN   TestDiscoveryCredentialPublicReadback/http
+=== RUN   TestDiscoveryCredentialPublicReadback/snmp-v2
+=== RUN   TestDiscoveryCredentialPublicReadback/snmp-v2/snmpRwCommunityDesc
+=== RUN   TestDiscoveryCredentialPublicReadback/snmp-v2/snmpVersion
+=== RUN   TestDiscoveryCredentialPublicReadback/snmp-v2/snmpRoCommunityDesc
+=== RUN   TestDiscoveryCredentialPublicReadback/snmp-v3
+=== RUN   TestDiscoveryCredentialPublicReadback/snmp-v3/snmpUserName
+=== RUN   TestDiscoveryCredentialPublicReadback/snmp-v3/snmpVersion
+=== RUN   TestDiscoveryCredentialPublicReadback/snmp-v3/snmpAuthProtocol
+=== RUN   TestDiscoveryCredentialPublicReadback/snmp-v3/snmpMode
+=== RUN   TestDiscoveryCredentialPublicReadback/snmp-v3/snmpPrivProtocol
+--- PASS: TestDiscoveryCredentialPublicReadback (0.07s)
+    --- PASS: TestDiscoveryCredentialPublicReadback/cli (0.02s)
+        --- PASS: TestDiscoveryCredentialPublicReadback/cli/userNameList (0.00s)
+    --- PASS: TestDiscoveryCredentialPublicReadback/http (0.01s)
+    --- PASS: TestDiscoveryCredentialPublicReadback/snmp-v2 (0.02s)
+        --- PASS: TestDiscoveryCredentialPublicReadback/snmp-v2/snmpRwCommunityDesc (0.00s)
+        --- PASS: TestDiscoveryCredentialPublicReadback/snmp-v2/snmpVersion (0.00s)
+        --- PASS: TestDiscoveryCredentialPublicReadback/snmp-v2/snmpRoCommunityDesc (0.00s)
+    --- PASS: TestDiscoveryCredentialPublicReadback/snmp-v3 (0.02s)
+        --- PASS: TestDiscoveryCredentialPublicReadback/snmp-v3/snmpUserName (0.00s)
+        --- PASS: TestDiscoveryCredentialPublicReadback/snmp-v3/snmpVersion (0.00s)
+        --- PASS: TestDiscoveryCredentialPublicReadback/snmp-v3/snmpAuthProtocol (0.00s)
+        --- PASS: TestDiscoveryCredentialPublicReadback/snmp-v3/snmpMode (0.00s)
+        --- PASS: TestDiscoveryCredentialPublicReadback/snmp-v3/snmpPrivProtocol (0.00s)
+=== RUN   TestDiscoveryCredentialPublicPrune
+=== RUN   TestDiscoveryCredentialPublicPrune/prune
+=== RUN   TestDiscoveryCredentialPublicPrune/prune-empty
+=== RUN   TestDiscoveryCredentialPublicPrune/prune-configmap
+=== RUN   TestDiscoveryCredentialPublicPrune/prune-unknown
+=== RUN   TestDiscoveryCredentialPublicPrune/prune-retain
+=== RUN   TestDiscoveryCredentialPublicPrune/prune-conflict
+=== RUN   TestDiscoveryCredentialPublicPrune/prune-composition
+=== RUN   TestDiscoveryCredentialPublicPrune/prune-lost-permit
+=== RUN   TestDiscoveryCredentialPublicPrune/prune-lost-receipt
+=== RUN   TestDiscoveryCredentialPublicPrune/prune-proof-pruned
+=== RUN   TestDiscoveryCredentialPublicPrune/prune-ambiguous
+=== RUN   TestDiscoveryCredentialPublicPrune/prune-failed
+=== RUN   TestDiscoveryCredentialPublicPrune/prune-capacity
+=== RUN   TestDiscoveryCredentialPublicPrune/prune-empty-conflict
+=== RUN   TestDiscoveryCredentialPublicPrune/prune-empty-unknown
+=== RUN   TestDiscoveryCredentialPublicPrune/prune-legacy
+=== RUN   TestDiscoveryCredentialPublicPrune/prune-active
+=== RUN   TestDiscoveryCredentialPublicPrune/prune-composition-pending
+=== RUN   TestDiscoveryCredentialPublicPrune/prune-empty-orphan-credentials
+=== RUN   TestDiscoveryCredentialPublicPrune/prune-empty-orphan-actions
+=== RUN   TestDiscoveryCredentialPublicPrune/prune-source-loss
+=== RUN   TestDiscoveryCredentialPublicPrune/prune-empty-source-loss
+--- PASS: TestDiscoveryCredentialPublicPrune (16.12s)
+    --- PASS: TestDiscoveryCredentialPublicPrune/prune (0.69s)
+    --- PASS: TestDiscoveryCredentialPublicPrune/prune-empty (0.94s)
+    --- PASS: TestDiscoveryCredentialPublicPrune/prune-configmap (0.74s)
+    --- PASS: TestDiscoveryCredentialPublicPrune/prune-unknown (0.72s)
+    --- PASS: TestDiscoveryCredentialPublicPrune/prune-retain (0.34s)
+    --- PASS: TestDiscoveryCredentialPublicPrune/prune-conflict (0.50s)
+    --- PASS: TestDiscoveryCredentialPublicPrune/prune-composition (0.63s)
+    --- PASS: TestDiscoveryCredentialPublicPrune/prune-lost-permit (0.45s)
+    --- PASS: TestDiscoveryCredentialPublicPrune/prune-lost-receipt (0.68s)
+    --- PASS: TestDiscoveryCredentialPublicPrune/prune-proof-pruned (0.52s)
+    --- PASS: TestDiscoveryCredentialPublicPrune/prune-ambiguous (0.48s)
+    --- PASS: TestDiscoveryCredentialPublicPrune/prune-failed (0.50s)
+    --- PASS: TestDiscoveryCredentialPublicPrune/prune-capacity (3.21s)
+    --- PASS: TestDiscoveryCredentialPublicPrune/prune-empty-conflict (0.44s)
+    --- PASS: TestDiscoveryCredentialPublicPrune/prune-empty-unknown (1.01s)
+    --- PASS: TestDiscoveryCredentialPublicPrune/prune-legacy (0.49s)
+    --- PASS: TestDiscoveryCredentialPublicPrune/prune-active (0.68s)
+    --- PASS: TestDiscoveryCredentialPublicPrune/prune-composition-pending (0.54s)
+    --- PASS: TestDiscoveryCredentialPublicPrune/prune-empty-orphan-credentials (0.41s)
+    --- PASS: TestDiscoveryCredentialPublicPrune/prune-empty-orphan-actions (0.41s)
+    --- PASS: TestDiscoveryCredentialPublicPrune/prune-source-loss (0.73s)
+    --- PASS: TestDiscoveryCredentialPublicPrune/prune-empty-source-loss (1.02s)
+=== RUN   TestDiscoveryCredentialPublicConfigDeletion
+=== RUN   TestDiscoveryCredentialPublicConfigDeletion/inline
+=== RUN   TestDiscoveryCredentialPublicConfigDeletion/configmap
+=== RUN   TestDiscoveryCredentialPublicConfigDeletion/active
+=== RUN   TestDiscoveryCredentialPublicConfigDeletion/known-unknown
+=== RUN   TestDiscoveryCredentialPublicConfigDeletion/drain-accepted
+=== RUN   TestDiscoveryCredentialPublicConfigDeletion/drain-unknown
+=== RUN   TestDiscoveryCredentialPublicConfigDeletion/drain-verified
+=== RUN   TestDiscoveryCredentialPublicConfigDeletion/drain-source-return
+=== RUN   TestDiscoveryCredentialPublicConfigDeletion/drain-projection-return
+=== RUN   TestDiscoveryCredentialPublicConfigDeletion/drain-prepared
+=== RUN   TestDiscoveryCredentialPublicConfigDeletion/drain-submitting
+=== RUN   TestDiscoveryCredentialPublicConfigDeletion/drain-taskless
+=== RUN   TestDiscoveryCredentialPublicConfigDeletion/drain-pending
+=== RUN   TestDiscoveryCredentialPublicConfigDeletion/drain-failed
+=== RUN   TestDiscoveryCredentialPublicConfigDeletion/drain-foreign-task
+=== RUN   TestDiscoveryCredentialPublicConfigDeletion/drain-scope-missing
+=== RUN   TestDiscoveryCredentialPublicConfigDeletion/drain-spec-change
+=== RUN   TestDiscoveryCredentialPublicConfigDeletion/drain-retirement
+=== RUN   TestDiscoveryCredentialPublicConfigDeletion/cleanup-preflight-replan
+--- PASS: TestDiscoveryCredentialPublicConfigDeletion (4.33s)
+    --- PASS: TestDiscoveryCredentialPublicConfigDeletion/inline (0.28s)
+    --- PASS: TestDiscoveryCredentialPublicConfigDeletion/configmap (0.30s)
+    --- PASS: TestDiscoveryCredentialPublicConfigDeletion/active (0.28s)
+    --- PASS: TestDiscoveryCredentialPublicConfigDeletion/known-unknown (0.30s)
+    --- PASS: TestDiscoveryCredentialPublicConfigDeletion/drain-accepted (0.26s)
+    --- PASS: TestDiscoveryCredentialPublicConfigDeletion/drain-unknown (0.29s)
+    --- PASS: TestDiscoveryCredentialPublicConfigDeletion/drain-verified (0.27s)
+    --- PASS: TestDiscoveryCredentialPublicConfigDeletion/drain-source-return (0.27s)
+    --- PASS: TestDiscoveryCredentialPublicConfigDeletion/drain-projection-return (0.26s)
+    --- PASS: TestDiscoveryCredentialPublicConfigDeletion/drain-prepared (0.11s)
+    --- PASS: TestDiscoveryCredentialPublicConfigDeletion/drain-submitting (0.15s)
+    --- PASS: TestDiscoveryCredentialPublicConfigDeletion/drain-taskless (0.16s)
+    --- PASS: TestDiscoveryCredentialPublicConfigDeletion/drain-pending (0.16s)
+    --- PASS: TestDiscoveryCredentialPublicConfigDeletion/drain-failed (0.16s)
+    --- PASS: TestDiscoveryCredentialPublicConfigDeletion/drain-foreign-task (0.16s)
+    --- PASS: TestDiscoveryCredentialPublicConfigDeletion/drain-scope-missing (0.15s)
+    --- PASS: TestDiscoveryCredentialPublicConfigDeletion/drain-spec-change (0.16s)
+    --- PASS: TestDiscoveryCredentialPublicConfigDeletion/drain-retirement (0.27s)
+    --- PASS: TestDiscoveryCredentialPublicConfigDeletion/cleanup-preflight-replan (0.34s)
+=== RUN   TestDiscoveryCredentialPublicDeletionCohort
+=== RUN   TestDiscoveryCredentialPublicDeletionCohort/public-delete
+=== RUN   TestDiscoveryCredentialPublicDeletionCohort/public-delete-conflict
+=== RUN   TestDiscoveryCredentialPublicDeletionCohort/public-delete-mixed
+--- PASS: TestDiscoveryCredentialPublicDeletionCohort (1.39s)
+    --- PASS: TestDiscoveryCredentialPublicDeletionCohort/public-delete (0.71s)
+    --- PASS: TestDiscoveryCredentialPublicDeletionCohort/public-delete-conflict (0.47s)
+    --- PASS: TestDiscoveryCredentialPublicDeletionCohort/public-delete-mixed (0.21s)
+=== RUN   TestDiscoveryCredentialPublicHandoff
+=== RUN   TestDiscoveryCredentialPublicHandoff/cleanup-inline
+=== RUN   TestDiscoveryCredentialPublicHandoff/configmap-cleanup
+=== RUN   TestDiscoveryCredentialPublicHandoff/same-name
+=== RUN   TestDiscoveryCredentialPublicHandoff/lost-ack
+=== RUN   TestDiscoveryCredentialPublicHandoff/rejected-write
+=== RUN   TestDiscoveryCredentialPublicHandoff/configmap-source-replan
+=== RUN   TestDiscoveryCredentialPublicHandoff/configmap-source-loss
+=== RUN   TestDiscoveryCredentialPublicHandoff/projection-loss
+=== RUN   TestDiscoveryCredentialPublicHandoff/missing-seal
+=== RUN   TestDiscoveryCredentialPublicHandoff/missing-pair
+=== RUN   TestDiscoveryCredentialPublicHandoff/old-config-present
+=== RUN   TestDiscoveryCredentialPublicHandoff/counter-reuse
+=== RUN   TestDiscoveryCredentialPublicHandoff/pending-operation
+=== RUN   TestDiscoveryCredentialPublicHandoff/controller-change
+=== RUN   TestDiscoveryCredentialPublicHandoff/unenrolled
+--- PASS: TestDiscoveryCredentialPublicHandoff (8.88s)
+    --- PASS: TestDiscoveryCredentialPublicHandoff/cleanup-inline (1.19s)
+    --- PASS: TestDiscoveryCredentialPublicHandoff/configmap-cleanup (1.20s)
+    --- PASS: TestDiscoveryCredentialPublicHandoff/same-name (0.69s)
+    --- PASS: TestDiscoveryCredentialPublicHandoff/lost-ack (0.68s)
+    --- PASS: TestDiscoveryCredentialPublicHandoff/rejected-write (0.72s)
+    --- PASS: TestDiscoveryCredentialPublicHandoff/configmap-source-replan (0.72s)
+    --- PASS: TestDiscoveryCredentialPublicHandoff/configmap-source-loss (0.38s)
+    --- PASS: TestDiscoveryCredentialPublicHandoff/projection-loss (0.38s)
+    --- PASS: TestDiscoveryCredentialPublicHandoff/missing-seal (0.62s)
+    --- PASS: TestDiscoveryCredentialPublicHandoff/missing-pair (0.41s)
+    --- PASS: TestDiscoveryCredentialPublicHandoff/old-config-present (0.40s)
+    --- PASS: TestDiscoveryCredentialPublicHandoff/counter-reuse (0.41s)
+    --- PASS: TestDiscoveryCredentialPublicHandoff/pending-operation (0.39s)
+    --- PASS: TestDiscoveryCredentialPublicHandoff/controller-change (0.34s)
+    --- PASS: TestDiscoveryCredentialPublicHandoff/unenrolled (0.38s)
+=== RUN   TestDiscoveryCredentialPublicRefusesUnsupportedBeforeIO
+=== RUN   TestDiscoveryCredentialPublicRefusesUnsupportedBeforeIO/extra-root
+=== RUN   TestDiscoveryCredentialPublicRefusesUnsupportedBeforeIO/tags
+=== RUN   TestDiscoveryCredentialPublicRefusesUnsupportedBeforeIO/second-unsupported-job
+=== RUN   TestDiscoveryCredentialPublicRefusesUnsupportedBeforeIO/second-global-metadata-job
+=== RUN   TestDiscoveryCredentialPublicRefusesUnsupportedBeforeIO/plaintext
+=== RUN   TestDiscoveryCredentialPublicRefusesUnsupportedBeforeIO/missing-counter
+=== RUN   TestDiscoveryCredentialPublicRefusesUnsupportedBeforeIO/projection-lag
+=== RUN   TestDiscoveryCredentialPublicRefusesUnsupportedBeforeIO/incomplete-snmp
+=== RUN   TestDiscoveryCredentialPublicRefusesUnsupportedBeforeIO/wrong-pointer
+=== RUN   TestDiscoveryCredentialPublicRefusesUnsupportedBeforeIO/comparison-use
+=== RUN   TestDiscoveryCredentialPublicRefusesUnsupportedBeforeIO/revoked-alias
+=== RUN   TestDiscoveryCredentialPublicRefusesUnsupportedBeforeIO/delete
+=== RUN   TestDiscoveryCredentialPublicRefusesUnsupportedBeforeIO/prune-unresolved
+--- PASS: TestDiscoveryCredentialPublicRefusesUnsupportedBeforeIO (0.25s)
+    --- PASS: TestDiscoveryCredentialPublicRefusesUnsupportedBeforeIO/extra-root (0.03s)
+    --- PASS: TestDiscoveryCredentialPublicRefusesUnsupportedBeforeIO/tags (0.02s)
+    --- PASS: TestDiscoveryCredentialPublicRefusesUnsupportedBeforeIO/second-unsupported-job (0.02s)
+    --- PASS: TestDiscoveryCredentialPublicRefusesUnsupportedBeforeIO/second-global-metadata-job (0.02s)
+    --- PASS: TestDiscoveryCredentialPublicRefusesUnsupportedBeforeIO/plaintext (0.02s)
+    --- PASS: TestDiscoveryCredentialPublicRefusesUnsupportedBeforeIO/missing-counter (0.02s)
+    --- PASS: TestDiscoveryCredentialPublicRefusesUnsupportedBeforeIO/projection-lag (0.02s)
+    --- PASS: TestDiscoveryCredentialPublicRefusesUnsupportedBeforeIO/incomplete-snmp (0.02s)
+    --- PASS: TestDiscoveryCredentialPublicRefusesUnsupportedBeforeIO/wrong-pointer (0.02s)
+    --- PASS: TestDiscoveryCredentialPublicRefusesUnsupportedBeforeIO/comparison-use (0.02s)
+    --- PASS: TestDiscoveryCredentialPublicRefusesUnsupportedBeforeIO/revoked-alias (0.02s)
+    --- PASS: TestDiscoveryCredentialPublicRefusesUnsupportedBeforeIO/delete (0.02s)
+    --- PASS: TestDiscoveryCredentialPublicRefusesUnsupportedBeforeIO/prune-unresolved (0.02s)
+=== RUN   TestDiscoveryCredentialAtomicCompletion
+=== RUN   TestDiscoveryCredentialAtomicCompletion/complete
+=== RUN   TestDiscoveryCredentialAtomicCompletion/lost-ack
+=== RUN   TestDiscoveryCredentialAtomicCompletion/conflict
+=== RUN   TestDiscoveryCredentialAtomicCompletion/pruned-credentials
+=== RUN   TestDiscoveryCredentialAtomicCompletion/pruned-action
+=== RUN   TestDiscoveryCredentialAtomicCompletion/pruned-operation-versions
+=== RUN   TestDiscoveryCredentialAtomicCompletion/pruned-action-versions
+=== RUN   TestDiscoveryCredentialAtomicCompletion/wrong-target
+=== RUN   TestDiscoveryCredentialAtomicCompletion/failed-task
+=== RUN   TestDiscoveryCredentialAtomicCompletion/pending-task
+=== RUN   TestDiscoveryCredentialAtomicCompletion/wrong-job
+--- PASS: TestDiscoveryCredentialAtomicCompletion (0.50s)
+    --- PASS: TestDiscoveryCredentialAtomicCompletion/complete (0.05s)
+    --- PASS: TestDiscoveryCredentialAtomicCompletion/lost-ack (0.05s)
+    --- PASS: TestDiscoveryCredentialAtomicCompletion/conflict (0.04s)
+    --- PASS: TestDiscoveryCredentialAtomicCompletion/pruned-credentials (0.05s)
+    --- PASS: TestDiscoveryCredentialAtomicCompletion/pruned-action (0.05s)
+    --- PASS: TestDiscoveryCredentialAtomicCompletion/pruned-operation-versions (0.05s)
+    --- PASS: TestDiscoveryCredentialAtomicCompletion/pruned-action-versions (0.05s)
+    --- PASS: TestDiscoveryCredentialAtomicCompletion/wrong-target (0.05s)
+    --- PASS: TestDiscoveryCredentialAtomicCompletion/failed-task (0.04s)
+    --- PASS: TestDiscoveryCredentialAtomicCompletion/pending-task (0.04s)
+    --- PASS: TestDiscoveryCredentialAtomicCompletion/wrong-job (0.04s)
+=== RUN   TestDiscoveryCredentialCapacityBeforePreparation
+=== RUN   TestDiscoveryCredentialCapacityBeforePreparation/actions-full
+=== RUN   TestDiscoveryCredentialCapacityBeforePreparation/credentials-full
+=== RUN   TestDiscoveryCredentialCapacityBeforePreparation/action-bytes
+=== RUN   TestDiscoveryCredentialCapacityBeforePreparation/same-name
+=== RUN   TestDiscoveryCredentialCapacityBeforePreparation/legacy-creator
+=== RUN   TestDiscoveryCredentialCapacityBeforePreparation/existing-version-receipt
+=== RUN   TestDiscoveryCredentialCapacityBeforePreparation/missing-versions
+=== RUN   TestDiscoveryCredentialCapacityBeforePreparation/altered-version
+=== RUN   TestDiscoveryCredentialCapacityBeforePreparation/wrong-action
+=== RUN   TestDiscoveryCredentialCapacityBeforePreparation/malformed-input
+=== RUN   TestDiscoveryCredentialCapacityBeforePreparation/unknown-version
+--- PASS: TestDiscoveryCredentialCapacityBeforePreparation (0.53s)
+    --- PASS: TestDiscoveryCredentialCapacityBeforePreparation/actions-full (0.10s)
+    --- PASS: TestDiscoveryCredentialCapacityBeforePreparation/credentials-full (0.06s)
+    --- PASS: TestDiscoveryCredentialCapacityBeforePreparation/action-bytes (0.25s)
+    --- PASS: TestDiscoveryCredentialCapacityBeforePreparation/same-name (0.02s)
+    --- PASS: TestDiscoveryCredentialCapacityBeforePreparation/legacy-creator (0.02s)
+    --- PASS: TestDiscoveryCredentialCapacityBeforePreparation/existing-version-receipt (0.02s)
+    --- PASS: TestDiscoveryCredentialCapacityBeforePreparation/missing-versions (0.02s)
+    --- PASS: TestDiscoveryCredentialCapacityBeforePreparation/altered-version (0.01s)
+    --- PASS: TestDiscoveryCredentialCapacityBeforePreparation/wrong-action (0.02s)
+    --- PASS: TestDiscoveryCredentialCapacityBeforePreparation/malformed-input (0.02s)
+    --- PASS: TestDiscoveryCredentialCapacityBeforePreparation/unknown-version (0.02s)
+=== RUN   TestDiscoveryCredentialReceiptPairRefusesMissingOrEditedEvidence
+=== RUN   TestDiscoveryCredentialReceiptPairRefusesMissingOrEditedEvidence/no-action
+=== RUN   TestDiscoveryCredentialReceiptPairRefusesMissingOrEditedEvidence/no-credentials
+=== RUN   TestDiscoveryCredentialReceiptPairRefusesMissingOrEditedEvidence/no-op-versions
+=== RUN   TestDiscoveryCredentialReceiptPairRefusesMissingOrEditedEvidence/both-pruned
+=== RUN   TestDiscoveryCredentialReceiptPairRefusesMissingOrEditedEvidence/wrong-target
+=== RUN   TestDiscoveryCredentialReceiptPairRefusesMissingOrEditedEvidence/wrong-operation
+=== RUN   TestDiscoveryCredentialReceiptPairRefusesMissingOrEditedEvidence/duplicate-action
+=== RUN   TestDiscoveryCredentialReceiptPairRefusesMissingOrEditedEvidence/duplicate-credentials
+=== RUN   TestDiscoveryCredentialReceiptPairRefusesMissingOrEditedEvidence/foreign-creator
+=== RUN   TestDiscoveryCredentialReceiptPairRefusesMissingOrEditedEvidence/wrong-name
+=== RUN   TestDiscoveryCredentialReceiptPairRefusesMissingOrEditedEvidence/legacy-scope-downgrade
+=== RUN   TestDiscoveryCredentialReceiptPairRefusesMissingOrEditedEvidence/old-time
+=== RUN   TestDiscoveryCredentialReceiptPairRefusesMissingOrEditedEvidence/future-time
+=== RUN   TestDiscoveryCredentialReceiptPairRefusesMissingOrEditedEvidence/missing-task
+=== RUN   TestDiscoveryCredentialReceiptPairRefusesMissingOrEditedEvidence/changed-counter
+=== RUN   TestDiscoveryCredentialReceiptPairRefusesMissingOrEditedEvidence/unknown-leaf
+=== RUN   TestDiscoveryCredentialReceiptPairRefusesMissingOrEditedEvidence/cross-job-path
+=== RUN   TestDiscoveryCredentialReceiptPairRefusesMissingOrEditedEvidence/no-owner
+=== RUN   TestDiscoveryCredentialReceiptPairRefusesMissingOrEditedEvidence/foreign-owner
+=== RUN   TestDiscoveryCredentialReceiptPairRefusesMissingOrEditedEvidence/overlapping-owner
+=== RUN   TestDiscoveryCredentialReceiptPairRefusesMissingOrEditedEvidence/duplicate-owner
+--- PASS: TestDiscoveryCredentialReceiptPairRefusesMissingOrEditedEvidence (0.03s)
+    --- PASS: TestDiscoveryCredentialReceiptPairRefusesMissingOrEditedEvidence/no-action (0.00s)
+    --- PASS: TestDiscoveryCredentialReceiptPairRefusesMissingOrEditedEvidence/no-credentials (0.00s)
+    --- PASS: TestDiscoveryCredentialReceiptPairRefusesMissingOrEditedEvidence/no-op-versions (0.00s)
+    --- PASS: TestDiscoveryCredentialReceiptPairRefusesMissingOrEditedEvidence/both-pruned (0.00s)
+    --- PASS: TestDiscoveryCredentialReceiptPairRefusesMissingOrEditedEvidence/wrong-target (0.00s)
+    --- PASS: TestDiscoveryCredentialReceiptPairRefusesMissingOrEditedEvidence/wrong-operation (0.00s)
+    --- PASS: TestDiscoveryCredentialReceiptPairRefusesMissingOrEditedEvidence/duplicate-action (0.00s)
+    --- PASS: TestDiscoveryCredentialReceiptPairRefusesMissingOrEditedEvidence/duplicate-credentials (0.00s)
+    --- PASS: TestDiscoveryCredentialReceiptPairRefusesMissingOrEditedEvidence/foreign-creator (0.00s)
+    --- PASS: TestDiscoveryCredentialReceiptPairRefusesMissingOrEditedEvidence/wrong-name (0.00s)
+    --- PASS: TestDiscoveryCredentialReceiptPairRefusesMissingOrEditedEvidence/legacy-scope-downgrade (0.00s)
+    --- PASS: TestDiscoveryCredentialReceiptPairRefusesMissingOrEditedEvidence/old-time (0.00s)
+    --- PASS: TestDiscoveryCredentialReceiptPairRefusesMissingOrEditedEvidence/future-time (0.00s)
+    --- PASS: TestDiscoveryCredentialReceiptPairRefusesMissingOrEditedEvidence/missing-task (0.00s)
+    --- PASS: TestDiscoveryCredentialReceiptPairRefusesMissingOrEditedEvidence/changed-counter (0.00s)
+    --- PASS: TestDiscoveryCredentialReceiptPairRefusesMissingOrEditedEvidence/unknown-leaf (0.00s)
+    --- PASS: TestDiscoveryCredentialReceiptPairRefusesMissingOrEditedEvidence/cross-job-path (0.00s)
+    --- PASS: TestDiscoveryCredentialReceiptPairRefusesMissingOrEditedEvidence/no-owner (0.00s)
+    --- PASS: TestDiscoveryCredentialReceiptPairRefusesMissingOrEditedEvidence/foreign-owner (0.00s)
+    --- PASS: TestDiscoveryCredentialReceiptPairRefusesMissingOrEditedEvidence/overlapping-owner (0.00s)
+    --- PASS: TestDiscoveryCredentialReceiptPairRefusesMissingOrEditedEvidence/duplicate-owner (0.00s)
+=== RUN   TestDiscoveryCredentialPermitRechecksCapacity
+=== RUN   TestDiscoveryCredentialPermitRechecksCapacity/full
+=== RUN   TestDiscoveryCredentialPermitRechecksCapacity/foreign-creator
+=== RUN   TestDiscoveryCredentialPermitRechecksCapacity/pruned-versions
+--- PASS: TestDiscoveryCredentialPermitRechecksCapacity (0.14s)
+    --- PASS: TestDiscoveryCredentialPermitRechecksCapacity/full (0.10s)
+    --- PASS: TestDiscoveryCredentialPermitRechecksCapacity/foreign-creator (0.02s)
+    --- PASS: TestDiscoveryCredentialPermitRechecksCapacity/pruned-versions (0.02s)
+=== RUN   TestDiscoveryCredentialReplacement
+=== RUN   TestDiscoveryCredentialReplacement/complete
+=== RUN   TestDiscoveryCredentialReplacement/configmap
+=== RUN   TestDiscoveryCredentialReplacement/active
+=== RUN   TestDiscoveryCredentialReplacement/known-unknown
+=== RUN   TestDiscoveryCredentialReplacement/lost-accepted-ack
+=== RUN   TestDiscoveryCredentialReplacement/lost-receipt-ack
+=== RUN   TestDiscoveryCredentialReplacement/conflict
+=== RUN   TestDiscoveryCredentialReplacement/pruned-retirement
+=== RUN   TestDiscoveryCredentialReplacement/ambiguous-delete
+=== RUN   TestDiscoveryCredentialReplacement/lost-permit-ack
+=== RUN   TestDiscoveryCredentialReplacement/retained-native
+=== RUN   TestDiscoveryCredentialReplacement/foreign-native
+=== RUN   TestDiscoveryCredentialReplacement/failed-task
+=== RUN   TestDiscoveryCredentialReplacement/native-drift
+=== RUN   TestDiscoveryCredentialReplacement/capacity
+=== RUN   TestDiscoveryCredentialReplacement/source-change
+=== RUN   TestDiscoveryCredentialReplacement/source-loss-successor
+=== RUN   TestDiscoveryCredentialReplacement/delete-source-complete
+=== RUN   TestDiscoveryCredentialReplacement/delete-source-lost-receipt-ack
+=== RUN   TestDiscoveryCredentialReplacement/delete-source-conflict
+=== RUN   TestDiscoveryCredentialReplacement/delete-source-ambiguous-delete
+=== RUN   TestDiscoveryCredentialReplacement/delete-source-retained-native
+=== RUN   TestDiscoveryCredentialReplacement/delete-source-foreign-native
+=== RUN   TestDiscoveryCredentialReplacement/delete-source-failed-task
+--- PASS: TestDiscoveryCredentialReplacement (14.55s)
+    --- PASS: TestDiscoveryCredentialReplacement/complete (1.85s)
+    --- PASS: TestDiscoveryCredentialReplacement/configmap (1.96s)
+    --- PASS: TestDiscoveryCredentialReplacement/active (0.44s)
+    --- PASS: TestDiscoveryCredentialReplacement/known-unknown (0.47s)
+    --- PASS: TestDiscoveryCredentialReplacement/lost-accepted-ack (0.44s)
+    --- PASS: TestDiscoveryCredentialReplacement/lost-receipt-ack (0.44s)
+    --- PASS: TestDiscoveryCredentialReplacement/conflict (0.47s)
+    --- PASS: TestDiscoveryCredentialReplacement/pruned-retirement (0.32s)
+    --- PASS: TestDiscoveryCredentialReplacement/ambiguous-delete (0.28s)
+    --- PASS: TestDiscoveryCredentialReplacement/lost-permit-ack (0.26s)
+    --- PASS: TestDiscoveryCredentialReplacement/retained-native (0.36s)
+    --- PASS: TestDiscoveryCredentialReplacement/foreign-native (0.35s)
+    --- PASS: TestDiscoveryCredentialReplacement/failed-task (0.29s)
+    --- PASS: TestDiscoveryCredentialReplacement/native-drift (0.28s)
+    --- PASS: TestDiscoveryCredentialReplacement/capacity (2.77s)
+    --- PASS: TestDiscoveryCredentialReplacement/source-change (0.31s)
+    --- PASS: TestDiscoveryCredentialReplacement/source-loss-successor (0.52s)
+    --- PASS: TestDiscoveryCredentialReplacement/delete-source-complete (0.45s)
+    --- PASS: TestDiscoveryCredentialReplacement/delete-source-lost-receipt-ack (0.45s)
+    --- PASS: TestDiscoveryCredentialReplacement/delete-source-conflict (0.48s)
+    --- PASS: TestDiscoveryCredentialReplacement/delete-source-ambiguous-delete (0.28s)
+    --- PASS: TestDiscoveryCredentialReplacement/delete-source-retained-native (0.39s)
+    --- PASS: TestDiscoveryCredentialReplacement/delete-source-foreign-native (0.38s)
+    --- PASS: TestDiscoveryCredentialReplacement/delete-source-failed-task (0.30s)
+=== RUN   TestDiscoveryCredentialRetainedScopeIdentity
+--- PASS: TestDiscoveryCredentialRetainedScopeIdentity (0.00s)
+=== RUN   TestDiscoveryCredentialRetainedCreateObservation
+=== RUN   TestDiscoveryCredentialRetainedCreateObservation/source-lost
+=== RUN   TestDiscoveryCredentialRetainedCreateObservation/legacy
+=== RUN   TestDiscoveryCredentialRetainedCreateObservation/drift
+=== RUN   TestDiscoveryCredentialRetainedCreateObservation/foreign-uuid
+=== RUN   TestDiscoveryCredentialRetainedCreateObservation/failed-task
+=== RUN   TestDiscoveryCredentialRetainedCreateObservation/pending-task
+=== RUN   TestDiscoveryCredentialRetainedCreateObservation/active-job
+=== RUN   TestDiscoveryCredentialRetainedCreateObservation/journal-changed
+=== RUN   TestDiscoveryCredentialRetainedCreateObservation/owner-revoked
+=== RUN   TestDiscoveryCredentialRetainedCreateObservation/scope-version
+--- PASS: TestDiscoveryCredentialRetainedCreateObservation (0.35s)
+    --- PASS: TestDiscoveryCredentialRetainedCreateObservation/source-lost (0.04s)
+    --- PASS: TestDiscoveryCredentialRetainedCreateObservation/legacy (0.03s)
+    --- PASS: TestDiscoveryCredentialRetainedCreateObservation/drift (0.04s)
+    --- PASS: TestDiscoveryCredentialRetainedCreateObservation/foreign-uuid (0.04s)
+    --- PASS: TestDiscoveryCredentialRetainedCreateObservation/failed-task (0.04s)
+    --- PASS: TestDiscoveryCredentialRetainedCreateObservation/pending-task (0.04s)
+    --- PASS: TestDiscoveryCredentialRetainedCreateObservation/active-job (0.04s)
+    --- PASS: TestDiscoveryCredentialRetainedCreateObservation/journal-changed (0.04s)
+    --- PASS: TestDiscoveryCredentialRetainedCreateObservation/owner-revoked (0.03s)
+    --- PASS: TestDiscoveryCredentialRetainedCreateObservation/scope-version (0.03s)
+=== RUN   TestDiscoveryCredentialRetainedScopeLegacyNoopAndPair
+--- PASS: TestDiscoveryCredentialRetainedScopeLegacyNoopAndPair (0.00s)
+=== RUN   TestDiscoveryCredentialRetirementLineage
+=== RUN   TestDiscoveryCredentialRetirementLineage/rollback
+=== RUN   TestDiscoveryCredentialRetirementLineage/reintroduced-old-counter
+--- PASS: TestDiscoveryCredentialRetirementLineage (0.00s)
+    --- PASS: TestDiscoveryCredentialRetirementLineage/rollback (0.00s)
+    --- PASS: TestDiscoveryCredentialRetirementLineage/reintroduced-old-counter (0.00s)
+=== RUN   TestDiscoveryCredentialRetirementHistoryTampering
+=== RUN   TestDiscoveryCredentialRetirementHistoryTampering/delete-is-not-credential-delivery
+=== RUN   TestDiscoveryCredentialRetirementHistoryTampering/missing-root
+=== RUN   TestDiscoveryCredentialRetirementHistoryTampering/missing-retirement
+=== RUN   TestDiscoveryCredentialRetirementHistoryTampering/altered-retirement-time
+=== RUN   TestDiscoveryCredentialRetirementHistoryTampering/wrong-retirement-uuid
+=== RUN   TestDiscoveryCredentialRetirementHistoryTampering/duplicate-operation-id
+=== RUN   TestDiscoveryCredentialRetirementHistoryTampering/pruned-retirement-key
+=== RUN   TestDiscoveryCredentialRetirementHistoryTampering/pruned-version-receipt
+=== RUN   TestDiscoveryCredentialRetirementHistoryTampering/reused-native-uuid
+=== RUN   TestDiscoveryCredentialRetirementHistoryTampering/fork
+--- PASS: TestDiscoveryCredentialRetirementHistoryTampering (0.00s)
+    --- PASS: TestDiscoveryCredentialRetirementHistoryTampering/delete-is-not-credential-delivery (0.00s)
+    --- PASS: TestDiscoveryCredentialRetirementHistoryTampering/missing-root (0.00s)
+    --- PASS: TestDiscoveryCredentialRetirementHistoryTampering/missing-retirement (0.00s)
+    --- PASS: TestDiscoveryCredentialRetirementHistoryTampering/altered-retirement-time (0.00s)
+    --- PASS: TestDiscoveryCredentialRetirementHistoryTampering/wrong-retirement-uuid (0.00s)
+    --- PASS: TestDiscoveryCredentialRetirementHistoryTampering/duplicate-operation-id (0.00s)
+    --- PASS: TestDiscoveryCredentialRetirementHistoryTampering/pruned-retirement-key (0.00s)
+    --- PASS: TestDiscoveryCredentialRetirementHistoryTampering/pruned-version-receipt (0.00s)
+    --- PASS: TestDiscoveryCredentialRetirementHistoryTampering/reused-native-uuid (0.00s)
+    --- PASS: TestDiscoveryCredentialRetirementHistoryTampering/fork (0.00s)
+=== RUN   TestDiscoveryCredentialContinuationIdentity
+--- PASS: TestDiscoveryCredentialContinuationIdentity (0.00s)
+=== RUN   TestDiscoveryCredentialRetirementCapacity
+=== RUN   TestDiscoveryCredentialRetirementCapacity/room-for-both
+=== RUN   TestDiscoveryCredentialRetirementCapacity/wrong-target
+=== RUN   TestDiscoveryCredentialRetirementCapacity/one-action-slot
+=== RUN   TestDiscoveryCredentialRetirementCapacity/two-action-slots
+=== RUN   TestDiscoveryCredentialRetirementCapacity/credential-budget
+=== RUN   TestDiscoveryCredentialRetirementCapacity/action-byte-budget
+=== RUN   TestDiscoveryCredentialRetirementCapacity/missing-creator-credential
+--- PASS: TestDiscoveryCredentialRetirementCapacity (0.02s)
+    --- PASS: TestDiscoveryCredentialRetirementCapacity/room-for-both (0.00s)
+    --- PASS: TestDiscoveryCredentialRetirementCapacity/wrong-target (0.00s)
+    --- PASS: TestDiscoveryCredentialRetirementCapacity/one-action-slot (0.00s)
+    --- PASS: TestDiscoveryCredentialRetirementCapacity/two-action-slots (0.01s)
+    --- PASS: TestDiscoveryCredentialRetirementCapacity/credential-budget (0.00s)
+    --- PASS: TestDiscoveryCredentialRetirementCapacity/action-byte-budget (0.00s)
+    --- PASS: TestDiscoveryCredentialRetirementCapacity/missing-creator-credential (0.00s)
+=== RUN   TestDiscoveryCredentialRetirementHistoricalRollback
+=== RUN   TestDiscoveryCredentialRetirementHistoricalRollback/lower-counter
+=== RUN   TestDiscoveryCredentialRetirementHistoricalRollback/source-change-same-counter
+=== RUN   TestDiscoveryCredentialRetirementHistoricalRollback/removed-counter-reused
+--- PASS: TestDiscoveryCredentialRetirementHistoricalRollback (0.00s)
+    --- PASS: TestDiscoveryCredentialRetirementHistoricalRollback/lower-counter (0.00s)
+    --- PASS: TestDiscoveryCredentialRetirementHistoricalRollback/source-change-same-counter (0.00s)
+    --- PASS: TestDiscoveryCredentialRetirementHistoricalRollback/removed-counter-reused (0.00s)
+=== RUN   TestDiscoveryCredentialTerminalPruneHistory
+--- PASS: TestDiscoveryCredentialTerminalPruneHistory (0.00s)
+=== RUN   TestDiscoveryCredentialCustodyRevision
+=== RUN   TestDiscoveryCredentialCustodyRevision/rotate-inline
+=== RUN   TestDiscoveryCredentialCustodyRevision/rotate-configmap
+=== RUN   TestDiscoveryCredentialCustodyRevision/leaf-reintroduction
+=== RUN   TestDiscoveryCredentialCustodyRevision/leaf-reuse-refused
+=== RUN   TestDiscoveryCredentialCustodyRevision/prune-recreate
+=== RUN   TestDiscoveryCredentialCustodyRevision/metadata
+=== RUN   TestDiscoveryCredentialCustodyRevision/prune-inline
+=== RUN   TestDiscoveryCredentialCustodyRevision/prune-configmap
+=== RUN   TestDiscoveryCredentialCustodyRevision/retain
+=== RUN   TestDiscoveryCredentialCustodyRevision/old-counter
+=== RUN   TestDiscoveryCredentialCustodyRevision/projection-lag
+=== RUN   TestDiscoveryCredentialCustodyRevision/archive-return
+=== RUN   TestDiscoveryCredentialCustodyRevision/seal-loss
+=== RUN   TestDiscoveryCredentialCustodyRevision/lost-accepted-ack
+=== RUN   TestDiscoveryCredentialCustodyRevision/lost-retirement-ack
+=== RUN   TestDiscoveryCredentialCustodyRevision/lost-permit-ack
+=== RUN   TestDiscoveryCredentialCustodyRevision/ambiguous-delete
+=== RUN   TestDiscoveryCredentialCustodyRevision/unknown-delete
+=== RUN   TestDiscoveryCredentialCustodyRevision/configmap-source-loss
+=== RUN   TestDiscoveryCredentialCustodyRevision/scope-loss-after-submit
+=== RUN   TestDiscoveryCredentialCustodyRevision/empty-inline
+=== RUN   TestDiscoveryCredentialCustodyRevision/empty-configmap
+=== RUN   TestDiscoveryCredentialCustodyRevision/empty-retain
+=== RUN   TestDiscoveryCredentialCustodyRevision/empty-recreate
+=== RUN   TestDiscoveryCredentialCustodyRevision/empty-lost-accepted-ack
+=== RUN   TestDiscoveryCredentialCustodyRevision/empty-lost-retirement-ack
+=== RUN   TestDiscoveryCredentialCustodyRevision/empty-lost-permit-ack
+=== RUN   TestDiscoveryCredentialCustodyRevision/empty-ambiguous-delete
+=== RUN   TestDiscoveryCredentialCustodyRevision/empty-unknown-delete
+=== RUN   TestDiscoveryCredentialCustodyRevision/empty-configmap-source-loss
+=== RUN   TestDiscoveryCredentialCustodyRevision/empty-scope-loss-after-submit
+=== RUN   TestDiscoveryCredentialCustodyRevision/empty-seal-loss
+=== RUN   TestDiscoveryCredentialCustodyRevision/empty-archive-return
+=== RUN   TestDiscoveryCredentialCustodyRevision/empty-native-return
+=== RUN   TestDiscoveryCredentialCustodyRevision/metadata-noauth-configmap
+=== RUN   TestDiscoveryCredentialCustodyRevision/metadata-global-inline
+=== RUN   TestDiscoveryCredentialCustodyRevision/metadata-global-configmap
+=== RUN   TestDiscoveryCredentialCustodyRevision/metadata-noauth
+=== RUN   TestDiscoveryCredentialCustodyRevision/metadata-reintroduce
+=== RUN   TestDiscoveryCredentialCustodyRevision/metadata-version-reuse
+=== RUN   TestDiscoveryCredentialCustodyRevision/metadata-prune
+=== RUN   TestDiscoveryCredentialCustodyRevision/metadata-prune-recreate
+=== RUN   TestDiscoveryCredentialCustodyRevision/metadata-mixed
+=== RUN   TestDiscoveryCredentialCustodyRevision/metadata-lost-accepted-ack
+=== RUN   TestDiscoveryCredentialCustodyRevision/metadata-lost-retirement-ack
+=== RUN   TestDiscoveryCredentialCustodyRevision/metadata-lost-permit-ack
+=== RUN   TestDiscoveryCredentialCustodyRevision/metadata-ambiguous-delete
+=== RUN   TestDiscoveryCredentialCustodyRevision/metadata-unknown-delete
+=== RUN   TestDiscoveryCredentialCustodyRevision/metadata-configmap-source-loss
+=== RUN   TestDiscoveryCredentialCustodyRevision/metadata-scope-loss-after-submit
+=== RUN   TestDiscoveryCredentialCustodyRevision/metadata-lost-metadata-accepted-ack
+=== RUN   TestDiscoveryCredentialCustodyRevision/metadata-lost-metadata-permit-ack
+=== RUN   TestDiscoveryCredentialCustodyRevision/metadata-lost-metadata-receipt-ack
+=== RUN   TestDiscoveryCredentialCustodyRevision/metadata-rejected-metadata-receipt
+=== RUN   TestDiscoveryCredentialCustodyRevision/metadata-ambiguous-create
+=== RUN   TestDiscoveryCredentialCustodyRevision/metadata-configmap-create-source-loss
+=== RUN   TestDiscoveryCredentialCustodyRevision/metadata-unknown-create
+--- PASS: TestDiscoveryCredentialCustodyRevision (126.08s)
+    --- PASS: TestDiscoveryCredentialCustodyRevision/rotate-inline (1.70s)
+    --- PASS: TestDiscoveryCredentialCustodyRevision/rotate-configmap (1.71s)
+    --- PASS: TestDiscoveryCredentialCustodyRevision/leaf-reintroduction (3.35s)
+    --- PASS: TestDiscoveryCredentialCustodyRevision/leaf-reuse-refused (3.51s)
+    --- PASS: TestDiscoveryCredentialCustodyRevision/prune-recreate (2.57s)
+    --- PASS: TestDiscoveryCredentialCustodyRevision/metadata (1.68s)
+    --- PASS: TestDiscoveryCredentialCustodyRevision/prune-inline (1.73s)
+    --- PASS: TestDiscoveryCredentialCustodyRevision/prune-configmap (1.75s)
+    --- PASS: TestDiscoveryCredentialCustodyRevision/retain (1.80s)
+    --- PASS: TestDiscoveryCredentialCustodyRevision/old-counter (1.82s)
+    --- PASS: TestDiscoveryCredentialCustodyRevision/projection-lag (1.16s)
+    --- PASS: TestDiscoveryCredentialCustodyRevision/archive-return (1.74s)
+    --- PASS: TestDiscoveryCredentialCustodyRevision/seal-loss (1.52s)
+    --- PASS: TestDiscoveryCredentialCustodyRevision/lost-accepted-ack (1.71s)
+    --- PASS: TestDiscoveryCredentialCustodyRevision/lost-retirement-ack (1.66s)
+    --- PASS: TestDiscoveryCredentialCustodyRevision/lost-permit-ack (1.41s)
+    --- PASS: TestDiscoveryCredentialCustodyRevision/ambiguous-delete (1.51s)
+    --- PASS: TestDiscoveryCredentialCustodyRevision/unknown-delete (1.70s)
+    --- PASS: TestDiscoveryCredentialCustodyRevision/configmap-source-loss (1.31s)
+    --- PASS: TestDiscoveryCredentialCustodyRevision/scope-loss-after-submit (1.78s)
+    --- PASS: TestDiscoveryCredentialCustodyRevision/empty-inline (2.29s)
+    --- PASS: TestDiscoveryCredentialCustodyRevision/empty-configmap (2.31s)
+    --- PASS: TestDiscoveryCredentialCustodyRevision/empty-retain (2.37s)
+    --- PASS: TestDiscoveryCredentialCustodyRevision/empty-recreate (3.26s)
+    --- PASS: TestDiscoveryCredentialCustodyRevision/empty-lost-accepted-ack (2.29s)
+    --- PASS: TestDiscoveryCredentialCustodyRevision/empty-lost-retirement-ack (2.28s)
+    --- PASS: TestDiscoveryCredentialCustodyRevision/empty-lost-permit-ack (1.26s)
+    --- PASS: TestDiscoveryCredentialCustodyRevision/empty-ambiguous-delete (1.32s)
+    --- PASS: TestDiscoveryCredentialCustodyRevision/empty-unknown-delete (2.28s)
+    --- PASS: TestDiscoveryCredentialCustodyRevision/empty-configmap-source-loss (1.25s)
+    --- PASS: TestDiscoveryCredentialCustodyRevision/empty-scope-loss-after-submit (1.53s)
+    --- PASS: TestDiscoveryCredentialCustodyRevision/empty-seal-loss (1.30s)
+    --- PASS: TestDiscoveryCredentialCustodyRevision/empty-archive-return (1.47s)
+    --- PASS: TestDiscoveryCredentialCustodyRevision/empty-native-return (1.92s)
+    --- PASS: TestDiscoveryCredentialCustodyRevision/metadata-noauth-configmap (3.09s)
+    --- PASS: TestDiscoveryCredentialCustodyRevision/metadata-global-inline (3.06s)
+    --- PASS: TestDiscoveryCredentialCustodyRevision/metadata-global-configmap (3.33s)
+    --- PASS: TestDiscoveryCredentialCustodyRevision/metadata-noauth (3.07s)
+    --- PASS: TestDiscoveryCredentialCustodyRevision/metadata-reintroduce (4.09s)
+    --- PASS: TestDiscoveryCredentialCustodyRevision/metadata-version-reuse (2.43s)
+    --- PASS: TestDiscoveryCredentialCustodyRevision/metadata-prune (3.03s)
+    --- PASS: TestDiscoveryCredentialCustodyRevision/metadata-prune-recreate (3.89s)
+    --- PASS: TestDiscoveryCredentialCustodyRevision/metadata-mixed (4.21s)
+    --- PASS: TestDiscoveryCredentialCustodyRevision/metadata-lost-accepted-ack (3.08s)
+    --- PASS: TestDiscoveryCredentialCustodyRevision/metadata-lost-retirement-ack (3.06s)
+    --- PASS: TestDiscoveryCredentialCustodyRevision/metadata-lost-permit-ack (1.34s)
+    --- PASS: TestDiscoveryCredentialCustodyRevision/metadata-ambiguous-delete (1.37s)
+    --- PASS: TestDiscoveryCredentialCustodyRevision/metadata-unknown-delete (3.10s)
+    --- PASS: TestDiscoveryCredentialCustodyRevision/metadata-configmap-source-loss (1.28s)
+    --- PASS: TestDiscoveryCredentialCustodyRevision/metadata-scope-loss-after-submit (1.63s)
+    --- PASS: TestDiscoveryCredentialCustodyRevision/metadata-lost-metadata-accepted-ack (3.08s)
+    --- PASS: TestDiscoveryCredentialCustodyRevision/metadata-lost-metadata-permit-ack (1.48s)
+    --- PASS: TestDiscoveryCredentialCustodyRevision/metadata-lost-metadata-receipt-ack (3.07s)
+    --- PASS: TestDiscoveryCredentialCustodyRevision/metadata-rejected-metadata-receipt (3.09s)
+    --- PASS: TestDiscoveryCredentialCustodyRevision/metadata-ambiguous-create (1.52s)
+    --- PASS: TestDiscoveryCredentialCustodyRevision/metadata-configmap-create-source-loss (1.43s)
+    --- PASS: TestDiscoveryCredentialCustodyRevision/metadata-unknown-create (3.09s)
+=== RUN   TestDiscoveryCredentialSourceRecovery
+=== RUN   TestDiscoveryCredentialSourceRecovery/cm-deleted
+=== RUN   TestDiscoveryCredentialSourceRecovery/cm-changed
+=== RUN   TestDiscoveryCredentialSourceRecovery/cm-replaced
+=== RUN   TestDiscoveryCredentialSourceRecovery/projection-lost
+=== RUN   TestDiscoveryCredentialSourceRecovery/counter-lag
+=== RUN   TestDiscoveryCredentialSourceRecovery/known-unknown
+=== RUN   TestDiscoveryCredentialSourceRecovery/lost-receipt-ack
+=== RUN   TestDiscoveryCredentialSourceRecovery/conflict
+=== RUN   TestDiscoveryCredentialSourceRecovery/pruned-application
+=== RUN   TestDiscoveryCredentialSourceRecovery/scope-missing
+=== RUN   TestDiscoveryCredentialSourceRecovery/scope-tampered
+=== RUN   TestDiscoveryCredentialSourceRecovery/spec-changed
+=== RUN   TestDiscoveryCredentialSourceRecovery/controller-changed
+=== RUN   TestDiscoveryCredentialSourceRecovery/owner-revoked
+=== RUN   TestDiscoveryCredentialSourceRecovery/taskless
+=== RUN   TestDiscoveryCredentialSourceRecovery/legacy
+=== RUN   TestDiscoveryCredentialSourceRecovery/source-returned
+=== RUN   TestDiscoveryCredentialSourceRecovery/failed-task
+=== RUN   TestDiscoveryCredentialSourceRecovery/pending-task
+=== RUN   TestDiscoveryCredentialSourceRecovery/native-drift
+=== RUN   TestDiscoveryCredentialSourceRecovery/foreign-uuid
+=== RUN   TestDiscoveryCredentialSourceRecovery/cleanup-conflict
+--- PASS: TestDiscoveryCredentialSourceRecovery (2.85s)
+    --- PASS: TestDiscoveryCredentialSourceRecovery/cm-deleted (0.11s)
+    --- PASS: TestDiscoveryCredentialSourceRecovery/cm-changed (0.12s)
+    --- PASS: TestDiscoveryCredentialSourceRecovery/cm-replaced (0.14s)
+    --- PASS: TestDiscoveryCredentialSourceRecovery/projection-lost (0.11s)
+    --- PASS: TestDiscoveryCredentialSourceRecovery/counter-lag (0.12s)
+    --- PASS: TestDiscoveryCredentialSourceRecovery/known-unknown (0.12s)
+    --- PASS: TestDiscoveryCredentialSourceRecovery/lost-receipt-ack (0.11s)
+    --- PASS: TestDiscoveryCredentialSourceRecovery/conflict (0.18s)
+    --- PASS: TestDiscoveryCredentialSourceRecovery/pruned-application (0.15s)
+    --- PASS: TestDiscoveryCredentialSourceRecovery/scope-missing (0.12s)
+    --- PASS: TestDiscoveryCredentialSourceRecovery/scope-tampered (0.12s)
+    --- PASS: TestDiscoveryCredentialSourceRecovery/spec-changed (0.12s)
+    --- PASS: TestDiscoveryCredentialSourceRecovery/controller-changed (0.12s)
+    --- PASS: TestDiscoveryCredentialSourceRecovery/owner-revoked (0.13s)
+    --- PASS: TestDiscoveryCredentialSourceRecovery/taskless (0.12s)
+    --- PASS: TestDiscoveryCredentialSourceRecovery/legacy (0.12s)
+    --- PASS: TestDiscoveryCredentialSourceRecovery/source-returned (0.14s)
+    --- PASS: TestDiscoveryCredentialSourceRecovery/failed-task (0.13s)
+    --- PASS: TestDiscoveryCredentialSourceRecovery/pending-task (0.13s)
+    --- PASS: TestDiscoveryCredentialSourceRecovery/native-drift (0.16s)
+    --- PASS: TestDiscoveryCredentialSourceRecovery/foreign-uuid (0.16s)
+    --- PASS: TestDiscoveryCredentialSourceRecovery/cleanup-conflict (0.11s)
+=== RUN   TestDiscoveryCredentialScopePublicationGuard
+--- PASS: TestDiscoveryCredentialScopePublicationGuard (0.01s)
+=== RUN   TestDiscoveryCredentialScopePublicPublicationRace
+--- PASS: TestDiscoveryCredentialScopePublicPublicationRace (0.02s)
+=== RUN   TestDiscoveryCredentialSourceChangeBeforePlanning
+--- PASS: TestDiscoveryCredentialSourceChangeBeforePlanning (0.03s)
+=== RUN   TestDiscoveryCredentialUnsubmittedDeletion
+=== RUN   TestDiscoveryCredentialUnsubmittedDeletion/drain-prepared
+=== RUN   TestDiscoveryCredentialUnsubmittedDeletion/drain-prepared-handoff
+=== RUN   TestDiscoveryCredentialUnsubmittedDeletion/drain-prepared-retained-source-loss
+=== RUN   TestDiscoveryCredentialUnsubmittedDeletion/drain-prepared-retained-projection-loss
+=== RUN   TestDiscoveryCredentialUnsubmittedDeletion/drain-prepared-configmap
+=== RUN   TestDiscoveryCredentialUnsubmittedDeletion/drain-prepared-source-loss
+=== RUN   TestDiscoveryCredentialUnsubmittedDeletion/drain-prepared-projection-loss
+=== RUN   TestDiscoveryCredentialUnsubmittedDeletion/drain-prepared-scope-loss
+=== RUN   TestDiscoveryCredentialUnsubmittedDeletion/drain-prepared-native-conflict
+=== RUN   TestDiscoveryCredentialUnsubmittedDeletion/drain-prepared-native-error
+=== RUN   TestDiscoveryCredentialUnsubmittedDeletion/drain-prepared-source-race
+=== RUN   TestDiscoveryCredentialUnsubmittedDeletion/drain-prepared-config-race
+=== RUN   TestDiscoveryCredentialUnsubmittedDeletion/drain-prepared-journal-race
+=== RUN   TestDiscoveryCredentialUnsubmittedDeletion/drain-prepared-task-contamination
+=== RUN   TestDiscoveryCredentialUnsubmittedDeletion/drain-prepared-credential-contamination
+=== RUN   TestDiscoveryCredentialUnsubmittedDeletion/drain-prepared-lost-retirement-ack
+=== RUN   TestDiscoveryCredentialUnsubmittedDeletion/drain-prepared-conflict-retirement
+=== RUN   TestDiscoveryCredentialUnsubmittedDeletion/drain-prepared-lost-completion-ack
+=== RUN   TestDiscoveryCredentialUnsubmittedDeletion/drain-prepared-conflict-completion
+--- PASS: TestDiscoveryCredentialUnsubmittedDeletion (3.12s)
+    --- PASS: TestDiscoveryCredentialUnsubmittedDeletion/drain-prepared (0.11s)
+    --- PASS: TestDiscoveryCredentialUnsubmittedDeletion/drain-prepared-handoff (0.81s)
+    --- PASS: TestDiscoveryCredentialUnsubmittedDeletion/drain-prepared-retained-source-loss (0.13s)
+    --- PASS: TestDiscoveryCredentialUnsubmittedDeletion/drain-prepared-retained-projection-loss (0.13s)
+    --- PASS: TestDiscoveryCredentialUnsubmittedDeletion/drain-prepared-configmap (0.11s)
+    --- PASS: TestDiscoveryCredentialUnsubmittedDeletion/drain-prepared-source-loss (0.13s)
+    --- PASS: TestDiscoveryCredentialUnsubmittedDeletion/drain-prepared-projection-loss (0.13s)
+    --- PASS: TestDiscoveryCredentialUnsubmittedDeletion/drain-prepared-scope-loss (0.11s)
+    --- PASS: TestDiscoveryCredentialUnsubmittedDeletion/drain-prepared-native-conflict (0.16s)
+    --- PASS: TestDiscoveryCredentialUnsubmittedDeletion/drain-prepared-native-error (0.16s)
+    --- PASS: TestDiscoveryCredentialUnsubmittedDeletion/drain-prepared-source-race (0.14s)
+    --- PASS: TestDiscoveryCredentialUnsubmittedDeletion/drain-prepared-config-race (0.13s)
+    --- PASS: TestDiscoveryCredentialUnsubmittedDeletion/drain-prepared-journal-race (0.13s)
+    --- PASS: TestDiscoveryCredentialUnsubmittedDeletion/drain-prepared-task-contamination (0.12s)
+    --- PASS: TestDiscoveryCredentialUnsubmittedDeletion/drain-prepared-credential-contamination (0.12s)
+    --- PASS: TestDiscoveryCredentialUnsubmittedDeletion/drain-prepared-lost-retirement-ack (0.13s)
+    --- PASS: TestDiscoveryCredentialUnsubmittedDeletion/drain-prepared-conflict-retirement (0.13s)
+    --- PASS: TestDiscoveryCredentialUnsubmittedDeletion/drain-prepared-lost-completion-ack (0.11s)
+    --- PASS: TestDiscoveryCredentialUnsubmittedDeletion/drain-prepared-conflict-completion (0.13s)
+=== RUN   TestDiscoveryCredentialProjectionKinds
+=== RUN   TestDiscoveryCredentialProjectionKinds/cli/global=false
+=== RUN   TestDiscoveryCredentialProjectionKinds/cli/global=true
+=== RUN   TestDiscoveryCredentialProjectionKinds/http-read/global=false
+=== RUN   TestDiscoveryCredentialProjectionKinds/http-read/global=true
+=== RUN   TestDiscoveryCredentialProjectionKinds/http-write/global=false
+=== RUN   TestDiscoveryCredentialProjectionKinds/http-write/global=true
+=== RUN   TestDiscoveryCredentialProjectionKinds/snmp-v2/global=false
+=== RUN   TestDiscoveryCredentialProjectionKinds/snmp-v2/global=true
+=== RUN   TestDiscoveryCredentialProjectionKinds/snmp-auth-priv/global=false
+=== RUN   TestDiscoveryCredentialProjectionKinds/snmp-auth-priv/global=true
+=== RUN   TestDiscoveryCredentialProjectionKinds/snmp-auth-no-priv/global=false
+=== RUN   TestDiscoveryCredentialProjectionKinds/snmp-auth-no-priv/global=true
+=== RUN   TestDiscoveryCredentialProjectionKinds/snmp-no-auth/global=false
+=== RUN   TestDiscoveryCredentialProjectionKinds/snmp-no-auth/global=true
+--- PASS: TestDiscoveryCredentialProjectionKinds (0.21s)
+    --- PASS: TestDiscoveryCredentialProjectionKinds/cli/global=false (0.02s)
+    --- PASS: TestDiscoveryCredentialProjectionKinds/cli/global=true (0.02s)
+    --- PASS: TestDiscoveryCredentialProjectionKinds/http-read/global=false (0.01s)
+    --- PASS: TestDiscoveryCredentialProjectionKinds/http-read/global=true (0.01s)
+    --- PASS: TestDiscoveryCredentialProjectionKinds/http-write/global=false (0.01s)
+    --- PASS: TestDiscoveryCredentialProjectionKinds/http-write/global=true (0.02s)
+    --- PASS: TestDiscoveryCredentialProjectionKinds/snmp-v2/global=false (0.01s)
+    --- PASS: TestDiscoveryCredentialProjectionKinds/snmp-v2/global=true (0.02s)
+    --- PASS: TestDiscoveryCredentialProjectionKinds/snmp-auth-priv/global=false (0.02s)
+    --- PASS: TestDiscoveryCredentialProjectionKinds/snmp-auth-priv/global=true (0.02s)
+    --- PASS: TestDiscoveryCredentialProjectionKinds/snmp-auth-no-priv/global=false (0.01s)
+    --- PASS: TestDiscoveryCredentialProjectionKinds/snmp-auth-no-priv/global=true (0.01s)
+    --- PASS: TestDiscoveryCredentialProjectionKinds/snmp-no-auth/global=false (0.01s)
+    --- PASS: TestDiscoveryCredentialProjectionKinds/snmp-no-auth/global=true (0.01s)
+=== RUN   TestDiscoveryCredentialModelRefusal
+=== RUN   TestDiscoveryCredentialModelRefusal/null-counter
+=== RUN   TestDiscoveryCredentialModelRefusal/missing-privacy
+=== RUN   TestDiscoveryCredentialModelRefusal/noauth-with-secret
+=== RUN   TestDiscoveryCredentialModelRefusal/plaintext-community
+=== RUN   TestDiscoveryCredentialModelRefusal/string-counter
+=== RUN   TestDiscoveryCredentialModelRefusal/v2-mode
+=== RUN   TestDiscoveryCredentialModelRefusal/bad-enum
+=== RUN   TestDiscoveryCredentialModelRefusal/missing-auth
+=== RUN   TestDiscoveryCredentialModelRefusal/description-no-community
+=== RUN   TestDiscoveryCredentialModelRefusal/plaintext-password
+=== RUN   TestDiscoveryCredentialModelRefusal/unknown
+=== RUN   TestDiscoveryCredentialModelRefusal/v3-community
+=== RUN   TestDiscoveryCredentialModelRefusal/duplicate-users
+=== RUN   TestDiscoveryCredentialModelRefusal/plaintext-http
+=== RUN   TestDiscoveryCredentialModelRefusal/zero-counter
+--- PASS: TestDiscoveryCredentialModelRefusal (0.01s)
+    --- PASS: TestDiscoveryCredentialModelRefusal/null-counter (0.00s)
+    --- PASS: TestDiscoveryCredentialModelRefusal/missing-privacy (0.00s)
+    --- PASS: TestDiscoveryCredentialModelRefusal/noauth-with-secret (0.00s)
+    --- PASS: TestDiscoveryCredentialModelRefusal/plaintext-community (0.00s)
+    --- PASS: TestDiscoveryCredentialModelRefusal/string-counter (0.00s)
+    --- PASS: TestDiscoveryCredentialModelRefusal/v2-mode (0.00s)
+    --- PASS: TestDiscoveryCredentialModelRefusal/bad-enum (0.00s)
+    --- PASS: TestDiscoveryCredentialModelRefusal/missing-auth (0.00s)
+    --- PASS: TestDiscoveryCredentialModelRefusal/description-no-community (0.00s)
+    --- PASS: TestDiscoveryCredentialModelRefusal/plaintext-password (0.00s)
+    --- PASS: TestDiscoveryCredentialModelRefusal/unknown (0.00s)
+    --- PASS: TestDiscoveryCredentialModelRefusal/v3-community (0.00s)
+    --- PASS: TestDiscoveryCredentialModelRefusal/duplicate-users (0.00s)
+    --- PASS: TestDiscoveryCredentialModelRefusal/plaintext-http (0.00s)
+    --- PASS: TestDiscoveryCredentialModelRefusal/zero-counter (0.00s)
+=== RUN   TestDiscoveryCredentialSetAndProjectionFences
+=== RUN   TestDiscoveryCredentialSetAndProjectionFences/empty-set
+=== RUN   TestDiscoveryCredentialSetAndProjectionFences/duplicate-set
+=== RUN   TestDiscoveryCredentialSetAndProjectionFences/non-string
+=== RUN   TestDiscoveryCredentialSetAndProjectionFences/trailing
+=== RUN   TestDiscoveryCredentialSetAndProjectionFences/null-set
+=== RUN   TestDiscoveryCredentialSetAndProjectionFences/missing-file
+=== RUN   TestDiscoveryCredentialSetAndProjectionFences/projection-lag
+=== RUN   TestDiscoveryCredentialSetAndProjectionFences/changed-bytes
+=== RUN   TestDiscoveryCredentialSetAndProjectionFences/controller-uid
+=== RUN   TestDiscoveryCredentialSetAndProjectionFences/config-uid
+=== RUN   TestDiscoveryCredentialSetAndProjectionFences/source-uid
+=== RUN   TestDiscoveryCredentialSetAndProjectionFences/source-version
+=== RUN   TestDiscoveryCredentialSetAndProjectionFences/source-edit
+=== RUN   TestDiscoveryCredentialSetAndProjectionFences/destination-edit
+=== RUN   TestDiscoveryCredentialSetAndProjectionFences/revoked
+=== RUN   TestDiscoveryCredentialSetAndProjectionFences/wrong-use
+--- PASS: TestDiscoveryCredentialSetAndProjectionFences (0.21s)
+    --- PASS: TestDiscoveryCredentialSetAndProjectionFences/empty-set (0.01s)
+    --- PASS: TestDiscoveryCredentialSetAndProjectionFences/duplicate-set (0.01s)
+    --- PASS: TestDiscoveryCredentialSetAndProjectionFences/non-string (0.01s)
+    --- PASS: TestDiscoveryCredentialSetAndProjectionFences/trailing (0.01s)
+    --- PASS: TestDiscoveryCredentialSetAndProjectionFences/null-set (0.01s)
+    --- PASS: TestDiscoveryCredentialSetAndProjectionFences/missing-file (0.01s)
+    --- PASS: TestDiscoveryCredentialSetAndProjectionFences/projection-lag (0.01s)
+    --- PASS: TestDiscoveryCredentialSetAndProjectionFences/changed-bytes (0.01s)
+    --- PASS: TestDiscoveryCredentialSetAndProjectionFences/controller-uid (0.01s)
+    --- PASS: TestDiscoveryCredentialSetAndProjectionFences/config-uid (0.01s)
+    --- PASS: TestDiscoveryCredentialSetAndProjectionFences/source-uid (0.01s)
+    --- PASS: TestDiscoveryCredentialSetAndProjectionFences/source-version (0.01s)
+    --- PASS: TestDiscoveryCredentialSetAndProjectionFences/source-edit (0.01s)
+    --- PASS: TestDiscoveryCredentialSetAndProjectionFences/destination-edit (0.01s)
+    --- PASS: TestDiscoveryCredentialSetAndProjectionFences/revoked (0.01s)
+    --- PASS: TestDiscoveryCredentialSetAndProjectionFences/wrong-use (0.01s)
+=== RUN   TestDiscoveryCredentialProjectionDoesNotEnableUnsupportedLifecycle
+--- PASS: TestDiscoveryCredentialProjectionDoesNotEnableUnsupportedLifecycle (0.02s)
+=== RUN   TestDiscoveryCredentialNullGlobalAndMetadataIdentity
+=== RUN   TestDiscoveryCredentialNullGlobalAndMetadataIdentity/uid
+=== RUN   TestDiscoveryCredentialNullGlobalAndMetadataIdentity/generation
+=== RUN   TestDiscoveryCredentialNullGlobalAndMetadataIdentity/paused
+=== RUN   TestDiscoveryCredentialNullGlobalAndMetadataIdentity/source-version
+--- PASS: TestDiscoveryCredentialNullGlobalAndMetadataIdentity (0.06s)
+    --- PASS: TestDiscoveryCredentialNullGlobalAndMetadataIdentity/uid (0.01s)
+    --- PASS: TestDiscoveryCredentialNullGlobalAndMetadataIdentity/generation (0.01s)
+    --- PASS: TestDiscoveryCredentialNullGlobalAndMetadataIdentity/paused (0.01s)
+    --- PASS: TestDiscoveryCredentialNullGlobalAndMetadataIdentity/source-version (0.01s)
+=== RUN   TestDiscoveryCredentialSortedJobsKeepProjectionPaths
+--- PASS: TestDiscoveryCredentialSortedJobsKeepProjectionPaths (0.02s)
+=== RUN   TestDiscoveryCredentialInputIdentityAndGlobalResolution
+--- PASS: TestDiscoveryCredentialInputIdentityAndGlobalResolution (0.02s)
+=== RUN   TestDiscoveryCredentialInputIdentityUsesVersionsAndSets
+--- PASS: TestDiscoveryCredentialInputIdentityUsesVersionsAndSets (0.04s)
+=== RUN   TestDiscoveryCredentialProjectionRequiresExactActorAndSource
+=== RUN   TestDiscoveryCredentialProjectionRequiresExactActorAndSource/actor-uid
+=== RUN   TestDiscoveryCredentialProjectionRequiresExactActorAndSource/actor-generation
+=== RUN   TestDiscoveryCredentialProjectionRequiresExactActorAndSource/actor-namespace
+=== RUN   TestDiscoveryCredentialProjectionRequiresExactActorAndSource/report
+=== RUN   TestDiscoveryCredentialProjectionRequiresExactActorAndSource/inline-mismatch
+=== RUN   TestDiscoveryCredentialProjectionRequiresExactActorAndSource/inline-source-uid
+--- PASS: TestDiscoveryCredentialProjectionRequiresExactActorAndSource (0.08s)
+    --- PASS: TestDiscoveryCredentialProjectionRequiresExactActorAndSource/actor-uid (0.01s)
+    --- PASS: TestDiscoveryCredentialProjectionRequiresExactActorAndSource/actor-generation (0.01s)
+    --- PASS: TestDiscoveryCredentialProjectionRequiresExactActorAndSource/actor-namespace (0.01s)
+    --- PASS: TestDiscoveryCredentialProjectionRequiresExactActorAndSource/report (0.01s)
+    --- PASS: TestDiscoveryCredentialProjectionRequiresExactActorAndSource/inline-mismatch (0.01s)
+    --- PASS: TestDiscoveryCredentialProjectionRequiresExactActorAndSource/inline-source-uid (0.01s)
+=== RUN   TestDiscoveryDefaultsPrecedenceAndSelection
+--- PASS: TestDiscoveryDefaultsPrecedenceAndSelection (0.01s)
+=== RUN   TestDiscoveryDefaultsFields
+=== RUN   TestDiscoveryDefaultsFields/lldp_level
+=== RUN   TestDiscoveryDefaultsFields/retry
+=== RUN   TestDiscoveryDefaultsFields/type
+=== RUN   TestDiscoveryDefaultsFields/time_out
+=== RUN   TestDiscoveryDefaultsFields/netconf_port
+=== RUN   TestDiscoveryDefaultsFields/preferred_mgmt_ip_method
+=== RUN   TestDiscoveryDefaultsFields/ip_filter_list
+=== RUN   TestDiscoveryDefaultsFields/protocol_order
+=== RUN   TestDiscoveryDefaultsFields/ip_address_list
+=== RUN   TestDiscoveryDefaultsFields/cdp_level
+--- PASS: TestDiscoveryDefaultsFields (0.00s)
+    --- PASS: TestDiscoveryDefaultsFields/lldp_level (0.00s)
+    --- PASS: TestDiscoveryDefaultsFields/retry (0.00s)
+    --- PASS: TestDiscoveryDefaultsFields/type (0.00s)
+    --- PASS: TestDiscoveryDefaultsFields/time_out (0.00s)
+    --- PASS: TestDiscoveryDefaultsFields/netconf_port (0.00s)
+    --- PASS: TestDiscoveryDefaultsFields/preferred_mgmt_ip_method (0.00s)
+    --- PASS: TestDiscoveryDefaultsFields/ip_filter_list (0.00s)
+    --- PASS: TestDiscoveryDefaultsFields/protocol_order (0.00s)
+    --- PASS: TestDiscoveryDefaultsFields/ip_address_list (0.00s)
+    --- PASS: TestDiscoveryDefaultsFields/cdp_level (0.00s)
+=== RUN   TestDiscoveryDefaultsRefusal
+=== RUN   TestDiscoveryDefaultsRefusal/{"name":"NO_PRINT"}
+=== RUN   TestDiscoveryDefaultsRefusal/{"global_credential_list":["NO_PRINT"]}
+=== RUN   TestDiscoveryDefaultsRefusal/{"create_per_site":true}
+=== RUN   TestDiscoveryDefaultsRefusal/{"password_list":["NO_PRINT"]}
+=== RUN   TestDiscoveryDefaultsRefusal/{"type":null}
+=== RUN   TestDiscoveryDefaultsRefusal/{"retry":-1}
+=== RUN   TestDiscoveryDefaultsRefusal/{"time_out":0}
+=== RUN   TestDiscoveryDefaultsRefusal/{"netconf_port":830}
+=== RUN   TestDiscoveryDefaultsRefusal/{"protocol_order":"NO_PRINT"}
+=== RUN   TestDiscoveryDefaultsRefusal/{"ip_filter_list":["bad"]}
+=== RUN   TestDiscoveryDefaultsRefusal/{"unknown":"NO_PRINT"}
+--- PASS: TestDiscoveryDefaultsRefusal (0.07s)
+    --- PASS: TestDiscoveryDefaultsRefusal/{"name":"NO_PRINT"} (0.00s)
+    --- PASS: TestDiscoveryDefaultsRefusal/{"global_credential_list":["NO_PRINT"]} (0.00s)
+    --- PASS: TestDiscoveryDefaultsRefusal/{"create_per_site":true} (0.00s)
+    --- PASS: TestDiscoveryDefaultsRefusal/{"password_list":["NO_PRINT"]} (0.00s)
+    --- PASS: TestDiscoveryDefaultsRefusal/{"type":null} (0.00s)
+    --- PASS: TestDiscoveryDefaultsRefusal/{"retry":-1} (0.00s)
+    --- PASS: TestDiscoveryDefaultsRefusal/{"time_out":0} (0.00s)
+    --- PASS: TestDiscoveryDefaultsRefusal/{"netconf_port":830} (0.00s)
+    --- PASS: TestDiscoveryDefaultsRefusal/{"protocol_order":"NO_PRINT"} (0.00s)
+    --- PASS: TestDiscoveryDefaultsRefusal/{"ip_filter_list":["bad"]} (0.00s)
+    --- PASS: TestDiscoveryDefaultsRefusal/{"unknown":"NO_PRINT"} (0.00s)
+=== RUN   TestDiscoveryDefaultsPinnedEmpty
+--- PASS: TestDiscoveryDefaultsPinnedEmpty (0.01s)
+=== RUN   TestDiscoveryDefaultsManifestLifecycle
+--- PASS: TestDiscoveryDefaultsManifestLifecycle (0.27s)
+=== RUN   TestDiscoveryDefaultsExpansionBudget
+--- PASS: TestDiscoveryDefaultsExpansionBudget (0.18s)
+=== RUN   TestDiscoveryExportSiteSelection
+=== RUN   TestDiscoveryExportSiteSelection/single-state
+=== RUN   TestDiscoveryExportSiteSelection/global
+=== RUN   TestDiscoveryExportSiteSelection/per-site
+=== RUN   TestDiscoveryExportSiteSelection/exact-site
+=== RUN   TestDiscoveryExportSiteSelection/global-and-sites
+--- PASS: TestDiscoveryExportSiteSelection (0.01s)
+    --- PASS: TestDiscoveryExportSiteSelection/single-state (0.00s)
+    --- PASS: TestDiscoveryExportSiteSelection/global (0.00s)
+    --- PASS: TestDiscoveryExportSiteSelection/per-site (0.00s)
+    --- PASS: TestDiscoveryExportSiteSelection/exact-site (0.00s)
+    --- PASS: TestDiscoveryExportSiteSelection/global-and-sites (0.00s)
+=== RUN   TestDiscoveryExportSelectionRefusesHiddenInvalidInput
+--- PASS: TestDiscoveryExportSelectionRefusesHiddenInvalidInput (0.01s)
+=== RUN   TestDiscoverySelectedManifestLifecycle
+--- PASS: TestDiscoverySelectedManifestLifecycle (0.26s)
+=== RUN   TestDiscoveryOwnedFieldMaskPreservesOriginalPublicShape
+--- PASS: TestDiscoveryOwnedFieldMaskPreservesOriginalPublicShape (0.00s)
+=== RUN   TestDiscoveryInitialNoAuthLifecycle
+=== RUN   TestDiscoveryInitialNoAuthLifecycle/inline
+=== RUN   TestDiscoveryInitialNoAuthLifecycle/configmap
+=== RUN   TestDiscoveryInitialNoAuthLifecycle/unknown
+=== RUN   TestDiscoveryInitialNoAuthLifecycle/prepared
+=== RUN   TestDiscoveryInitialNoAuthLifecycle/prepared-configmap
+=== RUN   TestDiscoveryInitialNoAuthLifecycle/prepared-source-loss
+=== RUN   TestDiscoveryInitialNoAuthLifecycle/prepared-committed-source-loss
+=== RUN   TestDiscoveryInitialNoAuthLifecycle/prepared-native-conflict
+=== RUN   TestDiscoveryInitialNoAuthLifecycle/prepared-scope-loss
+=== RUN   TestDiscoveryInitialNoAuthLifecycle/handoff
+=== RUN   TestDiscoveryInitialNoAuthLifecycle/handoff-configmap
+=== RUN   TestDiscoveryInitialNoAuthLifecycle/prepared-handoff
+=== RUN   TestDiscoveryInitialNoAuthLifecycle/prepared-committed-source-loss-handoff
+=== RUN   TestDiscoveryInitialNoAuthLifecycle/projected
+=== RUN   TestDiscoveryInitialNoAuthLifecycle/projected-configmap
+=== RUN   TestDiscoveryInitialNoAuthLifecycle/projected-return-to-metadata
+--- PASS: TestDiscoveryInitialNoAuthLifecycle (7.63s)
+    --- PASS: TestDiscoveryInitialNoAuthLifecycle/inline (0.23s)
+    --- PASS: TestDiscoveryInitialNoAuthLifecycle/configmap (0.24s)
+    --- PASS: TestDiscoveryInitialNoAuthLifecycle/unknown (0.22s)
+    --- PASS: TestDiscoveryInitialNoAuthLifecycle/prepared (0.08s)
+    --- PASS: TestDiscoveryInitialNoAuthLifecycle/prepared-configmap (0.08s)
+    --- PASS: TestDiscoveryInitialNoAuthLifecycle/prepared-source-loss (0.30s)
+    --- PASS: TestDiscoveryInitialNoAuthLifecycle/prepared-committed-source-loss (0.09s)
+    --- PASS: TestDiscoveryInitialNoAuthLifecycle/prepared-native-conflict (0.36s)
+    --- PASS: TestDiscoveryInitialNoAuthLifecycle/prepared-scope-loss (0.24s)
+    --- PASS: TestDiscoveryInitialNoAuthLifecycle/handoff (1.11s)
+    --- PASS: TestDiscoveryInitialNoAuthLifecycle/handoff-configmap (1.13s)
+    --- PASS: TestDiscoveryInitialNoAuthLifecycle/prepared-handoff (0.77s)
+    --- PASS: TestDiscoveryInitialNoAuthLifecycle/prepared-committed-source-loss-handoff (0.80s)
+    --- PASS: TestDiscoveryInitialNoAuthLifecycle/projected (0.55s)
+    --- PASS: TestDiscoveryInitialNoAuthLifecycle/projected-configmap (0.57s)
+    --- PASS: TestDiscoveryInitialNoAuthLifecycle/projected-return-to-metadata (0.85s)
+=== RUN   TestDiscoveryNoAuthRetainLifecycle
+=== RUN   TestDiscoveryNoAuthRetainLifecycle/inline
+=== RUN   TestDiscoveryNoAuthRetainLifecycle/default
+=== RUN   TestDiscoveryNoAuthRetainLifecycle/configmap
+=== RUN   TestDiscoveryNoAuthRetainLifecycle/unknown
+=== RUN   TestDiscoveryNoAuthRetainLifecycle/unknown-source-loss
+=== RUN   TestDiscoveryNoAuthRetainLifecycle/projected
+=== RUN   TestDiscoveryNoAuthRetainLifecycle/projected-configmap
+=== RUN   TestDiscoveryNoAuthRetainLifecycle/projected-return-to-metadata
+=== RUN   TestDiscoveryNoAuthRetainLifecycle/projected-reintroduce
+=== RUN   TestDiscoveryNoAuthRetainLifecycle/projected-reuse
+=== RUN   TestDiscoveryNoAuthRetainLifecycle/versioned-origin
+=== RUN   TestDiscoveryNoAuthRetainLifecycle/prepared
+=== RUN   TestDiscoveryNoAuthRetainLifecycle/blocked-discovery-finalizer
+=== RUN   TestDiscoveryNoAuthRetainLifecycle/blocked-feature-finalizer
+--- PASS: TestDiscoveryNoAuthRetainLifecycle (5.24s)
+    --- PASS: TestDiscoveryNoAuthRetainLifecycle/inline (0.16s)
+    --- PASS: TestDiscoveryNoAuthRetainLifecycle/default (0.16s)
+    --- PASS: TestDiscoveryNoAuthRetainLifecycle/configmap (0.17s)
+    --- PASS: TestDiscoveryNoAuthRetainLifecycle/unknown (0.16s)
+    --- PASS: TestDiscoveryNoAuthRetainLifecycle/unknown-source-loss (0.17s)
+    --- PASS: TestDiscoveryNoAuthRetainLifecycle/projected (0.42s)
+    --- PASS: TestDiscoveryNoAuthRetainLifecycle/projected-configmap (0.45s)
+    --- PASS: TestDiscoveryNoAuthRetainLifecycle/projected-return-to-metadata (0.67s)
+    --- PASS: TestDiscoveryNoAuthRetainLifecycle/projected-reintroduce (1.09s)
+    --- PASS: TestDiscoveryNoAuthRetainLifecycle/projected-reuse (0.83s)
+    --- PASS: TestDiscoveryNoAuthRetainLifecycle/versioned-origin (0.76s)
+    --- PASS: TestDiscoveryNoAuthRetainLifecycle/prepared (0.10s)
+    --- PASS: TestDiscoveryNoAuthRetainLifecycle/blocked-discovery-finalizer (0.05s)
+    --- PASS: TestDiscoveryNoAuthRetainLifecycle/blocked-feature-finalizer (0.05s)
+=== RUN   TestDiscoveryOptionalNullProjection
+=== RUN   TestDiscoveryOptionalNullProjection/all
+=== RUN   TestDiscoveryOptionalNullProjection/cdp_level
+=== RUN   TestDiscoveryOptionalNullProjection/lldp_level
+=== RUN   TestDiscoveryOptionalNullProjection/retry
+=== RUN   TestDiscoveryOptionalNullProjection/time_out
+=== RUN   TestDiscoveryOptionalNullProjection/netconf_port
+=== RUN   TestDiscoveryOptionalNullProjection/preferred_mgmt_ip_method
+=== RUN   TestDiscoveryOptionalNullProjection/ip_filter_list
+--- PASS: TestDiscoveryOptionalNullProjection (0.00s)
+    --- PASS: TestDiscoveryOptionalNullProjection/all (0.00s)
+    --- PASS: TestDiscoveryOptionalNullProjection/cdp_level (0.00s)
+    --- PASS: TestDiscoveryOptionalNullProjection/lldp_level (0.00s)
+    --- PASS: TestDiscoveryOptionalNullProjection/retry (0.00s)
+    --- PASS: TestDiscoveryOptionalNullProjection/time_out (0.00s)
+    --- PASS: TestDiscoveryOptionalNullProjection/netconf_port (0.00s)
+    --- PASS: TestDiscoveryOptionalNullProjection/preferred_mgmt_ip_method (0.00s)
+    --- PASS: TestDiscoveryOptionalNullProjection/ip_filter_list (0.00s)
+=== RUN   TestDiscoveryNullManifestLifecycle
+=== RUN   TestDiscoveryNullManifestLifecycle/false
+=== RUN   TestDiscoveryNullManifestLifecycle/true
+--- PASS: TestDiscoveryNullManifestLifecycle (0.34s)
+    --- PASS: TestDiscoveryNullManifestLifecycle/false (0.14s)
+    --- PASS: TestDiscoveryNullManifestLifecycle/true (0.19s)
+=== RUN   TestDiscoveryNullDefaultsPreserveSelection
+=== RUN   TestDiscoveryNullDefaultsPreserveSelection/cdp_level
+=== RUN   TestDiscoveryNullDefaultsPreserveSelection/lldp_level
+=== RUN   TestDiscoveryNullDefaultsPreserveSelection/retry
+=== RUN   TestDiscoveryNullDefaultsPreserveSelection/time_out
+=== RUN   TestDiscoveryNullDefaultsPreserveSelection/netconf_port
+=== RUN   TestDiscoveryNullDefaultsPreserveSelection/preferred_mgmt_ip_method
+=== RUN   TestDiscoveryNullDefaultsPreserveSelection/ip_filter_list
+--- PASS: TestDiscoveryNullDefaultsPreserveSelection (0.04s)
+    --- PASS: TestDiscoveryNullDefaultsPreserveSelection/cdp_level (0.00s)
+    --- PASS: TestDiscoveryNullDefaultsPreserveSelection/lldp_level (0.00s)
+    --- PASS: TestDiscoveryNullDefaultsPreserveSelection/retry (0.00s)
+    --- PASS: TestDiscoveryNullDefaultsPreserveSelection/time_out (0.00s)
+    --- PASS: TestDiscoveryNullDefaultsPreserveSelection/netconf_port (0.00s)
+    --- PASS: TestDiscoveryNullDefaultsPreserveSelection/preferred_mgmt_ip_method (0.00s)
+    --- PASS: TestDiscoveryNullDefaultsPreserveSelection/ip_filter_list (0.00s)
+=== RUN   TestDiscoveryUnsupportedNullStillRefusesBeforeIO
+=== RUN   TestDiscoveryUnsupportedNullStillRefusesBeforeIO/name
+=== RUN   TestDiscoveryUnsupportedNullStillRefusesBeforeIO/type
+=== RUN   TestDiscoveryUnsupportedNullStillRefusesBeforeIO/ip_address_list
+=== RUN   TestDiscoveryUnsupportedNullStillRefusesBeforeIO/protocol_order
+=== RUN   TestDiscoveryUnsupportedNullStillRefusesBeforeIO/global_credential_list
+=== RUN   TestDiscoveryUnsupportedNullStillRefusesBeforeIO/create_per_site
+=== RUN   TestDiscoveryUnsupportedNullStillRefusesBeforeIO/password_list
+=== RUN   TestDiscoveryUnsupportedNullStillRefusesBeforeIO/user_name_list
+=== RUN   TestDiscoveryUnsupportedNullStillRefusesBeforeIO/enable_password_list
+=== RUN   TestDiscoveryUnsupportedNullStillRefusesBeforeIO/http_read_credential
+=== RUN   TestDiscoveryUnsupportedNullStillRefusesBeforeIO/http_write_credential
+=== RUN   TestDiscoveryUnsupportedNullStillRefusesBeforeIO/unknown_optional
+--- PASS: TestDiscoveryUnsupportedNullStillRefusesBeforeIO (0.20s)
+    --- PASS: TestDiscoveryUnsupportedNullStillRefusesBeforeIO/name (0.02s)
+    --- PASS: TestDiscoveryUnsupportedNullStillRefusesBeforeIO/type (0.02s)
+    --- PASS: TestDiscoveryUnsupportedNullStillRefusesBeforeIO/ip_address_list (0.02s)
+    --- PASS: TestDiscoveryUnsupportedNullStillRefusesBeforeIO/protocol_order (0.02s)
+    --- PASS: TestDiscoveryUnsupportedNullStillRefusesBeforeIO/global_credential_list (0.02s)
+    --- PASS: TestDiscoveryUnsupportedNullStillRefusesBeforeIO/create_per_site (0.02s)
+    --- PASS: TestDiscoveryUnsupportedNullStillRefusesBeforeIO/password_list (0.02s)
+    --- PASS: TestDiscoveryUnsupportedNullStillRefusesBeforeIO/user_name_list (0.02s)
+    --- PASS: TestDiscoveryUnsupportedNullStillRefusesBeforeIO/enable_password_list (0.02s)
+    --- PASS: TestDiscoveryUnsupportedNullStillRefusesBeforeIO/http_read_credential (0.02s)
+    --- PASS: TestDiscoveryUnsupportedNullStillRefusesBeforeIO/http_write_credential (0.02s)
+    --- PASS: TestDiscoveryUnsupportedNullStillRefusesBeforeIO/unknown_optional (0.02s)
+=== RUN   TestDiscoveryOutcomePaginationAndValidation
+=== RUN   TestDiscoveryOutcomePaginationAndValidation/valid
+=== RUN   TestDiscoveryOutcomePaginationAndValidation/repeat
+=== RUN   TestDiscoveryOutcomePaginationAndValidation/duplicate-address
+=== RUN   TestDiscoveryOutcomePaginationAndValidation/null
+=== RUN   TestDiscoveryOutcomePaginationAndValidation/missing
+=== RUN   TestDiscoveryOutcomePaginationAndValidation/invalid-ip
+=== RUN   TestDiscoveryOutcomePaginationAndValidation/oversize
+--- PASS: TestDiscoveryOutcomePaginationAndValidation (0.08s)
+    --- PASS: TestDiscoveryOutcomePaginationAndValidation/valid (0.01s)
+    --- PASS: TestDiscoveryOutcomePaginationAndValidation/repeat (0.01s)
+    --- PASS: TestDiscoveryOutcomePaginationAndValidation/duplicate-address (0.01s)
+    --- PASS: TestDiscoveryOutcomePaginationAndValidation/null (0.01s)
+    --- PASS: TestDiscoveryOutcomePaginationAndValidation/missing (0.01s)
+    --- PASS: TestDiscoveryOutcomePaginationAndValidation/invalid-ip (0.01s)
+    --- PASS: TestDiscoveryOutcomePaginationAndValidation/oversize (0.01s)
+=== RUN   TestDiscoveryOutcomeReportSeparatesConfigurationAndCollection
+--- PASS: TestDiscoveryOutcomeReportSeparatesConfigurationAndCollection (0.01s)
+=== RUN   TestDiscoveryEmptyOutcomesAreUnverified
+--- PASS: TestDiscoveryEmptyOutcomesAreUnverified (0.00s)
+=== RUN   TestDiscoveryOwnedSubmissionPreflightAndSingleUse
+=== RUN   TestDiscoveryOwnedSubmissionPreflightAndSingleUse/unchanged
+=== RUN   TestDiscoveryOwnedSubmissionPreflightAndSingleUse/credential-replaced
+=== RUN   TestDiscoveryOwnedSubmissionPreflightAndSingleUse/job-appeared
+=== RUN   TestDiscoveryOwnedSubmissionPreflightAndSingleUse/model-mutated
+=== RUN   TestDiscoveryOwnedSubmissionPreflightAndSingleUse/ambiguous-result
+--- PASS: TestDiscoveryOwnedSubmissionPreflightAndSingleUse (0.06s)
+    --- PASS: TestDiscoveryOwnedSubmissionPreflightAndSingleUse/unchanged (0.01s)
+    --- PASS: TestDiscoveryOwnedSubmissionPreflightAndSingleUse/credential-replaced (0.01s)
+    --- PASS: TestDiscoveryOwnedSubmissionPreflightAndSingleUse/job-appeared (0.01s)
+    --- PASS: TestDiscoveryOwnedSubmissionPreflightAndSingleUse/model-mutated (0.01s)
+    --- PASS: TestDiscoveryOwnedSubmissionPreflightAndSingleUse/ambiguous-result (0.01s)
+=== RUN   TestDiscoveryOwnedReceiptReleaseAndCapacity
+=== RUN   TestDiscoveryOwnedReceiptReleaseAndCapacity/missing-task
+=== RUN   TestDiscoveryOwnedReceiptReleaseAndCapacity/missing-native-id
+=== RUN   TestDiscoveryOwnedReceiptReleaseAndCapacity/wrong-native-name
+=== RUN   TestDiscoveryOwnedReceiptReleaseAndCapacity/duplicate
+=== RUN   TestDiscoveryOwnedReceiptReleaseAndCapacity/foreign-owner
+--- PASS: TestDiscoveryOwnedReceiptReleaseAndCapacity (0.02s)
+    --- PASS: TestDiscoveryOwnedReceiptReleaseAndCapacity/missing-task (0.00s)
+    --- PASS: TestDiscoveryOwnedReceiptReleaseAndCapacity/missing-native-id (0.00s)
+    --- PASS: TestDiscoveryOwnedReceiptReleaseAndCapacity/wrong-native-name (0.00s)
+    --- PASS: TestDiscoveryOwnedReceiptReleaseAndCapacity/duplicate (0.00s)
+    --- PASS: TestDiscoveryOwnedReceiptReleaseAndCapacity/foreign-owner (0.00s)
+=== RUN   TestDiscoveryOwnedResultRecoversOriginalCredentialIDs
+--- PASS: TestDiscoveryOwnedResultRecoversOriginalCredentialIDs (0.01s)
+=== RUN   TestDiscoveryOwnedReplacementRefusesDriftAndReplay
+=== RUN   TestDiscoveryOwnedReplacementRefusesDriftAndReplay/unchanged
+=== RUN   TestDiscoveryOwnedReplacementRefusesDriftAndReplay/foreign-id
+=== RUN   TestDiscoveryOwnedReplacementRefusesDriftAndReplay/changed-footprint
+=== RUN   TestDiscoveryOwnedReplacementRefusesDriftAndReplay/active-job
+=== RUN   TestDiscoveryOwnedReplacementRefusesDriftAndReplay/credential-replaced
+=== RUN   TestDiscoveryOwnedReplacementRefusesDriftAndReplay/lost-ack
+=== RUN   TestDiscoveryOwnedReplacementRefusesDriftAndReplay/unowned
+--- PASS: TestDiscoveryOwnedReplacementRefusesDriftAndReplay (0.08s)
+    --- PASS: TestDiscoveryOwnedReplacementRefusesDriftAndReplay/unchanged (0.01s)
+    --- PASS: TestDiscoveryOwnedReplacementRefusesDriftAndReplay/foreign-id (0.01s)
+    --- PASS: TestDiscoveryOwnedReplacementRefusesDriftAndReplay/changed-footprint (0.01s)
+    --- PASS: TestDiscoveryOwnedReplacementRefusesDriftAndReplay/active-job (0.01s)
+    --- PASS: TestDiscoveryOwnedReplacementRefusesDriftAndReplay/credential-replaced (0.01s)
+    --- PASS: TestDiscoveryOwnedReplacementRefusesDriftAndReplay/lost-ack (0.01s)
+    --- PASS: TestDiscoveryOwnedReplacementRefusesDriftAndReplay/unowned (0.01s)
+=== RUN   TestDiscoveryOwnedDeletionRequiresLineageAndAbsence
+--- PASS: TestDiscoveryOwnedDeletionRequiresLineageAndAbsence (0.01s)
+=== RUN   TestDiscoveryMixedDispatchRequiresAllOwners
+=== RUN   TestDiscoveryMixedDispatchRequiresAllOwners/stable
+=== RUN   TestDiscoveryMixedDispatchRequiresAllOwners/inventory-owner-pruned
+=== RUN   TestDiscoveryMixedDispatchRequiresAllOwners/template-owner-pruned
+=== RUN   TestDiscoveryMixedDispatchRequiresAllOwners/foreign-inventory-owner
+=== RUN   TestDiscoveryMixedDispatchRequiresAllOwners/receipt-pruned
+--- PASS: TestDiscoveryMixedDispatchRequiresAllOwners (0.17s)
+    --- PASS: TestDiscoveryMixedDispatchRequiresAllOwners/stable (0.03s)
+    --- PASS: TestDiscoveryMixedDispatchRequiresAllOwners/inventory-owner-pruned (0.03s)
+    --- PASS: TestDiscoveryMixedDispatchRequiresAllOwners/template-owner-pruned (0.03s)
+    --- PASS: TestDiscoveryMixedDispatchRequiresAllOwners/foreign-inventory-owner (0.03s)
+    --- PASS: TestDiscoveryMixedDispatchRequiresAllOwners/receipt-pruned (0.03s)
+=== RUN   TestDiscoveryMixedNamespaceAndCallbackDelegation
+--- PASS: TestDiscoveryMixedNamespaceAndCallbackDelegation (0.01s)
+=== RUN   TestDiscoveryDuplicateLogicalReceiptAcrossNamespaces
+--- PASS: TestDiscoveryDuplicateLogicalReceiptAcrossNamespaces (0.02s)
+=== RUN   TestDiscoveryPureDispatchHonorsOverlappingTemplateOwner
+=== RUN   TestDiscoveryPureDispatchHonorsOverlappingTemplateOwner/false
+=== RUN   TestDiscoveryPureDispatchHonorsOverlappingTemplateOwner/true
+--- PASS: TestDiscoveryPureDispatchHonorsOverlappingTemplateOwner (0.06s)
+    --- PASS: TestDiscoveryPureDispatchHonorsOverlappingTemplateOwner/false (0.03s)
+    --- PASS: TestDiscoveryPureDispatchHonorsOverlappingTemplateOwner/true (0.03s)
+=== RUN   TestDiscoveryOwnershipHandoff
+=== RUN   TestDiscoveryOwnershipHandoff/closed
+=== RUN   TestDiscoveryOwnershipHandoff/public
+=== RUN   TestDiscoveryOwnershipHandoff/recreate
+=== RUN   TestDiscoveryOwnershipHandoff/same-name
+=== RUN   TestDiscoveryOwnershipHandoff/prior-present
+=== RUN   TestDiscoveryOwnershipHandoff/prior-deleting
+=== RUN   TestDiscoveryOwnershipHandoff/missing-proof
+=== RUN   TestDiscoveryOwnershipHandoff/malformed-proof
+=== RUN   TestDiscoveryOwnershipHandoff/proof-edit
+=== RUN   TestDiscoveryOwnershipHandoff/proof-generation
+=== RUN   TestDiscoveryOwnershipHandoff/receipt-edit
+=== RUN   TestDiscoveryOwnershipHandoff/create-receipt
+=== RUN   TestDiscoveryOwnershipHandoff/receipt-missing
+=== RUN   TestDiscoveryOwnershipHandoff/foreign-owner
+=== RUN   TestDiscoveryOwnershipHandoff/pending
+=== RUN   TestDiscoveryOwnershipHandoff/reappeared
+=== RUN   TestDiscoveryOwnershipHandoff/native-race
+=== RUN   TestDiscoveryOwnershipHandoff/source-race
+=== RUN   TestDiscoveryOwnershipHandoff/evidence-race
+=== RUN   TestDiscoveryOwnershipHandoff/controller-race
+=== RUN   TestDiscoveryOwnershipHandoff/cas-conflict
+=== RUN   TestDiscoveryOwnershipHandoff/read-error
+=== RUN   TestDiscoveryOwnershipHandoff/old-read-error
+=== RUN   TestDiscoveryOwnershipHandoff/mixed
+=== RUN   TestDiscoveryOwnershipHandoff/unenrolled
+=== RUN   TestDiscoveryOwnershipHandoff/retain
+=== RUN   TestDiscoveryOwnershipHandoff/empty-owned
+=== RUN   TestDiscoveryOwnershipHandoff/history-edit
+=== RUN   TestDiscoveryOwnershipHandoff/history-prune
+=== RUN   TestDiscoveryOwnershipHandoff/history-proof-missing
+=== RUN   TestDiscoveryOwnershipHandoff/history-reappeared
+--- PASS: TestDiscoveryOwnershipHandoff (2.36s)
+    --- PASS: TestDiscoveryOwnershipHandoff/closed (0.05s)
+    --- PASS: TestDiscoveryOwnershipHandoff/public (0.06s)
+    --- PASS: TestDiscoveryOwnershipHandoff/recreate (0.92s)
+    --- PASS: TestDiscoveryOwnershipHandoff/same-name (0.05s)
+    --- PASS: TestDiscoveryOwnershipHandoff/prior-present (0.04s)
+    --- PASS: TestDiscoveryOwnershipHandoff/prior-deleting (0.04s)
+    --- PASS: TestDiscoveryOwnershipHandoff/missing-proof (0.04s)
+    --- PASS: TestDiscoveryOwnershipHandoff/malformed-proof (0.04s)
+    --- PASS: TestDiscoveryOwnershipHandoff/proof-edit (0.04s)
+    --- PASS: TestDiscoveryOwnershipHandoff/proof-generation (0.04s)
+    --- PASS: TestDiscoveryOwnershipHandoff/receipt-edit (0.04s)
+    --- PASS: TestDiscoveryOwnershipHandoff/create-receipt (0.04s)
+    --- PASS: TestDiscoveryOwnershipHandoff/receipt-missing (0.04s)
+    --- PASS: TestDiscoveryOwnershipHandoff/foreign-owner (0.04s)
+    --- PASS: TestDiscoveryOwnershipHandoff/pending (0.04s)
+    --- PASS: TestDiscoveryOwnershipHandoff/reappeared (0.05s)
+    --- PASS: TestDiscoveryOwnershipHandoff/native-race (0.05s)
+    --- PASS: TestDiscoveryOwnershipHandoff/source-race (0.05s)
+    --- PASS: TestDiscoveryOwnershipHandoff/evidence-race (0.05s)
+    --- PASS: TestDiscoveryOwnershipHandoff/controller-race (0.05s)
+    --- PASS: TestDiscoveryOwnershipHandoff/cas-conflict (0.06s)
+    --- PASS: TestDiscoveryOwnershipHandoff/read-error (0.05s)
+    --- PASS: TestDiscoveryOwnershipHandoff/old-read-error (0.04s)
+    --- PASS: TestDiscoveryOwnershipHandoff/mixed (0.04s)
+    --- PASS: TestDiscoveryOwnershipHandoff/unenrolled (0.04s)
+    --- PASS: TestDiscoveryOwnershipHandoff/retain (0.04s)
+    --- PASS: TestDiscoveryOwnershipHandoff/empty-owned (0.05s)
+    --- PASS: TestDiscoveryOwnershipHandoff/history-edit (0.07s)
+    --- PASS: TestDiscoveryOwnershipHandoff/history-prune (0.06s)
+    --- PASS: TestDiscoveryOwnershipHandoff/history-proof-missing (0.07s)
+    --- PASS: TestDiscoveryOwnershipHandoff/history-reappeared (0.07s)
+=== RUN   TestDiscoveryOwnedPrunePublicCycle
+=== RUN   TestDiscoveryOwnedPrunePublicCycle/prune
+=== RUN   TestDiscoveryOwnedPrunePublicCycle/retain
+=== RUN   TestDiscoveryOwnedPrunePublicCycle/lost-ack
+=== RUN   TestDiscoveryOwnedPrunePublicCycle/backend-error
+=== RUN   TestDiscoveryOwnedPrunePublicCycle/source-change
+=== RUN   TestDiscoveryOwnedPrunePublicCycle/prune-omitted
+=== RUN   TestDiscoveryOwnedPrunePublicCycle/retain-omitted
+=== RUN   TestDiscoveryOwnedPrunePublicCycle/prune-failed
+--- PASS: TestDiscoveryOwnedPrunePublicCycle (1.68s)
+    --- PASS: TestDiscoveryOwnedPrunePublicCycle/prune (0.23s)
+    --- PASS: TestDiscoveryOwnedPrunePublicCycle/retain (0.03s)
+    --- PASS: TestDiscoveryOwnedPrunePublicCycle/lost-ack (0.29s)
+    --- PASS: TestDiscoveryOwnedPrunePublicCycle/backend-error (0.29s)
+    --- PASS: TestDiscoveryOwnedPrunePublicCycle/source-change (0.34s)
+    --- PASS: TestDiscoveryOwnedPrunePublicCycle/prune-omitted (0.24s)
+    --- PASS: TestDiscoveryOwnedPrunePublicCycle/retain-omitted (0.03s)
+    --- PASS: TestDiscoveryOwnedPrunePublicCycle/prune-failed (0.23s)
+=== RUN   TestDiscoveryPruneFinalDispatchAndIdentity
+=== RUN   TestDiscoveryPruneFinalDispatchAndIdentity/stable
+=== RUN   TestDiscoveryPruneFinalDispatchAndIdentity/active
+=== RUN   TestDiscoveryPruneFinalDispatchAndIdentity/renamed
+=== RUN   TestDiscoveryPruneFinalDispatchAndIdentity/replaced
+=== RUN   TestDiscoveryPruneFinalDispatchAndIdentity/missing
+=== RUN   TestDiscoveryPruneFinalDispatchAndIdentity/changed-effect
+=== RUN   TestDiscoveryPruneFinalDispatchAndIdentity/receipt-pruned
+=== RUN   TestDiscoveryPruneFinalDispatchAndIdentity/owner-changed
+=== RUN   TestDiscoveryPruneFinalDispatchAndIdentity/paused
+=== RUN   TestDiscoveryPruneFinalDispatchAndIdentity/source-changed
+=== RUN   TestDiscoveryPruneFinalDispatchAndIdentity/foreign-unrelated
+--- PASS: TestDiscoveryPruneFinalDispatchAndIdentity (0.33s)
+    --- PASS: TestDiscoveryPruneFinalDispatchAndIdentity/stable (0.03s)
+    --- PASS: TestDiscoveryPruneFinalDispatchAndIdentity/active (0.03s)
+    --- PASS: TestDiscoveryPruneFinalDispatchAndIdentity/renamed (0.03s)
+    --- PASS: TestDiscoveryPruneFinalDispatchAndIdentity/replaced (0.03s)
+    --- PASS: TestDiscoveryPruneFinalDispatchAndIdentity/missing (0.03s)
+    --- PASS: TestDiscoveryPruneFinalDispatchAndIdentity/changed-effect (0.03s)
+    --- PASS: TestDiscoveryPruneFinalDispatchAndIdentity/receipt-pruned (0.03s)
+    --- PASS: TestDiscoveryPruneFinalDispatchAndIdentity/owner-changed (0.03s)
+    --- PASS: TestDiscoveryPruneFinalDispatchAndIdentity/paused (0.03s)
+    --- PASS: TestDiscoveryPruneFinalDispatchAndIdentity/source-changed (0.04s)
+    --- PASS: TestDiscoveryPruneFinalDispatchAndIdentity/foreign-unrelated (0.03s)
+=== RUN   TestDiscoveryPruneScopeAndEmptyModel
+=== RUN   TestDiscoveryPruneScopeAndEmptyModel/null
+=== RUN   TestDiscoveryPruneScopeAndEmptyModel/unknown
+=== RUN   TestDiscoveryPruneScopeAndEmptyModel/tags
+=== RUN   TestDiscoveryPruneScopeAndEmptyModel/devices
+=== RUN   TestDiscoveryPruneScopeAndEmptyModel/prior-other-receipt
+=== RUN   TestDiscoveryPruneScopeAndEmptyModel/prior-credential
+=== RUN   TestDiscoveryPruneScopeAndEmptyModel/other-section
+=== RUN   TestDiscoveryPruneScopeAndEmptyModel/CR-delete
+--- PASS: TestDiscoveryPruneScopeAndEmptyModel (0.14s)
+    --- PASS: TestDiscoveryPruneScopeAndEmptyModel/null (0.01s)
+    --- PASS: TestDiscoveryPruneScopeAndEmptyModel/unknown (0.01s)
+    --- PASS: TestDiscoveryPruneScopeAndEmptyModel/tags (0.01s)
+    --- PASS: TestDiscoveryPruneScopeAndEmptyModel/devices (0.02s)
+    --- PASS: TestDiscoveryPruneScopeAndEmptyModel/prior-other-receipt (0.01s)
+    --- PASS: TestDiscoveryPruneScopeAndEmptyModel/prior-credential (0.01s)
+    --- PASS: TestDiscoveryPruneScopeAndEmptyModel/other-section (0.01s)
+    --- PASS: TestDiscoveryPruneScopeAndEmptyModel/CR-delete (0.01s)
+=== RUN   TestDiscoveryPruneWholeCohortAndOwnershipPreflight
+=== RUN   TestDiscoveryPruneWholeCohortAndOwnershipPreflight/active-other-owned
+=== RUN   TestDiscoveryPruneWholeCohortAndOwnershipPreflight/legacy
+=== RUN   TestDiscoveryPruneWholeCohortAndOwnershipPreflight/foreign-owner
+=== RUN   TestDiscoveryPruneWholeCohortAndOwnershipPreflight/externally-missing-kept
+=== RUN   TestDiscoveryPruneWholeCohortAndOwnershipPreflight/duplicate
+=== RUN   TestDiscoveryPruneWholeCohortAndOwnershipPreflight/foreign-tombstone-replacement
+=== RUN   TestDiscoveryPruneWholeCohortAndOwnershipPreflight/unowned
+--- PASS: TestDiscoveryPruneWholeCohortAndOwnershipPreflight (0.16s)
+    --- PASS: TestDiscoveryPruneWholeCohortAndOwnershipPreflight/active-other-owned (0.02s)
+    --- PASS: TestDiscoveryPruneWholeCohortAndOwnershipPreflight/legacy (0.02s)
+    --- PASS: TestDiscoveryPruneWholeCohortAndOwnershipPreflight/foreign-owner (0.02s)
+    --- PASS: TestDiscoveryPruneWholeCohortAndOwnershipPreflight/externally-missing-kept (0.02s)
+    --- PASS: TestDiscoveryPruneWholeCohortAndOwnershipPreflight/duplicate (0.02s)
+    --- PASS: TestDiscoveryPruneWholeCohortAndOwnershipPreflight/foreign-tombstone-replacement (0.02s)
+    --- PASS: TestDiscoveryPruneWholeCohortAndOwnershipPreflight/unowned (0.02s)
+=== RUN   TestDiscoveryPruneReintroductionRequiresLaterInput
+--- PASS: TestDiscoveryPruneReintroductionRequiresLaterInput (0.01s)
+=== RUN   TestDiscoveryPrunePreservesDeclaredImportAndForeignReceipt
+--- PASS: TestDiscoveryPrunePreservesDeclaredImportAndForeignReceipt (0.09s)
+=== RUN   TestDiscoverySNMPReadback
+=== RUN   TestDiscoverySNMPReadback/noauth-camel
+=== RUN   TestDiscoverySNMPReadback/noauth-upper
+=== RUN   TestDiscoverySNMPReadback/auth-no-priv
+=== RUN   TestDiscoverySNMPReadback/auth-priv
+=== RUN   TestDiscoverySNMPReadback/explicit-v3
+=== RUN   TestDiscoverySNMPReadback/missing-mode
+=== RUN   TestDiscoverySNMPReadback/missing-user
+=== RUN   TestDiscoverySNMPReadback/unknown-mode
+=== RUN   TestDiscoverySNMPReadback/contradictory-v2
+--- PASS: TestDiscoverySNMPReadback (0.09s)
+    --- PASS: TestDiscoverySNMPReadback/noauth-camel (0.01s)
+    --- PASS: TestDiscoverySNMPReadback/noauth-upper (0.01s)
+    --- PASS: TestDiscoverySNMPReadback/auth-no-priv (0.01s)
+    --- PASS: TestDiscoverySNMPReadback/auth-priv (0.01s)
+    --- PASS: TestDiscoverySNMPReadback/explicit-v3 (0.01s)
+    --- PASS: TestDiscoverySNMPReadback/missing-mode (0.01s)
+    --- PASS: TestDiscoverySNMPReadback/missing-user (0.01s)
+    --- PASS: TestDiscoverySNMPReadback/unknown-mode (0.01s)
+    --- PASS: TestDiscoverySNMPReadback/contradictory-v2 (0.01s)
+=== RUN   TestDiscoveryScopePublicationJournalRace
+--- PASS: TestDiscoveryScopePublicationJournalRace (0.02s)
+=== RUN   TestDiscoveryManifestCreateRestartAndNoOp
+=== RUN   TestDiscoveryManifestCreateRestartAndNoOp/combined=false
+=== RUN   TestDiscoveryManifestCreateRestartAndNoOp/combined=true
+--- PASS: TestDiscoveryManifestCreateRestartAndNoOp (0.27s)
+    --- PASS: TestDiscoveryManifestCreateRestartAndNoOp/combined=false (0.11s)
+    --- PASS: TestDiscoveryManifestCreateRestartAndNoOp/combined=true (0.16s)
+=== RUN   TestDiscoveryLegacyAcceptedRecovery
+--- PASS: TestDiscoveryLegacyAcceptedRecovery (0.11s)
+=== RUN   TestDiscoveryOwnedReplacementCycle
+--- PASS: TestDiscoveryOwnedReplacementCycle (0.26s)
+=== RUN   TestDiscoveryMixedOwnedReplacement
+=== RUN   TestDiscoveryMixedOwnedReplacement/inventoryOnly=false/reversed=false
+=== RUN   TestDiscoveryMixedOwnedReplacement/inventoryOnly=false/reversed=true
+=== RUN   TestDiscoveryMixedOwnedReplacement/inventoryOnly=true/reversed=false
+--- PASS: TestDiscoveryMixedOwnedReplacement (0.96s)
+    --- PASS: TestDiscoveryMixedOwnedReplacement/inventoryOnly=false/reversed=false (0.32s)
+    --- PASS: TestDiscoveryMixedOwnedReplacement/inventoryOnly=false/reversed=true (0.31s)
+    --- PASS: TestDiscoveryMixedOwnedReplacement/inventoryOnly=true/reversed=false (0.33s)
+=== RUN   TestDiscoveryPureToMixedOwnership
+--- PASS: TestDiscoveryPureToMixedOwnership (0.32s)
+=== RUN   TestDiscoveryMixedLegacyAcceptedRecovery
+--- PASS: TestDiscoveryMixedLegacyAcceptedRecovery (0.16s)
+=== RUN   TestDiscoveryModelRejectsUnresolvedOrSecretIntent
+--- PASS: TestDiscoveryModelRejectsUnresolvedOrSecretIntent (0.00s)
+=== RUN   TestDiscoveryCrossTypeCredentialAmbiguity
+--- PASS: TestDiscoveryCrossTypeCredentialAmbiguity (0.00s)
+=== RUN   TestDiscoveryPaginationAndReadShapeFailures
+=== RUN   TestDiscoveryPaginationAndReadShapeFailures/null
+=== RUN   TestDiscoveryPaginationAndReadShapeFailures/duplicate-id
+=== RUN   TestDiscoveryPaginationAndReadShapeFailures/duplicate-name
+=== RUN   TestDiscoveryPaginationAndReadShapeFailures/bad-type
+--- PASS: TestDiscoveryPaginationAndReadShapeFailures (0.04s)
+    --- PASS: TestDiscoveryPaginationAndReadShapeFailures/null (0.01s)
+    --- PASS: TestDiscoveryPaginationAndReadShapeFailures/duplicate-id (0.01s)
+    --- PASS: TestDiscoveryPaginationAndReadShapeFailures/duplicate-name (0.01s)
+    --- PASS: TestDiscoveryPaginationAndReadShapeFailures/bad-type (0.01s)
+=== RUN   TestDiscoveryVerifyRequiresTaskResourceAndCompletion
+=== RUN   TestDiscoveryVerifyRequiresTaskResourceAndCompletion/wrong-resource
+=== RUN   TestDiscoveryVerifyRequiresTaskResourceAndCompletion/wrong-task
+=== RUN   TestDiscoveryVerifyRequiresTaskResourceAndCompletion/running
+=== RUN   TestDiscoveryVerifyRequiresTaskResourceAndCompletion/malformed-data
+--- PASS: TestDiscoveryVerifyRequiresTaskResourceAndCompletion (0.04s)
+    --- PASS: TestDiscoveryVerifyRequiresTaskResourceAndCompletion/wrong-resource (0.01s)
+    --- PASS: TestDiscoveryVerifyRequiresTaskResourceAndCompletion/wrong-task (0.01s)
+    --- PASS: TestDiscoveryVerifyRequiresTaskResourceAndCompletion/running (0.01s)
+    --- PASS: TestDiscoveryVerifyRequiresTaskResourceAndCompletion/malformed-data (0.01s)
+=== RUN   TestDiscoveryPagination
+--- PASS: TestDiscoveryPagination (0.03s)
+=== RUN   TestTagAssociationQueriesRemainScopedWhilePaging
+=== RUN   TestTagAssociationQueriesRemainScopedWhilePaging/networkdevice/
+=== RUN   TestTagAssociationQueriesRemainScopedWhilePaging/networkdevice/DYNAMIC
+=== RUN   TestTagAssociationQueriesRemainScopedWhilePaging/networkdevice/STATIC
+=== RUN   TestTagAssociationQueriesRemainScopedWhilePaging/networkdevice/MIXED
+=== RUN   TestTagAssociationQueriesRemainScopedWhilePaging/template/
+=== RUN   TestTagAssociationQueriesRemainScopedWhilePaging/template/DYNAMIC
+=== RUN   TestTagAssociationQueriesRemainScopedWhilePaging/template/STATIC
+=== RUN   TestTagAssociationQueriesRemainScopedWhilePaging/template/MIXED
+--- PASS: TestTagAssociationQueriesRemainScopedWhilePaging (0.13s)
+    --- PASS: TestTagAssociationQueriesRemainScopedWhilePaging/networkdevice/ (0.02s)
+    --- PASS: TestTagAssociationQueriesRemainScopedWhilePaging/networkdevice/DYNAMIC (0.02s)
+    --- PASS: TestTagAssociationQueriesRemainScopedWhilePaging/networkdevice/STATIC (0.02s)
+    --- PASS: TestTagAssociationQueriesRemainScopedWhilePaging/networkdevice/MIXED (0.02s)
+    --- PASS: TestTagAssociationQueriesRemainScopedWhilePaging/template/ (0.02s)
+    --- PASS: TestTagAssociationQueriesRemainScopedWhilePaging/template/DYNAMIC (0.02s)
+    --- PASS: TestTagAssociationQueriesRemainScopedWhilePaging/template/STATIC (0.02s)
+    --- PASS: TestTagAssociationQueriesRemainScopedWhilePaging/template/MIXED (0.02s)
+=== RUN   TestTagAssociationReadRefusesInvalidScopeAndFallback
+--- PASS: TestTagAssociationReadRefusesInvalidScopeAndFallback (0.01s)
+=== RUN   TestTagExplicitAssociationRejectsPartialClassEvidence
+=== RUN   TestTagExplicitAssociationRejectsPartialClassEvidence/template
+=== RUN   TestTagExplicitAssociationRejectsPartialClassEvidence/networkdevice
+--- PASS: TestTagExplicitAssociationRejectsPartialClassEvidence (0.02s)
+    --- PASS: TestTagExplicitAssociationRejectsPartialClassEvidence/template (0.01s)
+    --- PASS: TestTagExplicitAssociationRejectsPartialClassEvidence/networkdevice (0.01s)
+=== RUN   TestTagAssociationMalformedMemberCannotSupplyPartialEvidence
+--- PASS: TestTagAssociationMalformedMemberCannotSupplyPartialEvidence (0.01s)
+=== RUN   TestTagCreateRequiresOriginalTaskIdentity
+=== RUN   TestTagCreateRequiresOriginalTaskIdentity/valid
+=== RUN   TestTagCreateRequiresOriginalTaskIdentity/pending
+=== RUN   TestTagCreateRequiresOriginalTaskIdentity/failed
+=== RUN   TestTagCreateRequiresOriginalTaskIdentity/foreign-task
+=== RUN   TestTagCreateRequiresOriginalTaskIdentity/missing-time
+=== RUN   TestTagCreateRequiresOriginalTaskIdentity/future-time
+=== RUN   TestTagCreateRequiresOriginalTaskIdentity/wrong-service
+=== RUN   TestTagCreateRequiresOriginalTaskIdentity/missing-result
+=== RUN   TestTagCreateRequiresOriginalTaskIdentity/noncanonical-result
+=== RUN   TestTagCreateRequiresOriginalTaskIdentity/foreign-result
+=== RUN   TestTagCreateRequiresOriginalTaskIdentity/missing-native
+=== RUN   TestTagCreateRequiresOriginalTaskIdentity/protected
+=== RUN   TestTagCreateRequiresOriginalTaskIdentity/taskless
+=== RUN   TestTagCreateRequiresOriginalTaskIdentity/nil-operation
+--- PASS: TestTagCreateRequiresOriginalTaskIdentity (0.12s)
+    --- PASS: TestTagCreateRequiresOriginalTaskIdentity/valid (0.01s)
+    --- PASS: TestTagCreateRequiresOriginalTaskIdentity/pending (0.01s)
+    --- PASS: TestTagCreateRequiresOriginalTaskIdentity/failed (0.01s)
+    --- PASS: TestTagCreateRequiresOriginalTaskIdentity/foreign-task (0.01s)
+    --- PASS: TestTagCreateRequiresOriginalTaskIdentity/missing-time (0.01s)
+    --- PASS: TestTagCreateRequiresOriginalTaskIdentity/future-time (0.01s)
+    --- PASS: TestTagCreateRequiresOriginalTaskIdentity/wrong-service (0.01s)
+    --- PASS: TestTagCreateRequiresOriginalTaskIdentity/missing-result (0.01s)
+    --- PASS: TestTagCreateRequiresOriginalTaskIdentity/noncanonical-result (0.01s)
+    --- PASS: TestTagCreateRequiresOriginalTaskIdentity/foreign-result (0.01s)
+    --- PASS: TestTagCreateRequiresOriginalTaskIdentity/missing-native (0.01s)
+    --- PASS: TestTagCreateRequiresOriginalTaskIdentity/protected (0.01s)
+    --- PASS: TestTagCreateRequiresOriginalTaskIdentity/taskless (0.00s)
+    --- PASS: TestTagCreateRequiresOriginalTaskIdentity/nil-operation (0.00s)
+=== RUN   TestTagMembershipPlansRevalidateWholeSelection
+=== RUN   TestTagMembershipPlansRevalidateWholeSelection/template/valid
+=== RUN   TestTagMembershipPlansRevalidateWholeSelection/template/tag-replaced
+=== RUN   TestTagMembershipPlansRevalidateWholeSelection/template/member-replaced
+=== RUN   TestTagMembershipPlansRevalidateWholeSelection/template/protection-flip
+=== RUN   TestTagMembershipPlansRevalidateWholeSelection/template/during-reobserve-protection
+=== RUN   TestTagMembershipPlansRevalidateWholeSelection/template/later-tag-replaced
+=== RUN   TestTagMembershipPlansRevalidateWholeSelection/template/later-member-replaced
+=== RUN   TestTagMembershipPlansRevalidateWholeSelection/template/became-present
+=== RUN   TestTagMembershipPlansRevalidateWholeSelection/template/frozen
+=== RUN   TestTagMembershipPlansRevalidateWholeSelection/template/unrelated-member
+=== RUN   TestTagMembershipPlansRevalidateWholeSelection/template/missing-receipt
+=== RUN   TestTagMembershipPlansRevalidateWholeSelection/template/read-error
+=== RUN   TestTagMembershipPlansRevalidateWholeSelection/template/project-replaced
+=== RUN   TestTagMembershipPlansRevalidateWholeSelection/networkdevice/valid
+=== RUN   TestTagMembershipPlansRevalidateWholeSelection/networkdevice/tag-replaced
+=== RUN   TestTagMembershipPlansRevalidateWholeSelection/networkdevice/member-replaced
+=== RUN   TestTagMembershipPlansRevalidateWholeSelection/networkdevice/protection-flip
+=== RUN   TestTagMembershipPlansRevalidateWholeSelection/networkdevice/during-reobserve-protection
+=== RUN   TestTagMembershipPlansRevalidateWholeSelection/networkdevice/later-tag-replaced
+=== RUN   TestTagMembershipPlansRevalidateWholeSelection/networkdevice/later-member-replaced
+=== RUN   TestTagMembershipPlansRevalidateWholeSelection/networkdevice/became-present
+=== RUN   TestTagMembershipPlansRevalidateWholeSelection/networkdevice/frozen
+=== RUN   TestTagMembershipPlansRevalidateWholeSelection/networkdevice/unrelated-member
+=== RUN   TestTagMembershipPlansRevalidateWholeSelection/networkdevice/missing-receipt
+=== RUN   TestTagMembershipPlansRevalidateWholeSelection/networkdevice/read-error
+=== RUN   TestTagMembershipPlansRevalidateWholeSelection/networkdevice/project-replaced
+--- PASS: TestTagMembershipPlansRevalidateWholeSelection (0.38s)
+    --- PASS: TestTagMembershipPlansRevalidateWholeSelection/template/valid (0.02s)
+    --- PASS: TestTagMembershipPlansRevalidateWholeSelection/template/tag-replaced (0.01s)
+    --- PASS: TestTagMembershipPlansRevalidateWholeSelection/template/member-replaced (0.01s)
+    --- PASS: TestTagMembershipPlansRevalidateWholeSelection/template/protection-flip (0.01s)
+    --- PASS: TestTagMembershipPlansRevalidateWholeSelection/template/during-reobserve-protection (0.02s)
+    --- PASS: TestTagMembershipPlansRevalidateWholeSelection/template/later-tag-replaced (0.01s)
+    --- PASS: TestTagMembershipPlansRevalidateWholeSelection/template/later-member-replaced (0.01s)
+    --- PASS: TestTagMembershipPlansRevalidateWholeSelection/template/became-present (0.01s)
+    --- PASS: TestTagMembershipPlansRevalidateWholeSelection/template/frozen (0.02s)
+    --- PASS: TestTagMembershipPlansRevalidateWholeSelection/template/unrelated-member (0.02s)
+    --- PASS: TestTagMembershipPlansRevalidateWholeSelection/template/missing-receipt (0.02s)
+    --- PASS: TestTagMembershipPlansRevalidateWholeSelection/template/read-error (0.01s)
+    --- PASS: TestTagMembershipPlansRevalidateWholeSelection/template/project-replaced (0.01s)
+    --- PASS: TestTagMembershipPlansRevalidateWholeSelection/networkdevice/valid (0.02s)
+    --- PASS: TestTagMembershipPlansRevalidateWholeSelection/networkdevice/tag-replaced (0.01s)
+    --- PASS: TestTagMembershipPlansRevalidateWholeSelection/networkdevice/member-replaced (0.01s)
+    --- PASS: TestTagMembershipPlansRevalidateWholeSelection/networkdevice/protection-flip (0.01s)
+    --- PASS: TestTagMembershipPlansRevalidateWholeSelection/networkdevice/during-reobserve-protection (0.02s)
+    --- PASS: TestTagMembershipPlansRevalidateWholeSelection/networkdevice/later-tag-replaced (0.01s)
+    --- PASS: TestTagMembershipPlansRevalidateWholeSelection/networkdevice/later-member-replaced (0.01s)
+    --- PASS: TestTagMembershipPlansRevalidateWholeSelection/networkdevice/became-present (0.01s)
+    --- PASS: TestTagMembershipPlansRevalidateWholeSelection/networkdevice/frozen (0.02s)
+    --- PASS: TestTagMembershipPlansRevalidateWholeSelection/networkdevice/unrelated-member (0.02s)
+    --- PASS: TestTagMembershipPlansRevalidateWholeSelection/networkdevice/missing-receipt (0.02s)
+    --- PASS: TestTagMembershipPlansRevalidateWholeSelection/networkdevice/read-error (0.01s)
+    --- PASS: TestTagMembershipPlansRevalidateWholeSelection/networkdevice/project-replaced (0.02s)
+=== RUN   TestTagEmptyRuleComparisonIsSelectionScoped
+=== RUN   TestTagEmptyRuleComparisonIsSelectionScoped/clear-native-null
+=== RUN   TestTagEmptyRuleComparisonIsSelectionScoped/clear-native-empty
+=== RUN   TestTagEmptyRuleComparisonIsSelectionScoped/clear-native-present
+=== RUN   TestTagEmptyRuleComparisonIsSelectionScoped/omitted-native-present
+=== RUN   TestTagEmptyRuleComparisonIsSelectionScoped/nonempty-native-null
+=== RUN   TestTagEmptyRuleComparisonIsSelectionScoped/nonempty-native-matching
+--- PASS: TestTagEmptyRuleComparisonIsSelectionScoped (0.00s)
+    --- PASS: TestTagEmptyRuleComparisonIsSelectionScoped/clear-native-null (0.00s)
+    --- PASS: TestTagEmptyRuleComparisonIsSelectionScoped/clear-native-empty (0.00s)
+    --- PASS: TestTagEmptyRuleComparisonIsSelectionScoped/clear-native-present (0.00s)
+    --- PASS: TestTagEmptyRuleComparisonIsSelectionScoped/omitted-native-present (0.00s)
+    --- PASS: TestTagEmptyRuleComparisonIsSelectionScoped/nonempty-native-null (0.00s)
+    --- PASS: TestTagEmptyRuleComparisonIsSelectionScoped/nonempty-native-matching (0.00s)
+=== RUN   TestTagUnmanagedRulesArePreserved
+=== RUN   TestTagUnmanagedRulesArePreserved/existing-rules-false
+=== RUN   TestTagUnmanagedRulesArePreserved/existing-rules-true
+--- PASS: TestTagUnmanagedRulesArePreserved (0.02s)
+    --- PASS: TestTagUnmanagedRulesArePreserved/existing-rules-false (0.01s)
+    --- PASS: TestTagUnmanagedRulesArePreserved/existing-rules-true (0.01s)
+=== RUN   TestDynamicTagClearRestorePublicRestartCycle
+--- PASS: TestDynamicTagClearRestorePublicRestartCycle (0.23s)
+=== RUN   TestUnaryTagClearRestorePublicRestartCycle
+--- PASS: TestUnaryTagClearRestorePublicRestartCycle (0.21s)
+=== RUN   TestTagUnaryLogicalRulesPreserveAtomicMeaning
+=== RUN   TestTagUnaryLogicalRulesPreserveAtomicMeaning/AND-EQ
+=== RUN   TestTagUnaryLogicalRulesPreserveAtomicMeaning/AND-LIKE
+=== RUN   TestTagUnaryLogicalRulesPreserveAtomicMeaning/AND-ILIKE
+=== RUN   TestTagUnaryLogicalRulesPreserveAtomicMeaning/AND-IN
+=== RUN   TestTagUnaryLogicalRulesPreserveAtomicMeaning/OR-EQ
+=== RUN   TestTagUnaryLogicalRulesPreserveAtomicMeaning/OR-LIKE
+=== RUN   TestTagUnaryLogicalRulesPreserveAtomicMeaning/OR-ILIKE
+=== RUN   TestTagUnaryLogicalRulesPreserveAtomicMeaning/OR-IN
+--- PASS: TestTagUnaryLogicalRulesPreserveAtomicMeaning (0.00s)
+    --- PASS: TestTagUnaryLogicalRulesPreserveAtomicMeaning/AND-EQ (0.00s)
+    --- PASS: TestTagUnaryLogicalRulesPreserveAtomicMeaning/AND-LIKE (0.00s)
+    --- PASS: TestTagUnaryLogicalRulesPreserveAtomicMeaning/AND-ILIKE (0.00s)
+    --- PASS: TestTagUnaryLogicalRulesPreserveAtomicMeaning/AND-IN (0.00s)
+    --- PASS: TestTagUnaryLogicalRulesPreserveAtomicMeaning/OR-EQ (0.00s)
+    --- PASS: TestTagUnaryLogicalRulesPreserveAtomicMeaning/OR-LIKE (0.00s)
+    --- PASS: TestTagUnaryLogicalRulesPreserveAtomicMeaning/OR-ILIKE (0.00s)
+    --- PASS: TestTagUnaryLogicalRulesPreserveAtomicMeaning/OR-IN (0.00s)
+=== RUN   TestTagUnaryLogicalRulesRefuseAmbiguousMeaning
+--- PASS: TestTagUnaryLogicalRulesRefuseAmbiguousMeaning (0.00s)
+=== RUN   TestTagSubmissionRechecksPaginatedSelection
+=== RUN   TestTagSubmissionRechecksPaginatedSelection/unchanged
+=== RUN   TestTagSubmissionRechecksPaginatedSelection/protection
+=== RUN   TestTagSubmissionRechecksPaginatedSelection/replacement
+=== RUN   TestTagSubmissionRechecksPaginatedSelection/preserved-description
+=== RUN   TestTagSubmissionRechecksPaginatedSelection/later-selected
+=== RUN   TestTagSubmissionRechecksPaginatedSelection/create-race
+=== RUN   TestTagSubmissionRechecksPaginatedSelection/unrelated
+--- PASS: TestTagSubmissionRechecksPaginatedSelection (0.42s)
+    --- PASS: TestTagSubmissionRechecksPaginatedSelection/unchanged (0.06s)
+    --- PASS: TestTagSubmissionRechecksPaginatedSelection/protection (0.06s)
+    --- PASS: TestTagSubmissionRechecksPaginatedSelection/replacement (0.06s)
+    --- PASS: TestTagSubmissionRechecksPaginatedSelection/preserved-description (0.06s)
+    --- PASS: TestTagSubmissionRechecksPaginatedSelection/later-selected (0.06s)
+    --- PASS: TestTagSubmissionRechecksPaginatedSelection/create-race (0.06s)
+    --- PASS: TestTagSubmissionRechecksPaginatedSelection/unrelated (0.06s)
+=== RUN   TestTagEmptyLogicalGroupRejectedBeforeRequests
+--- PASS: TestTagEmptyLogicalGroupRejectedBeforeRequests (0.00s)
+=== RUN   TestTagPlansRevalidateNativeState
+=== RUN   TestTagPlansRevalidateNativeState/valid
+=== RUN   TestTagPlansRevalidateNativeState/create-race
+=== RUN   TestTagPlansRevalidateNativeState/replacement
+=== RUN   TestTagPlansRevalidateNativeState/protection-flip
+=== RUN   TestTagPlansRevalidateNativeState/preserved-rule-change
+=== RUN   TestTagPlansRevalidateNativeState/later-protection-flip
+=== RUN   TestTagPlansRevalidateNativeState/unrelated-change
+=== RUN   TestTagPlansRevalidateNativeState/frozen
+=== RUN   TestTagPlansRevalidateNativeState/frozen-dynamic
+=== RUN   TestTagPlansRevalidateNativeState/missing-receipt
+--- PASS: TestTagPlansRevalidateNativeState (0.11s)
+    --- PASS: TestTagPlansRevalidateNativeState/valid (0.01s)
+    --- PASS: TestTagPlansRevalidateNativeState/create-race (0.01s)
+    --- PASS: TestTagPlansRevalidateNativeState/replacement (0.01s)
+    --- PASS: TestTagPlansRevalidateNativeState/protection-flip (0.01s)
+    --- PASS: TestTagPlansRevalidateNativeState/preserved-rule-change (0.01s)
+    --- PASS: TestTagPlansRevalidateNativeState/later-protection-flip (0.01s)
+    --- PASS: TestTagPlansRevalidateNativeState/unrelated-change (0.01s)
+    --- PASS: TestTagPlansRevalidateNativeState/frozen (0.01s)
+    --- PASS: TestTagPlansRevalidateNativeState/frozen-dynamic (0.01s)
+    --- PASS: TestTagPlansRevalidateNativeState/missing-receipt (0.01s)
+=== RUN   TestTagConflictingValueSelectorsPreflight
+--- PASS: TestTagConflictingValueSelectorsPreflight (0.00s)
+=== RUN   TestTagMultipleValuesMappingAndFrozenRequest
+--- PASS: TestTagMultipleValuesMappingAndFrozenRequest (0.01s)
+=== RUN   TestTagExecution
+--- PASS: TestTagExecution (0.02s)
+=== RUN   TestTagRulesAndProtectedPreflight
+--- PASS: TestTagRulesAndProtectedPreflight (0.01s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	303.541s

@@ -1,0 +1,152 @@
+{
+  "date": "2026-10-19",
+  "branch": "pr/johalley/catc-support",
+  "model": {
+    "version": "0.5.0",
+    "revision": "a435555fe828f03cf3311d52fe1ab6572a247916",
+    "uniqueResourceRows": 93
+  },
+  "fullModelComplete": false,
+  "installedMutationQualified": false,
+  "productionRuntimeHooksWired": true,
+  "newExecutionDefaultEnabled": false,
+  "change": "Receipt-only PnP terminal journal recovery before current source/config loading, using shared finish and exact original operation CAS",
+  "sourceFingerprints": {
+    "cmd/cisco-vk": {
+      "files": 51,
+      "sha256": "b81d16c72fcb5e71d612244b9beda34e9fc64bb38a90105e6bda780afca1f23c"
+    },
+    "internal/controller": {
+      "files": 94,
+      "sha256": "0b06e0a67a7ed4f4cb7f74f5a3fb9c421430a42b6e8768d6d557e4cfd6e384eb"
+    },
+    "internal/controllerconfiguration": {
+      "files": 164,
+      "sha256": "28563a5da8b8797e298aef7cd4aa032fb613e5ca347a92407436bd0b81bf0c6b"
+    },
+    "internal/controlleradapter": {
+      "files": 14,
+      "sha256": "56a3957004389d72271d3d7f1dc62492b372f77b594fbc448817840baaf9b52d"
+    },
+    "internal/controlleradapter/catalystcenter": {
+      "files": 1702,
+      "sha256": "336344947b83458f6d93693daabcc0c5176b1da4e6ed56028795a1e59e5b93f0"
+    },
+    "internal/controlleradapter/nexusdashboard": {
+      "files": 15,
+      "sha256": "721d2b2d127236e03cef0a92c34f9b33cd12165b629c2253b0aad6f6a35e0427"
+    },
+    "internal/managedprotocol": {
+      "files": 4,
+      "sha256": "3219ec496e993710e5d2cffa3c7ff7156daab082e656642a1ac55b2c5d912e89"
+    },
+    "internal/aggregator": {
+      "files": 11,
+      "sha256": "137bc460cb8794a00d09429e5291a0736a783f60389e6da00ebdf8f5b0631083"
+    },
+    "internal/provider/maintenance": {
+      "files": 13,
+      "sha256": "0427d4e628f3ebf19606730961206fc07e149ba24d61fe0ea06db182a6d2af83"
+    },
+    "internal/provider/softwareupgrade": {
+      "files": 28,
+      "sha256": "570d7e6f46cc8eab03dc0ed709e5bc92f746ddeee253490aec77b8735f0e636b"
+    },
+    "internal/softwarelifecycle": {
+      "files": 7,
+      "sha256": "339a85ef58bb74b7c91d88c4e5813ffad9256f7fc5cf760cd209c587a432ebe6"
+    }
+  },
+  "gates": {
+    "regression": {
+      "path": "/private/tmp/cvk-pnp-terminal-final-regression.log",
+      "exitCode": 0,
+      "passingTestEvents": 19285,
+      "passingPackages": [
+        "github.com/cisco/virtual-kubelet-cisco/api/config/v1alpha1",
+        "github.com/cisco/virtual-kubelet-cisco/api/v1alpha1",
+        "github.com/cisco/virtual-kubelet-cisco/api/ops/v1alpha1",
+        "github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter",
+        "github.com/cisco/virtual-kubelet-cisco/internal/softwarelifecycle",
+        "github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter/nacmodel",
+        "github.com/cisco/virtual-kubelet-cisco/internal/managedprotocol",
+        "github.com/cisco/virtual-kubelet-cisco/internal/aggregator",
+        "github.com/cisco/virtual-kubelet-cisco/internal/provider/maintenance",
+        "github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/nexusdashboard",
+        "github.com/cisco/virtual-kubelet-cisco/internal/provider/softwareupgrade",
+        "github.com/cisco/virtual-kubelet-cisco/cmd/cisco-vk",
+        "github.com/cisco/virtual-kubelet-cisco/internal/controller",
+        "github.com/cisco/virtual-kubelet-cisco/internal/controllerconfiguration",
+        "github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter"
+      ]
+    },
+    "actualAPIServer": {
+      "path": "/private/tmp/cvk-pnp-terminal-final-api.log",
+      "exitCode": 0,
+      "passingTestEvents": 6,
+      "passingPackages": [
+        "github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter"
+      ]
+    },
+    "race": {
+      "path": "/private/tmp/cvk-pnp-terminal-race.log",
+      "exitCode": 0,
+      "passingTestEvents": 47,
+      "passingPackages": [
+        "github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter"
+      ]
+    },
+    "targetedExactOperation": {
+      "path": "/private/tmp/cvk-pnp-terminal-exact-operation.log",
+      "exitCode": 0,
+      "passingTestEvents": 13,
+      "passingPackages": [
+        "github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter"
+      ]
+    }
+  },
+  "native": {
+    "log": "/private/tmp/cvk-pnp-terminal-final-native.log",
+    "exitCode": 0,
+    "generatedAndDeleted": [
+      {
+        "uuid": "6ad5d6f30bc0186771cb182e",
+        "serial": "CVKF0839F48"
+      },
+      {
+        "uuid": "6ad5d6f60bc0186771cb182f",
+        "serial": "CVKF0839F49"
+      }
+    ],
+    "privateRecoveryDirectory": "/private/tmp/cvk-pnp-cohort-2935747146",
+    "registrationCount": 2,
+    "deleteCount": 2,
+    "originalCreatorRows": 2,
+    "absenceTombstoneRows": 2,
+    "remainingOperation": false,
+    "remainingMetadataHandoff": false,
+    "pnpBaselineRestored": true,
+    "managedInventoryBaselineRestored": true,
+    "terminalRecoveryNativeRequests": 0,
+    "kubernetesStorageAndAuthority": "simulated; not installed runtime proof"
+  },
+  "binary": {
+    "path": "/private/tmp/cvk-pnp-terminal-qualified-cisco-vk",
+    "sha256": "a72db3e96d26022c48039912017b6dbbae222a28b41f21440f47b23f1fcc7322"
+  },
+  "documentation": {
+    "strictBuildLog": "/private/tmp/cvk-pnp-terminal-docs.log",
+    "status": "passed before final machine-readable evidence refresh"
+  },
+  "installedBlocker": {
+    "kind": "Docker daemon socket accepts connection but times out without response",
+    "qualificationCluster": "cvk-catc-qualification-20261017",
+    "dockerRestarted": false
+  },
+  "remaining": [
+    "Installed manager/worker/native flow qualification",
+    "Prepared metadata cancellation and in-flight controller generation/domain transitions",
+    "Source-lost unverified recovery and deletion-policy cleanup",
+    "Full physical claim/provisioning convergence and wider pinned model execution/hardware qualification"
+  ]
+}

@@ -1,0 +1,242 @@
+=== RUN   TestSitePruneManifestAdmission
+=== RUN   TestSitePruneManifestAdmission/private
+=== RUN   TestSitePruneManifestAdmission/default-retain
+=== RUN   TestSitePruneManifestAdmission/no-key
+=== RUN   TestSitePruneManifestAdmission/bulk
+=== RUN   TestSitePruneManifestAdmission/delete-config
+=== RUN   TestSitePruneManifestAdmission/report
+=== RUN   TestSitePruneManifestAdmission/mixed-sections
+--- PASS: TestSitePruneManifestAdmission (0.68s)
+    --- PASS: TestSitePruneManifestAdmission/private (0.61s)
+    --- PASS: TestSitePruneManifestAdmission/default-retain (0.01s)
+    --- PASS: TestSitePruneManifestAdmission/no-key (0.01s)
+    --- PASS: TestSitePruneManifestAdmission/bulk (0.01s)
+    --- PASS: TestSitePruneManifestAdmission/delete-config (0.01s)
+    --- PASS: TestSitePruneManifestAdmission/report (0.01s)
+    --- PASS: TestSitePruneManifestAdmission/mixed-sections (0.01s)
+=== RUN   TestSitePruneManifestLifecycle
+=== RUN   TestSitePruneManifestLifecycle/cm-false/complete
+=== RUN   TestSitePruneManifestLifecycle/cm-false/consumer
+=== RUN   TestSitePruneManifestLifecycle/cm-false/foreign-child
+=== RUN   TestSitePruneManifestLifecycle/cm-false/missing-owned
+=== RUN   TestSitePruneManifestLifecycle/cm-false/replaced-owned
+=== RUN   TestSitePruneManifestLifecycle/cm-false/reappeared-retired
+=== RUN   TestSitePruneManifestLifecycle/cm-false/lost-ack
+=== RUN   TestSitePruneManifestLifecycle/cm-false/failed-task
+=== RUN   TestSitePruneManifestLifecycle/cm-true/complete
+=== RUN   TestSitePruneManifestLifecycle/cm-true/consumer
+=== RUN   TestSitePruneManifestLifecycle/cm-true/foreign-child
+=== RUN   TestSitePruneManifestLifecycle/cm-true/missing-owned
+=== RUN   TestSitePruneManifestLifecycle/cm-true/replaced-owned
+=== RUN   TestSitePruneManifestLifecycle/cm-true/reappeared-retired
+=== RUN   TestSitePruneManifestLifecycle/cm-true/lost-ack
+=== RUN   TestSitePruneManifestLifecycle/cm-true/failed-task
+--- PASS: TestSitePruneManifestLifecycle (7.89s)
+    --- PASS: TestSitePruneManifestLifecycle/cm-false/complete (1.82s)
+    --- PASS: TestSitePruneManifestLifecycle/cm-false/consumer (0.33s)
+    --- PASS: TestSitePruneManifestLifecycle/cm-false/foreign-child (0.29s)
+    --- PASS: TestSitePruneManifestLifecycle/cm-false/missing-owned (0.26s)
+    --- PASS: TestSitePruneManifestLifecycle/cm-false/replaced-owned (0.26s)
+    --- PASS: TestSitePruneManifestLifecycle/cm-false/reappeared-retired (0.67s)
+    --- PASS: TestSitePruneManifestLifecycle/cm-false/lost-ack (0.08s)
+    --- PASS: TestSitePruneManifestLifecycle/cm-false/failed-task (0.09s)
+    --- PASS: TestSitePruneManifestLifecycle/cm-true/complete (1.94s)
+    --- PASS: TestSitePruneManifestLifecycle/cm-true/consumer (0.37s)
+    --- PASS: TestSitePruneManifestLifecycle/cm-true/foreign-child (0.29s)
+    --- PASS: TestSitePruneManifestLifecycle/cm-true/missing-owned (0.29s)
+    --- PASS: TestSitePruneManifestLifecycle/cm-true/replaced-owned (0.29s)
+    --- PASS: TestSitePruneManifestLifecycle/cm-true/reappeared-retired (0.72s)
+    --- PASS: TestSitePruneManifestLifecycle/cm-true/lost-ack (0.09s)
+    --- PASS: TestSitePruneManifestLifecycle/cm-true/failed-task (0.10s)
+=== RUN   TestSitePruneHierarchyManifestLifecycle
+=== RUN   TestSitePruneHierarchyManifestLifecycle/cm-false
+=== RUN   TestSitePruneHierarchyManifestLifecycle/cm-true
+--- PASS: TestSitePruneHierarchyManifestLifecycle (7.84s)
+    --- PASS: TestSitePruneHierarchyManifestLifecycle/cm-false (3.83s)
+    --- PASS: TestSitePruneHierarchyManifestLifecycle/cm-true (4.01s)
+=== RUN   TestSiteRecreationExecution
+=== RUN   TestSiteRecreationExecution/cm-false/complete
+=== RUN   TestSiteRecreationExecution/cm-false/latest
+=== RUN   TestSiteRecreationExecution/cm-false/occupied
+=== RUN   TestSiteRecreationExecution/cm-false/old-moved
+=== RUN   TestSiteRecreationExecution/cm-false/parent-replaced
+=== RUN   TestSiteRecreationExecution/cm-false/source
+=== RUN   TestSiteRecreationExecution/cm-false/key
+=== RUN   TestSiteRecreationExecution/cm-false/ancestry
+=== RUN   TestSiteRecreationExecution/cm-false/history
+=== RUN   TestSiteRecreationExecution/cm-false/unknown
+=== RUN   TestSiteRecreationExecution/cm-false/pending
+=== RUN   TestSiteRecreationExecution/cm-false/failed
+=== RUN   TestSiteRecreationExecution/cm-false/lost-ack
+=== RUN   TestSiteRecreationExecution/cm-false/unauthorized
+=== RUN   TestSiteRecreationExecution/cm-false/server-error
+=== RUN   TestSiteRecreationExecution/cm-false/prepared
+=== RUN   TestSiteRecreationExecution/cm-true/complete
+=== RUN   TestSiteRecreationExecution/cm-true/latest
+=== RUN   TestSiteRecreationExecution/cm-true/occupied
+=== RUN   TestSiteRecreationExecution/cm-true/old-moved
+=== RUN   TestSiteRecreationExecution/cm-true/parent-replaced
+=== RUN   TestSiteRecreationExecution/cm-true/source
+=== RUN   TestSiteRecreationExecution/cm-true/key
+=== RUN   TestSiteRecreationExecution/cm-true/ancestry
+=== RUN   TestSiteRecreationExecution/cm-true/history
+=== RUN   TestSiteRecreationExecution/cm-true/unknown
+=== RUN   TestSiteRecreationExecution/cm-true/pending
+=== RUN   TestSiteRecreationExecution/cm-true/failed
+=== RUN   TestSiteRecreationExecution/cm-true/lost-ack
+=== RUN   TestSiteRecreationExecution/cm-true/unauthorized
+=== RUN   TestSiteRecreationExecution/cm-true/server-error
+=== RUN   TestSiteRecreationExecution/cm-true/prepared
+--- PASS: TestSiteRecreationExecution (5.54s)
+    --- PASS: TestSiteRecreationExecution/cm-false/complete (0.20s)
+    --- PASS: TestSiteRecreationExecution/cm-false/latest (0.25s)
+    --- PASS: TestSiteRecreationExecution/cm-false/occupied (0.12s)
+    --- PASS: TestSiteRecreationExecution/cm-false/old-moved (0.12s)
+    --- PASS: TestSiteRecreationExecution/cm-false/parent-replaced (0.12s)
+    --- PASS: TestSiteRecreationExecution/cm-false/source (0.17s)
+    --- PASS: TestSiteRecreationExecution/cm-false/key (0.15s)
+    --- PASS: TestSiteRecreationExecution/cm-false/ancestry (0.14s)
+    --- PASS: TestSiteRecreationExecution/cm-false/history (0.15s)
+    --- PASS: TestSiteRecreationExecution/cm-false/unknown (0.21s)
+    --- PASS: TestSiteRecreationExecution/cm-false/pending (0.20s)
+    --- PASS: TestSiteRecreationExecution/cm-false/failed (0.16s)
+    --- PASS: TestSiteRecreationExecution/cm-false/lost-ack (0.16s)
+    --- PASS: TestSiteRecreationExecution/cm-false/unauthorized (0.16s)
+    --- PASS: TestSiteRecreationExecution/cm-false/server-error (0.15s)
+    --- PASS: TestSiteRecreationExecution/cm-false/prepared (0.22s)
+    --- PASS: TestSiteRecreationExecution/cm-true/complete (0.21s)
+    --- PASS: TestSiteRecreationExecution/cm-true/latest (0.26s)
+    --- PASS: TestSiteRecreationExecution/cm-true/occupied (0.13s)
+    --- PASS: TestSiteRecreationExecution/cm-true/old-moved (0.14s)
+    --- PASS: TestSiteRecreationExecution/cm-true/parent-replaced (0.14s)
+    --- PASS: TestSiteRecreationExecution/cm-true/source (0.16s)
+    --- PASS: TestSiteRecreationExecution/cm-true/key (0.16s)
+    --- PASS: TestSiteRecreationExecution/cm-true/ancestry (0.15s)
+    --- PASS: TestSiteRecreationExecution/cm-true/history (0.16s)
+    --- PASS: TestSiteRecreationExecution/cm-true/unknown (0.22s)
+    --- PASS: TestSiteRecreationExecution/cm-true/pending (0.22s)
+    --- PASS: TestSiteRecreationExecution/cm-true/failed (0.18s)
+    --- PASS: TestSiteRecreationExecution/cm-true/lost-ack (0.17s)
+    --- PASS: TestSiteRecreationExecution/cm-true/unauthorized (0.17s)
+    --- PASS: TestSiteRecreationExecution/cm-true/server-error (0.17s)
+    --- PASS: TestSiteRecreationExecution/cm-true/prepared (0.23s)
+=== RUN   TestSiteRecreationParentHandoff
+=== RUN   TestSiteRecreationParentHandoff/complete
+=== RUN   TestSiteRecreationParentHandoff/wrong-parent
+=== RUN   TestSiteRecreationParentHandoff/same-parent
+=== RUN   TestSiteRecreationParentHandoff/missing-parent-archive
+=== RUN   TestSiteRecreationParentHandoff/wrong-reference
+=== RUN   TestSiteRecreationParentHandoff/v1-reparent
+=== RUN   TestSiteRecreationParentHandoff/unknown-version
+=== RUN   TestSiteRecreationParentHandoff/borrow-parent-task
+=== RUN   TestSiteRecreationParentHandoff/before-parent
+=== RUN   TestSiteRecreationParentHandoff/retired-parent
+=== RUN   TestSiteRecreationParentHandoff/drop-parent-history
+--- PASS: TestSiteRecreationParentHandoff (0.16s)
+    --- PASS: TestSiteRecreationParentHandoff/complete (0.02s)
+    --- PASS: TestSiteRecreationParentHandoff/wrong-parent (0.01s)
+    --- PASS: TestSiteRecreationParentHandoff/same-parent (0.01s)
+    --- PASS: TestSiteRecreationParentHandoff/missing-parent-archive (0.01s)
+    --- PASS: TestSiteRecreationParentHandoff/wrong-reference (0.01s)
+    --- PASS: TestSiteRecreationParentHandoff/v1-reparent (0.01s)
+    --- PASS: TestSiteRecreationParentHandoff/unknown-version (0.01s)
+    --- PASS: TestSiteRecreationParentHandoff/borrow-parent-task (0.01s)
+    --- PASS: TestSiteRecreationParentHandoff/before-parent (0.01s)
+    --- PASS: TestSiteRecreationParentHandoff/retired-parent (0.02s)
+    --- PASS: TestSiteRecreationParentHandoff/drop-parent-history (0.02s)
+=== RUN   TestSiteRecreationParentHandoffArchivedReference
+--- PASS: TestSiteRecreationParentHandoffArchivedReference (0.06s)
+=== RUN   TestSiteRecreationPublicationBoundaries
+=== RUN   TestSiteRecreationPublicationBoundaries/valid
+=== RUN   TestSiteRecreationPublicationBoundaries/old-uuid
+=== RUN   TestSiteRecreationPublicationBoundaries/old-task
+=== RUN   TestSiteRecreationPublicationBoundaries/row-frame
+=== RUN   TestSiteRecreationPublicationBoundaries/lost-history
+=== RUN   TestSiteRecreationPublicationBoundaries/capacity
+=== RUN   TestSiteRecreationPublicationBoundaries/wrong-phase
+=== RUN   TestSiteRecreationPublicationBoundaries/wrong-active
+--- PASS: TestSiteRecreationPublicationBoundaries (0.04s)
+    --- PASS: TestSiteRecreationPublicationBoundaries/valid (0.01s)
+    --- PASS: TestSiteRecreationPublicationBoundaries/old-uuid (0.01s)
+    --- PASS: TestSiteRecreationPublicationBoundaries/old-task (0.00s)
+    --- PASS: TestSiteRecreationPublicationBoundaries/row-frame (0.00s)
+    --- PASS: TestSiteRecreationPublicationBoundaries/lost-history (0.00s)
+    --- PASS: TestSiteRecreationPublicationBoundaries/capacity (0.01s)
+    --- PASS: TestSiteRecreationPublicationBoundaries/wrong-phase (0.00s)
+    --- PASS: TestSiteRecreationPublicationBoundaries/wrong-active (0.00s)
+=== RUN   TestSiteRecreationCohortChain
+=== RUN   TestSiteRecreationCohortChain/latest-false
+=== RUN   TestSiteRecreationCohortChain/latest-true
+--- PASS: TestSiteRecreationCohortChain (0.08s)
+    --- PASS: TestSiteRecreationCohortChain/latest-false (0.03s)
+    --- PASS: TestSiteRecreationCohortChain/latest-true (0.05s)
+=== RUN   TestSiteRecreationHistoryFences
+=== RUN   TestSiteRecreationHistoryFences/missing-creator
+=== RUN   TestSiteRecreationHistoryFences/missing-retired
+=== RUN   TestSiteRecreationHistoryFences/missing-applied
+=== RUN   TestSiteRecreationHistoryFences/orphan
+=== RUN   TestSiteRecreationHistoryFences/edit-producer
+=== RUN   TestSiteRecreationHistoryFences/edit-time
+=== RUN   TestSiteRecreationHistoryFences/edit-digest
+=== RUN   TestSiteRecreationHistoryFences/unknown-version
+=== RUN   TestSiteRecreationHistoryFences/duplicate
+=== RUN   TestSiteRecreationHistoryFences/borrowed-task
+=== RUN   TestSiteRecreationHistoryFences/reused-uuid
+=== RUN   TestSiteRecreationHistoryFences/same-input
+=== RUN   TestSiteRecreationHistoryFences/foreign-owner
+=== RUN   TestSiteRecreationHistoryFences/wrong-parent
+=== RUN   TestSiteRecreationHistoryFences/wrong-key
+=== RUN   TestSiteRecreationHistoryFences/lost-parent
+=== RUN   TestSiteRecreationHistoryFences/oversized
+--- PASS: TestSiteRecreationHistoryFences (0.26s)
+    --- PASS: TestSiteRecreationHistoryFences/missing-creator (0.01s)
+    --- PASS: TestSiteRecreationHistoryFences/missing-retired (0.02s)
+    --- PASS: TestSiteRecreationHistoryFences/missing-applied (0.01s)
+    --- PASS: TestSiteRecreationHistoryFences/orphan (0.02s)
+    --- PASS: TestSiteRecreationHistoryFences/edit-producer (0.01s)
+    --- PASS: TestSiteRecreationHistoryFences/edit-time (0.01s)
+    --- PASS: TestSiteRecreationHistoryFences/edit-digest (0.01s)
+    --- PASS: TestSiteRecreationHistoryFences/unknown-version (0.01s)
+    --- PASS: TestSiteRecreationHistoryFences/duplicate (0.01s)
+    --- PASS: TestSiteRecreationHistoryFences/borrowed-task (0.02s)
+    --- PASS: TestSiteRecreationHistoryFences/reused-uuid (0.02s)
+    --- PASS: TestSiteRecreationHistoryFences/same-input (0.02s)
+    --- PASS: TestSiteRecreationHistoryFences/foreign-owner (0.02s)
+    --- PASS: TestSiteRecreationHistoryFences/wrong-parent (0.02s)
+    --- PASS: TestSiteRecreationHistoryFences/wrong-key (0.02s)
+    --- PASS: TestSiteRecreationHistoryFences/lost-parent (0.02s)
+    --- PASS: TestSiteRecreationHistoryFences/oversized (0.01s)
+=== RUN   TestSiteRecreationArchiveAuthority
+=== RUN   TestSiteRecreationArchiveAuthority/valid
+=== RUN   TestSiteRecreationArchiveAuthority/same-input
+=== RUN   TestSiteRecreationArchiveAuthority/old-controller
+=== RUN   TestSiteRecreationArchiveAuthority/foreign-owner
+=== RUN   TestSiteRecreationArchiveAuthority/wrong-parent
+=== RUN   TestSiteRecreationArchiveAuthority/reused-operation
+=== RUN   TestSiteRecreationArchiveAuthority/borrowed-task
+=== RUN   TestSiteRecreationArchiveAuthority/wrong-cohort
+=== RUN   TestSiteRecreationArchiveAuthority/wrong-phase
+=== RUN   TestSiteRecreationArchiveAuthority/capacity
+--- PASS: TestSiteRecreationArchiveAuthority (0.02s)
+    --- PASS: TestSiteRecreationArchiveAuthority/valid (0.00s)
+    --- PASS: TestSiteRecreationArchiveAuthority/same-input (0.00s)
+    --- PASS: TestSiteRecreationArchiveAuthority/old-controller (0.00s)
+    --- PASS: TestSiteRecreationArchiveAuthority/foreign-owner (0.00s)
+    --- PASS: TestSiteRecreationArchiveAuthority/wrong-parent (0.00s)
+    --- PASS: TestSiteRecreationArchiveAuthority/reused-operation (0.00s)
+    --- PASS: TestSiteRecreationArchiveAuthority/borrowed-task (0.00s)
+    --- PASS: TestSiteRecreationArchiveAuthority/wrong-cohort (0.00s)
+    --- PASS: TestSiteRecreationArchiveAuthority/wrong-phase (0.00s)
+    --- PASS: TestSiteRecreationArchiveAuthority/capacity (0.01s)
+=== RUN   TestSiteRecreationOlderHistoryFences
+=== RUN   TestSiteRecreationOlderHistoryFences/valid
+=== RUN   TestSiteRecreationOlderHistoryFences/older-task
+=== RUN   TestSiteRecreationOlderHistoryFences/older-uuid
+=== RUN   TestSiteRecreationOlderHistoryFences/configmap-successor
+--- PASS: TestSiteRecreationOlderHistoryFences (0.11s)
+    --- PASS: TestSiteRecreationOlderHistoryFences/valid (0.03s)
+    --- PASS: TestSiteRecreationOlderHistoryFences/older-task (0.03s)
+    --- PASS: TestSiteRecreationOlderHistoryFences/older-uuid (0.03s)
+    --- PASS: TestSiteRecreationOlderHistoryFences/configmap-successor (0.03s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	25.051s

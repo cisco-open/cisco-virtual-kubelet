@@ -1,0 +1,66 @@
+{
+  "scope": "Two actual reconciler recreation cycles with ordinary v5 update, membership reduction, deletion and four complete predecessor cohorts; singleton/bulk and stable/fresh native IDs. Test-only extension, no production change.",
+  "gates": [
+    {
+      "surface": "local",
+      "status": "passed",
+      "seconds": 121.465,
+      "recreationCases": 23,
+      "repeatCases": [
+        "cohort-false/membership-prune-recreate-repeat-fresh",
+        "cohort-false/membership-prune-recreate-repeat-stable",
+        "cohort-true/membership-prune-recreate-repeat-fresh",
+        "cohort-true/membership-prune-recreate-repeat-stable"
+      ],
+      "originalHistoryCases": 84,
+      "archiveCases": 89,
+      "log": "wireless-tag-repeat-recreation-local.log"
+    },
+    {
+      "surface": "api",
+      "status": "passed",
+      "seconds": 308.937,
+      "recreationCases": 23,
+      "repeatCases": [
+        "cohort-false/membership-prune-recreate-repeat-fresh",
+        "cohort-false/membership-prune-recreate-repeat-stable",
+        "cohort-true/membership-prune-recreate-repeat-fresh",
+        "cohort-true/membership-prune-recreate-repeat-stable"
+      ],
+      "originalHistoryCases": 84,
+      "archiveCases": 89,
+      "log": "wireless-tag-repeat-recreation-api.log"
+    }
+  ],
+  "sourceSha256": {
+    "internal/controlleradapter/catalystcenter/wireless_tag_repeated_recreation_test.go": "7d3e75daa2f763952525430bcc6241b58350fe7bb2e8c5962622c999d76030e2",
+    "internal/controlleradapter/catalystcenter/wireless_tag_recreate_execution_test.go": "82dfc5ebfe728cd76fe46fe065ef782e284b6f5cdc1707f0685140d2dee7afa6",
+    "internal/controlleradapter/catalystcenter/wireless_tag_receipts_test.go": "b2ecd0743dc30a776cb5e281603d28c9bbec0d4d10bfaa7117823de3e030c016",
+    "internal/controlleradapter/catalystcenter/wireless_profile_configuration_test.go": "ad9033b7085fb291b7709498602c729b73ff668e34afa73a9433a1afea0a32c2"
+  },
+  "nativeBoundary": "The active 5603 binary predates these test-only fixture additions. Its independent singleton/cohort lab run qualifies one recreation and pruning; it is not native qualification of the new repeated-cycle cases.",
+  "remaining": [
+    "Repeated v5 ordinary-update/member cycles against native lab",
+    "Larger/mixed scopes, owner/key/archive retirement and handoff",
+    "Parent/config deletion and association resurrection",
+    "Installed workers and physical WLC/AP behavior",
+    "Remaining full 93-resource model parity"
+  ],
+  "preparedLiveSources": {
+    "internal/controlleradapter/catalystcenter/wireless_tag_recreate_live_test.go": "1240d472a78a8879c0cd978c298e66c1a86c3ad6009d98e9ec9557d1524f6b28",
+    "internal/controlleradapter/catalystcenter/wireless_tag_repeated_recreation_live_test.go": "8eeb5475a09e54391cf29ff30d278478abc73cd36eedcdd2c9cf13ea09b7d276",
+    "internal/controlleradapter/catalystcenter/wireless_profile_execution_live_test.go": "aa9c4aa7c0f243a0bdc4bd2e9ffc0402bf03a99ff4b8e007994b78c0152e8d64"
+  },
+  "preparedLiveGate": {
+    "log": "wireless-tag-repeat-live-compile.log",
+    "compiled": true,
+    "skippedNativeTests": 2,
+    "nativeOperationsSubmitted": 0,
+    "qualification": "not native lifecycle attestation",
+    "refusalChecks": {
+      "log": "wireless-tag-repeat-live-refusal-gates.json",
+      "cases": 4,
+      "beforeClientOrFixtureInitialization": true
+    }
+  }
+}

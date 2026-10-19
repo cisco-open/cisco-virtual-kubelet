@@ -1,0 +1,2112 @@
+=== RUN   TestSWIMMutationsAreNeverReplayed
+=== RUN   TestSWIMMutationsAreNeverReplayed/401
+=== RUN   TestSWIMMutationsAreNeverReplayed/403
+=== RUN   TestSWIMMutationsAreNeverReplayed/429
+=== RUN   TestSWIMMutationsAreNeverReplayed/500
+--- PASS: TestSWIMMutationsAreNeverReplayed (0.04s)
+    --- PASS: TestSWIMMutationsAreNeverReplayed/401 (0.01s)
+    --- PASS: TestSWIMMutationsAreNeverReplayed/403 (0.01s)
+    --- PASS: TestSWIMMutationsAreNeverReplayed/429 (0.01s)
+    --- PASS: TestSWIMMutationsAreNeverReplayed/500 (0.01s)
+=== RUN   TestSWIMClientContracts
+--- PASS: TestSWIMClientContracts (0.01s)
+=== RUN   TestConfigurationReceiptCompletion
+=== RUN   TestConfigurationReceiptCompletion/generic
+=== RUN   TestConfigurationReceiptCompletion/deployment
+=== RUN   TestConfigurationReceiptCompletion/pending
+=== RUN   TestConfigurationReceiptCompletion/error
+=== RUN   TestConfigurationReceiptCompletion/wrong-phase
+=== RUN   TestConfigurationReceiptCompletion/wrong-section
+=== RUN   TestConfigurationReceiptCompletion/missing-time
+=== RUN   TestConfigurationReceiptCompletion/future-time
+=== RUN   TestConfigurationReceiptCompletion/missing-receipt
+--- PASS: TestConfigurationReceiptCompletion (0.05s)
+    --- PASS: TestConfigurationReceiptCompletion/generic (0.01s)
+    --- PASS: TestConfigurationReceiptCompletion/deployment (0.01s)
+    --- PASS: TestConfigurationReceiptCompletion/pending (0.01s)
+    --- PASS: TestConfigurationReceiptCompletion/error (0.01s)
+    --- PASS: TestConfigurationReceiptCompletion/wrong-phase (0.00s)
+    --- PASS: TestConfigurationReceiptCompletion/wrong-section (0.00s)
+    --- PASS: TestConfigurationReceiptCompletion/missing-time (0.00s)
+    --- PASS: TestConfigurationReceiptCompletion/future-time (0.00s)
+    --- PASS: TestConfigurationReceiptCompletion/missing-receipt (0.00s)
+=== RUN   TestConfigurationReceiptConflictDoesNotReplaySubmission
+=== RUN   TestConfigurationReceiptConflictDoesNotReplaySubmission/async-heartbeat
+=== RUN   TestConfigurationReceiptConflictDoesNotReplaySubmission/async-replaced
+=== RUN   TestConfigurationReceiptConflictDoesNotReplaySubmission/sync-heartbeat
+=== RUN   TestConfigurationReceiptConflictDoesNotReplaySubmission/sync-replaced
+--- PASS: TestConfigurationReceiptConflictDoesNotReplaySubmission (0.73s)
+    --- PASS: TestConfigurationReceiptConflictDoesNotReplaySubmission/async-heartbeat (0.64s)
+    --- PASS: TestConfigurationReceiptConflictDoesNotReplaySubmission/async-replaced (0.03s)
+    --- PASS: TestConfigurationReceiptConflictDoesNotReplaySubmission/sync-heartbeat (0.03s)
+    --- PASS: TestConfigurationReceiptConflictDoesNotReplaySubmission/sync-replaced (0.03s)
+=== RUN   TestConfigurationReceiptConflictExhaustionRetainsFence
+--- PASS: TestConfigurationReceiptConflictExhaustionRetainsFence (0.34s)
+=== RUN   TestConfigurationJournalTaskReceiptDoesNotReleaseFence
+--- PASS: TestConfigurationJournalTaskReceiptDoesNotReleaseFence (0.02s)
+=== RUN   TestConfigurationSubmissionPersistsReceiptOrUncertainty
+=== RUN   TestConfigurationSubmissionPersistsReceiptOrUncertainty/accepted
+=== RUN   TestConfigurationSubmissionPersistsReceiptOrUncertainty/request-timeout
+=== RUN   TestConfigurationSubmissionPersistsReceiptOrUncertainty/empty-receipt
+=== RUN   TestConfigurationSubmissionPersistsReceiptOrUncertainty/receipt-write-timeout
+--- PASS: TestConfigurationSubmissionPersistsReceiptOrUncertainty (0.06s)
+    --- PASS: TestConfigurationSubmissionPersistsReceiptOrUncertainty/accepted (0.02s)
+    --- PASS: TestConfigurationSubmissionPersistsReceiptOrUncertainty/request-timeout (0.01s)
+    --- PASS: TestConfigurationSubmissionPersistsReceiptOrUncertainty/empty-receipt (0.01s)
+    --- PASS: TestConfigurationSubmissionPersistsReceiptOrUncertainty/receipt-write-timeout (0.01s)
+=== RUN   TestFloorImageAssetIndex
+=== RUN   TestFloorImageAssetIndex/valid
+=== RUN   TestFloorImageAssetIndex/missing-index
+=== RUN   TestFloorImageAssetIndex/duplicate
+=== RUN   TestFloorImageAssetIndex/missing-binary
+=== RUN   TestFloorImageAssetIndex/text-collision
+=== RUN   TestFloorImageAssetIndex/model-key
+=== RUN   TestFloorImageAssetIndex/null
+=== RUN   TestFloorImageAssetIndex/non-string
+=== RUN   TestFloorImageAssetIndex/array
+=== RUN   TestFloorImageAssetIndex/trailing
+=== RUN   TestFloorImageAssetIndex/binary-index
+=== RUN   TestFloorImageAssetIndex/wrong-type
+=== RUN   TestFloorImageAssetIndex/invalid-key
+--- PASS: TestFloorImageAssetIndex (0.00s)
+    --- PASS: TestFloorImageAssetIndex/valid (0.00s)
+    --- PASS: TestFloorImageAssetIndex/missing-index (0.00s)
+    --- PASS: TestFloorImageAssetIndex/duplicate (0.00s)
+    --- PASS: TestFloorImageAssetIndex/missing-binary (0.00s)
+    --- PASS: TestFloorImageAssetIndex/text-collision (0.00s)
+    --- PASS: TestFloorImageAssetIndex/model-key (0.00s)
+    --- PASS: TestFloorImageAssetIndex/null (0.00s)
+    --- PASS: TestFloorImageAssetIndex/non-string (0.00s)
+    --- PASS: TestFloorImageAssetIndex/array (0.00s)
+    --- PASS: TestFloorImageAssetIndex/trailing (0.00s)
+    --- PASS: TestFloorImageAssetIndex/binary-index (0.00s)
+    --- PASS: TestFloorImageAssetIndex/wrong-type (0.00s)
+    --- PASS: TestFloorImageAssetIndex/invalid-key (0.00s)
+=== RUN   TestFloorImageExecutorLifecycle
+=== RUN   TestFloorImageExecutorLifecycle/complete
+=== RUN   TestFloorImageExecutorLifecycle/failed
+=== RUN   TestFloorImageExecutorLifecycle/running
+=== RUN   TestFloorImageExecutorLifecycle/wrong-task
+=== RUN   TestFloorImageExecutorLifecycle/replaced-floor
+=== RUN   TestFloorImageExecutorLifecycle/unknown
+--- PASS: TestFloorImageExecutorLifecycle (0.09s)
+    --- PASS: TestFloorImageExecutorLifecycle/complete (0.02s)
+    --- PASS: TestFloorImageExecutorLifecycle/failed (0.01s)
+    --- PASS: TestFloorImageExecutorLifecycle/running (0.01s)
+    --- PASS: TestFloorImageExecutorLifecycle/wrong-task (0.01s)
+    --- PASS: TestFloorImageExecutorLifecycle/replaced-floor (0.01s)
+    --- PASS: TestFloorImageExecutorLifecycle/unknown (0.02s)
+=== RUN   TestFloorImageAtomicJournal
+=== RUN   TestFloorImageAtomicJournal/complete
+=== RUN   TestFloorImageAtomicJournal/synchronous-complete
+=== RUN   TestFloorImageAtomicJournal/pruned
+=== RUN   TestFloorImageAtomicJournal/failed-task
+=== RUN   TestFloorImageAtomicJournal/running-task
+=== RUN   TestFloorImageAtomicJournal/replaced-floor
+=== RUN   TestFloorImageAtomicJournal/stale-source
+=== RUN   TestFloorImageAtomicJournal/foreign-owner
+=== RUN   TestFloorImageAtomicJournal/generic-bypass
+--- PASS: TestFloorImageAtomicJournal (0.30s)
+    --- PASS: TestFloorImageAtomicJournal/complete (0.05s)
+    --- PASS: TestFloorImageAtomicJournal/synchronous-complete (0.04s)
+    --- PASS: TestFloorImageAtomicJournal/pruned (0.04s)
+    --- PASS: TestFloorImageAtomicJournal/failed-task (0.03s)
+    --- PASS: TestFloorImageAtomicJournal/running-task (0.03s)
+    --- PASS: TestFloorImageAtomicJournal/replaced-floor (0.04s)
+    --- PASS: TestFloorImageAtomicJournal/stale-source (0.02s)
+    --- PASS: TestFloorImageAtomicJournal/foreign-owner (0.02s)
+    --- PASS: TestFloorImageAtomicJournal/generic-bypass (0.02s)
+=== RUN   TestFloorImageModelSnapshot
+--- PASS: TestFloorImageModelSnapshot (0.00s)
+=== RUN   TestFloorImageModelRejectsInvalidIntent
+--- PASS: TestFloorImageModelRejectsInvalidIntent (0.01s)
+=== RUN   TestFloorImagePreflightBeforeGeometry
+=== RUN   TestFloorImagePreflightBeforeGeometry/new-floor
+=== RUN   TestFloorImagePreflightBeforeGeometry/null-image
+=== RUN   TestFloorImagePreflightBeforeGeometry/missing-asset
+=== RUN   TestFloorImagePreflightBeforeGeometry/bad-image
+=== RUN   TestFloorImagePreflightBeforeGeometry/missing-floor-receipt
+=== RUN   TestFloorImagePreflightBeforeGeometry/capacity
+=== RUN   TestFloorImagePreflightBeforeGeometry/invalid-ap
+--- PASS: TestFloorImagePreflightBeforeGeometry (0.12s)
+    --- PASS: TestFloorImagePreflightBeforeGeometry/new-floor (0.02s)
+    --- PASS: TestFloorImagePreflightBeforeGeometry/null-image (0.02s)
+    --- PASS: TestFloorImagePreflightBeforeGeometry/missing-asset (0.01s)
+    --- PASS: TestFloorImagePreflightBeforeGeometry/bad-image (0.01s)
+    --- PASS: TestFloorImagePreflightBeforeGeometry/missing-floor-receipt (0.02s)
+    --- PASS: TestFloorImagePreflightBeforeGeometry/capacity (0.02s)
+    --- PASS: TestFloorImagePreflightBeforeGeometry/invalid-ap (0.01s)
+=== RUN   TestFloorImageReleaseRejectsAlteredEvidence
+--- PASS: TestFloorImageReleaseRejectsAlteredEvidence (0.00s)
+=== RUN   TestFloorImageReceiptBinding
+=== RUN   TestFloorImageReceiptBinding/applied
+=== RUN   TestFloorImageReceiptBinding/absent
+=== RUN   TestFloorImageReceiptBinding/other-section
+=== RUN   TestFloorImageReceiptBinding/changed-bytes
+=== RUN   TestFloorImageReceiptBinding/renamed-file
+=== RUN   TestFloorImageReceiptBinding/foreign-owner
+=== RUN   TestFloorImageReceiptBinding/foreign-name
+=== RUN   TestFloorImageReceiptBinding/replaced-floor
+=== RUN   TestFloorImageReceiptBinding/duplicate
+=== RUN   TestFloorImageReceiptBinding/wrong-operation
+=== RUN   TestFloorImageReceiptBinding/wrong-key
+=== RUN   TestFloorImageReceiptBinding/wrong-section
+=== RUN   TestFloorImageReceiptBinding/unknown
+=== RUN   TestFloorImageReceiptBinding/missing-task
+=== RUN   TestFloorImageReceiptBinding/missing-time
+=== RUN   TestFloorImageReceiptBinding/future-time
+=== RUN   TestFloorImageReceiptBinding/reversed-time
+=== RUN   TestFloorImageReceiptBinding/missing-verification
+=== RUN   TestFloorImageReceiptBinding/serial
+=== RUN   TestFloorImageReceiptBinding/parent
+=== RUN   TestFloorImageReceiptBinding/bad-id
+=== RUN   TestFloorImageReceiptBinding/wrong-action
+--- PASS: TestFloorImageReceiptBinding (0.00s)
+    --- PASS: TestFloorImageReceiptBinding/applied (0.00s)
+    --- PASS: TestFloorImageReceiptBinding/absent (0.00s)
+    --- PASS: TestFloorImageReceiptBinding/other-section (0.00s)
+    --- PASS: TestFloorImageReceiptBinding/changed-bytes (0.00s)
+    --- PASS: TestFloorImageReceiptBinding/renamed-file (0.00s)
+    --- PASS: TestFloorImageReceiptBinding/foreign-owner (0.00s)
+    --- PASS: TestFloorImageReceiptBinding/foreign-name (0.00s)
+    --- PASS: TestFloorImageReceiptBinding/replaced-floor (0.00s)
+    --- PASS: TestFloorImageReceiptBinding/duplicate (0.00s)
+    --- PASS: TestFloorImageReceiptBinding/wrong-operation (0.00s)
+    --- PASS: TestFloorImageReceiptBinding/wrong-key (0.00s)
+    --- PASS: TestFloorImageReceiptBinding/wrong-section (0.00s)
+    --- PASS: TestFloorImageReceiptBinding/unknown (0.00s)
+    --- PASS: TestFloorImageReceiptBinding/missing-task (0.00s)
+    --- PASS: TestFloorImageReceiptBinding/missing-time (0.00s)
+    --- PASS: TestFloorImageReceiptBinding/future-time (0.00s)
+    --- PASS: TestFloorImageReceiptBinding/reversed-time (0.00s)
+    --- PASS: TestFloorImageReceiptBinding/missing-verification (0.00s)
+    --- PASS: TestFloorImageReceiptBinding/serial (0.00s)
+    --- PASS: TestFloorImageReceiptBinding/parent (0.00s)
+    --- PASS: TestFloorImageReceiptBinding/bad-id (0.00s)
+    --- PASS: TestFloorImageReceiptBinding/wrong-action (0.00s)
+=== RUN   TestFloorImageReceiptResourceSyntax
+--- PASS: TestFloorImageReceiptResourceSyntax (0.00s)
+=== RUN   TestFloorImageReportDoesNotClaimByteObservation
+=== RUN   TestFloorImageReportDoesNotClaimByteObservation/unobservable
+=== RUN   TestFloorImageReportDoesNotClaimByteObservation/geometry-drift
+=== RUN   TestFloorImageReportDoesNotClaimByteObservation/missing-floor
+=== RUN   TestFloorImageReportDoesNotClaimByteObservation/missing-asset
+=== RUN   TestFloorImageReportDoesNotClaimByteObservation/invalid-asset
+=== RUN   TestFloorImageReportDoesNotClaimByteObservation/null-image
+=== RUN   TestFloorImageReportDoesNotClaimByteObservation/source-race
+--- PASS: TestFloorImageReportDoesNotClaimByteObservation (0.15s)
+    --- PASS: TestFloorImageReportDoesNotClaimByteObservation/unobservable (0.03s)
+    --- PASS: TestFloorImageReportDoesNotClaimByteObservation/geometry-drift (0.02s)
+    --- PASS: TestFloorImageReportDoesNotClaimByteObservation/missing-floor (0.03s)
+    --- PASS: TestFloorImageReportDoesNotClaimByteObservation/missing-asset (0.01s)
+    --- PASS: TestFloorImageReportDoesNotClaimByteObservation/invalid-asset (0.01s)
+    --- PASS: TestFloorImageReportDoesNotClaimByteObservation/null-image (0.02s)
+    --- PASS: TestFloorImageReportDoesNotClaimByteObservation/source-race (0.02s)
+=== RUN   TestFloorImageSynchronousUploadReceipt
+=== RUN   TestFloorImageSynchronousUploadReceipt/complete
+=== RUN   TestFloorImageSynchronousUploadReceipt/group-complete
+=== RUN   TestFloorImageSynchronousUploadReceipt/wrong-group
+=== RUN   TestFloorImageSynchronousUploadReceipt/wrong-floor
+=== RUN   TestFloorImageSynchronousUploadReceipt/opaque-hierarchy
+=== RUN   TestFloorImageSynchronousUploadReceipt/missing-image
+=== RUN   TestFloorImageSynchronousUploadReceipt/task-envelope
+=== RUN   TestFloorImageSynchronousUploadReceipt/wrong-status
+=== RUN   TestFloorImageSynchronousUploadReceipt/unauthorized
+--- PASS: TestFloorImageSynchronousUploadReceipt (0.09s)
+    --- PASS: TestFloorImageSynchronousUploadReceipt/complete (0.01s)
+    --- PASS: TestFloorImageSynchronousUploadReceipt/group-complete (0.01s)
+    --- PASS: TestFloorImageSynchronousUploadReceipt/wrong-group (0.01s)
+    --- PASS: TestFloorImageSynchronousUploadReceipt/wrong-floor (0.01s)
+    --- PASS: TestFloorImageSynchronousUploadReceipt/opaque-hierarchy (0.01s)
+    --- PASS: TestFloorImageSynchronousUploadReceipt/missing-image (0.01s)
+    --- PASS: TestFloorImageSynchronousUploadReceipt/task-envelope (0.01s)
+    --- PASS: TestFloorImageSynchronousUploadReceipt/wrong-status (0.01s)
+    --- PASS: TestFloorImageSynchronousUploadReceipt/unauthorized (0.01s)
+=== RUN   TestFloorImageSynchronousCompletionRejectsMalformedJournal
+=== RUN   TestFloorImageSynchronousCompletionRejectsMalformedJournal/missing-time
+=== RUN   TestFloorImageSynchronousCompletionRejectsMalformedJournal/zero-time
+=== RUN   TestFloorImageSynchronousCompletionRejectsMalformedJournal/future-time
+=== RUN   TestFloorImageSynchronousCompletionRejectsMalformedJournal/created-id
+=== RUN   TestFloorImageSynchronousCompletionRejectsMalformedJournal/group
+=== RUN   TestFloorImageSynchronousCompletionRejectsMalformedJournal/cancel
+--- PASS: TestFloorImageSynchronousCompletionRejectsMalformedJournal (0.02s)
+    --- PASS: TestFloorImageSynchronousCompletionRejectsMalformedJournal/missing-time (0.00s)
+    --- PASS: TestFloorImageSynchronousCompletionRejectsMalformedJournal/zero-time (0.00s)
+    --- PASS: TestFloorImageSynchronousCompletionRejectsMalformedJournal/future-time (0.00s)
+    --- PASS: TestFloorImageSynchronousCompletionRejectsMalformedJournal/created-id (0.00s)
+    --- PASS: TestFloorImageSynchronousCompletionRejectsMalformedJournal/group (0.00s)
+    --- PASS: TestFloorImageSynchronousCompletionRejectsMalformedJournal/cancel (0.00s)
+=== RUN   TestFloorImageSynchronousExecutorRefusesReplacedFloor
+--- PASS: TestFloorImageSynchronousExecutorRefusesReplacedFloor (0.01s)
+=== RUN   TestFloorImageResponseKindCannotInferPrunedTask
+--- PASS: TestFloorImageResponseKindCannotInferPrunedTask (0.00s)
+=== RUN   TestFloorImageUploadTransport
+=== RUN   TestFloorImageUploadTransport/accepted
+=== RUN   TestFloorImageUploadTransport/unauthorized
+=== RUN   TestFloorImageUploadTransport/missing-task
+=== RUN   TestFloorImageUploadTransport/server-error
+--- PASS: TestFloorImageUploadTransport (0.04s)
+    --- PASS: TestFloorImageUploadTransport/accepted (0.01s)
+    --- PASS: TestFloorImageUploadTransport/unauthorized (0.01s)
+    --- PASS: TestFloorImageUploadTransport/missing-task (0.01s)
+    --- PASS: TestFloorImageUploadTransport/server-error (0.01s)
+=== RUN   TestFloorImageInputValidation
+--- PASS: TestFloorImageInputValidation (0.00s)
+=== RUN   TestPlannedAPKeyedNativeBaseline
+=== RUN   TestPlannedAPKeyedNativeBaseline/same
+=== RUN   TestPlannedAPKeyedNativeBaseline/opaque-number
+=== RUN   TestPlannedAPKeyedNativeBaseline/opaque-null
+=== RUN   TestPlannedAPKeyedNativeBaseline/managed-coordinate
+=== RUN   TestPlannedAPKeyedNativeBaseline/MAC-representation
+=== RUN   TestPlannedAPKeyedNativeBaseline/key-removed
+=== RUN   TestPlannedAPKeyedNativeBaseline/key-changed
+=== RUN   TestPlannedAPKeyedNativeBaseline/key-id
+=== RUN   TestPlannedAPKeyedNativeBaseline/source-mode
+=== RUN   TestPlannedAPKeyedNativeBaseline/scope
+=== RUN   TestPlannedAPKeyedNativeBaseline/missing-check
+--- PASS: TestPlannedAPKeyedNativeBaseline (0.02s)
+    --- PASS: TestPlannedAPKeyedNativeBaseline/same (0.00s)
+    --- PASS: TestPlannedAPKeyedNativeBaseline/opaque-number (0.00s)
+    --- PASS: TestPlannedAPKeyedNativeBaseline/opaque-null (0.00s)
+    --- PASS: TestPlannedAPKeyedNativeBaseline/managed-coordinate (0.00s)
+    --- PASS: TestPlannedAPKeyedNativeBaseline/MAC-representation (0.00s)
+    --- PASS: TestPlannedAPKeyedNativeBaseline/key-removed (0.00s)
+    --- PASS: TestPlannedAPKeyedNativeBaseline/key-changed (0.00s)
+    --- PASS: TestPlannedAPKeyedNativeBaseline/key-id (0.00s)
+    --- PASS: TestPlannedAPKeyedNativeBaseline/source-mode (0.00s)
+    --- PASS: TestPlannedAPKeyedNativeBaseline/scope (0.00s)
+    --- PASS: TestPlannedAPKeyedNativeBaseline/missing-check (0.00s)
+=== RUN   TestPlannedAPPrivateIdentityReceiptBoundaries
+=== RUN   TestPlannedAPPrivateIdentityReceiptBoundaries/valid
+=== RUN   TestPlannedAPPrivateIdentityReceiptBoundaries/key-pruned
+=== RUN   TestPlannedAPPrivateIdentityReceiptBoundaries/MAC-pruned
+=== RUN   TestPlannedAPPrivateIdentityReceiptBoundaries/mode-pruned
+=== RUN   TestPlannedAPPrivateIdentityReceiptBoundaries/producer-key
+=== RUN   TestPlannedAPPrivateIdentityReceiptBoundaries/result-prefix
+=== RUN   TestPlannedAPPrivateIdentityReceiptBoundaries/result-pruned
+=== RUN   TestPlannedAPPrivateIdentityReceiptBoundaries/task-pruned
+--- PASS: TestPlannedAPPrivateIdentityReceiptBoundaries (0.01s)
+    --- PASS: TestPlannedAPPrivateIdentityReceiptBoundaries/valid (0.00s)
+    --- PASS: TestPlannedAPPrivateIdentityReceiptBoundaries/key-pruned (0.00s)
+    --- PASS: TestPlannedAPPrivateIdentityReceiptBoundaries/MAC-pruned (0.00s)
+    --- PASS: TestPlannedAPPrivateIdentityReceiptBoundaries/mode-pruned (0.00s)
+    --- PASS: TestPlannedAPPrivateIdentityReceiptBoundaries/producer-key (0.00s)
+    --- PASS: TestPlannedAPPrivateIdentityReceiptBoundaries/result-prefix (0.00s)
+    --- PASS: TestPlannedAPPrivateIdentityReceiptBoundaries/result-pruned (0.00s)
+    --- PASS: TestPlannedAPPrivateIdentityReceiptBoundaries/task-pruned (0.00s)
+=== RUN   TestPlannedAPPrivateUpdateResultAndCapacity
+--- PASS: TestPlannedAPPrivateUpdateResultAndCapacity (0.00s)
+=== RUN   TestPlannedAPCatalogPreflight
+=== RUN   TestPlannedAPCatalogPreflight/valid
+=== RUN   TestPlannedAPCatalogPreflight/numbered-choice
+=== RUN   TestPlannedAPCatalogPreflight/raw-choice
+=== RUN   TestPlannedAPCatalogPreflight/duplicate-choice
+=== RUN   TestPlannedAPCatalogPreflight/unknown-model
+=== RUN   TestPlannedAPCatalogPreflight/unknown-band
+=== RUN   TestPlannedAPCatalogPreflight/unknown-antenna
+=== RUN   TestPlannedAPCatalogPreflight/antenna-without-band
+=== RUN   TestPlannedAPCatalogPreflight/band-without-antenna
+=== RUN   TestPlannedAPCatalogPreflight/default-radio
+=== RUN   TestPlannedAPCatalogPreflight/later-invalid
+=== RUN   TestPlannedAPCatalogPreflight/null
+=== RUN   TestPlannedAPCatalogPreflight/envelope
+=== RUN   TestPlannedAPCatalogPreflight/duplicate-model
+=== RUN   TestPlannedAPCatalogPreflight/duplicate-band
+=== RUN   TestPlannedAPCatalogPreflight/empty-names
+=== RUN   TestPlannedAPCatalogPreflight/partial
+=== RUN   TestPlannedAPCatalogPreflight/missing-patterns
+--- PASS: TestPlannedAPCatalogPreflight (0.19s)
+    --- PASS: TestPlannedAPCatalogPreflight/valid (0.01s)
+    --- PASS: TestPlannedAPCatalogPreflight/numbered-choice (0.01s)
+    --- PASS: TestPlannedAPCatalogPreflight/raw-choice (0.01s)
+    --- PASS: TestPlannedAPCatalogPreflight/duplicate-choice (0.01s)
+    --- PASS: TestPlannedAPCatalogPreflight/unknown-model (0.01s)
+    --- PASS: TestPlannedAPCatalogPreflight/unknown-band (0.01s)
+    --- PASS: TestPlannedAPCatalogPreflight/unknown-antenna (0.01s)
+    --- PASS: TestPlannedAPCatalogPreflight/antenna-without-band (0.01s)
+    --- PASS: TestPlannedAPCatalogPreflight/band-without-antenna (0.01s)
+    --- PASS: TestPlannedAPCatalogPreflight/default-radio (0.01s)
+    --- PASS: TestPlannedAPCatalogPreflight/later-invalid (0.01s)
+    --- PASS: TestPlannedAPCatalogPreflight/null (0.01s)
+    --- PASS: TestPlannedAPCatalogPreflight/envelope (0.01s)
+    --- PASS: TestPlannedAPCatalogPreflight/duplicate-model (0.01s)
+    --- PASS: TestPlannedAPCatalogPreflight/duplicate-band (0.01s)
+    --- PASS: TestPlannedAPCatalogPreflight/empty-names (0.01s)
+    --- PASS: TestPlannedAPCatalogPreflight/partial (0.01s)
+    --- PASS: TestPlannedAPCatalogPreflight/missing-patterns (0.01s)
+=== RUN   TestPlannedAPInvalidCatalogSelectionPrecedesGeometry
+--- PASS: TestPlannedAPInvalidCatalogSelectionPrecedesGeometry (0.01s)
+=== RUN   TestPlannedAPCatalogChangedBeforeSubmission
+--- PASS: TestPlannedAPCatalogChangedBeforeSubmission (0.01s)
+=== RUN   TestPlannedAPDispatchRechecksNativeObservation
+=== RUN   TestPlannedAPDispatchRechecksNativeObservation/stable
+=== RUN   TestPlannedAPDispatchRechecksNativeObservation/appeared
+=== RUN   TestPlannedAPDispatchRechecksNativeObservation/replaced
+=== RUN   TestPlannedAPDispatchRechecksNativeObservation/mac
+=== RUN   TestPlannedAPDispatchRechecksNativeObservation/unselected-z
+=== RUN   TestPlannedAPDispatchRechecksNativeObservation/unselected-radio
+=== RUN   TestPlannedAPDispatchRechecksNativeObservation/lost-response
+--- PASS: TestPlannedAPDispatchRechecksNativeObservation (0.11s)
+    --- PASS: TestPlannedAPDispatchRechecksNativeObservation/stable (0.02s)
+    --- PASS: TestPlannedAPDispatchRechecksNativeObservation/appeared (0.02s)
+    --- PASS: TestPlannedAPDispatchRechecksNativeObservation/replaced (0.02s)
+    --- PASS: TestPlannedAPDispatchRechecksNativeObservation/mac (0.02s)
+    --- PASS: TestPlannedAPDispatchRechecksNativeObservation/unselected-z (0.02s)
+    --- PASS: TestPlannedAPDispatchRechecksNativeObservation/unselected-radio (0.02s)
+    --- PASS: TestPlannedAPDispatchRechecksNativeObservation/lost-response (0.02s)
+=== RUN   TestPlannedAPUpdatePreservesUnselected
+--- PASS: TestPlannedAPUpdatePreservesUnselected (0.00s)
+=== RUN   TestPlannedAPExecutorLifecycle
+=== RUN   TestPlannedAPExecutorLifecycle/create
+=== RUN   TestPlannedAPExecutorLifecycle/update
+=== RUN   TestPlannedAPExecutorLifecycle/incomplete-create
+=== RUN   TestPlannedAPExecutorLifecycle/bad-task
+=== RUN   TestPlannedAPExecutorLifecycle/radio-change
+=== RUN   TestPlannedAPExecutorLifecycle/optional-create
+--- PASS: TestPlannedAPExecutorLifecycle (0.10s)
+    --- PASS: TestPlannedAPExecutorLifecycle/create (0.02s)
+    --- PASS: TestPlannedAPExecutorLifecycle/update (0.02s)
+    --- PASS: TestPlannedAPExecutorLifecycle/incomplete-create (0.01s)
+    --- PASS: TestPlannedAPExecutorLifecycle/bad-task (0.01s)
+    --- PASS: TestPlannedAPExecutorLifecycle/radio-change (0.01s)
+    --- PASS: TestPlannedAPExecutorLifecycle/optional-create (0.02s)
+=== RUN   TestPlannedAPFloorEffect
+=== RUN   TestPlannedAPFloorEffect/unchanged
+=== RUN   TestPlannedAPFloorEffect/width
+=== RUN   TestPlannedAPFloorEffect/length
+=== RUN   TestPlannedAPFloorEffect/both
+=== RUN   TestPlannedAPFloorEffect/shrink
+=== RUN   TestPlannedAPFloorEffect/height
+=== RUN   TestPlannedAPFloorEffect/units-equivalent
+=== RUN   TestPlannedAPFloorEffect/fractional
+=== RUN   TestPlannedAPFloorEffect/origin
+=== RUN   TestPlannedAPFloorEffect/target-ID
+=== RUN   TestPlannedAPFloorEffect/parent-ID
+=== RUN   TestPlannedAPFloorEffect/path
+=== RUN   TestPlannedAPFloorEffect/old-width
+=== RUN   TestPlannedAPFloorEffect/new-width
+=== RUN   TestPlannedAPFloorEffect/new-units
+=== RUN   TestPlannedAPFloorEffect/missing-position
+=== RUN   TestPlannedAPFloorEffect/outside-before
+=== RUN   TestPlannedAPFloorEffect/height-below-AP
+=== RUN   TestPlannedAPFloorEffect/raw-coordinate
+=== RUN   TestPlannedAPFloorEffect/raw-ID
+=== RUN   TestPlannedAPFloorEffect/unknown-fields
+=== RUN   TestPlannedAPFloorEffect/overflow
+--- PASS: TestPlannedAPFloorEffect (0.04s)
+    --- PASS: TestPlannedAPFloorEffect/unchanged (0.00s)
+    --- PASS: TestPlannedAPFloorEffect/width (0.00s)
+    --- PASS: TestPlannedAPFloorEffect/length (0.00s)
+    --- PASS: TestPlannedAPFloorEffect/both (0.00s)
+    --- PASS: TestPlannedAPFloorEffect/shrink (0.00s)
+    --- PASS: TestPlannedAPFloorEffect/height (0.00s)
+    --- PASS: TestPlannedAPFloorEffect/units-equivalent (0.00s)
+    --- PASS: TestPlannedAPFloorEffect/fractional (0.00s)
+    --- PASS: TestPlannedAPFloorEffect/origin (0.00s)
+    --- PASS: TestPlannedAPFloorEffect/target-ID (0.00s)
+    --- PASS: TestPlannedAPFloorEffect/parent-ID (0.00s)
+    --- PASS: TestPlannedAPFloorEffect/path (0.00s)
+    --- PASS: TestPlannedAPFloorEffect/old-width (0.00s)
+    --- PASS: TestPlannedAPFloorEffect/new-width (0.00s)
+    --- PASS: TestPlannedAPFloorEffect/new-units (0.00s)
+    --- PASS: TestPlannedAPFloorEffect/missing-position (0.00s)
+    --- PASS: TestPlannedAPFloorEffect/outside-before (0.00s)
+    --- PASS: TestPlannedAPFloorEffect/height-below-AP (0.00s)
+    --- PASS: TestPlannedAPFloorEffect/raw-coordinate (0.00s)
+    --- PASS: TestPlannedAPFloorEffect/raw-ID (0.00s)
+    --- PASS: TestPlannedAPFloorEffect/unknown-fields (0.00s)
+    --- PASS: TestPlannedAPFloorEffect/overflow (0.00s)
+=== RUN   TestPlannedAPFloorCoordinatePrecision
+=== RUN   TestPlannedAPFloorCoordinatePrecision/native-width-effect
+=== RUN   TestPlannedAPFloorCoordinatePrecision/exact-integer
+=== RUN   TestPlannedAPFloorCoordinatePrecision/exact-half
+=== RUN   TestPlannedAPFloorCoordinatePrecision/decimal
+=== RUN   TestPlannedAPFloorCoordinatePrecision/origin
+=== RUN   TestPlannedAPFloorCoordinatePrecision/negative
+=== RUN   TestPlannedAPFloorCoordinatePrecision/not-a-number
+=== RUN   TestPlannedAPFloorCoordinatePrecision/infinite
+=== RUN   TestPlannedAPFloorCoordinatePrecision/binary32-overflow
+--- PASS: TestPlannedAPFloorCoordinatePrecision (0.00s)
+    --- PASS: TestPlannedAPFloorCoordinatePrecision/native-width-effect (0.00s)
+    --- PASS: TestPlannedAPFloorCoordinatePrecision/exact-integer (0.00s)
+    --- PASS: TestPlannedAPFloorCoordinatePrecision/exact-half (0.00s)
+    --- PASS: TestPlannedAPFloorCoordinatePrecision/decimal (0.00s)
+    --- PASS: TestPlannedAPFloorCoordinatePrecision/origin (0.00s)
+    --- PASS: TestPlannedAPFloorCoordinatePrecision/negative (0.00s)
+    --- PASS: TestPlannedAPFloorCoordinatePrecision/not-a-number (0.00s)
+    --- PASS: TestPlannedAPFloorCoordinatePrecision/infinite (0.00s)
+    --- PASS: TestPlannedAPFloorCoordinatePrecision/binary32-overflow (0.00s)
+=== RUN   TestPlannedAPPositionBounds
+=== RUN   TestPlannedAPPositionBounds/feet/x/zero
+=== RUN   TestPlannedAPPositionBounds/feet/x/boundary
+=== RUN   TestPlannedAPPositionBounds/feet/x/negative
+=== RUN   TestPlannedAPPositionBounds/feet/x/above
+=== RUN   TestPlannedAPPositionBounds/feet/x/nan
+=== RUN   TestPlannedAPPositionBounds/feet/x/missing
+=== RUN   TestPlannedAPPositionBounds/feet/y/zero
+=== RUN   TestPlannedAPPositionBounds/feet/y/boundary
+=== RUN   TestPlannedAPPositionBounds/feet/y/negative
+=== RUN   TestPlannedAPPositionBounds/feet/y/above
+=== RUN   TestPlannedAPPositionBounds/feet/y/nan
+=== RUN   TestPlannedAPPositionBounds/feet/y/missing
+=== RUN   TestPlannedAPPositionBounds/feet/z/zero
+=== RUN   TestPlannedAPPositionBounds/feet/z/boundary
+=== RUN   TestPlannedAPPositionBounds/feet/z/negative
+=== RUN   TestPlannedAPPositionBounds/feet/z/above
+=== RUN   TestPlannedAPPositionBounds/feet/z/nan
+=== RUN   TestPlannedAPPositionBounds/feet/z/missing
+=== RUN   TestPlannedAPPositionBounds/meters/x/zero
+=== RUN   TestPlannedAPPositionBounds/meters/x/boundary
+=== RUN   TestPlannedAPPositionBounds/meters/x/negative
+=== RUN   TestPlannedAPPositionBounds/meters/x/above
+=== RUN   TestPlannedAPPositionBounds/meters/x/nan
+=== RUN   TestPlannedAPPositionBounds/meters/x/missing
+=== RUN   TestPlannedAPPositionBounds/meters/y/zero
+=== RUN   TestPlannedAPPositionBounds/meters/y/boundary
+=== RUN   TestPlannedAPPositionBounds/meters/y/negative
+=== RUN   TestPlannedAPPositionBounds/meters/y/above
+=== RUN   TestPlannedAPPositionBounds/meters/y/nan
+=== RUN   TestPlannedAPPositionBounds/meters/y/missing
+=== RUN   TestPlannedAPPositionBounds/meters/z/zero
+=== RUN   TestPlannedAPPositionBounds/meters/z/boundary
+=== RUN   TestPlannedAPPositionBounds/meters/z/negative
+=== RUN   TestPlannedAPPositionBounds/meters/z/above
+=== RUN   TestPlannedAPPositionBounds/meters/z/nan
+=== RUN   TestPlannedAPPositionBounds/meters/z/missing
+--- PASS: TestPlannedAPPositionBounds (0.00s)
+    --- PASS: TestPlannedAPPositionBounds/feet/x/zero (0.00s)
+    --- PASS: TestPlannedAPPositionBounds/feet/x/boundary (0.00s)
+    --- PASS: TestPlannedAPPositionBounds/feet/x/negative (0.00s)
+    --- PASS: TestPlannedAPPositionBounds/feet/x/above (0.00s)
+    --- PASS: TestPlannedAPPositionBounds/feet/x/nan (0.00s)
+    --- PASS: TestPlannedAPPositionBounds/feet/x/missing (0.00s)
+    --- PASS: TestPlannedAPPositionBounds/feet/y/zero (0.00s)
+    --- PASS: TestPlannedAPPositionBounds/feet/y/boundary (0.00s)
+    --- PASS: TestPlannedAPPositionBounds/feet/y/negative (0.00s)
+    --- PASS: TestPlannedAPPositionBounds/feet/y/above (0.00s)
+    --- PASS: TestPlannedAPPositionBounds/feet/y/nan (0.00s)
+    --- PASS: TestPlannedAPPositionBounds/feet/y/missing (0.00s)
+    --- PASS: TestPlannedAPPositionBounds/feet/z/zero (0.00s)
+    --- PASS: TestPlannedAPPositionBounds/feet/z/boundary (0.00s)
+    --- PASS: TestPlannedAPPositionBounds/feet/z/negative (0.00s)
+    --- PASS: TestPlannedAPPositionBounds/feet/z/above (0.00s)
+    --- PASS: TestPlannedAPPositionBounds/feet/z/nan (0.00s)
+    --- PASS: TestPlannedAPPositionBounds/feet/z/missing (0.00s)
+    --- PASS: TestPlannedAPPositionBounds/meters/x/zero (0.00s)
+    --- PASS: TestPlannedAPPositionBounds/meters/x/boundary (0.00s)
+    --- PASS: TestPlannedAPPositionBounds/meters/x/negative (0.00s)
+    --- PASS: TestPlannedAPPositionBounds/meters/x/above (0.00s)
+    --- PASS: TestPlannedAPPositionBounds/meters/x/nan (0.00s)
+    --- PASS: TestPlannedAPPositionBounds/meters/x/missing (0.00s)
+    --- PASS: TestPlannedAPPositionBounds/meters/y/zero (0.00s)
+    --- PASS: TestPlannedAPPositionBounds/meters/y/boundary (0.00s)
+    --- PASS: TestPlannedAPPositionBounds/meters/y/negative (0.00s)
+    --- PASS: TestPlannedAPPositionBounds/meters/y/above (0.00s)
+    --- PASS: TestPlannedAPPositionBounds/meters/y/nan (0.00s)
+    --- PASS: TestPlannedAPPositionBounds/meters/y/missing (0.00s)
+    --- PASS: TestPlannedAPPositionBounds/meters/z/zero (0.00s)
+    --- PASS: TestPlannedAPPositionBounds/meters/z/boundary (0.00s)
+    --- PASS: TestPlannedAPPositionBounds/meters/z/negative (0.00s)
+    --- PASS: TestPlannedAPPositionBounds/meters/z/above (0.00s)
+    --- PASS: TestPlannedAPPositionBounds/meters/z/nan (0.00s)
+    --- PASS: TestPlannedAPPositionBounds/meters/z/missing (0.00s)
+=== RUN   TestPlannedAPGeometryUsesSubmittedPrecision
+--- PASS: TestPlannedAPGeometryUsesSubmittedPrecision (0.00s)
+=== RUN   TestPlannedAPInvalidPositionPrecedesGeometry
+=== RUN   TestPlannedAPInvalidPositionPrecedesGeometry/x
+=== RUN   TestPlannedAPInvalidPositionPrecedesGeometry/y
+=== RUN   TestPlannedAPInvalidPositionPrecedesGeometry/z
+--- PASS: TestPlannedAPInvalidPositionPrecedesGeometry (0.04s)
+    --- PASS: TestPlannedAPInvalidPositionPrecedesGeometry/x (0.01s)
+    --- PASS: TestPlannedAPInvalidPositionPrecedesGeometry/y (0.01s)
+    --- PASS: TestPlannedAPInvalidPositionPrecedesGeometry/z (0.01s)
+=== RUN   TestPlannedAPFutureGeometryAllowsExpansion
+--- PASS: TestPlannedAPFutureGeometryAllowsExpansion (0.01s)
+=== RUN   TestPlannedAPSubmissionRechecksAllNativeExtents
+=== RUN   TestPlannedAPSubmissionRechecksAllNativeExtents/valid
+=== RUN   TestPlannedAPSubmissionRechecksAllNativeExtents/selected-shrink
+=== RUN   TestPlannedAPSubmissionRechecksAllNativeExtents/later-shrink
+=== RUN   TestPlannedAPSubmissionRechecksAllNativeExtents/replaced-floor
+=== RUN   TestPlannedAPSubmissionRechecksAllNativeExtents/missing-extent
+=== RUN   TestPlannedAPSubmissionRechecksAllNativeExtents/frozen-position
+=== RUN   TestPlannedAPSubmissionRechecksAllNativeExtents/missing-receipt
+--- PASS: TestPlannedAPSubmissionRechecksAllNativeExtents (0.11s)
+    --- PASS: TestPlannedAPSubmissionRechecksAllNativeExtents/valid (0.02s)
+    --- PASS: TestPlannedAPSubmissionRechecksAllNativeExtents/selected-shrink (0.01s)
+    --- PASS: TestPlannedAPSubmissionRechecksAllNativeExtents/later-shrink (0.01s)
+    --- PASS: TestPlannedAPSubmissionRechecksAllNativeExtents/replaced-floor (0.01s)
+    --- PASS: TestPlannedAPSubmissionRechecksAllNativeExtents/missing-extent (0.01s)
+    --- PASS: TestPlannedAPSubmissionRechecksAllNativeExtents/frozen-position (0.02s)
+    --- PASS: TestPlannedAPSubmissionRechecksAllNativeExtents/missing-receipt (0.02s)
+=== RUN   TestPlannedAPVerificationRequiresCurrentExtents
+=== RUN   TestPlannedAPVerificationRequiresCurrentExtents/valid
+=== RUN   TestPlannedAPVerificationRequiresCurrentExtents/shrunk-floor
+=== RUN   TestPlannedAPVerificationRequiresCurrentExtents/retained-z-outside
+--- PASS: TestPlannedAPVerificationRequiresCurrentExtents (0.04s)
+    --- PASS: TestPlannedAPVerificationRequiresCurrentExtents/valid (0.01s)
+    --- PASS: TestPlannedAPVerificationRequiresCurrentExtents/shrunk-floor (0.01s)
+    --- PASS: TestPlannedAPVerificationRequiresCurrentExtents/retained-z-outside (0.01s)
+=== RUN   TestPlannedAPIdentityReceiptBoundaries
+=== RUN   TestPlannedAPIdentityReceiptBoundaries/valid
+=== RUN   TestPlannedAPIdentityReceiptBoundaries/configmap
+=== RUN   TestPlannedAPIdentityReceiptBoundaries/source-pruned
+=== RUN   TestPlannedAPIdentityReceiptBoundaries/result-pruned
+=== RUN   TestPlannedAPIdentityReceiptBoundaries/task-pruned
+=== RUN   TestPlannedAPIdentityReceiptBoundaries/no-time
+=== RUN   TestPlannedAPIdentityReceiptBoundaries/no-verified-time
+=== RUN   TestPlannedAPIdentityReceiptBoundaries/future
+=== RUN   TestPlannedAPIdentityReceiptBoundaries/before-submission
+=== RUN   TestPlannedAPIdentityReceiptBoundaries/wrong-section
+=== RUN   TestPlannedAPIdentityReceiptBoundaries/wrong-floor
+=== RUN   TestPlannedAPIdentityReceiptBoundaries/bad-UUID
+=== RUN   TestPlannedAPIdentityReceiptBoundaries/wrong-resource
+=== RUN   TestPlannedAPIdentityReceiptBoundaries/update
+=== RUN   TestPlannedAPIdentityReceiptBoundaries/physical
+=== RUN   TestPlannedAPIdentityReceiptBoundaries/prepared
+=== RUN   TestPlannedAPIdentityReceiptBoundaries/duplicate
+=== RUN   TestPlannedAPIdentityReceiptBoundaries/alias
+=== RUN   TestPlannedAPIdentityReceiptBoundaries/same-UUID
+=== RUN   TestPlannedAPIdentityReceiptBoundaries/generation
+=== RUN   TestPlannedAPIdentityReceiptBoundaries/missing-owner
+--- PASS: TestPlannedAPIdentityReceiptBoundaries (0.00s)
+    --- PASS: TestPlannedAPIdentityReceiptBoundaries/valid (0.00s)
+    --- PASS: TestPlannedAPIdentityReceiptBoundaries/configmap (0.00s)
+    --- PASS: TestPlannedAPIdentityReceiptBoundaries/source-pruned (0.00s)
+    --- PASS: TestPlannedAPIdentityReceiptBoundaries/result-pruned (0.00s)
+    --- PASS: TestPlannedAPIdentityReceiptBoundaries/task-pruned (0.00s)
+    --- PASS: TestPlannedAPIdentityReceiptBoundaries/no-time (0.00s)
+    --- PASS: TestPlannedAPIdentityReceiptBoundaries/no-verified-time (0.00s)
+    --- PASS: TestPlannedAPIdentityReceiptBoundaries/future (0.00s)
+    --- PASS: TestPlannedAPIdentityReceiptBoundaries/before-submission (0.00s)
+    --- PASS: TestPlannedAPIdentityReceiptBoundaries/wrong-section (0.00s)
+    --- PASS: TestPlannedAPIdentityReceiptBoundaries/wrong-floor (0.00s)
+    --- PASS: TestPlannedAPIdentityReceiptBoundaries/bad-UUID (0.00s)
+    --- PASS: TestPlannedAPIdentityReceiptBoundaries/wrong-resource (0.00s)
+    --- PASS: TestPlannedAPIdentityReceiptBoundaries/update (0.00s)
+    --- PASS: TestPlannedAPIdentityReceiptBoundaries/physical (0.00s)
+    --- PASS: TestPlannedAPIdentityReceiptBoundaries/prepared (0.00s)
+    --- PASS: TestPlannedAPIdentityReceiptBoundaries/duplicate (0.00s)
+    --- PASS: TestPlannedAPIdentityReceiptBoundaries/alias (0.00s)
+    --- PASS: TestPlannedAPIdentityReceiptBoundaries/same-UUID (0.00s)
+    --- PASS: TestPlannedAPIdentityReceiptBoundaries/generation (0.00s)
+    --- PASS: TestPlannedAPIdentityReceiptBoundaries/missing-owner (0.00s)
+=== RUN   TestPlannedAPIdentityCapacityAndSettlement
+--- PASS: TestPlannedAPIdentityCapacityAndSettlement (0.01s)
+=== RUN   TestPlannedAPObservedFloorIdentityFence
+=== RUN   TestPlannedAPObservedFloorIdentityFence/same
+=== RUN   TestPlannedAPObservedFloorIdentityFence/replaced
+=== RUN   TestPlannedAPObservedFloorIdentityFence/missing
+=== RUN   TestPlannedAPObservedFloorIdentityFence/wrong-kind
+=== RUN   TestPlannedAPObservedFloorIdentityFence/foreign-owner
+=== RUN   TestPlannedAPObservedFloorIdentityFence/legacy
+--- PASS: TestPlannedAPObservedFloorIdentityFence (0.01s)
+    --- PASS: TestPlannedAPObservedFloorIdentityFence/same (0.00s)
+    --- PASS: TestPlannedAPObservedFloorIdentityFence/replaced (0.00s)
+    --- PASS: TestPlannedAPObservedFloorIdentityFence/missing (0.00s)
+    --- PASS: TestPlannedAPObservedFloorIdentityFence/wrong-kind (0.00s)
+    --- PASS: TestPlannedAPObservedFloorIdentityFence/foreign-owner (0.00s)
+    --- PASS: TestPlannedAPObservedFloorIdentityFence/legacy (0.00s)
+=== RUN   TestPlannedAPManifestFloorThenPlacement
+=== RUN   TestPlannedAPManifestFloorThenPlacement/normal
+=== RUN   TestPlannedAPManifestFloorThenPlacement/ambiguous
+=== RUN   TestPlannedAPManifestFloorThenPlacement/optional
+=== RUN   TestPlannedAPManifestFloorThenPlacement/image
+=== RUN   TestPlannedAPManifestFloorThenPlacement/image-ambiguous
+--- PASS: TestPlannedAPManifestFloorThenPlacement (1.41s)
+    --- PASS: TestPlannedAPManifestFloorThenPlacement/normal (0.26s)
+    --- PASS: TestPlannedAPManifestFloorThenPlacement/ambiguous (0.22s)
+    --- PASS: TestPlannedAPManifestFloorThenPlacement/optional (0.26s)
+    --- PASS: TestPlannedAPManifestFloorThenPlacement/image (0.46s)
+    --- PASS: TestPlannedAPManifestFloorThenPlacement/image-ambiguous (0.21s)
+=== RUN   TestPlannedAPObservedIdentityManifest
+=== RUN   TestPlannedAPObservedIdentityManifest/identity-replaced
+=== RUN   TestPlannedAPObservedIdentityManifest/identity-missing
+=== RUN   TestPlannedAPObservedIdentityManifest/identity-floor
+=== RUN   TestPlannedAPObservedIdentityManifest/identity-pruned
+=== RUN   TestPlannedAPObservedIdentityManifest/identity-replaced-private
+=== RUN   TestPlannedAPObservedIdentityManifest/identity-missing-private
+=== RUN   TestPlannedAPObservedIdentityManifest/identity-floor-private
+=== RUN   TestPlannedAPObservedIdentityManifest/identity-pruned-private
+--- PASS: TestPlannedAPObservedIdentityManifest (1.75s)
+    --- PASS: TestPlannedAPObservedIdentityManifest/identity-replaced (0.18s)
+    --- PASS: TestPlannedAPObservedIdentityManifest/identity-missing (0.18s)
+    --- PASS: TestPlannedAPObservedIdentityManifest/identity-floor (0.17s)
+    --- PASS: TestPlannedAPObservedIdentityManifest/identity-pruned (0.17s)
+    --- PASS: TestPlannedAPObservedIdentityManifest/identity-replaced-private (0.26s)
+    --- PASS: TestPlannedAPObservedIdentityManifest/identity-missing-private (0.26s)
+    --- PASS: TestPlannedAPObservedIdentityManifest/identity-floor-private (0.24s)
+    --- PASS: TestPlannedAPObservedIdentityManifest/identity-pruned-private (0.28s)
+=== RUN   TestPlannedAPNativeStateManifest
+=== RUN   TestPlannedAPNativeStateManifest/native-unknown
+=== RUN   TestPlannedAPNativeStateManifest/native-late
+=== RUN   TestPlannedAPNativeStateManifest/native-sensor
+=== RUN   TestPlannedAPNativeStateManifest/native-publish-late
+=== RUN   TestPlannedAPNativeStateManifest/native-unknown-private
+=== RUN   TestPlannedAPNativeStateManifest/native-late-private
+=== RUN   TestPlannedAPNativeStateManifest/native-sensor-private
+=== RUN   TestPlannedAPNativeStateManifest/native-publish-late-private
+--- PASS: TestPlannedAPNativeStateManifest (2.39s)
+    --- PASS: TestPlannedAPNativeStateManifest/native-unknown (0.23s)
+    --- PASS: TestPlannedAPNativeStateManifest/native-late (0.24s)
+    --- PASS: TestPlannedAPNativeStateManifest/native-sensor (0.27s)
+    --- PASS: TestPlannedAPNativeStateManifest/native-publish-late (0.24s)
+    --- PASS: TestPlannedAPNativeStateManifest/native-unknown-private (0.32s)
+    --- PASS: TestPlannedAPNativeStateManifest/native-late-private (0.36s)
+    --- PASS: TestPlannedAPNativeStateManifest/native-sensor-private (0.39s)
+    --- PASS: TestPlannedAPNativeStateManifest/native-publish-late-private (0.34s)
+=== RUN   TestPlannedAPKeyedBaselineManifest
+=== RUN   TestPlannedAPKeyedBaselineManifest/keyed-private
+=== RUN   TestPlannedAPKeyedBaselineManifest/keyed-recover-private
+=== RUN   TestPlannedAPKeyedBaselineManifest/keyed-recover-refuse-private
+=== RUN   TestPlannedAPKeyedBaselineManifest/image-keyed-private
+=== RUN   TestPlannedAPKeyedBaselineManifest/keyed-native-sensor-private
+=== RUN   TestPlannedAPKeyedBaselineManifest/keyed-native-late-private
+=== RUN   TestPlannedAPKeyedBaselineManifest/keyed-drift-private
+=== RUN   TestPlannedAPKeyedBaselineManifest/keyed-geometry-private
+=== RUN   TestPlannedAPKeyedBaselineManifest/keyed-geometry-removed-private
+=== RUN   TestPlannedAPKeyedBaselineManifest/keyed-disable-private
+=== RUN   TestPlannedAPKeyedBaselineManifest/keyed-pruned-private
+=== RUN   TestPlannedAPKeyedBaselineManifest/keyed-result-drift-private
+--- PASS: TestPlannedAPKeyedBaselineManifest (6.61s)
+    --- PASS: TestPlannedAPKeyedBaselineManifest/keyed-private (0.79s)
+    --- PASS: TestPlannedAPKeyedBaselineManifest/keyed-recover-private (0.74s)
+    --- PASS: TestPlannedAPKeyedBaselineManifest/keyed-recover-refuse-private (0.84s)
+    --- PASS: TestPlannedAPKeyedBaselineManifest/image-keyed-private (1.19s)
+    --- PASS: TestPlannedAPKeyedBaselineManifest/keyed-native-sensor-private (0.84s)
+    --- PASS: TestPlannedAPKeyedBaselineManifest/keyed-native-late-private (0.37s)
+    --- PASS: TestPlannedAPKeyedBaselineManifest/keyed-drift-private (0.30s)
+    --- PASS: TestPlannedAPKeyedBaselineManifest/keyed-geometry-private (0.32s)
+    --- PASS: TestPlannedAPKeyedBaselineManifest/keyed-geometry-removed-private (0.29s)
+    --- PASS: TestPlannedAPKeyedBaselineManifest/keyed-disable-private (0.26s)
+    --- PASS: TestPlannedAPKeyedBaselineManifest/keyed-pruned-private (0.27s)
+    --- PASS: TestPlannedAPKeyedBaselineManifest/keyed-result-drift-private (0.40s)
+=== RUN   TestPlannedAPTypeManifest
+=== RUN   TestPlannedAPTypeManifest/model-type
+=== RUN   TestPlannedAPTypeManifest/model-type-recover
+=== RUN   TestPlannedAPTypeManifest/model-type-omitted
+=== RUN   TestPlannedAPTypeManifest/model-type-ignored
+=== RUN   TestPlannedAPTypeManifest/model-type-incompatible
+=== RUN   TestPlannedAPTypeManifest/model-type-keyed-private
+=== RUN   TestPlannedAPTypeManifest/model-type-keyed-recover-private
+=== RUN   TestPlannedAPTypeManifest/image-model-type-keyed-private
+=== RUN   TestPlannedAPTypeManifest/model-type-keyed-ignored-private
+--- PASS: TestPlannedAPTypeManifest (4.47s)
+    --- PASS: TestPlannedAPTypeManifest/model-type (0.26s)
+    --- PASS: TestPlannedAPTypeManifest/model-type-recover (0.27s)
+    --- PASS: TestPlannedAPTypeManifest/model-type-omitted (0.32s)
+    --- PASS: TestPlannedAPTypeManifest/model-type-ignored (0.24s)
+    --- PASS: TestPlannedAPTypeManifest/model-type-incompatible (0.22s)
+    --- PASS: TestPlannedAPTypeManifest/model-type-keyed-private (0.73s)
+    --- PASS: TestPlannedAPTypeManifest/model-type-keyed-recover-private (0.75s)
+    --- PASS: TestPlannedAPTypeManifest/image-model-type-keyed-private (1.24s)
+    --- PASS: TestPlannedAPTypeManifest/model-type-keyed-ignored-private (0.43s)
+=== RUN   TestPlannedAPRetainedManifest
+=== RUN   TestPlannedAPRetainedManifest/same
+=== RUN   TestPlannedAPRetainedManifest/drift
+=== RUN   TestPlannedAPRetainedManifest/missing
+=== RUN   TestPlannedAPRetainedManifest/replaced
+=== RUN   TestPlannedAPRetainedManifest/renamed
+=== RUN   TestPlannedAPRetainedManifest/dispatch
+--- PASS: TestPlannedAPRetainedManifest (3.22s)
+    --- PASS: TestPlannedAPRetainedManifest/same (0.48s)
+    --- PASS: TestPlannedAPRetainedManifest/drift (0.56s)
+    --- PASS: TestPlannedAPRetainedManifest/missing (0.54s)
+    --- PASS: TestPlannedAPRetainedManifest/replaced (0.53s)
+    --- PASS: TestPlannedAPRetainedManifest/renamed (0.54s)
+    --- PASS: TestPlannedAPRetainedManifest/dispatch (0.57s)
+=== RUN   TestPlannedAPIncompleteIntentBlocksSiteCreation
+--- PASS: TestPlannedAPIncompleteIntentBlocksSiteCreation (0.01s)
+=== RUN   TestPlannedAPModel
+--- PASS: TestPlannedAPModel (0.00s)
+=== RUN   TestPlannedAPModelRejectsInvalidInput
+--- PASS: TestPlannedAPModelRejectsInvalidInput (0.01s)
+=== RUN   TestPlannedAPDuplicateAndOrdering
+--- PASS: TestPlannedAPDuplicateAndOrdering (0.00s)
+=== RUN   TestPlannedAPCompleteNativeDispatchView
+=== RUN   TestPlannedAPCompleteNativeDispatchView/stable
+=== RUN   TestPlannedAPCompleteNativeDispatchView/unknown-added
+=== RUN   TestPlannedAPCompleteNativeDispatchView/unknown-number
+=== RUN   TestPlannedAPCompleteNativeDispatchView/unknown-removed
+=== RUN   TestPlannedAPCompleteNativeDispatchView/null-to-absent
+=== RUN   TestPlannedAPCompleteNativeDispatchView/array-order
+=== RUN   TestPlannedAPCompleteNativeDispatchView/sensor-flag
+=== RUN   TestPlannedAPCompleteNativeDispatchView/nested-radio
+=== RUN   TestPlannedAPCompleteNativeDispatchView/nested-position
+=== RUN   TestPlannedAPCompleteNativeDispatchView/nested-antenna
+=== RUN   TestPlannedAPCompleteNativeDispatchView/equivalent-key-order
+--- PASS: TestPlannedAPCompleteNativeDispatchView (0.19s)
+    --- PASS: TestPlannedAPCompleteNativeDispatchView/stable (0.02s)
+    --- PASS: TestPlannedAPCompleteNativeDispatchView/unknown-added (0.02s)
+    --- PASS: TestPlannedAPCompleteNativeDispatchView/unknown-number (0.02s)
+    --- PASS: TestPlannedAPCompleteNativeDispatchView/unknown-removed (0.02s)
+    --- PASS: TestPlannedAPCompleteNativeDispatchView/null-to-absent (0.02s)
+    --- PASS: TestPlannedAPCompleteNativeDispatchView/array-order (0.02s)
+    --- PASS: TestPlannedAPCompleteNativeDispatchView/sensor-flag (0.02s)
+    --- PASS: TestPlannedAPCompleteNativeDispatchView/nested-radio (0.02s)
+    --- PASS: TestPlannedAPCompleteNativeDispatchView/nested-position (0.02s)
+    --- PASS: TestPlannedAPCompleteNativeDispatchView/nested-antenna (0.02s)
+    --- PASS: TestPlannedAPCompleteNativeDispatchView/equivalent-key-order (0.02s)
+=== RUN   TestPlannedAPNativeSnapshotPrecision
+--- PASS: TestPlannedAPNativeSnapshotPrecision (0.00s)
+=== RUN   TestPlannedAPUnmappedUpdateFields
+=== RUN   TestPlannedAPUnmappedUpdateFields/known
+=== RUN   TestPlannedAPUnmappedUpdateFields/sensor
+=== RUN   TestPlannedAPUnmappedUpdateFields/bad-sensor
+=== RUN   TestPlannedAPUnmappedUpdateFields/top
+=== RUN   TestPlannedAPUnmappedUpdateFields/position
+=== RUN   TestPlannedAPUnmappedUpdateFields/radio
+=== RUN   TestPlannedAPUnmappedUpdateFields/antenna
+--- PASS: TestPlannedAPUnmappedUpdateFields (0.00s)
+    --- PASS: TestPlannedAPUnmappedUpdateFields/known (0.00s)
+    --- PASS: TestPlannedAPUnmappedUpdateFields/sensor (0.00s)
+    --- PASS: TestPlannedAPUnmappedUpdateFields/bad-sensor (0.00s)
+    --- PASS: TestPlannedAPUnmappedUpdateFields/top (0.00s)
+    --- PASS: TestPlannedAPUnmappedUpdateFields/position (0.00s)
+    --- PASS: TestPlannedAPUnmappedUpdateFields/radio (0.00s)
+    --- PASS: TestPlannedAPUnmappedUpdateFields/antenna (0.00s)
+=== RUN   TestPlannedAPObservation
+=== RUN   TestPlannedAPObservation/valid
+=== RUN   TestPlannedAPObservation/empty
+=== RUN   TestPlannedAPObservation/missing
+=== RUN   TestPlannedAPObservation/null
+=== RUN   TestPlannedAPObservation/partial
+=== RUN   TestPlannedAPObservation/duplicate-name
+=== RUN   TestPlannedAPObservation/duplicate-id
+=== RUN   TestPlannedAPObservation/missing-radio-id
+=== RUN   TestPlannedAPObservation/missing-position
+=== RUN   TestPlannedAPObservation/missing-channel
+=== RUN   TestPlannedAPObservation/bad-band
+=== RUN   TestPlannedAPObservation/duplicate-band
+=== RUN   TestPlannedAPObservation/bad-antenna
+=== RUN   TestPlannedAPObservation/bad-mac
+--- PASS: TestPlannedAPObservation (0.15s)
+    --- PASS: TestPlannedAPObservation/valid (0.01s)
+    --- PASS: TestPlannedAPObservation/empty (0.01s)
+    --- PASS: TestPlannedAPObservation/missing (0.01s)
+    --- PASS: TestPlannedAPObservation/null (0.01s)
+    --- PASS: TestPlannedAPObservation/partial (0.01s)
+    --- PASS: TestPlannedAPObservation/duplicate-name (0.01s)
+    --- PASS: TestPlannedAPObservation/duplicate-id (0.01s)
+    --- PASS: TestPlannedAPObservation/missing-radio-id (0.01s)
+    --- PASS: TestPlannedAPObservation/missing-position (0.01s)
+    --- PASS: TestPlannedAPObservation/missing-channel (0.01s)
+    --- PASS: TestPlannedAPObservation/bad-band (0.01s)
+    --- PASS: TestPlannedAPObservation/duplicate-band (0.01s)
+    --- PASS: TestPlannedAPObservation/bad-antenna (0.01s)
+    --- PASS: TestPlannedAPObservation/bad-mac (0.01s)
+=== RUN   TestPlannedAPObservationPagination
+=== RUN   TestPlannedAPObservationPagination/false
+=== RUN   TestPlannedAPObservationPagination/true
+--- PASS: TestPlannedAPObservationPagination (0.27s)
+    --- PASS: TestPlannedAPObservationPagination/false (0.14s)
+    --- PASS: TestPlannedAPObservationPagination/true (0.13s)
+=== RUN   TestPlannedAPRadioMatching
+=== RUN   TestPlannedAPRadioMatching/omitted-band
+=== RUN   TestPlannedAPRadioMatching/wildcard-before-specific
+=== RUN   TestPlannedAPRadioMatching/same-band-different-channel
+=== RUN   TestPlannedAPRadioMatching/cannot-reuse-one-radio
+=== RUN   TestPlannedAPRadioMatching/changed-radio
+=== RUN   TestPlannedAPRadioMatching/unknown-band
+=== RUN   TestPlannedAPRadioMatching/empty
+--- PASS: TestPlannedAPRadioMatching (0.00s)
+    --- PASS: TestPlannedAPRadioMatching/omitted-band (0.00s)
+    --- PASS: TestPlannedAPRadioMatching/wildcard-before-specific (0.00s)
+    --- PASS: TestPlannedAPRadioMatching/same-band-different-channel (0.00s)
+    --- PASS: TestPlannedAPRadioMatching/cannot-reuse-one-radio (0.00s)
+    --- PASS: TestPlannedAPRadioMatching/changed-radio (0.00s)
+    --- PASS: TestPlannedAPRadioMatching/unknown-band (0.00s)
+    --- PASS: TestPlannedAPRadioMatching/empty (0.00s)
+=== RUN   TestPlannedAPReport
+=== RUN   TestPlannedAPReport/match
+=== RUN   TestPlannedAPReport/missing-floor
+=== RUN   TestPlannedAPReport/missing-ap
+=== RUN   TestPlannedAPReport/position
+=== RUN   TestPlannedAPReport/radio
+=== RUN   TestPlannedAPReport/type
+=== RUN   TestPlannedAPReport/partial
+--- PASS: TestPlannedAPReport (0.08s)
+    --- PASS: TestPlannedAPReport/match (0.01s)
+    --- PASS: TestPlannedAPReport/missing-floor (0.00s)
+    --- PASS: TestPlannedAPReport/missing-ap (0.01s)
+    --- PASS: TestPlannedAPReport/position (0.01s)
+    --- PASS: TestPlannedAPReport/radio (0.01s)
+    --- PASS: TestPlannedAPReport/type (0.01s)
+    --- PASS: TestPlannedAPReport/partial (0.01s)
+=== RUN   TestPlannedAPRetainedPrivateBoundary
+=== RUN   TestPlannedAPRetainedPrivateBoundary/removed
+=== RUN   TestPlannedAPRetainedPrivateBoundary/declared
+=== RUN   TestPlannedAPRetainedPrivateBoundary/missing-floor
+=== RUN   TestPlannedAPRetainedPrivateBoundary/replacement-floor
+=== RUN   TestPlannedAPRetainedPrivateBoundary/renamed-floor
+=== RUN   TestPlannedAPRetainedPrivateBoundary/missing-AP
+=== RUN   TestPlannedAPRetainedPrivateBoundary/replacement-AP
+=== RUN   TestPlannedAPRetainedPrivateBoundary/renamed-AP
+=== RUN   TestPlannedAPRetainedPrivateBoundary/opaque-drift
+=== RUN   TestPlannedAPRetainedPrivateBoundary/coordinate-drift
+=== RUN   TestPlannedAPRetainedPrivateBoundary/owner
+=== RUN   TestPlannedAPRetainedPrivateBoundary/legacy-anchor
+=== RUN   TestPlannedAPRetainedPrivateBoundary/latest
+=== RUN   TestPlannedAPRetainedPrivateBoundary/latest-drift
+--- PASS: TestPlannedAPRetainedPrivateBoundary (0.13s)
+    --- PASS: TestPlannedAPRetainedPrivateBoundary/removed (0.01s)
+    --- PASS: TestPlannedAPRetainedPrivateBoundary/declared (0.01s)
+    --- PASS: TestPlannedAPRetainedPrivateBoundary/missing-floor (0.00s)
+    --- PASS: TestPlannedAPRetainedPrivateBoundary/replacement-floor (0.00s)
+    --- PASS: TestPlannedAPRetainedPrivateBoundary/renamed-floor (0.01s)
+    --- PASS: TestPlannedAPRetainedPrivateBoundary/missing-AP (0.01s)
+    --- PASS: TestPlannedAPRetainedPrivateBoundary/replacement-AP (0.01s)
+    --- PASS: TestPlannedAPRetainedPrivateBoundary/renamed-AP (0.01s)
+    --- PASS: TestPlannedAPRetainedPrivateBoundary/opaque-drift (0.01s)
+    --- PASS: TestPlannedAPRetainedPrivateBoundary/coordinate-drift (0.01s)
+    --- PASS: TestPlannedAPRetainedPrivateBoundary/owner (0.00s)
+    --- PASS: TestPlannedAPRetainedPrivateBoundary/legacy-anchor (0.00s)
+    --- PASS: TestPlannedAPRetainedPrivateBoundary/latest (0.01s)
+    --- PASS: TestPlannedAPRetainedPrivateBoundary/latest-drift (0.01s)
+=== RUN   TestPlannedAPRetainedDispatchBoundary
+=== RUN   TestPlannedAPRetainedDispatchBoundary/same
+=== RUN   TestPlannedAPRetainedDispatchBoundary/native-before
+=== RUN   TestPlannedAPRetainedDispatchBoundary/native-during-CAS
+=== RUN   TestPlannedAPRetainedDispatchBoundary/journal
+=== RUN   TestPlannedAPRetainedDispatchBoundary/synchronous
+=== RUN   TestPlannedAPRetainedDispatchBoundary/native-response-error
+--- PASS: TestPlannedAPRetainedDispatchBoundary (0.09s)
+    --- PASS: TestPlannedAPRetainedDispatchBoundary/same (0.02s)
+    --- PASS: TestPlannedAPRetainedDispatchBoundary/native-before (0.01s)
+    --- PASS: TestPlannedAPRetainedDispatchBoundary/native-during-CAS (0.02s)
+    --- PASS: TestPlannedAPRetainedDispatchBoundary/journal (0.01s)
+    --- PASS: TestPlannedAPRetainedDispatchBoundary/synchronous (0.02s)
+    --- PASS: TestPlannedAPRetainedDispatchBoundary/native-response-error (0.02s)
+=== RUN   TestPlannedAPRetainedCollectionBatch
+--- PASS: TestPlannedAPRetainedCollectionBatch (0.02s)
+=== RUN   TestPlannedAPTypeUpdate
+=== RUN   TestPlannedAPTypeUpdate/update
+=== RUN   TestPlannedAPTypeUpdate/omitted-radios
+=== RUN   TestPlannedAPTypeUpdate/incompatible-antenna
+=== RUN   TestPlannedAPTypeUpdate/incompatible-band
+=== RUN   TestPlannedAPTypeUpdate/unselected-radio
+=== RUN   TestPlannedAPTypeUpdate/late-catalog
+=== RUN   TestPlannedAPTypeUpdate/late-native-type
+=== RUN   TestPlannedAPTypeUpdate/mutated-intent-type
+=== RUN   TestPlannedAPTypeUpdate/radio-change
+=== RUN   TestPlannedAPTypeUpdate/missing-task
+=== RUN   TestPlannedAPTypeUpdate/ignored-type
+=== RUN   TestPlannedAPTypeUpdate/no-op
+--- PASS: TestPlannedAPTypeUpdate (0.19s)
+    --- PASS: TestPlannedAPTypeUpdate/update (0.02s)
+    --- PASS: TestPlannedAPTypeUpdate/omitted-radios (0.02s)
+    --- PASS: TestPlannedAPTypeUpdate/incompatible-antenna (0.01s)
+    --- PASS: TestPlannedAPTypeUpdate/incompatible-band (0.01s)
+    --- PASS: TestPlannedAPTypeUpdate/unselected-radio (0.01s)
+    --- PASS: TestPlannedAPTypeUpdate/late-catalog (0.02s)
+    --- PASS: TestPlannedAPTypeUpdate/late-native-type (0.02s)
+    --- PASS: TestPlannedAPTypeUpdate/mutated-intent-type (0.02s)
+    --- PASS: TestPlannedAPTypeUpdate/radio-change (0.01s)
+    --- PASS: TestPlannedAPTypeUpdate/missing-task (0.02s)
+    --- PASS: TestPlannedAPTypeUpdate/ignored-type (0.02s)
+    --- PASS: TestPlannedAPTypeUpdate/no-op (0.01s)
+=== RUN   TestFloorImageExampleCompiles
+--- PASS: TestFloorImageExampleCompiles (0.00s)
+=== RUN   TestSitePrivateAppliedPublic
+=== RUN   TestSitePrivateAppliedPublic/building-create/complete
+=== RUN   TestSitePrivateAppliedPublic/building-create/recover
+=== RUN   TestSitePrivateAppliedPublic/building-create/pending-child
+=== RUN   TestSitePrivateAppliedPublic/building-create/failed-child
+=== RUN   TestSitePrivateAppliedPublic/building-create/foreign-child
+=== RUN   TestSitePrivateAppliedPublic/building-create/missing-result
+=== RUN   TestSitePrivateAppliedPublic/building-create/foreign-result
+=== RUN   TestSitePrivateAppliedPublic/building-create/lost-ack
+=== RUN   TestSitePrivateAppliedPublic/building-create/source-change
+=== RUN   TestSitePrivateAppliedPublic/building-create/owner-change
+=== RUN   TestSitePrivateAppliedPublic/building-create/preflight-native
+=== RUN   TestSitePrivateAppliedPublic/building-create/post-applied-drift
+=== RUN   TestSitePrivateAppliedPublic/floor-create/complete
+=== RUN   TestSitePrivateAppliedPublic/floor-create/recover
+=== RUN   TestSitePrivateAppliedPublic/floor-create/pending-child
+=== RUN   TestSitePrivateAppliedPublic/floor-create/failed-child
+=== RUN   TestSitePrivateAppliedPublic/floor-create/foreign-child
+=== RUN   TestSitePrivateAppliedPublic/floor-create/missing-result
+=== RUN   TestSitePrivateAppliedPublic/floor-create/foreign-result
+=== RUN   TestSitePrivateAppliedPublic/floor-create/lost-ack
+=== RUN   TestSitePrivateAppliedPublic/floor-create/source-change
+=== RUN   TestSitePrivateAppliedPublic/floor-create/owner-change
+=== RUN   TestSitePrivateAppliedPublic/floor-create/preflight-native
+=== RUN   TestSitePrivateAppliedPublic/floor-create/post-applied-drift
+--- PASS: TestSitePrivateAppliedPublic (16.88s)
+    --- PASS: TestSitePrivateAppliedPublic/building-create/complete (1.11s)
+    --- PASS: TestSitePrivateAppliedPublic/building-create/recover (1.10s)
+    --- PASS: TestSitePrivateAppliedPublic/building-create/pending-child (0.44s)
+    --- PASS: TestSitePrivateAppliedPublic/building-create/failed-child (0.44s)
+    --- PASS: TestSitePrivateAppliedPublic/building-create/foreign-child (0.44s)
+    --- PASS: TestSitePrivateAppliedPublic/building-create/missing-result (0.58s)
+    --- PASS: TestSitePrivateAppliedPublic/building-create/foreign-result (0.58s)
+    --- PASS: TestSitePrivateAppliedPublic/building-create/lost-ack (0.42s)
+    --- PASS: TestSitePrivateAppliedPublic/building-create/source-change (0.42s)
+    --- PASS: TestSitePrivateAppliedPublic/building-create/owner-change (0.41s)
+    --- PASS: TestSitePrivateAppliedPublic/building-create/preflight-native (1.15s)
+    --- PASS: TestSitePrivateAppliedPublic/building-create/post-applied-drift (1.18s)
+    --- PASS: TestSitePrivateAppliedPublic/floor-create/complete (1.15s)
+    --- PASS: TestSitePrivateAppliedPublic/floor-create/recover (1.16s)
+    --- PASS: TestSitePrivateAppliedPublic/floor-create/pending-child (0.47s)
+    --- PASS: TestSitePrivateAppliedPublic/floor-create/failed-child (0.47s)
+    --- PASS: TestSitePrivateAppliedPublic/floor-create/foreign-child (0.46s)
+    --- PASS: TestSitePrivateAppliedPublic/floor-create/missing-result (0.61s)
+    --- PASS: TestSitePrivateAppliedPublic/floor-create/foreign-result (0.60s)
+    --- PASS: TestSitePrivateAppliedPublic/floor-create/lost-ack (0.44s)
+    --- PASS: TestSitePrivateAppliedPublic/floor-create/source-change (0.44s)
+    --- PASS: TestSitePrivateAppliedPublic/floor-create/owner-change (0.43s)
+    --- PASS: TestSitePrivateAppliedPublic/floor-create/preflight-native (1.18s)
+    --- PASS: TestSitePrivateAppliedPublic/floor-create/post-applied-drift (1.20s)
+=== RUN   TestSiteAppliedReceiptBoundaries
+=== RUN   TestSiteAppliedReceiptBoundaries/valid
+=== RUN   TestSiteAppliedReceiptBoundaries/missing-creator
+=== RUN   TestSiteAppliedReceiptBoundaries/legacy-creator
+=== RUN   TestSiteAppliedReceiptBoundaries/creator-altered
+=== RUN   TestSiteAppliedReceiptBoundaries/target
+=== RUN   TestSiteAppliedReceiptBoundaries/parent
+=== RUN   TestSiteAppliedReceiptBoundaries/owner
+=== RUN   TestSiteAppliedReceiptBoundaries/generation
+=== RUN   TestSiteAppliedReceiptBoundaries/missing-task
+=== RUN   TestSiteAppliedReceiptBoundaries/missing-time
+=== RUN   TestSiteAppliedReceiptBoundaries/future
+=== RUN   TestSiteAppliedReceiptBoundaries/unverified
+=== RUN   TestSiteAppliedReceiptBoundaries/pruned-result
+=== RUN   TestSiteAppliedReceiptBoundaries/pruned-producer
+=== RUN   TestSiteAppliedReceiptBoundaries/bad-mac
+=== RUN   TestSiteAppliedReceiptBoundaries/wrong-key
+=== RUN   TestSiteAppliedReceiptBoundaries/alias
+=== RUN   TestSiteAppliedReceiptBoundaries/duplicate
+--- PASS: TestSiteAppliedReceiptBoundaries (0.01s)
+    --- PASS: TestSiteAppliedReceiptBoundaries/valid (0.00s)
+    --- PASS: TestSiteAppliedReceiptBoundaries/missing-creator (0.00s)
+    --- PASS: TestSiteAppliedReceiptBoundaries/legacy-creator (0.00s)
+    --- PASS: TestSiteAppliedReceiptBoundaries/creator-altered (0.00s)
+    --- PASS: TestSiteAppliedReceiptBoundaries/target (0.00s)
+    --- PASS: TestSiteAppliedReceiptBoundaries/parent (0.00s)
+    --- PASS: TestSiteAppliedReceiptBoundaries/owner (0.00s)
+    --- PASS: TestSiteAppliedReceiptBoundaries/generation (0.00s)
+    --- PASS: TestSiteAppliedReceiptBoundaries/missing-task (0.00s)
+    --- PASS: TestSiteAppliedReceiptBoundaries/missing-time (0.00s)
+    --- PASS: TestSiteAppliedReceiptBoundaries/future (0.00s)
+    --- PASS: TestSiteAppliedReceiptBoundaries/unverified (0.00s)
+    --- PASS: TestSiteAppliedReceiptBoundaries/pruned-result (0.00s)
+    --- PASS: TestSiteAppliedReceiptBoundaries/pruned-producer (0.00s)
+    --- PASS: TestSiteAppliedReceiptBoundaries/bad-mac (0.00s)
+    --- PASS: TestSiteAppliedReceiptBoundaries/wrong-key (0.00s)
+    --- PASS: TestSiteAppliedReceiptBoundaries/alias (0.00s)
+    --- PASS: TestSiteAppliedReceiptBoundaries/duplicate (0.00s)
+=== RUN   TestSiteAppliedCapacityAndPriorBinding
+=== RUN   TestSiteAppliedCapacityAndPriorBinding/first
+=== RUN   TestSiteAppliedCapacityAndPriorBinding/replace
+=== RUN   TestSiteAppliedCapacityAndPriorBinding/stale-prior
+=== RUN   TestSiteAppliedCapacityAndPriorBinding/count
+=== RUN   TestSiteAppliedCapacityAndPriorBinding/bytes
+--- PASS: TestSiteAppliedCapacityAndPriorBinding (0.02s)
+    --- PASS: TestSiteAppliedCapacityAndPriorBinding/first (0.00s)
+    --- PASS: TestSiteAppliedCapacityAndPriorBinding/replace (0.00s)
+    --- PASS: TestSiteAppliedCapacityAndPriorBinding/stale-prior (0.00s)
+    --- PASS: TestSiteAppliedCapacityAndPriorBinding/count (0.00s)
+    --- PASS: TestSiteAppliedCapacityAndPriorBinding/bytes (0.01s)
+=== RUN   TestSiteAppliedSettlementRejectsSchemaLoss
+=== RUN   TestSiteAppliedSettlementRejectsSchemaLoss/valid
+=== RUN   TestSiteAppliedSettlementRejectsSchemaLoss/resource
+=== RUN   TestSiteAppliedSettlementRejectsSchemaLoss/target
+=== RUN   TestSiteAppliedSettlementRejectsSchemaLoss/parent
+=== RUN   TestSiteAppliedSettlementRejectsSchemaLoss/task
+=== RUN   TestSiteAppliedSettlementRejectsSchemaLoss/missing-row
+=== RUN   TestSiteAppliedSettlementRejectsSchemaLoss/both-resources
+--- PASS: TestSiteAppliedSettlementRejectsSchemaLoss (0.09s)
+    --- PASS: TestSiteAppliedSettlementRejectsSchemaLoss/valid (0.01s)
+    --- PASS: TestSiteAppliedSettlementRejectsSchemaLoss/resource (0.01s)
+    --- PASS: TestSiteAppliedSettlementRejectsSchemaLoss/target (0.01s)
+    --- PASS: TestSiteAppliedSettlementRejectsSchemaLoss/parent (0.01s)
+    --- PASS: TestSiteAppliedSettlementRejectsSchemaLoss/task (0.01s)
+    --- PASS: TestSiteAppliedSettlementRejectsSchemaLoss/missing-row (0.01s)
+    --- PASS: TestSiteAppliedSettlementRejectsSchemaLoss/both-resources (0.01s)
+=== RUN   TestSiteAppliedSnapshotDoesNotAliasStatus
+--- PASS: TestSiteAppliedSnapshotDoesNotAliasStatus (0.00s)
+=== RUN   TestSitePrivateBaselineReusesNativeInventory
+--- PASS: TestSitePrivateBaselineReusesNativeInventory (0.02s)
+=== RUN   TestSiteBulkBindingRetainsExactSelectionThroughPartialResult
+--- PASS: TestSiteBulkBindingRetainsExactSelectionThroughPartialResult (0.00s)
+=== RUN   TestSiteBulkBindingPinsExistingMembersAndRejectsMalformedSelection
+--- PASS: TestSiteBulkBindingPinsExistingMembersAndRejectsMalformedSelection (0.00s)
+=== RUN   TestSiteBulkBindingMaximumSourceFitsExistingJournal
+--- PASS: TestSiteBulkBindingMaximumSourceFitsExistingJournal (0.01s)
+=== RUN   TestSiteBulkManifestRestartAndUncertainFencing
+=== RUN   TestSiteBulkManifestRestartAndUncertainFencing/complete
+=== RUN   TestSiteBulkManifestRestartAndUncertainFencing/partial
+=== RUN   TestSiteBulkManifestRestartAndUncertainFencing/task-failed
+=== RUN   TestSiteBulkManifestRestartAndUncertainFencing/lost-receipt
+=== RUN   TestSiteBulkManifestRestartAndUncertainFencing/source-changed
+--- PASS: TestSiteBulkManifestRestartAndUncertainFencing (0.71s)
+    --- PASS: TestSiteBulkManifestRestartAndUncertainFencing/complete (0.21s)
+    --- PASS: TestSiteBulkManifestRestartAndUncertainFencing/partial (0.17s)
+    --- PASS: TestSiteBulkManifestRestartAndUncertainFencing/task-failed (0.11s)
+    --- PASS: TestSiteBulkManifestRestartAndUncertainFencing/lost-receipt (0.11s)
+    --- PASS: TestSiteBulkManifestRestartAndUncertainFencing/source-changed (0.11s)
+=== RUN   TestSiteBulkSubmissionRequiresCurrentOwnedJournal
+=== RUN   TestSiteBulkSubmissionRequiresCurrentOwnedJournal/unprepared
+=== RUN   TestSiteBulkSubmissionRequiresCurrentOwnedJournal/prepared
+=== RUN   TestSiteBulkSubmissionRequiresCurrentOwnedJournal/owner-lost
+=== RUN   TestSiteBulkSubmissionRequiresCurrentOwnedJournal/source-changed
+=== RUN   TestSiteBulkSubmissionRequiresCurrentOwnedJournal/wrong-parent
+=== RUN   TestSiteBulkSubmissionRequiresCurrentOwnedJournal/controller-paused
+--- PASS: TestSiteBulkSubmissionRequiresCurrentOwnedJournal (0.19s)
+    --- PASS: TestSiteBulkSubmissionRequiresCurrentOwnedJournal/unprepared (0.03s)
+    --- PASS: TestSiteBulkSubmissionRequiresCurrentOwnedJournal/prepared (0.03s)
+    --- PASS: TestSiteBulkSubmissionRequiresCurrentOwnedJournal/owner-lost (0.04s)
+    --- PASS: TestSiteBulkSubmissionRequiresCurrentOwnedJournal/source-changed (0.03s)
+    --- PASS: TestSiteBulkSubmissionRequiresCurrentOwnedJournal/wrong-parent (0.03s)
+    --- PASS: TestSiteBulkSubmissionRequiresCurrentOwnedJournal/controller-paused (0.03s)
+=== RUN   TestSiteBulkPlansCompleteHierarchyWithoutSyntheticWireIDs
+--- PASS: TestSiteBulkPlansCompleteHierarchyWithoutSyntheticWireIDs (0.00s)
+=== RUN   TestSiteBulkRefusesExistingDivergenceAndInvalidDescendants
+--- PASS: TestSiteBulkRefusesExistingDivergenceAndInvalidDescendants (0.00s)
+=== RUN   TestSiteBulkGuardSubmissionAndReplay
+=== RUN   TestSiteBulkGuardSubmissionAndReplay/accepted
+=== RUN   TestSiteBulkGuardSubmissionAndReplay/denied
+=== RUN   TestSiteBulkGuardSubmissionAndReplay/stale-parent
+=== RUN   TestSiteBulkGuardSubmissionAndReplay/ambiguous
+--- PASS: TestSiteBulkGuardSubmissionAndReplay (0.05s)
+    --- PASS: TestSiteBulkGuardSubmissionAndReplay/accepted (0.01s)
+    --- PASS: TestSiteBulkGuardSubmissionAndReplay/denied (0.01s)
+    --- PASS: TestSiteBulkGuardSubmissionAndReplay/stale-parent (0.01s)
+    --- PASS: TestSiteBulkGuardSubmissionAndReplay/ambiguous (0.01s)
+=== RUN   TestSiteCredentialParsing
+--- PASS: TestSiteCredentialParsing (0.00s)
+=== RUN   TestSiteCredentialManifestRestartAndRemovalGate
+=== RUN   TestSiteCredentialManifestRestartAndRemovalGate/global=false
+=== RUN   TestSiteCredentialManifestRestartAndRemovalGate/global=true
+--- PASS: TestSiteCredentialManifestRestartAndRemovalGate (0.51s)
+    --- PASS: TestSiteCredentialManifestRestartAndRemovalGate/global=false (0.26s)
+    --- PASS: TestSiteCredentialManifestRestartAndRemovalGate/global=true (0.25s)
+=== RUN   TestSiteCredentialReadAndDependencyFailures
+=== RUN   TestSiteCredentialReadAndDependencyFailures/partial
+=== RUN   TestSiteCredentialReadAndDependencyFailures/disabled
+=== RUN   TestSiteCredentialReadAndDependencyFailures/inherited
+=== RUN   TestSiteCredentialReadAndDependencyFailures/wrong-type
+=== RUN   TestSiteCredentialReadAndDependencyFailures/replacement
+=== RUN   TestSiteCredentialReadAndDependencyFailures/missing-credential
+--- PASS: TestSiteCredentialReadAndDependencyFailures (0.07s)
+    --- PASS: TestSiteCredentialReadAndDependencyFailures/partial (0.01s)
+    --- PASS: TestSiteCredentialReadAndDependencyFailures/disabled (0.01s)
+    --- PASS: TestSiteCredentialReadAndDependencyFailures/inherited (0.01s)
+    --- PASS: TestSiteCredentialReadAndDependencyFailures/wrong-type (0.01s)
+    --- PASS: TestSiteCredentialReadAndDependencyFailures/replacement (0.01s)
+    --- PASS: TestSiteCredentialReadAndDependencyFailures/missing-credential (0.01s)
+=== RUN   TestSiteCredentialReportProjectionAndPreflight
+--- PASS: TestSiteCredentialReportProjectionAndPreflight (0.01s)
+=== RUN   TestSiteDesignNoDispatchScope
+=== RUN   TestSiteDesignNoDispatchScope/image/valid
+=== RUN   TestSiteDesignNoDispatchScope/image/delete
+=== RUN   TestSiteDesignNoDispatchScope/image/physical
+=== RUN   TestSiteDesignNoDispatchScope/image/task
+=== RUN   TestSiteDesignNoDispatchScope/image/created-id
+=== RUN   TestSiteDesignNoDispatchScope/image/prepared
+=== RUN   TestSiteDesignNoDispatchScope/image/cancelled
+=== RUN   TestSiteDesignNoDispatchScope/image/wrong-section
+=== RUN   TestSiteDesignNoDispatchScope/image/bad-hash
+=== RUN   TestSiteDesignNoDispatchScope/image/bad-parent
+=== RUN   TestSiteDesignNoDispatchScope/image/bad-target
+=== RUN   TestSiteDesignNoDispatchScope/image/legacy-image
+=== RUN   TestSiteDesignNoDispatchScope/ap-create/valid
+=== RUN   TestSiteDesignNoDispatchScope/ap-create/delete
+=== RUN   TestSiteDesignNoDispatchScope/ap-create/physical
+=== RUN   TestSiteDesignNoDispatchScope/ap-create/task
+=== RUN   TestSiteDesignNoDispatchScope/ap-create/created-id
+=== RUN   TestSiteDesignNoDispatchScope/ap-create/prepared
+=== RUN   TestSiteDesignNoDispatchScope/ap-create/cancelled
+=== RUN   TestSiteDesignNoDispatchScope/ap-create/wrong-section
+=== RUN   TestSiteDesignNoDispatchScope/ap-create/bad-hash
+=== RUN   TestSiteDesignNoDispatchScope/ap-create/bad-parent
+=== RUN   TestSiteDesignNoDispatchScope/ap-create/bad-target
+=== RUN   TestSiteDesignNoDispatchScope/ap-create/legacy-image
+=== RUN   TestSiteDesignNoDispatchScope/ap-update/valid
+=== RUN   TestSiteDesignNoDispatchScope/ap-update/delete
+=== RUN   TestSiteDesignNoDispatchScope/ap-update/physical
+=== RUN   TestSiteDesignNoDispatchScope/ap-update/task
+=== RUN   TestSiteDesignNoDispatchScope/ap-update/created-id
+=== RUN   TestSiteDesignNoDispatchScope/ap-update/prepared
+=== RUN   TestSiteDesignNoDispatchScope/ap-update/cancelled
+=== RUN   TestSiteDesignNoDispatchScope/ap-update/wrong-section
+=== RUN   TestSiteDesignNoDispatchScope/ap-update/bad-hash
+=== RUN   TestSiteDesignNoDispatchScope/ap-update/bad-parent
+=== RUN   TestSiteDesignNoDispatchScope/ap-update/bad-target
+=== RUN   TestSiteDesignNoDispatchScope/ap-update/legacy-image
+=== RUN   TestSiteDesignNoDispatchScope/ap-observe/valid
+=== RUN   TestSiteDesignNoDispatchScope/ap-observe/delete
+=== RUN   TestSiteDesignNoDispatchScope/ap-observe/physical
+=== RUN   TestSiteDesignNoDispatchScope/ap-observe/task
+=== RUN   TestSiteDesignNoDispatchScope/ap-observe/created-id
+=== RUN   TestSiteDesignNoDispatchScope/ap-observe/prepared
+=== RUN   TestSiteDesignNoDispatchScope/ap-observe/cancelled
+=== RUN   TestSiteDesignNoDispatchScope/ap-observe/wrong-section
+=== RUN   TestSiteDesignNoDispatchScope/ap-observe/bad-hash
+=== RUN   TestSiteDesignNoDispatchScope/ap-observe/bad-parent
+=== RUN   TestSiteDesignNoDispatchScope/ap-observe/bad-target
+=== RUN   TestSiteDesignNoDispatchScope/ap-observe/legacy-image
+--- PASS: TestSiteDesignNoDispatchScope (0.00s)
+    --- PASS: TestSiteDesignNoDispatchScope/image/valid (0.00s)
+    --- PASS: TestSiteDesignNoDispatchScope/image/delete (0.00s)
+    --- PASS: TestSiteDesignNoDispatchScope/image/physical (0.00s)
+    --- PASS: TestSiteDesignNoDispatchScope/image/task (0.00s)
+    --- PASS: TestSiteDesignNoDispatchScope/image/created-id (0.00s)
+    --- PASS: TestSiteDesignNoDispatchScope/image/prepared (0.00s)
+    --- PASS: TestSiteDesignNoDispatchScope/image/cancelled (0.00s)
+    --- PASS: TestSiteDesignNoDispatchScope/image/wrong-section (0.00s)
+    --- PASS: TestSiteDesignNoDispatchScope/image/bad-hash (0.00s)
+    --- PASS: TestSiteDesignNoDispatchScope/image/bad-parent (0.00s)
+    --- PASS: TestSiteDesignNoDispatchScope/image/bad-target (0.00s)
+    --- PASS: TestSiteDesignNoDispatchScope/image/legacy-image (0.00s)
+    --- PASS: TestSiteDesignNoDispatchScope/ap-create/valid (0.00s)
+    --- PASS: TestSiteDesignNoDispatchScope/ap-create/delete (0.00s)
+    --- PASS: TestSiteDesignNoDispatchScope/ap-create/physical (0.00s)
+    --- PASS: TestSiteDesignNoDispatchScope/ap-create/task (0.00s)
+    --- PASS: TestSiteDesignNoDispatchScope/ap-create/created-id (0.00s)
+    --- PASS: TestSiteDesignNoDispatchScope/ap-create/prepared (0.00s)
+    --- PASS: TestSiteDesignNoDispatchScope/ap-create/cancelled (0.00s)
+    --- PASS: TestSiteDesignNoDispatchScope/ap-create/wrong-section (0.00s)
+    --- PASS: TestSiteDesignNoDispatchScope/ap-create/bad-hash (0.00s)
+    --- PASS: TestSiteDesignNoDispatchScope/ap-create/bad-parent (0.00s)
+    --- PASS: TestSiteDesignNoDispatchScope/ap-create/bad-target (0.00s)
+    --- PASS: TestSiteDesignNoDispatchScope/ap-create/legacy-image (0.00s)
+    --- PASS: TestSiteDesignNoDispatchScope/ap-update/valid (0.00s)
+    --- PASS: TestSiteDesignNoDispatchScope/ap-update/delete (0.00s)
+    --- PASS: TestSiteDesignNoDispatchScope/ap-update/physical (0.00s)
+    --- PASS: TestSiteDesignNoDispatchScope/ap-update/task (0.00s)
+    --- PASS: TestSiteDesignNoDispatchScope/ap-update/created-id (0.00s)
+    --- PASS: TestSiteDesignNoDispatchScope/ap-update/prepared (0.00s)
+    --- PASS: TestSiteDesignNoDispatchScope/ap-update/cancelled (0.00s)
+    --- PASS: TestSiteDesignNoDispatchScope/ap-update/wrong-section (0.00s)
+    --- PASS: TestSiteDesignNoDispatchScope/ap-update/bad-hash (0.00s)
+    --- PASS: TestSiteDesignNoDispatchScope/ap-update/bad-parent (0.00s)
+    --- PASS: TestSiteDesignNoDispatchScope/ap-update/bad-target (0.00s)
+    --- PASS: TestSiteDesignNoDispatchScope/ap-update/legacy-image (0.00s)
+    --- PASS: TestSiteDesignNoDispatchScope/ap-observe/valid (0.00s)
+    --- PASS: TestSiteDesignNoDispatchScope/ap-observe/delete (0.00s)
+    --- PASS: TestSiteDesignNoDispatchScope/ap-observe/physical (0.00s)
+    --- PASS: TestSiteDesignNoDispatchScope/ap-observe/task (0.00s)
+    --- PASS: TestSiteDesignNoDispatchScope/ap-observe/created-id (0.00s)
+    --- PASS: TestSiteDesignNoDispatchScope/ap-observe/prepared (0.00s)
+    --- PASS: TestSiteDesignNoDispatchScope/ap-observe/cancelled (0.00s)
+    --- PASS: TestSiteDesignNoDispatchScope/ap-observe/wrong-section (0.00s)
+    --- PASS: TestSiteDesignNoDispatchScope/ap-observe/bad-hash (0.00s)
+    --- PASS: TestSiteDesignNoDispatchScope/ap-observe/bad-parent (0.00s)
+    --- PASS: TestSiteDesignNoDispatchScope/ap-observe/bad-target (0.00s)
+    --- PASS: TestSiteDesignNoDispatchScope/ap-observe/legacy-image (0.00s)
+=== RUN   TestSiteSingularPublicNoDispatch
+=== RUN   TestSiteSingularPublicNoDispatch/area-create/stable
+=== RUN   TestSiteSingularPublicNoDispatch/area-create/native-edit
+=== RUN   TestSiteSingularPublicNoDispatch/area-create/source-edit
+=== RUN   TestSiteSingularPublicNoDispatch/area-create/partial-read
+=== RUN   TestSiteSingularPublicNoDispatch/area-create/owner-edit
+=== RUN   TestSiteSingularPublicNoDispatch/area-create/lost-ack
+=== RUN   TestSiteSingularPublicNoDispatch/building-create/stable
+=== RUN   TestSiteSingularPublicNoDispatch/building-create/native-edit
+=== RUN   TestSiteSingularPublicNoDispatch/building-create/source-edit
+=== RUN   TestSiteSingularPublicNoDispatch/building-create/partial-read
+=== RUN   TestSiteSingularPublicNoDispatch/building-create/owner-edit
+=== RUN   TestSiteSingularPublicNoDispatch/building-create/lost-ack
+=== RUN   TestSiteSingularPublicNoDispatch/floor-create/stable
+=== RUN   TestSiteSingularPublicNoDispatch/floor-create/native-edit
+=== RUN   TestSiteSingularPublicNoDispatch/floor-create/source-edit
+=== RUN   TestSiteSingularPublicNoDispatch/floor-create/partial-read
+=== RUN   TestSiteSingularPublicNoDispatch/floor-create/owner-edit
+=== RUN   TestSiteSingularPublicNoDispatch/floor-create/lost-ack
+=== RUN   TestSiteSingularPublicNoDispatch/building-update/stable
+=== RUN   TestSiteSingularPublicNoDispatch/building-update/native-edit
+=== RUN   TestSiteSingularPublicNoDispatch/building-update/source-edit
+=== RUN   TestSiteSingularPublicNoDispatch/building-update/partial-read
+=== RUN   TestSiteSingularPublicNoDispatch/building-update/owner-edit
+=== RUN   TestSiteSingularPublicNoDispatch/building-update/lost-ack
+=== RUN   TestSiteSingularPublicNoDispatch/floor-update/stable
+=== RUN   TestSiteSingularPublicNoDispatch/floor-update/native-edit
+=== RUN   TestSiteSingularPublicNoDispatch/floor-update/source-edit
+=== RUN   TestSiteSingularPublicNoDispatch/floor-update/partial-read
+=== RUN   TestSiteSingularPublicNoDispatch/floor-update/owner-edit
+=== RUN   TestSiteSingularPublicNoDispatch/floor-update/lost-ack
+--- PASS: TestSiteSingularPublicNoDispatch (7.87s)
+    --- PASS: TestSiteSingularPublicNoDispatch/area-create/stable (0.28s)
+    --- PASS: TestSiteSingularPublicNoDispatch/area-create/native-edit (0.28s)
+    --- PASS: TestSiteSingularPublicNoDispatch/area-create/source-edit (0.28s)
+    --- PASS: TestSiteSingularPublicNoDispatch/area-create/partial-read (0.28s)
+    --- PASS: TestSiteSingularPublicNoDispatch/area-create/owner-edit (0.20s)
+    --- PASS: TestSiteSingularPublicNoDispatch/area-create/lost-ack (0.21s)
+    --- PASS: TestSiteSingularPublicNoDispatch/building-create/stable (0.28s)
+    --- PASS: TestSiteSingularPublicNoDispatch/building-create/native-edit (0.29s)
+    --- PASS: TestSiteSingularPublicNoDispatch/building-create/source-edit (0.30s)
+    --- PASS: TestSiteSingularPublicNoDispatch/building-create/partial-read (0.29s)
+    --- PASS: TestSiteSingularPublicNoDispatch/building-create/owner-edit (0.21s)
+    --- PASS: TestSiteSingularPublicNoDispatch/building-create/lost-ack (0.22s)
+    --- PASS: TestSiteSingularPublicNoDispatch/floor-create/stable (0.30s)
+    --- PASS: TestSiteSingularPublicNoDispatch/floor-create/native-edit (0.31s)
+    --- PASS: TestSiteSingularPublicNoDispatch/floor-create/source-edit (0.30s)
+    --- PASS: TestSiteSingularPublicNoDispatch/floor-create/partial-read (0.30s)
+    --- PASS: TestSiteSingularPublicNoDispatch/floor-create/owner-edit (0.23s)
+    --- PASS: TestSiteSingularPublicNoDispatch/floor-create/lost-ack (0.23s)
+    --- PASS: TestSiteSingularPublicNoDispatch/building-update/stable (0.25s)
+    --- PASS: TestSiteSingularPublicNoDispatch/building-update/native-edit (0.25s)
+    --- PASS: TestSiteSingularPublicNoDispatch/building-update/source-edit (0.25s)
+    --- PASS: TestSiteSingularPublicNoDispatch/building-update/partial-read (0.25s)
+    --- PASS: TestSiteSingularPublicNoDispatch/building-update/owner-edit (0.21s)
+    --- PASS: TestSiteSingularPublicNoDispatch/building-update/lost-ack (0.24s)
+    --- PASS: TestSiteSingularPublicNoDispatch/floor-update/stable (0.31s)
+    --- PASS: TestSiteSingularPublicNoDispatch/floor-update/native-edit (0.28s)
+    --- PASS: TestSiteSingularPublicNoDispatch/floor-update/source-edit (0.27s)
+    --- PASS: TestSiteSingularPublicNoDispatch/floor-update/partial-read (0.28s)
+    --- PASS: TestSiteSingularPublicNoDispatch/floor-update/owner-edit (0.23s)
+    --- PASS: TestSiteSingularPublicNoDispatch/floor-update/lost-ack (0.24s)
+=== RUN   TestSiteSingularPublicTaskRecovery
+=== RUN   TestSiteSingularPublicTaskRecovery/area-create/recover
+=== RUN   TestSiteSingularPublicTaskRecovery/area-create/recover-pending
+=== RUN   TestSiteSingularPublicTaskRecovery/area-create/recover-failed
+=== RUN   TestSiteSingularPublicTaskRecovery/area-create/recover-foreign
+=== RUN   TestSiteSingularPublicTaskRecovery/area-create/recover-unavailable
+=== RUN   TestSiteSingularPublicTaskRecovery/area-create/recover-source
+=== RUN   TestSiteSingularPublicTaskRecovery/area-create/recover-owner
+=== RUN   TestSiteSingularPublicTaskRecovery/area-create/recover-readback
+=== RUN   TestSiteSingularPublicTaskRecovery/area-create/recover-missing-result
+=== RUN   TestSiteSingularPublicTaskRecovery/area-create/recover-foreign-result
+=== RUN   TestSiteSingularPublicTaskRecovery/building-create/recover
+=== RUN   TestSiteSingularPublicTaskRecovery/building-create/recover-pending
+=== RUN   TestSiteSingularPublicTaskRecovery/building-create/recover-failed
+=== RUN   TestSiteSingularPublicTaskRecovery/building-create/recover-foreign
+=== RUN   TestSiteSingularPublicTaskRecovery/building-create/recover-unavailable
+=== RUN   TestSiteSingularPublicTaskRecovery/building-create/recover-source
+=== RUN   TestSiteSingularPublicTaskRecovery/building-create/recover-owner
+=== RUN   TestSiteSingularPublicTaskRecovery/building-create/recover-readback
+=== RUN   TestSiteSingularPublicTaskRecovery/building-create/recover-missing-result
+=== RUN   TestSiteSingularPublicTaskRecovery/building-create/recover-foreign-result
+=== RUN   TestSiteSingularPublicTaskRecovery/floor-create/recover
+=== RUN   TestSiteSingularPublicTaskRecovery/floor-create/recover-pending
+=== RUN   TestSiteSingularPublicTaskRecovery/floor-create/recover-failed
+=== RUN   TestSiteSingularPublicTaskRecovery/floor-create/recover-foreign
+=== RUN   TestSiteSingularPublicTaskRecovery/floor-create/recover-unavailable
+=== RUN   TestSiteSingularPublicTaskRecovery/floor-create/recover-source
+=== RUN   TestSiteSingularPublicTaskRecovery/floor-create/recover-owner
+=== RUN   TestSiteSingularPublicTaskRecovery/floor-create/recover-readback
+=== RUN   TestSiteSingularPublicTaskRecovery/floor-create/recover-missing-result
+=== RUN   TestSiteSingularPublicTaskRecovery/floor-create/recover-foreign-result
+=== RUN   TestSiteSingularPublicTaskRecovery/building-update/recover
+=== RUN   TestSiteSingularPublicTaskRecovery/building-update/recover-pending
+=== RUN   TestSiteSingularPublicTaskRecovery/building-update/recover-failed
+=== RUN   TestSiteSingularPublicTaskRecovery/building-update/recover-foreign
+=== RUN   TestSiteSingularPublicTaskRecovery/building-update/recover-unavailable
+=== RUN   TestSiteSingularPublicTaskRecovery/building-update/recover-source
+=== RUN   TestSiteSingularPublicTaskRecovery/building-update/recover-owner
+=== RUN   TestSiteSingularPublicTaskRecovery/building-update/recover-readback
+=== RUN   TestSiteSingularPublicTaskRecovery/floor-update/recover
+=== RUN   TestSiteSingularPublicTaskRecovery/floor-update/recover-pending
+=== RUN   TestSiteSingularPublicTaskRecovery/floor-update/recover-failed
+=== RUN   TestSiteSingularPublicTaskRecovery/floor-update/recover-foreign
+=== RUN   TestSiteSingularPublicTaskRecovery/floor-update/recover-unavailable
+=== RUN   TestSiteSingularPublicTaskRecovery/floor-update/recover-source
+=== RUN   TestSiteSingularPublicTaskRecovery/floor-update/recover-owner
+=== RUN   TestSiteSingularPublicTaskRecovery/floor-update/recover-readback
+--- PASS: TestSiteSingularPublicTaskRecovery (11.87s)
+    --- PASS: TestSiteSingularPublicTaskRecovery/area-create/recover (0.28s)
+    --- PASS: TestSiteSingularPublicTaskRecovery/area-create/recover-pending (0.24s)
+    --- PASS: TestSiteSingularPublicTaskRecovery/area-create/recover-failed (0.24s)
+    --- PASS: TestSiteSingularPublicTaskRecovery/area-create/recover-foreign (0.24s)
+    --- PASS: TestSiteSingularPublicTaskRecovery/area-create/recover-unavailable (0.23s)
+    --- PASS: TestSiteSingularPublicTaskRecovery/area-create/recover-source (0.23s)
+    --- PASS: TestSiteSingularPublicTaskRecovery/area-create/recover-owner (0.21s)
+    --- PASS: TestSiteSingularPublicTaskRecovery/area-create/recover-readback (0.32s)
+    --- PASS: TestSiteSingularPublicTaskRecovery/area-create/recover-missing-result (0.29s)
+    --- PASS: TestSiteSingularPublicTaskRecovery/area-create/recover-foreign-result (0.32s)
+    --- PASS: TestSiteSingularPublicTaskRecovery/building-create/recover (0.28s)
+    --- PASS: TestSiteSingularPublicTaskRecovery/building-create/recover-pending (0.24s)
+    --- PASS: TestSiteSingularPublicTaskRecovery/building-create/recover-failed (0.24s)
+    --- PASS: TestSiteSingularPublicTaskRecovery/building-create/recover-foreign (0.24s)
+    --- PASS: TestSiteSingularPublicTaskRecovery/building-create/recover-unavailable (0.23s)
+    --- PASS: TestSiteSingularPublicTaskRecovery/building-create/recover-source (0.22s)
+    --- PASS: TestSiteSingularPublicTaskRecovery/building-create/recover-owner (0.21s)
+    --- PASS: TestSiteSingularPublicTaskRecovery/building-create/recover-readback (0.33s)
+    --- PASS: TestSiteSingularPublicTaskRecovery/building-create/recover-missing-result (0.29s)
+    --- PASS: TestSiteSingularPublicTaskRecovery/building-create/recover-foreign-result (0.32s)
+    --- PASS: TestSiteSingularPublicTaskRecovery/floor-create/recover (0.30s)
+    --- PASS: TestSiteSingularPublicTaskRecovery/floor-create/recover-pending (0.25s)
+    --- PASS: TestSiteSingularPublicTaskRecovery/floor-create/recover-failed (0.26s)
+    --- PASS: TestSiteSingularPublicTaskRecovery/floor-create/recover-foreign (0.25s)
+    --- PASS: TestSiteSingularPublicTaskRecovery/floor-create/recover-unavailable (0.25s)
+    --- PASS: TestSiteSingularPublicTaskRecovery/floor-create/recover-source (0.23s)
+    --- PASS: TestSiteSingularPublicTaskRecovery/floor-create/recover-owner (0.23s)
+    --- PASS: TestSiteSingularPublicTaskRecovery/floor-create/recover-readback (0.34s)
+    --- PASS: TestSiteSingularPublicTaskRecovery/floor-create/recover-missing-result (0.30s)
+    --- PASS: TestSiteSingularPublicTaskRecovery/floor-create/recover-foreign-result (0.33s)
+    --- PASS: TestSiteSingularPublicTaskRecovery/building-update/recover (0.24s)
+    --- PASS: TestSiteSingularPublicTaskRecovery/building-update/recover-pending (0.24s)
+    --- PASS: TestSiteSingularPublicTaskRecovery/building-update/recover-failed (0.24s)
+    --- PASS: TestSiteSingularPublicTaskRecovery/building-update/recover-foreign (0.24s)
+    --- PASS: TestSiteSingularPublicTaskRecovery/building-update/recover-unavailable (0.23s)
+    --- PASS: TestSiteSingularPublicTaskRecovery/building-update/recover-source (0.22s)
+    --- PASS: TestSiteSingularPublicTaskRecovery/building-update/recover-owner (0.21s)
+    --- PASS: TestSiteSingularPublicTaskRecovery/building-update/recover-readback (0.25s)
+    --- PASS: TestSiteSingularPublicTaskRecovery/floor-update/recover (0.26s)
+    --- PASS: TestSiteSingularPublicTaskRecovery/floor-update/recover-pending (0.26s)
+    --- PASS: TestSiteSingularPublicTaskRecovery/floor-update/recover-failed (0.26s)
+    --- PASS: TestSiteSingularPublicTaskRecovery/floor-update/recover-foreign (0.26s)
+    --- PASS: TestSiteSingularPublicTaskRecovery/floor-update/recover-unavailable (0.25s)
+    --- PASS: TestSiteSingularPublicTaskRecovery/floor-update/recover-source (0.24s)
+    --- PASS: TestSiteSingularPublicTaskRecovery/floor-update/recover-owner (0.23s)
+    --- PASS: TestSiteSingularPublicTaskRecovery/floor-update/recover-readback (0.27s)
+=== RUN   TestSiteSingularDispatch
+=== RUN   TestSiteSingularDispatch/area-create/stable
+=== RUN   TestSiteSingularDispatch/area-create/parent-replaced
+=== RUN   TestSiteSingularDispatch/area-create/ancestor-changed
+=== RUN   TestSiteSingularDispatch/area-create/caller-intent
+=== RUN   TestSiteSingularDispatch/area-create/caller-descendant
+=== RUN   TestSiteSingularDispatch/area-create/during-guard
+=== RUN   TestSiteSingularDispatch/area-create/guard-denied
+=== RUN   TestSiteSingularDispatch/area-create/partial
+=== RUN   TestSiteSingularDispatch/area-create/missing-root
+=== RUN   TestSiteSingularDispatch/area-create/unrelated
+=== RUN   TestSiteSingularDispatch/area-create/reordered
+=== RUN   TestSiteSingularDispatch/area-create/uncertain
+=== RUN   TestSiteSingularDispatch/area-create/target-changed
+=== RUN   TestSiteSingularDispatch/building-create/stable
+=== RUN   TestSiteSingularDispatch/building-create/parent-replaced
+=== RUN   TestSiteSingularDispatch/building-create/ancestor-changed
+=== RUN   TestSiteSingularDispatch/building-create/caller-intent
+=== RUN   TestSiteSingularDispatch/building-create/caller-descendant
+=== RUN   TestSiteSingularDispatch/building-create/during-guard
+=== RUN   TestSiteSingularDispatch/building-create/guard-denied
+=== RUN   TestSiteSingularDispatch/building-create/partial
+=== RUN   TestSiteSingularDispatch/building-create/missing-root
+=== RUN   TestSiteSingularDispatch/building-create/unrelated
+=== RUN   TestSiteSingularDispatch/building-create/reordered
+=== RUN   TestSiteSingularDispatch/building-create/uncertain
+=== RUN   TestSiteSingularDispatch/building-create/target-changed
+=== RUN   TestSiteSingularDispatch/floor-create/stable
+=== RUN   TestSiteSingularDispatch/floor-create/parent-replaced
+=== RUN   TestSiteSingularDispatch/floor-create/ancestor-changed
+=== RUN   TestSiteSingularDispatch/floor-create/caller-intent
+=== RUN   TestSiteSingularDispatch/floor-create/caller-descendant
+=== RUN   TestSiteSingularDispatch/floor-create/during-guard
+=== RUN   TestSiteSingularDispatch/floor-create/guard-denied
+=== RUN   TestSiteSingularDispatch/floor-create/partial
+=== RUN   TestSiteSingularDispatch/floor-create/missing-root
+=== RUN   TestSiteSingularDispatch/floor-create/unrelated
+=== RUN   TestSiteSingularDispatch/floor-create/reordered
+=== RUN   TestSiteSingularDispatch/floor-create/uncertain
+=== RUN   TestSiteSingularDispatch/floor-create/target-changed
+=== RUN   TestSiteSingularDispatch/building-update/stable
+=== RUN   TestSiteSingularDispatch/building-update/parent-replaced
+=== RUN   TestSiteSingularDispatch/building-update/ancestor-changed
+=== RUN   TestSiteSingularDispatch/building-update/caller-intent
+=== RUN   TestSiteSingularDispatch/building-update/caller-descendant
+=== RUN   TestSiteSingularDispatch/building-update/during-guard
+=== RUN   TestSiteSingularDispatch/building-update/guard-denied
+=== RUN   TestSiteSingularDispatch/building-update/partial
+=== RUN   TestSiteSingularDispatch/building-update/missing-root
+=== RUN   TestSiteSingularDispatch/building-update/unrelated
+=== RUN   TestSiteSingularDispatch/building-update/reordered
+=== RUN   TestSiteSingularDispatch/building-update/uncertain
+=== RUN   TestSiteSingularDispatch/building-update/target-changed
+=== RUN   TestSiteSingularDispatch/building-update/target-field
+=== RUN   TestSiteSingularDispatch/building-update/unselected-field
+=== RUN   TestSiteSingularDispatch/floor-update/stable
+=== RUN   TestSiteSingularDispatch/floor-update/parent-replaced
+=== RUN   TestSiteSingularDispatch/floor-update/ancestor-changed
+=== RUN   TestSiteSingularDispatch/floor-update/caller-intent
+=== RUN   TestSiteSingularDispatch/floor-update/caller-descendant
+=== RUN   TestSiteSingularDispatch/floor-update/during-guard
+=== RUN   TestSiteSingularDispatch/floor-update/guard-denied
+=== RUN   TestSiteSingularDispatch/floor-update/partial
+=== RUN   TestSiteSingularDispatch/floor-update/missing-root
+=== RUN   TestSiteSingularDispatch/floor-update/unrelated
+=== RUN   TestSiteSingularDispatch/floor-update/reordered
+=== RUN   TestSiteSingularDispatch/floor-update/uncertain
+=== RUN   TestSiteSingularDispatch/floor-update/target-changed
+=== RUN   TestSiteSingularDispatch/floor-update/target-field
+=== RUN   TestSiteSingularDispatch/floor-update/unselected-field
+--- PASS: TestSiteSingularDispatch (0.80s)
+    --- PASS: TestSiteSingularDispatch/area-create/stable (0.01s)
+    --- PASS: TestSiteSingularDispatch/area-create/parent-replaced (0.01s)
+    --- PASS: TestSiteSingularDispatch/area-create/ancestor-changed (0.01s)
+    --- PASS: TestSiteSingularDispatch/area-create/caller-intent (0.01s)
+    --- PASS: TestSiteSingularDispatch/area-create/caller-descendant (0.01s)
+    --- PASS: TestSiteSingularDispatch/area-create/during-guard (0.01s)
+    --- PASS: TestSiteSingularDispatch/area-create/guard-denied (0.01s)
+    --- PASS: TestSiteSingularDispatch/area-create/partial (0.01s)
+    --- PASS: TestSiteSingularDispatch/area-create/missing-root (0.01s)
+    --- PASS: TestSiteSingularDispatch/area-create/unrelated (0.01s)
+    --- PASS: TestSiteSingularDispatch/area-create/reordered (0.01s)
+    --- PASS: TestSiteSingularDispatch/area-create/uncertain (0.01s)
+    --- PASS: TestSiteSingularDispatch/area-create/target-changed (0.01s)
+    --- PASS: TestSiteSingularDispatch/building-create/stable (0.01s)
+    --- PASS: TestSiteSingularDispatch/building-create/parent-replaced (0.01s)
+    --- PASS: TestSiteSingularDispatch/building-create/ancestor-changed (0.01s)
+    --- PASS: TestSiteSingularDispatch/building-create/caller-intent (0.01s)
+    --- PASS: TestSiteSingularDispatch/building-create/caller-descendant (0.01s)
+    --- PASS: TestSiteSingularDispatch/building-create/during-guard (0.01s)
+    --- PASS: TestSiteSingularDispatch/building-create/guard-denied (0.01s)
+    --- PASS: TestSiteSingularDispatch/building-create/partial (0.01s)
+    --- PASS: TestSiteSingularDispatch/building-create/missing-root (0.01s)
+    --- PASS: TestSiteSingularDispatch/building-create/unrelated (0.01s)
+    --- PASS: TestSiteSingularDispatch/building-create/reordered (0.01s)
+    --- PASS: TestSiteSingularDispatch/building-create/uncertain (0.01s)
+    --- PASS: TestSiteSingularDispatch/building-create/target-changed (0.01s)
+    --- PASS: TestSiteSingularDispatch/floor-create/stable (0.01s)
+    --- PASS: TestSiteSingularDispatch/floor-create/parent-replaced (0.01s)
+    --- PASS: TestSiteSingularDispatch/floor-create/ancestor-changed (0.01s)
+    --- PASS: TestSiteSingularDispatch/floor-create/caller-intent (0.01s)
+    --- PASS: TestSiteSingularDispatch/floor-create/caller-descendant (0.01s)
+    --- PASS: TestSiteSingularDispatch/floor-create/during-guard (0.01s)
+    --- PASS: TestSiteSingularDispatch/floor-create/guard-denied (0.01s)
+    --- PASS: TestSiteSingularDispatch/floor-create/partial (0.01s)
+    --- PASS: TestSiteSingularDispatch/floor-create/missing-root (0.01s)
+    --- PASS: TestSiteSingularDispatch/floor-create/unrelated (0.01s)
+    --- PASS: TestSiteSingularDispatch/floor-create/reordered (0.01s)
+    --- PASS: TestSiteSingularDispatch/floor-create/uncertain (0.01s)
+    --- PASS: TestSiteSingularDispatch/floor-create/target-changed (0.01s)
+    --- PASS: TestSiteSingularDispatch/building-update/stable (0.01s)
+    --- PASS: TestSiteSingularDispatch/building-update/parent-replaced (0.01s)
+    --- PASS: TestSiteSingularDispatch/building-update/ancestor-changed (0.01s)
+    --- PASS: TestSiteSingularDispatch/building-update/caller-intent (0.01s)
+    --- PASS: TestSiteSingularDispatch/building-update/caller-descendant (0.01s)
+    --- PASS: TestSiteSingularDispatch/building-update/during-guard (0.01s)
+    --- PASS: TestSiteSingularDispatch/building-update/guard-denied (0.01s)
+    --- PASS: TestSiteSingularDispatch/building-update/partial (0.01s)
+    --- PASS: TestSiteSingularDispatch/building-update/missing-root (0.01s)
+    --- PASS: TestSiteSingularDispatch/building-update/unrelated (0.01s)
+    --- PASS: TestSiteSingularDispatch/building-update/reordered (0.01s)
+    --- PASS: TestSiteSingularDispatch/building-update/uncertain (0.01s)
+    --- PASS: TestSiteSingularDispatch/building-update/target-changed (0.01s)
+    --- PASS: TestSiteSingularDispatch/building-update/target-field (0.01s)
+    --- PASS: TestSiteSingularDispatch/building-update/unselected-field (0.01s)
+    --- PASS: TestSiteSingularDispatch/floor-update/stable (0.01s)
+    --- PASS: TestSiteSingularDispatch/floor-update/parent-replaced (0.01s)
+    --- PASS: TestSiteSingularDispatch/floor-update/ancestor-changed (0.01s)
+    --- PASS: TestSiteSingularDispatch/floor-update/caller-intent (0.01s)
+    --- PASS: TestSiteSingularDispatch/floor-update/caller-descendant (0.01s)
+    --- PASS: TestSiteSingularDispatch/floor-update/during-guard (0.01s)
+    --- PASS: TestSiteSingularDispatch/floor-update/guard-denied (0.01s)
+    --- PASS: TestSiteSingularDispatch/floor-update/partial (0.01s)
+    --- PASS: TestSiteSingularDispatch/floor-update/missing-root (0.01s)
+    --- PASS: TestSiteSingularDispatch/floor-update/unrelated (0.01s)
+    --- PASS: TestSiteSingularDispatch/floor-update/reordered (0.01s)
+    --- PASS: TestSiteSingularDispatch/floor-update/uncertain (0.01s)
+    --- PASS: TestSiteSingularDispatch/floor-update/target-changed (0.01s)
+    --- PASS: TestSiteSingularDispatch/floor-update/target-field (0.01s)
+    --- PASS: TestSiteSingularDispatch/floor-update/unselected-field (0.01s)
+=== RUN   TestSiteExecutionOrdersDependenciesAndUsesModernEndpoints
+--- PASS: TestSiteExecutionOrdersDependenciesAndUsesModernEndpoints (0.00s)
+=== RUN   TestSiteExecutionValidatesWholeIntentBeforeFirstParent
+--- PASS: TestSiteExecutionValidatesWholeIntentBeforeFirstParent (0.00s)
+=== RUN   TestSiteExecutionUpdatePreservesUnselectedBuildingAttributes
+--- PASS: TestSiteExecutionUpdatePreservesUnselectedBuildingAttributes (0.00s)
+=== RUN   TestSiteSubmissionNeverReplaysMutatingRequests
+=== RUN   TestSiteSubmissionNeverReplaysMutatingRequests/accepted
+=== RUN   TestSiteSubmissionNeverReplaysMutatingRequests/unauthorized
+=== RUN   TestSiteSubmissionNeverReplaysMutatingRequests/unavailable
+=== RUN   TestSiteSubmissionNeverReplaysMutatingRequests/redirect
+=== RUN   TestSiteSubmissionNeverReplaysMutatingRequests/invalid
+=== RUN   TestSiteSubmissionNeverReplaysMutatingRequests/no-receipt
+--- PASS: TestSiteSubmissionNeverReplaysMutatingRequests (0.06s)
+    --- PASS: TestSiteSubmissionNeverReplaysMutatingRequests/accepted (0.01s)
+    --- PASS: TestSiteSubmissionNeverReplaysMutatingRequests/unauthorized (0.01s)
+    --- PASS: TestSiteSubmissionNeverReplaysMutatingRequests/unavailable (0.01s)
+    --- PASS: TestSiteSubmissionNeverReplaysMutatingRequests/redirect (0.01s)
+    --- PASS: TestSiteSubmissionNeverReplaysMutatingRequests/invalid (0.01s)
+    --- PASS: TestSiteSubmissionNeverReplaysMutatingRequests/no-receipt (0.01s)
+=== RUN   TestConfigurationTaskRequiresCorrelatedTerminalReceipt
+=== RUN   TestConfigurationTaskRequiresCorrelatedTerminalReceipt/complete
+=== RUN   TestConfigurationTaskRequiresCorrelatedTerminalReceipt/clock-ahead
+=== RUN   TestConfigurationTaskRequiresCorrelatedTerminalReceipt/clock-behind
+=== RUN   TestConfigurationTaskRequiresCorrelatedTerminalReceipt/running
+=== RUN   TestConfigurationTaskRequiresCorrelatedTerminalReceipt/wrong-id
+=== RUN   TestConfigurationTaskRequiresCorrelatedTerminalReceipt/old
+=== RUN   TestConfigurationTaskRequiresCorrelatedTerminalReceipt/future
+=== RUN   TestConfigurationTaskRequiresCorrelatedTerminalReceipt/missing-error
+=== RUN   TestConfigurationTaskRequiresCorrelatedTerminalReceipt/failed
+=== RUN   TestConfigurationTaskRequiresCorrelatedTerminalReceipt/end-before-start
+=== RUN   TestConfigurationTaskRequiresCorrelatedTerminalReceipt/partial
+--- PASS: TestConfigurationTaskRequiresCorrelatedTerminalReceipt (0.11s)
+    --- PASS: TestConfigurationTaskRequiresCorrelatedTerminalReceipt/complete (0.01s)
+    --- PASS: TestConfigurationTaskRequiresCorrelatedTerminalReceipt/clock-ahead (0.01s)
+    --- PASS: TestConfigurationTaskRequiresCorrelatedTerminalReceipt/clock-behind (0.01s)
+    --- PASS: TestConfigurationTaskRequiresCorrelatedTerminalReceipt/running (0.01s)
+    --- PASS: TestConfigurationTaskRequiresCorrelatedTerminalReceipt/wrong-id (0.01s)
+    --- PASS: TestConfigurationTaskRequiresCorrelatedTerminalReceipt/old (0.01s)
+    --- PASS: TestConfigurationTaskRequiresCorrelatedTerminalReceipt/future (0.01s)
+    --- PASS: TestConfigurationTaskRequiresCorrelatedTerminalReceipt/missing-error (0.01s)
+    --- PASS: TestConfigurationTaskRequiresCorrelatedTerminalReceipt/failed (0.01s)
+    --- PASS: TestConfigurationTaskRequiresCorrelatedTerminalReceipt/end-before-start (0.01s)
+    --- PASS: TestConfigurationTaskRequiresCorrelatedTerminalReceipt/partial (0.01s)
+=== RUN   TestSiteVerificationChecksIdentityAndAttributes
+=== RUN   TestSiteVerificationChecksIdentityAndAttributes/match
+=== RUN   TestSiteVerificationChecksIdentityAndAttributes/drift
+=== RUN   TestSiteVerificationChecksIdentityAndAttributes/replaced
+=== RUN   TestSiteVerificationChecksIdentityAndAttributes/missing
+=== RUN   TestSiteVerificationChecksIdentityAndAttributes/partial
+--- PASS: TestSiteVerificationChecksIdentityAndAttributes (0.05s)
+    --- PASS: TestSiteVerificationChecksIdentityAndAttributes/match (0.01s)
+    --- PASS: TestSiteVerificationChecksIdentityAndAttributes/drift (0.01s)
+    --- PASS: TestSiteVerificationChecksIdentityAndAttributes/replaced (0.01s)
+    --- PASS: TestSiteVerificationChecksIdentityAndAttributes/missing (0.01s)
+    --- PASS: TestSiteVerificationChecksIdentityAndAttributes/partial (0.01s)
+=== RUN   TestSiteExecutionRejectsOversizedNameBeforeSubmission
+--- PASS: TestSiteExecutionRejectsOversizedNameBeforeSubmission (0.00s)
+=== RUN   TestSiteFloorEffectReceiptBoundaries
+=== RUN   TestSiteFloorEffectReceiptBoundaries/valid
+=== RUN   TestSiteFloorEffectReceiptBoundaries/missing-effects
+=== RUN   TestSiteFloorEffectReceiptBoundaries/changed-effect
+=== RUN   TestSiteFloorEffectReceiptBoundaries/changed-prior
+=== RUN   TestSiteFloorEffectReceiptBoundaries/changed-root
+=== RUN   TestSiteFloorEffectReceiptBoundaries/missing-result-root
+=== RUN   TestSiteFloorEffectReceiptBoundaries/missing-producer-root
+=== RUN   TestSiteFloorEffectReceiptBoundaries/wrong-key
+=== RUN   TestSiteFloorEffectReceiptBoundaries/wrong-owner
+=== RUN   TestSiteFloorEffectReceiptBoundaries/wrong-parent
+=== RUN   TestSiteFloorEffectReceiptBoundaries/future-anchor
+=== RUN   TestSiteFloorEffectReceiptBoundaries/missing-anchor
+=== RUN   TestSiteFloorEffectReceiptBoundaries/pruned-anchor
+=== RUN   TestSiteFloorEffectReceiptBoundaries/missing-task
+=== RUN   TestSiteFloorEffectReceiptBoundaries/unverified
+=== RUN   TestSiteFloorEffectReceiptBoundaries/duplicate-operation
+=== RUN   TestSiteFloorEffectReceiptBoundaries/legacy-effects
+=== RUN   TestSiteFloorEffectReceiptBoundaries/AP-is-floor
+=== RUN   TestSiteFloorEffectReceiptBoundaries/copy
+--- PASS: TestSiteFloorEffectReceiptBoundaries (0.04s)
+    --- PASS: TestSiteFloorEffectReceiptBoundaries/valid (0.00s)
+    --- PASS: TestSiteFloorEffectReceiptBoundaries/missing-effects (0.00s)
+    --- PASS: TestSiteFloorEffectReceiptBoundaries/changed-effect (0.00s)
+    --- PASS: TestSiteFloorEffectReceiptBoundaries/changed-prior (0.00s)
+    --- PASS: TestSiteFloorEffectReceiptBoundaries/changed-root (0.00s)
+    --- PASS: TestSiteFloorEffectReceiptBoundaries/missing-result-root (0.00s)
+    --- PASS: TestSiteFloorEffectReceiptBoundaries/missing-producer-root (0.00s)
+    --- PASS: TestSiteFloorEffectReceiptBoundaries/wrong-key (0.00s)
+    --- PASS: TestSiteFloorEffectReceiptBoundaries/wrong-owner (0.00s)
+    --- PASS: TestSiteFloorEffectReceiptBoundaries/wrong-parent (0.00s)
+    --- PASS: TestSiteFloorEffectReceiptBoundaries/future-anchor (0.00s)
+    --- PASS: TestSiteFloorEffectReceiptBoundaries/missing-anchor (0.00s)
+    --- PASS: TestSiteFloorEffectReceiptBoundaries/pruned-anchor (0.00s)
+    --- PASS: TestSiteFloorEffectReceiptBoundaries/missing-task (0.00s)
+    --- PASS: TestSiteFloorEffectReceiptBoundaries/unverified (0.00s)
+    --- PASS: TestSiteFloorEffectReceiptBoundaries/duplicate-operation (0.00s)
+    --- PASS: TestSiteFloorEffectReceiptBoundaries/legacy-effects (0.00s)
+    --- PASS: TestSiteFloorEffectReceiptBoundaries/AP-is-floor (0.00s)
+    --- PASS: TestSiteFloorEffectReceiptBoundaries/copy (0.00s)
+=== RUN   TestPlannedAPFloorEffectSetRoot
+--- PASS: TestPlannedAPFloorEffectSetRoot (0.00s)
+=== RUN   TestSiteFloorEffectsPreserveLegacyReceiptDigest
+--- PASS: TestSiteFloorEffectsPreserveLegacyReceiptDigest (0.00s)
+=== RUN   TestSitePrivateNativeMAC
+=== RUN   TestSitePrivateNativeMAC/same
+=== RUN   TestSitePrivateNativeMAC/order
+=== RUN   TestSitePrivateNativeMAC/unknown-edit
+=== RUN   TestSitePrivateNativeMAC/number-edit
+=== RUN   TestSitePrivateNativeMAC/null-absent
+=== RUN   TestSitePrivateNativeMAC/other-object
+=== RUN   TestSitePrivateNativeMAC/other-key
+=== RUN   TestSitePrivateNativeMAC/same-key-other-scope
+--- PASS: TestSitePrivateNativeMAC (0.00s)
+    --- PASS: TestSitePrivateNativeMAC/same (0.00s)
+    --- PASS: TestSitePrivateNativeMAC/order (0.00s)
+    --- PASS: TestSitePrivateNativeMAC/unknown-edit (0.00s)
+    --- PASS: TestSitePrivateNativeMAC/number-edit (0.00s)
+    --- PASS: TestSitePrivateNativeMAC/null-absent (0.00s)
+    --- PASS: TestSitePrivateNativeMAC/other-object (0.00s)
+    --- PASS: TestSitePrivateNativeMAC/other-key (0.00s)
+    --- PASS: TestSitePrivateNativeMAC/same-key-other-scope (0.00s)
+=== RUN   TestSitePrivateCreatorReceiptBoundaries
+=== RUN   TestSitePrivateCreatorReceiptBoundaries/valid
+=== RUN   TestSitePrivateCreatorReceiptBoundaries/missing-baseline
+=== RUN   TestSitePrivateCreatorReceiptBoundaries/bad-baseline
+=== RUN   TestSitePrivateCreatorReceiptBoundaries/wrong-key
+=== RUN   TestSitePrivateCreatorReceiptBoundaries/lost-producer
+=== RUN   TestSitePrivateCreatorReceiptBoundaries/lost-source
+=== RUN   TestSitePrivateCreatorReceiptBoundaries/alias-legacy
+--- PASS: TestSitePrivateCreatorReceiptBoundaries (0.00s)
+    --- PASS: TestSitePrivateCreatorReceiptBoundaries/valid (0.00s)
+    --- PASS: TestSitePrivateCreatorReceiptBoundaries/missing-baseline (0.00s)
+    --- PASS: TestSitePrivateCreatorReceiptBoundaries/bad-baseline (0.00s)
+    --- PASS: TestSitePrivateCreatorReceiptBoundaries/wrong-key (0.00s)
+    --- PASS: TestSitePrivateCreatorReceiptBoundaries/lost-producer (0.00s)
+    --- PASS: TestSitePrivateCreatorReceiptBoundaries/lost-source (0.00s)
+    --- PASS: TestSitePrivateCreatorReceiptBoundaries/alias-legacy (0.00s)
+=== RUN   TestSitePrivatePublicCreatorBaseline
+=== RUN   TestSitePrivatePublicCreatorBaseline/area-create/private-known
+=== RUN   TestSitePrivatePublicCreatorBaseline/area-create/private-native-edit
+=== RUN   TestSitePrivatePublicCreatorBaseline/area-create/private-key-change
+=== RUN   TestSitePrivatePublicCreatorBaseline/area-create/private-option-loss
+=== RUN   TestSitePrivatePublicCreatorBaseline/area-create/recover-private
+=== RUN   TestSitePrivatePublicCreatorBaseline/building-create/private-known
+=== RUN   TestSitePrivatePublicCreatorBaseline/building-create/private-native-edit
+=== RUN   TestSitePrivatePublicCreatorBaseline/building-create/private-key-change
+=== RUN   TestSitePrivatePublicCreatorBaseline/building-create/private-option-loss
+=== RUN   TestSitePrivatePublicCreatorBaseline/building-create/recover-private
+=== RUN   TestSitePrivatePublicCreatorBaseline/floor-create/private-known
+=== RUN   TestSitePrivatePublicCreatorBaseline/floor-create/private-native-edit
+=== RUN   TestSitePrivatePublicCreatorBaseline/floor-create/private-key-change
+=== RUN   TestSitePrivatePublicCreatorBaseline/floor-create/private-option-loss
+=== RUN   TestSitePrivatePublicCreatorBaseline/floor-create/recover-private
+--- PASS: TestSitePrivatePublicCreatorBaseline (7.82s)
+    --- PASS: TestSitePrivatePublicCreatorBaseline/area-create/private-known (0.49s)
+    --- PASS: TestSitePrivatePublicCreatorBaseline/area-create/private-native-edit (0.53s)
+    --- PASS: TestSitePrivatePublicCreatorBaseline/area-create/private-key-change (0.52s)
+    --- PASS: TestSitePrivatePublicCreatorBaseline/area-create/private-option-loss (0.51s)
+    --- PASS: TestSitePrivatePublicCreatorBaseline/area-create/recover-private (0.49s)
+    --- PASS: TestSitePrivatePublicCreatorBaseline/building-create/private-known (0.50s)
+    --- PASS: TestSitePrivatePublicCreatorBaseline/building-create/private-native-edit (0.55s)
+    --- PASS: TestSitePrivatePublicCreatorBaseline/building-create/private-key-change (0.53s)
+    --- PASS: TestSitePrivatePublicCreatorBaseline/building-create/private-option-loss (0.52s)
+    --- PASS: TestSitePrivatePublicCreatorBaseline/building-create/recover-private (0.49s)
+    --- PASS: TestSitePrivatePublicCreatorBaseline/floor-create/private-known (0.51s)
+    --- PASS: TestSitePrivatePublicCreatorBaseline/floor-create/private-native-edit (0.56s)
+    --- PASS: TestSitePrivatePublicCreatorBaseline/floor-create/private-key-change (0.57s)
+    --- PASS: TestSitePrivatePublicCreatorBaseline/floor-create/private-option-loss (0.54s)
+    --- PASS: TestSitePrivatePublicCreatorBaseline/floor-create/recover-private (0.52s)
+=== RUN   TestSitePrivateDispatchFootprint
+=== RUN   TestSitePrivateDispatchFootprint/area-create/stable
+=== RUN   TestSitePrivateDispatchFootprint/area-create/unknown-edit
+=== RUN   TestSitePrivateDispatchFootprint/area-create/number-edit
+=== RUN   TestSitePrivateDispatchFootprint/area-create/partial-raw
+=== RUN   TestSitePrivateDispatchFootprint/area-create/uncertain
+=== RUN   TestSitePrivateDispatchFootprint/building-create/stable
+=== RUN   TestSitePrivateDispatchFootprint/building-create/unknown-edit
+=== RUN   TestSitePrivateDispatchFootprint/building-create/number-edit
+=== RUN   TestSitePrivateDispatchFootprint/building-create/partial-raw
+=== RUN   TestSitePrivateDispatchFootprint/building-create/uncertain
+=== RUN   TestSitePrivateDispatchFootprint/floor-create/stable
+=== RUN   TestSitePrivateDispatchFootprint/floor-create/unknown-edit
+=== RUN   TestSitePrivateDispatchFootprint/floor-create/number-edit
+=== RUN   TestSitePrivateDispatchFootprint/floor-create/partial-raw
+=== RUN   TestSitePrivateDispatchFootprint/floor-create/uncertain
+--- PASS: TestSitePrivateDispatchFootprint (0.23s)
+    --- PASS: TestSitePrivateDispatchFootprint/area-create/stable (0.02s)
+    --- PASS: TestSitePrivateDispatchFootprint/area-create/unknown-edit (0.01s)
+    --- PASS: TestSitePrivateDispatchFootprint/area-create/number-edit (0.01s)
+    --- PASS: TestSitePrivateDispatchFootprint/area-create/partial-raw (0.01s)
+    --- PASS: TestSitePrivateDispatchFootprint/area-create/uncertain (0.02s)
+    --- PASS: TestSitePrivateDispatchFootprint/building-create/stable (0.02s)
+    --- PASS: TestSitePrivateDispatchFootprint/building-create/unknown-edit (0.01s)
+    --- PASS: TestSitePrivateDispatchFootprint/building-create/number-edit (0.01s)
+    --- PASS: TestSitePrivateDispatchFootprint/building-create/partial-raw (0.01s)
+    --- PASS: TestSitePrivateDispatchFootprint/building-create/uncertain (0.02s)
+    --- PASS: TestSitePrivateDispatchFootprint/floor-create/stable (0.02s)
+    --- PASS: TestSitePrivateDispatchFootprint/floor-create/unknown-edit (0.01s)
+    --- PASS: TestSitePrivateDispatchFootprint/floor-create/number-edit (0.01s)
+    --- PASS: TestSitePrivateDispatchFootprint/floor-create/partial-raw (0.01s)
+    --- PASS: TestSitePrivateDispatchFootprint/floor-create/uncertain (0.02s)
+=== RUN   TestSitePrivateDoesNotBackfillOwnership
+=== RUN   TestSitePrivateDoesNotBackfillOwnership/legacy-creator
+=== RUN   TestSitePrivateDoesNotBackfillOwnership/imported
+=== RUN   TestSitePrivateDoesNotBackfillOwnership/new-absent
+--- PASS: TestSitePrivateDoesNotBackfillOwnership (0.00s)
+    --- PASS: TestSitePrivateDoesNotBackfillOwnership/legacy-creator (0.00s)
+    --- PASS: TestSitePrivateDoesNotBackfillOwnership/imported (0.00s)
+    --- PASS: TestSitePrivateDoesNotBackfillOwnership/new-absent (0.00s)
+=== RUN   TestSitePrivateUpdateRequiresOwnedProtocol
+--- PASS: TestSitePrivateUpdateRequiresOwnedProtocol (0.00s)
+=== RUN   TestSitePrivateExampleContract
+=== RUN   TestSitePrivateExampleContract/site-private-creator-execution.yaml
+=== RUN   TestSitePrivateExampleContract/planned-ap-private-state.yaml
+=== RUN   TestSitePrivateExampleContract/planned-ap-type-update.yaml
+--- PASS: TestSitePrivateExampleContract (0.01s)
+    --- PASS: TestSitePrivateExampleContract/site-private-creator-execution.yaml (0.00s)
+    --- PASS: TestSitePrivateExampleContract/planned-ap-private-state.yaml (0.00s)
+    --- PASS: TestSitePrivateExampleContract/planned-ap-type-update.yaml (0.00s)
+=== RUN   TestSitePrivateFootprintSeparatesParentSettings
+--- PASS: TestSitePrivateFootprintSeparatesParentSettings (0.02s)
+=== RUN   TestSiteNoDispatchScope
+=== RUN   TestSiteNoDispatchScope/create
+=== RUN   TestSiteNoDispatchScope/update
+=== RUN   TestSiteNoDispatchScope/delete
+=== RUN   TestSiteNoDispatchScope/root
+=== RUN   TestSiteNoDispatchScope/bulk
+=== RUN   TestSiteNoDispatchScope/image
+=== RUN   TestSiteNoDispatchScope/parent-missing
+=== RUN   TestSiteNoDispatchScope/self-parent
+=== RUN   TestSiteNoDispatchScope/create-target
+=== RUN   TestSiteNoDispatchScope/update-missing-target
+=== RUN   TestSiteNoDispatchScope/serial
+=== RUN   TestSiteNoDispatchScope/created-id
+=== RUN   TestSiteNoDispatchScope/prepared
+=== RUN   TestSiteNoDispatchScope/task
+=== RUN   TestSiteNoDispatchScope/canceled
+=== RUN   TestSiteNoDispatchScope/section
+=== RUN   TestSiteNoDispatchScope/operation-id
+--- PASS: TestSiteNoDispatchScope (0.00s)
+    --- PASS: TestSiteNoDispatchScope/create (0.00s)
+    --- PASS: TestSiteNoDispatchScope/update (0.00s)
+    --- PASS: TestSiteNoDispatchScope/delete (0.00s)
+    --- PASS: TestSiteNoDispatchScope/root (0.00s)
+    --- PASS: TestSiteNoDispatchScope/bulk (0.00s)
+    --- PASS: TestSiteNoDispatchScope/image (0.00s)
+    --- PASS: TestSiteNoDispatchScope/parent-missing (0.00s)
+    --- PASS: TestSiteNoDispatchScope/self-parent (0.00s)
+    --- PASS: TestSiteNoDispatchScope/create-target (0.00s)
+    --- PASS: TestSiteNoDispatchScope/update-missing-target (0.00s)
+    --- PASS: TestSiteNoDispatchScope/serial (0.00s)
+    --- PASS: TestSiteNoDispatchScope/created-id (0.00s)
+    --- PASS: TestSiteNoDispatchScope/prepared (0.00s)
+    --- PASS: TestSiteNoDispatchScope/task (0.00s)
+    --- PASS: TestSiteNoDispatchScope/canceled (0.00s)
+    --- PASS: TestSiteNoDispatchScope/section (0.00s)
+    --- PASS: TestSiteNoDispatchScope/operation-id (0.00s)
+=== RUN   TestSiteCreatorReceiptBoundaries
+=== RUN   TestSiteCreatorReceiptBoundaries/valid
+=== RUN   TestSiteCreatorReceiptBoundaries/configmap
+=== RUN   TestSiteCreatorReceiptBoundaries/lost-source
+=== RUN   TestSiteCreatorReceiptBoundaries/bad-target
+=== RUN   TestSiteCreatorReceiptBoundaries/bad-path
+=== RUN   TestSiteCreatorReceiptBoundaries/bad-kind
+=== RUN   TestSiteCreatorReceiptBoundaries/no-parent
+=== RUN   TestSiteCreatorReceiptBoundaries/unverified
+=== RUN   TestSiteCreatorReceiptBoundaries/no-task
+=== RUN   TestSiteCreatorReceiptBoundaries/no-time
+=== RUN   TestSiteCreatorReceiptBoundaries/future
+=== RUN   TestSiteCreatorReceiptBoundaries/duplicate
+=== RUN   TestSiteCreatorReceiptBoundaries/alias
+=== RUN   TestSiteCreatorReceiptBoundaries/pruned-result
+=== RUN   TestSiteCreatorReceiptBoundaries/foreign-section
+--- PASS: TestSiteCreatorReceiptBoundaries (0.00s)
+    --- PASS: TestSiteCreatorReceiptBoundaries/valid (0.00s)
+    --- PASS: TestSiteCreatorReceiptBoundaries/configmap (0.00s)
+    --- PASS: TestSiteCreatorReceiptBoundaries/lost-source (0.00s)
+    --- PASS: TestSiteCreatorReceiptBoundaries/bad-target (0.00s)
+    --- PASS: TestSiteCreatorReceiptBoundaries/bad-path (0.00s)
+    --- PASS: TestSiteCreatorReceiptBoundaries/bad-kind (0.00s)
+    --- PASS: TestSiteCreatorReceiptBoundaries/no-parent (0.00s)
+    --- PASS: TestSiteCreatorReceiptBoundaries/unverified (0.00s)
+    --- PASS: TestSiteCreatorReceiptBoundaries/no-task (0.00s)
+    --- PASS: TestSiteCreatorReceiptBoundaries/no-time (0.00s)
+    --- PASS: TestSiteCreatorReceiptBoundaries/future (0.00s)
+    --- PASS: TestSiteCreatorReceiptBoundaries/duplicate (0.00s)
+    --- PASS: TestSiteCreatorReceiptBoundaries/alias (0.00s)
+    --- PASS: TestSiteCreatorReceiptBoundaries/pruned-result (0.00s)
+    --- PASS: TestSiteCreatorReceiptBoundaries/foreign-section (0.00s)
+=== RUN   TestSiteCreatorIdentityFence
+=== RUN   TestSiteCreatorIdentityFence/same
+=== RUN   TestSiteCreatorIdentityFence/replaced
+=== RUN   TestSiteCreatorIdentityFence/missing
+=== RUN   TestSiteCreatorIdentityFence/parent
+=== RUN   TestSiteCreatorIdentityFence/foreign-owner
+=== RUN   TestSiteCreatorIdentityFence/imported
+--- PASS: TestSiteCreatorIdentityFence (0.00s)
+    --- PASS: TestSiteCreatorIdentityFence/same (0.00s)
+    --- PASS: TestSiteCreatorIdentityFence/replaced (0.00s)
+    --- PASS: TestSiteCreatorIdentityFence/missing (0.00s)
+    --- PASS: TestSiteCreatorIdentityFence/parent (0.00s)
+    --- PASS: TestSiteCreatorIdentityFence/foreign-owner (0.00s)
+    --- PASS: TestSiteCreatorIdentityFence/imported (0.00s)
+=== RUN   TestSiteCreatorCannotSettleWithoutReceipt
+--- PASS: TestSiteCreatorCannotSettleWithoutReceipt (0.02s)
+=== RUN   TestSiteCreatorCapacity
+=== RUN   TestSiteCreatorCapacity/empty
+=== RUN   TestSiteCreatorCapacity/existing
+=== RUN   TestSiteCreatorCapacity/duplicate-operation
+=== RUN   TestSiteCreatorCapacity/count
+=== RUN   TestSiteCreatorCapacity/bytes
+=== RUN   TestSiteCreatorCapacity/changed-history
+--- PASS: TestSiteCreatorCapacity (0.01s)
+    --- PASS: TestSiteCreatorCapacity/empty (0.00s)
+    --- PASS: TestSiteCreatorCapacity/existing (0.00s)
+    --- PASS: TestSiteCreatorCapacity/duplicate-operation (0.00s)
+    --- PASS: TestSiteCreatorCapacity/count (0.00s)
+    --- PASS: TestSiteCreatorCapacity/bytes (0.01s)
+    --- PASS: TestSiteCreatorCapacity/changed-history (0.00s)
+=== RUN   TestSiteCreatorPublicIdentityFence
+=== RUN   TestSiteCreatorPublicIdentityFence/area-create/creator-replaced
+=== RUN   TestSiteCreatorPublicIdentityFence/area-create/creator-missing
+=== RUN   TestSiteCreatorPublicIdentityFence/building-create/creator-replaced
+=== RUN   TestSiteCreatorPublicIdentityFence/building-create/creator-missing
+=== RUN   TestSiteCreatorPublicIdentityFence/floor-create/creator-replaced
+=== RUN   TestSiteCreatorPublicIdentityFence/floor-create/creator-missing
+--- PASS: TestSiteCreatorPublicIdentityFence (1.84s)
+    --- PASS: TestSiteCreatorPublicIdentityFence/area-create/creator-replaced (0.29s)
+    --- PASS: TestSiteCreatorPublicIdentityFence/area-create/creator-missing (0.30s)
+    --- PASS: TestSiteCreatorPublicIdentityFence/building-create/creator-replaced (0.30s)
+    --- PASS: TestSiteCreatorPublicIdentityFence/building-create/creator-missing (0.31s)
+    --- PASS: TestSiteCreatorPublicIdentityFence/floor-create/creator-replaced (0.32s)
+    --- PASS: TestSiteCreatorPublicIdentityFence/floor-create/creator-missing (0.32s)
+=== RUN   TestSiteCreatorSnapshotDoesNotAliasStatus
+--- PASS: TestSiteCreatorSnapshotDoesNotAliasStatus (0.00s)
+=== RUN   TestSiteExecutionPrecisionConvergesWithoutLosingIntent
+--- PASS: TestSiteExecutionPrecisionConvergesWithoutLosingIntent (0.00s)
+=== RUN   TestSiteExecutionRejectsGeometryRoundedToZeroBeforeParentCreation
+=== RUN   TestSiteExecutionRejectsGeometryRoundedToZeroBeforeParentCreation/width
+=== RUN   TestSiteExecutionRejectsGeometryRoundedToZeroBeforeParentCreation/length
+=== RUN   TestSiteExecutionRejectsGeometryRoundedToZeroBeforeParentCreation/height
+--- PASS: TestSiteExecutionRejectsGeometryRoundedToZeroBeforeParentCreation (0.00s)
+    --- PASS: TestSiteExecutionRejectsGeometryRoundedToZeroBeforeParentCreation/width (0.00s)
+    --- PASS: TestSiteExecutionRejectsGeometryRoundedToZeroBeforeParentCreation/length (0.00s)
+    --- PASS: TestSiteExecutionRejectsGeometryRoundedToZeroBeforeParentCreation/height (0.00s)
+=== RUN   TestSitesApplyManifestCompletesHierarchyAcrossWorkerRestarts
+--- PASS: TestSitesApplyManifestCompletesHierarchyAcrossWorkerRestarts (0.20s)
+=== RUN   TestSitesApplyUncertainReceiptCannotReplay
+--- PASS: TestSitesApplyUncertainReceiptCannotReplay (0.05s)
+=== RUN   TestSitesApplyTaskTimeoutRetainsJournal
+--- PASS: TestSitesApplyTaskTimeoutRetainsJournal (0.02s)
+=== RUN   TestSiteSingularTaskCompletion
+=== RUN   TestSiteSingularTaskCompletion/area-create/Accepted/complete
+=== RUN   TestSiteSingularTaskCompletion/area-create/Accepted/pending-child
+=== RUN   TestSiteSingularTaskCompletion/area-create/Accepted/failed-child
+=== RUN   TestSiteSingularTaskCompletion/area-create/Accepted/foreign-child
+=== RUN   TestSiteSingularTaskCompletion/area-create/Accepted/unavailable
+=== RUN   TestSiteSingularTaskCompletion/area-create/Accepted/partial
+=== RUN   TestSiteSingularTaskCompletion/area-create/Accepted/missing-root
+=== RUN   TestSiteSingularTaskCompletion/area-create/Unknown/complete
+=== RUN   TestSiteSingularTaskCompletion/area-create/Unknown/pending-child
+=== RUN   TestSiteSingularTaskCompletion/area-create/Unknown/failed-child
+=== RUN   TestSiteSingularTaskCompletion/area-create/Unknown/foreign-child
+=== RUN   TestSiteSingularTaskCompletion/area-create/Unknown/unavailable
+=== RUN   TestSiteSingularTaskCompletion/area-create/Unknown/partial
+=== RUN   TestSiteSingularTaskCompletion/area-create/Unknown/missing-root
+=== RUN   TestSiteSingularTaskCompletion/building-create/Accepted/complete
+=== RUN   TestSiteSingularTaskCompletion/building-create/Accepted/pending-child
+=== RUN   TestSiteSingularTaskCompletion/building-create/Accepted/failed-child
+=== RUN   TestSiteSingularTaskCompletion/building-create/Accepted/foreign-child
+=== RUN   TestSiteSingularTaskCompletion/building-create/Accepted/unavailable
+=== RUN   TestSiteSingularTaskCompletion/building-create/Accepted/partial
+=== RUN   TestSiteSingularTaskCompletion/building-create/Accepted/missing-root
+=== RUN   TestSiteSingularTaskCompletion/building-create/Unknown/complete
+=== RUN   TestSiteSingularTaskCompletion/building-create/Unknown/pending-child
+=== RUN   TestSiteSingularTaskCompletion/building-create/Unknown/failed-child
+=== RUN   TestSiteSingularTaskCompletion/building-create/Unknown/foreign-child
+=== RUN   TestSiteSingularTaskCompletion/building-create/Unknown/unavailable
+=== RUN   TestSiteSingularTaskCompletion/building-create/Unknown/partial
+=== RUN   TestSiteSingularTaskCompletion/building-create/Unknown/missing-root
+=== RUN   TestSiteSingularTaskCompletion/floor-create/Accepted/complete
+=== RUN   TestSiteSingularTaskCompletion/floor-create/Accepted/pending-child
+=== RUN   TestSiteSingularTaskCompletion/floor-create/Accepted/failed-child
+=== RUN   TestSiteSingularTaskCompletion/floor-create/Accepted/foreign-child
+=== RUN   TestSiteSingularTaskCompletion/floor-create/Accepted/unavailable
+=== RUN   TestSiteSingularTaskCompletion/floor-create/Accepted/partial
+=== RUN   TestSiteSingularTaskCompletion/floor-create/Accepted/missing-root
+=== RUN   TestSiteSingularTaskCompletion/floor-create/Unknown/complete
+=== RUN   TestSiteSingularTaskCompletion/floor-create/Unknown/pending-child
+=== RUN   TestSiteSingularTaskCompletion/floor-create/Unknown/failed-child
+=== RUN   TestSiteSingularTaskCompletion/floor-create/Unknown/foreign-child
+=== RUN   TestSiteSingularTaskCompletion/floor-create/Unknown/unavailable
+=== RUN   TestSiteSingularTaskCompletion/floor-create/Unknown/partial
+=== RUN   TestSiteSingularTaskCompletion/floor-create/Unknown/missing-root
+=== RUN   TestSiteSingularTaskCompletion/building-update/Accepted/complete
+=== RUN   TestSiteSingularTaskCompletion/building-update/Accepted/pending-child
+=== RUN   TestSiteSingularTaskCompletion/building-update/Accepted/failed-child
+=== RUN   TestSiteSingularTaskCompletion/building-update/Accepted/foreign-child
+=== RUN   TestSiteSingularTaskCompletion/building-update/Accepted/unavailable
+=== RUN   TestSiteSingularTaskCompletion/building-update/Accepted/partial
+=== RUN   TestSiteSingularTaskCompletion/building-update/Accepted/missing-root
+=== RUN   TestSiteSingularTaskCompletion/building-update/Unknown/complete
+=== RUN   TestSiteSingularTaskCompletion/building-update/Unknown/pending-child
+=== RUN   TestSiteSingularTaskCompletion/building-update/Unknown/failed-child
+=== RUN   TestSiteSingularTaskCompletion/building-update/Unknown/foreign-child
+=== RUN   TestSiteSingularTaskCompletion/building-update/Unknown/unavailable
+=== RUN   TestSiteSingularTaskCompletion/building-update/Unknown/partial
+=== RUN   TestSiteSingularTaskCompletion/building-update/Unknown/missing-root
+=== RUN   TestSiteSingularTaskCompletion/floor-update/Accepted/complete
+=== RUN   TestSiteSingularTaskCompletion/floor-update/Accepted/pending-child
+=== RUN   TestSiteSingularTaskCompletion/floor-update/Accepted/failed-child
+=== RUN   TestSiteSingularTaskCompletion/floor-update/Accepted/foreign-child
+=== RUN   TestSiteSingularTaskCompletion/floor-update/Accepted/unavailable
+=== RUN   TestSiteSingularTaskCompletion/floor-update/Accepted/partial
+=== RUN   TestSiteSingularTaskCompletion/floor-update/Accepted/missing-root
+=== RUN   TestSiteSingularTaskCompletion/floor-update/Unknown/complete
+=== RUN   TestSiteSingularTaskCompletion/floor-update/Unknown/pending-child
+=== RUN   TestSiteSingularTaskCompletion/floor-update/Unknown/failed-child
+=== RUN   TestSiteSingularTaskCompletion/floor-update/Unknown/foreign-child
+=== RUN   TestSiteSingularTaskCompletion/floor-update/Unknown/unavailable
+=== RUN   TestSiteSingularTaskCompletion/floor-update/Unknown/partial
+=== RUN   TestSiteSingularTaskCompletion/floor-update/Unknown/missing-root
+--- PASS: TestSiteSingularTaskCompletion (0.68s)
+    --- PASS: TestSiteSingularTaskCompletion/area-create/Accepted/complete (0.01s)
+    --- PASS: TestSiteSingularTaskCompletion/area-create/Accepted/pending-child (0.01s)
+    --- PASS: TestSiteSingularTaskCompletion/area-create/Accepted/failed-child (0.01s)
+    --- PASS: TestSiteSingularTaskCompletion/area-create/Accepted/foreign-child (0.01s)
+    --- PASS: TestSiteSingularTaskCompletion/area-create/Accepted/unavailable (0.01s)
+    --- PASS: TestSiteSingularTaskCompletion/area-create/Accepted/partial (0.01s)
+    --- PASS: TestSiteSingularTaskCompletion/area-create/Accepted/missing-root (0.01s)
+    --- PASS: TestSiteSingularTaskCompletion/area-create/Unknown/complete (0.01s)
+    --- PASS: TestSiteSingularTaskCompletion/area-create/Unknown/pending-child (0.01s)
+    --- PASS: TestSiteSingularTaskCompletion/area-create/Unknown/failed-child (0.01s)
+    --- PASS: TestSiteSingularTaskCompletion/area-create/Unknown/foreign-child (0.01s)
+    --- PASS: TestSiteSingularTaskCompletion/area-create/Unknown/unavailable (0.01s)
+    --- PASS: TestSiteSingularTaskCompletion/area-create/Unknown/partial (0.01s)
+    --- PASS: TestSiteSingularTaskCompletion/area-create/Unknown/missing-root (0.01s)
+    --- PASS: TestSiteSingularTaskCompletion/building-create/Accepted/complete (0.01s)
+    --- PASS: TestSiteSingularTaskCompletion/building-create/Accepted/pending-child (0.01s)
+    --- PASS: TestSiteSingularTaskCompletion/building-create/Accepted/failed-child (0.01s)
+    --- PASS: TestSiteSingularTaskCompletion/building-create/Accepted/foreign-child (0.01s)
+    --- PASS: TestSiteSingularTaskCompletion/building-create/Accepted/unavailable (0.01s)
+    --- PASS: TestSiteSingularTaskCompletion/building-create/Accepted/partial (0.01s)
+    --- PASS: TestSiteSingularTaskCompletion/building-create/Accepted/missing-root (0.01s)
+    --- PASS: TestSiteSingularTaskCompletion/building-create/Unknown/complete (0.01s)
+    --- PASS: TestSiteSingularTaskCompletion/building-create/Unknown/pending-child (0.01s)
+    --- PASS: TestSiteSingularTaskCompletion/building-create/Unknown/failed-child (0.01s)
+    --- PASS: TestSiteSingularTaskCompletion/building-create/Unknown/foreign-child (0.01s)
+    --- PASS: TestSiteSingularTaskCompletion/building-create/Unknown/unavailable (0.01s)
+    --- PASS: TestSiteSingularTaskCompletion/building-create/Unknown/partial (0.01s)
+    --- PASS: TestSiteSingularTaskCompletion/building-create/Unknown/missing-root (0.01s)
+    --- PASS: TestSiteSingularTaskCompletion/floor-create/Accepted/complete (0.01s)
+    --- PASS: TestSiteSingularTaskCompletion/floor-create/Accepted/pending-child (0.01s)
+    --- PASS: TestSiteSingularTaskCompletion/floor-create/Accepted/failed-child (0.01s)
+    --- PASS: TestSiteSingularTaskCompletion/floor-create/Accepted/foreign-child (0.01s)
+    --- PASS: TestSiteSingularTaskCompletion/floor-create/Accepted/unavailable (0.01s)
+    --- PASS: TestSiteSingularTaskCompletion/floor-create/Accepted/partial (0.01s)
+    --- PASS: TestSiteSingularTaskCompletion/floor-create/Accepted/missing-root (0.01s)
+    --- PASS: TestSiteSingularTaskCompletion/floor-create/Unknown/complete (0.01s)
+    --- PASS: TestSiteSingularTaskCompletion/floor-create/Unknown/pending-child (0.01s)
+    --- PASS: TestSiteSingularTaskCompletion/floor-create/Unknown/failed-child (0.01s)
+    --- PASS: TestSiteSingularTaskCompletion/floor-create/Unknown/foreign-child (0.01s)
+    --- PASS: TestSiteSingularTaskCompletion/floor-create/Unknown/unavailable (0.01s)
+    --- PASS: TestSiteSingularTaskCompletion/floor-create/Unknown/partial (0.01s)
+    --- PASS: TestSiteSingularTaskCompletion/floor-create/Unknown/missing-root (0.01s)
+    --- PASS: TestSiteSingularTaskCompletion/building-update/Accepted/complete (0.01s)
+    --- PASS: TestSiteSingularTaskCompletion/building-update/Accepted/pending-child (0.01s)
+    --- PASS: TestSiteSingularTaskCompletion/building-update/Accepted/failed-child (0.01s)
+    --- PASS: TestSiteSingularTaskCompletion/building-update/Accepted/foreign-child (0.01s)
+    --- PASS: TestSiteSingularTaskCompletion/building-update/Accepted/unavailable (0.01s)
+    --- PASS: TestSiteSingularTaskCompletion/building-update/Accepted/partial (0.01s)
+    --- PASS: TestSiteSingularTaskCompletion/building-update/Accepted/missing-root (0.01s)
+    --- PASS: TestSiteSingularTaskCompletion/building-update/Unknown/complete (0.01s)
+    --- PASS: TestSiteSingularTaskCompletion/building-update/Unknown/pending-child (0.01s)
+    --- PASS: TestSiteSingularTaskCompletion/building-update/Unknown/failed-child (0.01s)
+    --- PASS: TestSiteSingularTaskCompletion/building-update/Unknown/foreign-child (0.01s)
+    --- PASS: TestSiteSingularTaskCompletion/building-update/Unknown/unavailable (0.01s)
+    --- PASS: TestSiteSingularTaskCompletion/building-update/Unknown/partial (0.01s)
+    --- PASS: TestSiteSingularTaskCompletion/building-update/Unknown/missing-root (0.01s)
+    --- PASS: TestSiteSingularTaskCompletion/floor-update/Accepted/complete (0.01s)
+    --- PASS: TestSiteSingularTaskCompletion/floor-update/Accepted/pending-child (0.01s)
+    --- PASS: TestSiteSingularTaskCompletion/floor-update/Accepted/failed-child (0.01s)
+    --- PASS: TestSiteSingularTaskCompletion/floor-update/Accepted/foreign-child (0.01s)
+    --- PASS: TestSiteSingularTaskCompletion/floor-update/Accepted/unavailable (0.01s)
+    --- PASS: TestSiteSingularTaskCompletion/floor-update/Accepted/partial (0.01s)
+    --- PASS: TestSiteSingularTaskCompletion/floor-update/Accepted/missing-root (0.01s)
+    --- PASS: TestSiteSingularTaskCompletion/floor-update/Unknown/complete (0.01s)
+    --- PASS: TestSiteSingularTaskCompletion/floor-update/Unknown/pending-child (0.01s)
+    --- PASS: TestSiteSingularTaskCompletion/floor-update/Unknown/failed-child (0.01s)
+    --- PASS: TestSiteSingularTaskCompletion/floor-update/Unknown/foreign-child (0.01s)
+    --- PASS: TestSiteSingularTaskCompletion/floor-update/Unknown/unavailable (0.01s)
+    --- PASS: TestSiteSingularTaskCompletion/floor-update/Unknown/partial (0.01s)
+    --- PASS: TestSiteSingularTaskCompletion/floor-update/Unknown/missing-root (0.01s)
+=== RUN   TestSiteKnownTaskRecoveryScope
+=== RUN   TestSiteKnownTaskRecoveryScope/create
+=== RUN   TestSiteKnownTaskRecoveryScope/update
+=== RUN   TestSiteKnownTaskRecoveryScope/taskless
+=== RUN   TestSiteKnownTaskRecoveryScope/undeclared
+=== RUN   TestSiteKnownTaskRecoveryScope/bulk
+=== RUN   TestSiteKnownTaskRecoveryScope/root
+=== RUN   TestSiteKnownTaskRecoveryScope/delete
+=== RUN   TestSiteKnownTaskRecoveryScope/prepared
+=== RUN   TestSiteKnownTaskRecoveryScope/parentless
+=== RUN   TestSiteKnownTaskRecoveryScope/physical
+=== RUN   TestSiteKnownTaskRecoveryScope/created-id
+=== RUN   TestSiteKnownTaskRecoveryScope/credentials
+=== RUN   TestSiteKnownTaskRecoveryScope/foreign-section
+=== RUN   TestSiteKnownTaskRecoveryScope/bad-id
+=== RUN   TestSiteKnownTaskRecoveryScope/missing-config
+=== RUN   TestSiteKnownTaskRecoveryScope/missing-time
+=== RUN   TestSiteKnownTaskRecoveryScope/accepted
+--- PASS: TestSiteKnownTaskRecoveryScope (0.00s)
+    --- PASS: TestSiteKnownTaskRecoveryScope/create (0.00s)
+    --- PASS: TestSiteKnownTaskRecoveryScope/update (0.00s)
+    --- PASS: TestSiteKnownTaskRecoveryScope/taskless (0.00s)
+    --- PASS: TestSiteKnownTaskRecoveryScope/undeclared (0.00s)
+    --- PASS: TestSiteKnownTaskRecoveryScope/bulk (0.00s)
+    --- PASS: TestSiteKnownTaskRecoveryScope/root (0.00s)
+    --- PASS: TestSiteKnownTaskRecoveryScope/delete (0.00s)
+    --- PASS: TestSiteKnownTaskRecoveryScope/prepared (0.00s)
+    --- PASS: TestSiteKnownTaskRecoveryScope/parentless (0.00s)
+    --- PASS: TestSiteKnownTaskRecoveryScope/physical (0.00s)
+    --- PASS: TestSiteKnownTaskRecoveryScope/created-id (0.00s)
+    --- PASS: TestSiteKnownTaskRecoveryScope/credentials (0.00s)
+    --- PASS: TestSiteKnownTaskRecoveryScope/foreign-section (0.00s)
+    --- PASS: TestSiteKnownTaskRecoveryScope/bad-id (0.00s)
+    --- PASS: TestSiteKnownTaskRecoveryScope/missing-config (0.00s)
+    --- PASS: TestSiteKnownTaskRecoveryScope/missing-time (0.00s)
+    --- PASS: TestSiteKnownTaskRecoveryScope/accepted (0.00s)
+=== RUN   TestSitesObservationRequiresCompleteHierarchy
+=== RUN   TestSitesObservationRequiresCompleteHierarchy/valid
+=== RUN   TestSitesObservationRequiresCompleteHierarchy/partial
+=== RUN   TestSitesObservationRequiresCompleteHierarchy/missing-root
+=== RUN   TestSitesObservationRequiresCompleteHierarchy/missing-parent
+=== RUN   TestSitesObservationRequiresCompleteHierarchy/duplicate
+=== RUN   TestSitesObservationRequiresCompleteHierarchy/wrong-parent
+=== RUN   TestSitesObservationRequiresCompleteHierarchy/invalid-type
+=== RUN   TestSitesObservationRequiresCompleteHierarchy/missing-response
+--- PASS: TestSitesObservationRequiresCompleteHierarchy (0.08s)
+    --- PASS: TestSitesObservationRequiresCompleteHierarchy/valid (0.01s)
+    --- PASS: TestSitesObservationRequiresCompleteHierarchy/partial (0.01s)
+    --- PASS: TestSitesObservationRequiresCompleteHierarchy/missing-root (0.01s)
+    --- PASS: TestSitesObservationRequiresCompleteHierarchy/missing-parent (0.01s)
+    --- PASS: TestSitesObservationRequiresCompleteHierarchy/duplicate (0.01s)
+    --- PASS: TestSitesObservationRequiresCompleteHierarchy/wrong-parent (0.01s)
+    --- PASS: TestSitesObservationRequiresCompleteHierarchy/invalid-type (0.01s)
+    --- PASS: TestSitesObservationRequiresCompleteHierarchy/missing-response (0.01s)
+=== RUN   TestSitesPlanPreservesUnmanagedAndNormalizesNumbers
+--- PASS: TestSitesPlanPreservesUnmanagedAndNormalizesNumbers (0.00s)
+=== RUN   TestSitesRejectUnsupportedOrUnresolvedIntent
+--- PASS: TestSitesRejectUnsupportedOrUnresolvedIntent (0.00s)
+=== RUN   TestSitesPlanRejectsParentAndTypeConflicts
+--- PASS: TestSitesPlanRejectsParentAndTypeConflicts (0.00s)
+=== RUN   TestSitesFloorUnitsAndMissingObservations
+--- PASS: TestSitesFloorUnitsAndMissingObservations (0.00s)
+=== RUN   TestSWIMExecutionRequiresVerificationBeforeRelease
+--- PASS: TestSWIMExecutionRequiresVerificationBeforeRelease (0.00s)
+=== RUN   TestSWIMLostTaskReceiptNeverReplaysAfterRestart
+--- PASS: TestSWIMLostTaskReceiptNeverReplaysAfterRestart (0.00s)
+=== RUN   TestSWIMRecordedTaskSurvivesObservationOutageAndRestart
+=== RUN   TestSWIMRecordedTaskSurvivesObservationOutageAndRestart/Distributing
+=== RUN   TestSWIMRecordedTaskSurvivesObservationOutageAndRestart/Activating
+--- PASS: TestSWIMRecordedTaskSurvivesObservationOutageAndRestart (0.00s)
+    --- PASS: TestSWIMRecordedTaskSurvivesObservationOutageAndRestart/Distributing (0.00s)
+    --- PASS: TestSWIMRecordedTaskSurvivesObservationOutageAndRestart/Activating (0.00s)
+=== RUN   TestSWIMLostSubmissionResponseDoesNotFallback
+--- PASS: TestSWIMLostSubmissionResponseDoesNotFallback (0.00s)
+=== RUN   TestSWIMAdmissionAndPersistenceFailuresPreventPOST
+=== RUN   TestSWIMAdmissionAndPersistenceFailuresPreventPOST/claim_denied
+=== RUN   TestSWIMAdmissionAndPersistenceFailuresPreventPOST/claim_not_persisted
+=== RUN   TestSWIMAdmissionAndPersistenceFailuresPreventPOST/admission_revoked
+--- PASS: TestSWIMAdmissionAndPersistenceFailuresPreventPOST (0.00s)
+    --- PASS: TestSWIMAdmissionAndPersistenceFailuresPreventPOST/claim_denied (0.00s)
+    --- PASS: TestSWIMAdmissionAndPersistenceFailuresPreventPOST/claim_not_persisted (0.00s)
+    --- PASS: TestSWIMAdmissionAndPersistenceFailuresPreventPOST/admission_revoked (0.00s)
+=== RUN   TestSWIMTaskDisappearanceOrFailureRetainsFence
+=== RUN   TestSWIMTaskDisappearanceOrFailureRetainsFence/missing
+=== RUN   TestSWIMTaskDisappearanceOrFailureRetainsFence/failed
+--- PASS: TestSWIMTaskDisappearanceOrFailureRetainsFence (0.00s)
+    --- PASS: TestSWIMTaskDisappearanceOrFailureRetainsFence/missing (0.00s)
+    --- PASS: TestSWIMTaskDisappearanceOrFailureRetainsFence/failed (0.00s)
+=== RUN   TestSWIMExecutionIdentityCannotChange
+--- PASS: TestSWIMExecutionIdentityCannotChange (0.00s)
+=== RUN   TestSWIMActivationReceiptLossCannotRebootTwice
+--- PASS: TestSWIMActivationReceiptLossCannotRebootTwice (0.00s)
+=== RUN   TestSWIMIncompleteRecordCannotAdvanceOrRelease
+=== RUN   TestSWIMIncompleteRecordCannotAdvanceOrRelease/Distributed
+=== RUN   TestSWIMIncompleteRecordCannotAdvanceOrRelease/Verifying
+=== RUN   TestSWIMIncompleteRecordCannotAdvanceOrRelease/Succeeded
+--- PASS: TestSWIMIncompleteRecordCannotAdvanceOrRelease (0.00s)
+    --- PASS: TestSWIMIncompleteRecordCannotAdvanceOrRelease/Distributed (0.00s)
+    --- PASS: TestSWIMIncompleteRecordCannotAdvanceOrRelease/Verifying (0.00s)
+    --- PASS: TestSWIMIncompleteRecordCannotAdvanceOrRelease/Succeeded (0.00s)
+=== RUN   TestAutomaticPreparationGatesBothSWIMStages
+--- PASS: TestAutomaticPreparationGatesBothSWIMStages (0.00s)
+=== RUN   TestModernSWIMWireContract
+--- PASS: TestModernSWIMWireContract (0.01s)
+=== RUN   TestModernSWIMRechecksBeforeActivationAndVerifies
+--- PASS: TestModernSWIMRechecksBeforeActivationAndVerifies (0.00s)
+=== RUN   TestModernSWIMDoesNotTrustParentTaskOrPartialReadiness
+--- PASS: TestModernSWIMDoesNotTrustParentTaskOrPartialReadiness (0.00s)
+=== RUN   TestModernSWIMReadinessReceiptLossNeverReplays
+=== RUN   TestModernSWIMReadinessReceiptLossNeverReplays/response
+=== RUN   TestModernSWIMReadinessReceiptLossNeverReplays/persistence
+--- PASS: TestModernSWIMReadinessReceiptLossNeverReplays (0.00s)
+    --- PASS: TestModernSWIMReadinessReceiptLossNeverReplays/response (0.00s)
+    --- PASS: TestModernSWIMReadinessReceiptLossNeverReplays/persistence (0.00s)
+=== RUN   TestModernSWIMReadinessReplacementBoundedAndJournaled
+--- PASS: TestModernSWIMReadinessReplacementBoundedAndJournaled (0.00s)
+=== RUN   TestModernSWIMReadinessReplacementRetainsUncertainMarker
+=== RUN   TestModernSWIMReadinessReplacementRetainsUncertainMarker/response
+=== RUN   TestModernSWIMReadinessReplacementRetainsUncertainMarker/persistence
+=== RUN   TestModernSWIMReadinessReplacementRetainsUncertainMarker/revoked
+--- PASS: TestModernSWIMReadinessReplacementRetainsUncertainMarker (0.00s)
+    --- PASS: TestModernSWIMReadinessReplacementRetainsUncertainMarker/response (0.00s)
+    --- PASS: TestModernSWIMReadinessReplacementRetainsUncertainMarker/persistence (0.00s)
+    --- PASS: TestModernSWIMReadinessReplacementRetainsUncertainMarker/revoked (0.00s)
+=== RUN   TestModernSWIMReadinessReplacementCooldownAndTaskReuse
+--- PASS: TestModernSWIMReadinessReplacementCooldownAndTaskReuse (0.00s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	76.557s

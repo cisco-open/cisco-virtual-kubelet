@@ -1,0 +1,45 @@
+{
+  "scope": "Staged area retirement/recreation through controlled native HTTP and temporary Kubernetes API; no native lab mutation or installed rollout",
+  "gates": {
+    "regression": {
+      "families": 62,
+      "subcases": 861,
+      "seconds": 80.594,
+      "exit_code": 0,
+      "log_sha256": "3f3e6ff2a9c322f54b47bb211213958c52c6a4bc0000ec5181d5c98acdd3cfdf"
+    },
+    "api": {
+      "families": 7,
+      "subcases": 97,
+      "seconds": 68.283,
+      "exit_code": 0,
+      "log_sha256": "6e304319edd8d555f2121d8d6dcb093e5e03df03998fe1d2017c8b38ea239fbc"
+    }
+  },
+  "source_sha256": {
+    "internal/controlleradapter/catalystcenter/site_recreation_execution.go": "b3e5cfe0efd67eb86e408b6eb5c718cf0cf7dd30ce7d6d8f34cba67f2dbcbd20",
+    "internal/controlleradapter/catalystcenter/site_recreation_execution_test.go": "2ea650799923d3d96cd49c78ad35049c0df25d98fb89353d149c229767976a5b",
+    "internal/controlleradapter/catalystcenter/site_recreation_execution_envtest_test.go": "8e13d5b48b595935332431ecb4051c61d6cd6c8de31ee6d3b84d494511a3251c",
+    "internal/controlleradapter/catalystcenter/site_retirement_dispatch_test.go": "824ae4ad55b8ab838886a1e796abdfe939d22ad47b9c0e584b586b47ae320e03",
+    "internal/controlleradapter/catalystcenter/site_retirement_binding_test.go": "eb026639d3c694c30a21db81ca9299647396fc79d688b63bda6fad481d5a2d11",
+    "internal/controlleradapter/catalystcenter/site_creation_publication.go": "a25b46022fc8f2681b518cc1777c5e32563b51350ec853e2103279805fa782d2",
+    "internal/controlleradapter/catalystcenter/site_ownership.go": "ae5efdf035b4607942506f8ff233f8dd497d2beb9537392fe042370e169ba898",
+    "internal/controlleradapter/catalystcenter/site_recreation.go": "b64faf3a4b906731081a3d69f87e9071861ac67e27e9391f8f04d6a0ac5301f2",
+    "internal/controlleradapter/catalystcenter/site_dispatch.go": "6401ae33399c9e968dc6b0a4ccd7324805b7450c16c1dd4fba2e8d9caf12ce00",
+    "internal/controlleradapter/catalystcenter/site_task_recovery.go": "f550e1f025d9864928f562e51d937705655a9ca58de8c8c9d55fb443c1eda9c1"
+  },
+  "pinned_resource_rows": 93,
+  "new_cases": {
+    "local": 32,
+    "temporary_api": 8
+  },
+  "remaining": [
+    "public compiler/policy routing",
+    "complete operational/settings consumer protection",
+    "parent/child retirement coordination",
+    "configuration deletion",
+    "building/floor lifecycle qualification",
+    "archived-ancestor lifecycle qualification",
+    "native installed complete-cycle qualification"
+  ]
+}

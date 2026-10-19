@@ -1,0 +1,12 @@
+=== RUN   TestLiveCatalystCenterSiteBulkManifest
+    site_execution_live_test.go:61: isolated qualification hierarchy: Global/CVK-Q-20261014-145002-000000000
+    site_execution_live_test.go:193: public manifest reached InSync across simulated worker restarts; bulk journal cleared and owner retained
+    site_execution_live_test.go:205: bulk create task=01a13ae4-50b5-7d43-997a-1aa602ac3dd6
+    site_execution_live_test.go:231: single native batch created all three site identities; retained member/anchor binding and task tree verified
+    site_execution_live_test.go:261: submitted task=01a13ae4-6ca0-7eee-8687-b5c620273db2 at=2026-10-14T14:50:10.867604Z
+    site_execution_live_test.go:279: verified Update floor
+    site_execution_live_test.go:288: three creates, one floor update, and full hierarchy read-back verified
+    site_execution_live_test.go:172: isolated hierarchy cleanup verified
+--- PASS: TestLiveCatalystCenterSiteBulkManifest (14.11s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	14.981s

@@ -1,0 +1,13 @@
+{
+  "preparedIntentMode": "report",
+  "observedPhase": "Failed",
+  "reason": "UnsupportedConfiguration",
+  "projectionPresent": true,
+  "privateReferenceCount": 1,
+  "mount": {
+    "path": "/var/run/secrets/cisco-vk/controller-intent",
+    "readOnly": true
+  },
+  "nativeMutationSubmitted": false,
+  "boundary": "The attempted pre-Apply Report probe was refused by the existing private-site contract. It does not qualify private ownership. Retained intent has not been switched to Apply."
+}

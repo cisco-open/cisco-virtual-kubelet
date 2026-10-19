@@ -1,0 +1,5 @@
+{
+  "case": "unknown-site-shape",
+  "result": "refused before Kubernetes client construction or native access",
+  "expectedExit": 1
+}

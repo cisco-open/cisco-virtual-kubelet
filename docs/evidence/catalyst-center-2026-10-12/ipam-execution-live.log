@@ -1,0 +1,19 @@
+=== RUN   TestLiveCatalystCenterIPAMExecution
+    site_execution_live_test.go:39: isolated qualification hierarchy: Global/CVK-Q-20261012-124207-000000000
+    site_execution_live_test.go:178: submitted task=01a13023-a5ab-7985-b055-feedd8d2db7c at=2026-10-12T12:42:09.644795811Z
+    site_execution_live_test.go:196: verified Create area
+    site_execution_live_test.go:178: submitted task=01a13023-aa88-7a8b-8772-f9cac4ea3726 at=2026-10-12T12:42:10.907851178Z
+    site_execution_live_test.go:196: verified Create building
+    site_execution_live_test.go:178: submitted task=01a13023-afe5-70c0-9cb9-da655b6255cc at=2026-10-12T12:42:12.215656031Z
+    site_execution_live_test.go:196: verified Create floor
+    site_execution_live_test.go:178: submitted task=01a13023-b582-7058-997a-b63e4dcdecd3 at=2026-10-12T12:42:13.635157133Z
+    site_execution_live_test.go:196: verified Update floor
+    site_execution_live_test.go:205: three creates, one floor update, and full hierarchy read-back verified
+    site_execution_live_test.go:207: submitted ip-pool:CVK-Q-20261012-124207-000000000-pool task=01a13023-bba0-71d1-8e7e-5db30a048949
+    site_execution_live_test.go:207: submitted ip-reservation:Global/CVK-Q-20261012-124207-000000000#CVK-Q-20261012-124207-000000000-subnet task=01a13023-c428-72de-a20d-44865c4e0063
+    site_execution_live_test.go:207: global IPv4 pool and site reservation created and read-back verified
+    ipam_execution_live_test.go:163: verified fixture removal /dna/intent/api/v1/ipam/siteIpAddressPools 1fe01755-bd85-4e71-a7c9-3f8332004936
+    ipam_execution_live_test.go:163: verified fixture removal /dna/intent/api/v1/ipam/globalIpAddressPools b1eff67d-689b-449f-a31c-0ad0b18e7c6d
+    site_execution_live_test.go:150: isolated hierarchy cleanup verified
+--- PASS: TestLiveCatalystCenterIPAMExecution (17.40s)
+PASS

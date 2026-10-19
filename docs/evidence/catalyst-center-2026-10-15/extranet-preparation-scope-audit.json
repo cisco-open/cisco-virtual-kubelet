@@ -1,0 +1,7 @@
+{
+  "upstream_resource_types": 93,
+  "ledger_resource_types": 93,
+  "missing_from_ledger": [],
+  "unexpected_in_ledger": [],
+  "meaning": "scope inventory only; does not imply apply support or qualification"
+}

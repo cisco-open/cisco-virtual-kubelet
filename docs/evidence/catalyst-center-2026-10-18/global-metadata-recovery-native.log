@@ -1,0 +1,10 @@
+=== RUN   TestLiveGlobalCredentialMetadataKnownTaskRecovery
+    global_credential_metadata_live_test.go:85: private metadata recovery checkpoint /private/tmp/cvk-metadata-task-recovery-3358106782
+    global_credential_metadata_live_test.go:85: original metadata task retained as Unknown 01a14bf4-f4e6-732b-9be0-e4522be5270f
+    global_credential_metadata_live_test.go:85: NOAUTHNOPRIV public manifest phase verified step 0 target 00e22613-0e55-48af-a9b9-8a9662e63639 task 01a14bf4-f4e6-732b-9be0-e4522be5270f
+    global_credential_metadata_live_test.go:85: original metadata task retained as Unknown 01a14bf5-09de-72e0-828c-013f3e8a129c
+    global_credential_metadata_live_test.go:85: NOAUTHNOPRIV public manifest phase verified step 1 target 00e22613-0e55-48af-a9b9-8a9662e63639 task 01a14bf5-09de-72e0-828c-013f3e8a129c
+    global_credential_metadata_live_test.go:242: isolated SNMP credential removed; complete non-secret baseline restored target 00e22613-0e55-48af-a9b9-8a9662e63639 cleanupTask 01a14bf5-1e04-7315-b3cb-690c12f5981c
+--- PASS: TestLiveGlobalCredentialMetadataKnownTaskRecovery (13.16s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	15.579s

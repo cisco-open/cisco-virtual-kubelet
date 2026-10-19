@@ -1,0 +1,7 @@
+# ./internal/controlleradapter/nd
+stat /Users/johalley/Git/cisco-virtual-kubelet/internal/controlleradapter/nd: directory not found
+FAIL	./internal/controlleradapter/nd [setup failed]
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter	2.660s
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/provider/softwareupgrade	(cached)
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/provider/maintenance	(cached)
+FAIL

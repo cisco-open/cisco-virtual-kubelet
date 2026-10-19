@@ -1,0 +1,40 @@
+=== RUN   TestEnvtestPrivateSiteDesignComposition
+=== RUN   TestEnvtestPrivateSiteDesignComposition/normal-private
+=== RUN   TestEnvtestPrivateSiteDesignComposition/optional-private
+=== RUN   TestEnvtestPrivateSiteDesignComposition/image-private
+=== RUN   TestEnvtestPrivateSiteDesignComposition/recover-private
+=== RUN   TestEnvtestPrivateSiteDesignComposition/image-recover-private
+=== RUN   TestEnvtestPrivateSiteDesignComposition/ambiguous-private
+=== RUN   TestEnvtestPrivateSiteDesignComposition/image-ambiguous-private
+=== RUN   TestEnvtestPrivateSiteDesignComposition/image-refuse-private
+=== RUN   TestEnvtestPrivateSiteDesignComposition/recover-refuse-private
+--- PASS: TestEnvtestPrivateSiteDesignComposition (19.09s)
+    --- PASS: TestEnvtestPrivateSiteDesignComposition/normal-private (3.75s)
+    --- PASS: TestEnvtestPrivateSiteDesignComposition/optional-private (1.09s)
+    --- PASS: TestEnvtestPrivateSiteDesignComposition/image-private (2.15s)
+    --- PASS: TestEnvtestPrivateSiteDesignComposition/recover-private (1.13s)
+    --- PASS: TestEnvtestPrivateSiteDesignComposition/image-recover-private (2.11s)
+    --- PASS: TestEnvtestPrivateSiteDesignComposition/ambiguous-private (0.88s)
+    --- PASS: TestEnvtestPrivateSiteDesignComposition/image-ambiguous-private (0.96s)
+    --- PASS: TestEnvtestPrivateSiteDesignComposition/image-refuse-private (2.20s)
+    --- PASS: TestEnvtestPrivateSiteDesignComposition/recover-refuse-private (1.23s)
+=== RUN   TestEnvtestPlannedAPObservedIdentity
+=== RUN   TestEnvtestPlannedAPObservedIdentity/identity-replaced
+=== RUN   TestEnvtestPlannedAPObservedIdentity/identity-missing
+=== RUN   TestEnvtestPlannedAPObservedIdentity/identity-floor
+=== RUN   TestEnvtestPlannedAPObservedIdentity/identity-pruned
+=== RUN   TestEnvtestPlannedAPObservedIdentity/identity-replaced-private
+=== RUN   TestEnvtestPlannedAPObservedIdentity/identity-missing-private
+=== RUN   TestEnvtestPlannedAPObservedIdentity/identity-floor-private
+=== RUN   TestEnvtestPlannedAPObservedIdentity/identity-pruned-private
+--- PASS: TestEnvtestPlannedAPObservedIdentity (10.51s)
+    --- PASS: TestEnvtestPlannedAPObservedIdentity/identity-replaced (2.54s)
+    --- PASS: TestEnvtestPlannedAPObservedIdentity/identity-missing (0.50s)
+    --- PASS: TestEnvtestPlannedAPObservedIdentity/identity-floor (0.48s)
+    --- PASS: TestEnvtestPlannedAPObservedIdentity/identity-pruned (0.47s)
+    --- PASS: TestEnvtestPlannedAPObservedIdentity/identity-replaced-private (0.75s)
+    --- PASS: TestEnvtestPlannedAPObservedIdentity/identity-missing-private (0.74s)
+    --- PASS: TestEnvtestPlannedAPObservedIdentity/identity-floor-private (0.70s)
+    --- PASS: TestEnvtestPlannedAPObservedIdentity/identity-pruned-private (0.70s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	32.246s

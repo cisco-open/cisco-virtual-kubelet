@@ -1,0 +1,32 @@
+=== RUN   TestLiveDiscoveryRetainedSourceRecovery
+    discovery_owned_live_test.go:293: isolated discovery name and private recovery evidence CVK_DISC_bce82887f307a1e0 /private/tmp/cvk-discovery-owned-3952669930
+    discovery_owned_live_test.go:760: public manifest task/UUID receipt, JSON restart and no-op verified CVK_DISC_bce82887f307a1e0 198 01a14cf9-27f2-77c3-b75d-4c9854ccf8b7
+[controller-runtime] log.SetLogger(...) was never called; logs will not be displayed.
+Detected at:
+	>  goroutine 178 [running]:
+	>  runtime/debug.Stack()
+	>  	/Users/johalley/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.9.darwin-arm64/src/runtime/debug/stack.go:26 +0x6c
+	>  sigs.k8s.io/controller-runtime/pkg/log.eventuallyFulfillRoot()
+	>  	/Users/johalley/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.23.3/pkg/log/log.go:60 +0xc4
+	>  sigs.k8s.io/controller-runtime/pkg/log.(*delegatingLogSink).WithValues(0xc00038ad00, {0x0, 0x0, 0x0})
+	>  	/Users/johalley/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.23.3/pkg/log/deleg.go:168 +0x3c
+	>  github.com/go-logr/logr.Logger.WithValues(...)
+	>  	/Users/johalley/go/pkg/mod/github.com/go-logr/logr@v1.4.4/logr.go:332
+	>  sigs.k8s.io/controller-runtime/pkg/log.FromContext({0x106f1c1e8, 0xc0001a4000}, {0x0, 0x0, 0x0})
+	>  	/Users/johalley/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.23.3/pkg/log/log.go:98 +0xb8
+	>  github.com/cisco/virtual-kubelet-cisco/internal/controller.(*NetworkControllerReconciler).Reconcile(0xc001d0a000, {0x106f1c1e8, 0xc0001a4000}, {{{0x10444a669, 0x3}, {0x10444b088, 0x4}}})
+	>  	/Users/johalley/Git/cisco-virtual-kubelet/internal/controller/networkcontroller_controller.go:101 +0x5c
+	>  github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter.(*liveDiscoveryPublicLifecycle).finish(0xc001e108b8, 0xc000708b48, 0xc000c94840, 0xc0001a7208, {0xc00015bd32, 0x3}, {0xc000032ba0, 0x2b})
+	>  	/Users/johalley/Git/cisco-virtual-kubelet/internal/controlleradapter/catalystcenter/discovery_config_deletion_live_test.go:164 +0x14d4
+	>  github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter.qualifyLiveDiscoveryOwned(0xc000708b48, 0x0, {0x0, 0x0, 0x0?})
+	>  	/Users/johalley/Git/cisco-virtual-kubelet/internal/controlleradapter/catalystcenter/discovery_owned_live_test.go:767 +0x4f6c
+	>  github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter.TestLiveDiscoveryRetainedSourceRecovery(0xc000708b48)
+	>  	/Users/johalley/Git/cisco-virtual-kubelet/internal/controlleradapter/catalystcenter/discovery_owned_live_test.go:200 +0xc0
+	>  testing.tRunner(0xc000708b48, 0x106ebf208)
+	>  	/Users/johalley/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.9.darwin-arm64/src/testing/testing.go:2036 +0x168
+	>  created by testing.(*T).Run in goroutine 1
+	>  	/Users/johalley/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.9.darwin-arm64/src/testing/testing.go:2101 +0x7c0
+    discovery_owned_live_test.go:767: public manager enrollment, Delete-policy create, exact cleanup, injected Unknown recovery and manager-only finalizer release verified 198
+--- PASS: TestLiveDiscoveryRetainedSourceRecovery (38.14s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	40.594s

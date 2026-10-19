@@ -1,0 +1,120 @@
+{
+  "baselineDigest": "c2aa1fe47345e5965fd6640b0f9fc334d6ef46dc57563098a2e92298dcaae70b",
+  "configDeletionTimestamp": "2026-10-19T01:14:07Z",
+  "configFinalizers": [
+    "config.cisco.vk/catalyst-center-discovery-cleanup",
+    "example.com/other"
+  ],
+  "configGone": false,
+  "configStatus": {
+    "phase": "InSync",
+    "observedGeneration": 3,
+    "lastAppliedTime": "2026-10-19T01:14:07Z",
+    "lastControllerCheck": "2026-10-19T01:14:07Z",
+    "controllerAPIVersion": "v1/v2",
+    "sectionStatus": [
+      {
+        "name": "inventory",
+        "state": "InSync",
+        "resourceCount": 1
+      }
+    ],
+    "conditions": [
+      {
+        "type": "AdapterAvailable",
+        "status": "True",
+        "observedGeneration": 3,
+        "lastTransitionTime": "2026-10-19T01:14:03Z",
+        "reason": "AdapterAvailable",
+        "message": "Catalyst Center configuration adapter is available"
+      },
+      {
+        "type": "IntentValid",
+        "status": "True",
+        "observedGeneration": 3,
+        "lastTransitionTime": "2026-10-19T01:14:03Z",
+        "reason": "ApplyVerified",
+        "message": "Owned configuration attributes match authoritative controller state"
+      },
+      {
+        "type": "Ready",
+        "status": "True",
+        "observedGeneration": 3,
+        "lastTransitionTime": "2026-10-19T01:14:07Z",
+        "reason": "ApplyVerified",
+        "message": "Owned configuration attributes match authoritative controller state"
+      }
+    ]
+  },
+  "configUID": "d6f0df06-9333-4893-b50c-ee9b4d331a04",
+  "configuration": {
+    "actionApplications": [
+      {
+        "section": "inventory",
+        "resource": "tag-created:v1:7ab818fc42d19ec123693de4dd7ec01bd2b93d2e6ce2ee6055a76ea221060714:73c0871f-d4e3-4391-9aa5-dafdbd6d01b0:99afd3aef6c5e47f9ffd2deb301b306d95a3815867adb8951c68dcb09a3e499a:s:24adef14ae117ec33c299893ff376c91c0f0df35b377f0f281fed55d6b52fd4e",
+        "operation": {
+          "id": "4b9ceec18d327ef97dbc2162bd24fe28",
+          "configName": "sites",
+          "configUID": "d6f0df06-9333-4893-b50c-ee9b4d331a04",
+          "configGeneration": 2,
+          "controllerGeneration": 1,
+          "section": "inventory",
+          "resource": "tag-owned:v1:c:7ab818fc42d19ec123693de4dd7ec01bd2b93d2e6ce2ee6055a76ea221060714:99afd3aef6c5e47f9ffd2deb301b306d95a3815867adb8951c68dcb09a3e499a:i",
+          "action": "Create",
+          "phase": "Verified",
+          "submittedAt": "2026-10-19T01:14:02Z",
+          "taskID": "01a151b9-07c9-7ab9-ab55-4b80ade38c9a"
+        },
+        "verifiedAt": "2026-10-19T01:14:04Z"
+      },
+      {
+        "section": "inventory",
+        "resource": "tag-applied:v1:7ab818fc42d19ec123693de4dd7ec01bd2b93d2e6ce2ee6055a76ea221060714:73c0871f-d4e3-4391-9aa5-dafdbd6d01b0:a02479e7133eb024674a1181b818f83fac1a4c0d571be62635b7d0258116226e:s:482bd924ed7323ac01f8b171e9fe60a6802680e157ee7d9866767d0fcbd62b8b",
+        "operation": {
+          "id": "1a05dd035f6f525d31061f63745f5ce4",
+          "configName": "sites",
+          "configUID": "d6f0df06-9333-4893-b50c-ee9b4d331a04",
+          "configGeneration": 3,
+          "controllerGeneration": 1,
+          "section": "inventory",
+          "resource": "tag-owned:v1:u:7ab818fc42d19ec123693de4dd7ec01bd2b93d2e6ce2ee6055a76ea221060714:a02479e7133eb024674a1181b818f83fac1a4c0d571be62635b7d0258116226e:i",
+          "targetID": "73c0871f-d4e3-4391-9aa5-dafdbd6d01b0",
+          "action": "Update",
+          "phase": "Verified",
+          "submittedAt": "2026-10-19T01:14:05Z",
+          "taskID": "01a151b9-10de-7794-86f9-99fb1c0342dc"
+        },
+        "verifiedAt": "2026-10-19T01:14:06Z"
+      }
+    ],
+    "owners": [
+      {
+        "section": "inventory",
+        "configName": "sites",
+        "configUID": "d6f0df06-9333-4893-b50c-ee9b4d331a04"
+      }
+    ],
+    "operation": {
+      "id": "1bfe8af6afe132ea692b07878993973d",
+      "configName": "sites",
+      "configUID": "d6f0df06-9333-4893-b50c-ee9b4d331a04",
+      "configGeneration": 4,
+      "controllerGeneration": 1,
+      "section": "inventory",
+      "resource": "tag-finalize:v1:7ab818fc42d19ec123693de4dd7ec01bd2b93d2e6ce2ee6055a76ea221060714:482bd924ed7323ac01f8b171e9fe60a6802680e157ee7d9866767d0fcbd62b8b:i:b34b07c17f6bb3e1e5ab8c607b80d2e13d64ff156f61dac11da15f93d59d8afd:ea9d9a8aec338d97dc801b988cb698457da7153c9315920ecb19ae59e4778c43",
+      "targetID": "73c0871f-d4e3-4391-9aa5-dafdbd6d01b0",
+      "action": "Delete",
+      "phase": "Accepted",
+      "submittedAt": "2026-10-19T01:14:08Z",
+      "taskID": "01a151b9-29e6-7093-ac43-bca78e36a32c"
+    }
+  },
+  "controllerConditions": null,
+  "deletes": 1,
+  "generation": 4,
+  "nativeID": "73c0871f-d4e3-4391-9aa5-dafdbd6d01b0",
+  "phase": "initial-delete-accepted",
+  "posts": 1,
+  "puts": 1,
+  "tagName": "CVK-Q-Tag-Prune-1792372437826119000"
+}

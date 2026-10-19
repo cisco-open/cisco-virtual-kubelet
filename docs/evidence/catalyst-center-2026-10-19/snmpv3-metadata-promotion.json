@@ -1,0 +1,124 @@
+{
+  "scope": "same-owner global SNMPv3 metadata-to-versioned promotion",
+  "branch": "pr/johalley/catc-support",
+  "modelVersion": "0.5.0",
+  "pinnedModelCommit": "a435555fe828f03cf3311d52fe1ab6572a247916",
+  "resource": "catalystcenter_credentials_snmpv3",
+  "fullModelComplete": false,
+  "installedPromotionQualified": false,
+  "deviceAuthenticationQualified": false,
+  "kubernetesNativeComposition": "separate real temporary-API and native runs; native uses simulated Kubernetes persistence",
+  "generatedDefinition": "CVK-SNMP-Recover-52722922545193a5",
+  "removedUUID": "5495425e-bdd3-4fce-b8a6-4f83cae5e812",
+  "native": {
+    "baselineRestored": true,
+    "cleanupTask": "01a153a3-3d14-7cf8-a5a2-b9258c0676fe",
+    "credentialAuthenticatedOnDevice": false,
+    "deletes": 1,
+    "immutableOriginRetained": true,
+    "installed": false,
+    "knownTaskRecoveries": 4,
+    "metadataPromotion": true,
+    "sameUUID": true,
+    "tasks": [
+      "01a153a3-074d-7976-bad9-ecab9a8557ce",
+      "01a153a3-0fdc-78dd-90c0-333f7a5ba714",
+      "01a153a3-19b9-7891-8e93-5f68c0315790",
+      "01a153a3-2f10-7826-af62-00dee745c6bd"
+    ],
+    "writes": 4
+  },
+  "remainingGeneratedFixtures": [],
+  "productionFilesSHA256": {
+    "internal/controlleradapter/catalystcenter/global_credential_execution.go": "da2dde50c3a2477467af4ebf9715a280d0dc9dcd6ee5ff0f224d576ed13f1835",
+    "internal/controlleradapter/catalystcenter/global_credential_promotion.go": "574ae79a02ec293a49bd78213ef095239e0661e3ba299a0f2add8803dc9642c0",
+    "internal/controlleradapter/catalystcenter/global_credential_recovery.go": "8f425156ee7c19b42b835462e1d31b82eb84b4c0e1a8682f6db8d74285e57603",
+    "internal/controlleradapter/catalystcenter/config_credential_versions.go": "9eaa1a0770efef5625f7c7236188849e9dd6284b1489e84c2c78fe4414c08210"
+  },
+  "nativeCompiledPackageFingerprint": {
+    "internal/controlleradapter/catalystcenter": "c5b5b90c748bc67efe4ac577eb80591697cb7eff927312095df15ca796131945"
+  },
+  "qualificationNote": "Native source preceded additional negative-only test assertions; production code was unchanged. Later gates cover those additional tests.",
+  "remaining": [
+    "installed promotion and real manager/kubelet secret delivery for this transition",
+    "actual switch SNMP authentication",
+    "authentication/privacy downgrades and version-destination removal",
+    "credential adoption/recreation/pruning and broader lifecycle",
+    "other 93-row resource parity gaps retained in coverage table"
+  ],
+  "directPrivacyNative": {
+    "generatedDefinition": "CVK-SNMP-Recover-e2986590b179d485",
+    "removedUUID": "00a85aa7-64c4-4028-bb68-7316192e56f7",
+    "baselineRestored": true,
+    "cleanupTask": "01a153a7-c764-7b69-a072-9c53514b516a",
+    "credentialAuthenticatedOnDevice": false,
+    "deletes": 1,
+    "directPrivacyPromotion": true,
+    "immutableOriginRetained": true,
+    "installed": false,
+    "knownTaskRecoveries": 3,
+    "metadataPromotion": true,
+    "sameUUID": true,
+    "tasks": [
+      "01a153a7-a765-7b3c-b3a9-84f52ecafd4c",
+      "01a153a7-afb6-72ba-96ab-7b60492f6257",
+      "01a153a7-ba50-70d0-8d36-2ba747687a06"
+    ],
+    "writes": 3
+  },
+  "totalOriginalTaskRecoveries": 7,
+  "finalQualificationFilesSHA256": {
+    "internal/controlleradapter/catalystcenter/global_credential_promotion_test.go": "870b86534c3e1ec61e269cdc42e7d1f4e6ea15aa62b350f2dedb9bf2c6a4a2a3",
+    "internal/controlleradapter/catalystcenter/global_credential_promotion_envtest_test.go": "5e9249539f5c4eaa370cd759a43ab17507eaea394e651cbd8d814ae9326d826a",
+    "internal/controlleradapter/catalystcenter/global_credential_recovery_live_test.go": "8e7193f5f499af37c0e29cb022c74511d54401052837754d6a90900fefb5538c"
+  },
+  "gates": {
+    "regression": {
+      "exitCode": 0,
+      "passingTestEvents": 19353,
+      "passingPackages": 15,
+      "log": "/private/tmp/cvk-snmp-promotion-regression.log",
+      "sha256": "11e5a33e7d69db343386a9d3d1341905718f70dfc36cc24a7c08f84a8ab14b4e",
+      "scope": "api, all controlleradapter packages, controllerconfiguration, controller, aggregator, managedprotocol, maintenance, softwareupgrade, softwarelifecycle, cisco-vk; compiled before final extra negative assertions"
+    },
+    "focusedRace": {
+      "exitCode": 0,
+      "passingTestEvents": 104,
+      "log": "snmpv3-metadata-promotion-race.log",
+      "scope": "final public promotion lifecycle, original-task recovery, ownership and planning boundaries, fresh commit boundary checks"
+    },
+    "temporaryAPI": {
+      "exitCode": 0,
+      "passingTestEvents": 1,
+      "log": "snmpv3-metadata-promotion-api.log",
+      "scope": "final public promotion lifecycle and fresh commit refusal with actual CRD/API persistence"
+    },
+    "nativeSequential": {
+      "exitCode": 0,
+      "log": "snmpv3-metadata-promotion-native.log"
+    },
+    "nativeDirectPrivacy": {
+      "exitCode": 0,
+      "log": "snmpv3-metadata-promotion-direct-native.log"
+    },
+    "productionBuild": {
+      "exitCode": 0,
+      "binary": "/private/tmp/cvk-snmp-promotion-cisco-vk"
+    },
+    "strictDocumentation": {
+      "exitCode": 0,
+      "log": "/private/tmp/cvk-snmp-promotion-docs-final.log"
+    },
+    "coverage": {
+      "uniquePinnedResourceRows": 93,
+      "fullModelComplete": false
+    },
+    "example": {
+      "sameConfigIdentity": true,
+      "versionedSecretRefs": true,
+      "inlineCredentials": false
+    }
+  },
+  "priorGoalTurnClassification": "progress",
+  "currentGoalTurnClassification": "progress"
+}

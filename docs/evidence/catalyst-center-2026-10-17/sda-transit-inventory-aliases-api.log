@@ -1,0 +1,10 @@
+=== RUN   TestEnvtestSDATransitJournalPreparation
+=== RUN   TestEnvtestSDATransitJournalPreparation/source-bound
+=== RUN   TestEnvtestSDATransitJournalPreparation/alias-bound
+=== RUN   TestEnvtestSDATransitJournalPreparation/pruned-group
+--- PASS: TestEnvtestSDATransitJournalPreparation (19.48s)
+    --- PASS: TestEnvtestSDATransitJournalPreparation/source-bound (6.64s)
+    --- PASS: TestEnvtestSDATransitJournalPreparation/alias-bound (6.27s)
+    --- PASS: TestEnvtestSDATransitJournalPreparation/pruned-group (6.57s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	21.648s

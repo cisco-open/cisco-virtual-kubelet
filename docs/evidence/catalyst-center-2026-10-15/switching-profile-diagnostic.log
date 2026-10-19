@@ -1,0 +1,12 @@
+=== RUN   TestLiveSwitchingProfileRetainedReadOnlyDiagnostic
+    network_profile_diagnostic_live_test.go:46: retained profile membership counts 1 0
+    network_profile_diagnostic_live_test.go:52: consecutive private observations equal false selected payload equal true binding equal true
+    network_profile_diagnostic_live_test.go:52: consecutive private observations equal false selected payload equal true binding equal true
+    network_profile_diagnostic_live_test.go:52: consecutive private observations equal false selected payload equal true binding equal true
+    network_profile_diagnostic_live_test.go:52: consecutive private observations equal false selected payload equal true binding equal true
+    network_profile_diagnostic_live_test.go:52: consecutive private observations equal false selected payload equal true binding equal true
+    network_profile_diagnostic_live_test.go:52: consecutive private observations equal false selected payload equal true binding equal true
+    network_profile_diagnostic_live_test.go:72: captured task terminal true failed false
+--- PASS: TestLiveSwitchingProfileRetainedReadOnlyDiagnostic (2.55s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	4.657s

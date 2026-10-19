@@ -1,0 +1,19 @@
+=== RUN   TestLiveCatalystCenterPlannedAPManifest
+    site_execution_live_test.go:75: isolated qualification hierarchy: Global/CVK-Q-20261015-120826-000000000
+    site_execution_live_test.go:209: public manifest step=0 status=Waiting operation=Accepted task=01a13f76-b7ec-70e4-851a-deb47ad190c4 reasons=[AdapterAvailable TaskAccepted TaskAccepted]
+    site_execution_live_test.go:209: public manifest Create reached InSync across simulated worker restarts; journal cleared, owner retained, no-op verified
+    site_execution_live_test.go:221: bulk create task=01a13f76-b7ec-70e4-851a-deb47ad190c4
+    site_execution_live_test.go:247: single native batch created all three site identities; retained member/anchor binding and task tree verified
+    site_execution_live_test.go:276: public manifest step=0 status=Waiting operation=Accepted task=01a13f76-d83b-72da-9df9-5135de9ca17d reasons=[AdapterAvailable TaskAccepted TaskAccepted]
+    site_execution_live_test.go:276: public manifest Update reached InSync across simulated worker restarts; journal cleared, owner retained, no-op verified
+    site_execution_live_test.go:283: submitted task=01a13f76-d83b-72da-9df9-5135de9ca17d at=2026-10-15T12:08:35Z
+    site_execution_live_test.go:301: verified Update floor
+    site_execution_live_test.go:310: three creates, one floor update, and full hierarchy read-back verified
+    planned_ap_live_test.go:33: planned AP native response POST HTTP 400 transportError false
+    planned_ap_live_test.go:43: planned AP validation response {"response":{"errorCode":"NCMP10038","message":"NCMP10038: Please ensure that the 'position.z' field(s) for planned access point with 'name': CVK-Planned-AP must have valid value(s). Valid range for X: 0.0 to 41.51575, Y: 0.0 to 49.616142, Z: 3.0 to 10.246063. All planned access points should comply with values within these ranges"},"version":"1.0"}
+    site_execution_live_test.go:315: floor design outcome retained without replay: operation=d19fc7bb333b85b9885ec243165cd21c target= task=
+    site_execution_live_test.go:119: retained uncertain hierarchy for inspection: Global/CVK-Q-20261015-120826-000000000
+--- FAIL: TestLiveCatalystCenterPlannedAPManifest (15.74s)
+FAIL
+FAIL	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	16.859s
+FAIL

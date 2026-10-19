@@ -1,0 +1,5 @@
+ok  	github.com/cisco/virtual-kubelet-cisco/api/config/v1alpha1	(cached)
+ok  	github.com/cisco/virtual-kubelet-cisco/api/ops/v1alpha1	2.529s
+ok  	github.com/cisco/virtual-kubelet-cisco/api/v1alpha1	2.160s
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/nexusdashboard	4.663s
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/provider	5.130s

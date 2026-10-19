@@ -1,0 +1,13 @@
+=== RUN   TestLiveRetainedAPSettingsProbe
+    zz_ap_settings_probe_live_test.go:74: public request remoteWorkerEnabled true
+    zz_ap_settings_probe_live_test.go:74: public request awipsEnabled false
+    zz_ap_settings_probe_live_test.go:74: public request awipsForensicEnabled false
+    zz_ap_settings_probe_live_test.go:74: public request pmfDenialEnabled false
+    zz_ap_settings_probe_live_test.go:74: public request rogueDetectionSetting map[rogueDetection:false rogueDetectionMinRssi:-90 rogueDetectionReportInterval:10 rogueDetectionTransientInterval:0]
+    zz_ap_settings_probe_live_test.go:93: diagnostic HTTP status 400
+    zz_ap_settings_probe_live_test.go:112: diagnostic response errorCode NCND85057
+    zz_ap_settings_probe_live_test.go:112: diagnostic response message Invalid request. Please check the request parameters and resubmit
+    zz_ap_settings_probe_live_test.go:112: diagnostic response detail remoteWorkerEnabled modification is not allowed.
+--- PASS: TestLiveRetainedAPSettingsProbe (0.48s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	2.635s

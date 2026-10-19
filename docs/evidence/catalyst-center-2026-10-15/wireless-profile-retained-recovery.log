@@ -1,0 +1,11 @@
+=== RUN   TestLiveWirelessProfileRetained
+    zz_wireless_profile_retained_live_test.go:42: isolated names CVK_N_1eb5a6e2e80ec29c CVK_S_bd32c501864c3779
+    zz_wireless_profile_retained_live_test.go:152: owned SSID CVK_S_bd32c501864c3779 mdiYq1zl-x1nF-yMqZ-mMm1-mde4nJrJmZC3oumWvJflmL8ZuZrF
+    zz_wireless_profile_retained_live_test.go:178: owned profile CVK_N_1eb5a6e2e80ec29c 66916a01-c96e-4bde-9d04-a9885908ffe9
+    zz_wireless_profile_retained_live_test.go:189: task wireless/wireless-profile:CVK_N_1eb5a6e2e80ec29c:bddeb852b77b9b594def7dbf1cfa2d0815fa29f228d66d345009c7f3d4421649 Update 01a13e09-4bab-70bb-a6d9-7dda7096440d
+    zz_wireless_profile_retained_live_test.go:213: cleanup 66916a01-c96e-4bde-9d04-a9885908ffe9 01a13e09-56a1-7068-ad58-87d953ec0603
+    zz_wireless_profile_retained_live_test.go:219: cleanup mdiYq1zl-x1nF-yMqZ-mMm1-mde4nJrJmZC3oumWvJflmL8ZuZrF 01a13e09-5c5d-7714-911d-9349a7fdc4e0
+    zz_wireless_profile_retained_live_test.go:222: baselines restored; no site assignment, provisioning or device operation submitted
+--- PASS: TestLiveWirelessProfileRetained (10.17s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	12.198s

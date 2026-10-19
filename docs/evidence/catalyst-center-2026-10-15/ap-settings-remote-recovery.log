@@ -1,0 +1,6 @@
+=== RUN   TestLiveWirelessAPRetainedRemote
+    zz_ap_retained_live_test.go:76: update mdiYq1zl-x0fF-zge1-y2rL-owu0yMuYowq2zemWvJflmL8ZqtrF 01a13dfc-0085-7ca9-9627-c4b3f5b7688b
+    zz_ap_retained_live_test.go:111: delete mdiYq1zl-x0fF-zge1-y2rL-owu0yMuYowq2zemWvJflmL8ZqtrF 01a13dfc-064a-770c-b972-9bbb3ce8211d
+--- PASS: TestLiveWirelessAPRetainedRemote (3.47s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	5.574s

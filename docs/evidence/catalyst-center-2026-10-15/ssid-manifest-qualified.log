@@ -1,0 +1,8 @@
+=== RUN   TestLiveWirelessSSIDManifestCredentials
+    wireless_ssid_manifest_live_test.go:98: isolated disabled SSID and private recovery directory CVK_PSK_92e4f32c026bfd8e /private/tmp/cvk-ssid-manifest-3647107155
+    wireless_ssid_manifest_live_test.go:341: disabled credential SSID created and accepted-task restart verified CVK_PSK_92e4f32c026bfd8e mdi0q1zl-x1bt-s185-mMu0-zJmYyZaYnMjMzdHLqZbwmuSYxZnq
+    wireless_ssid_manifest_live_test.go:356: same-UUID credential rotation and stale-projection refusal verified mdi0q1zl-x1bt-s185-mMu0-zJmYyZaYnMjMzdHLqZbwmuSYxZnq
+    wireless_ssid_manifest_live_test.go:393: repository credential example/public manifest/native task/JSON restart/version receipt/rotation/exact cleanup verified; no profile association or device action
+--- PASS: TestLiveWirelessSSIDManifestCredentials (15.72s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	17.526s

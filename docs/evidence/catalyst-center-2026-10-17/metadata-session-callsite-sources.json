@@ -1,0 +1,15 @@
+{
+  "scope": "Six existing native qualification harnesses now reuse session-stable observation. The passing gate uses only a local fixture and does not requalify their device/native resource behavior. Default production decorator remains nil; active native cohort has separate evidence.",
+  "sourceSha256": {
+    "internal/controlleradapter/catalystcenter/client.go": "63ab17f41a36b676def48d597207272f9424549c3cbe81902669ce19b369739a",
+    "internal/controlleradapter/catalystcenter/template_no_dispatch_live_test.go": "07b97bb02d7af7a78b2f567976916a90d15cd69b57125f2842b292d825f45209",
+    "internal/controlleradapter/catalystcenter/metadata_session_trace_test.go": "5e5a7a0a4ea39b532712c559cf8284bde2ce45db56d8955be179dcfbab014493",
+    "internal/controlleradapter/catalystcenter/network_execution_live_test.go": "4e37b506900ed03c39d59cfc0d9b6a153b5ac94d0bc4168bae86288c133bb44f",
+    "internal/controlleradapter/catalystcenter/network_empty_execution_live_test.go": "57f95028965932c07cd0fcd33a61d3fc4eb9abb8a57fd38e133b00154080a119",
+    "internal/controlleradapter/catalystcenter/network_dns_optional_live_test.go": "b40d6f775fe1506694fa4a8bcf128672279f54fed2ed32554b205cb3012d4139",
+    "internal/controlleradapter/catalystcenter/telemetry_partial_execution_live_test.go": "6e53fa60763f05994494b0786f561ab73afa41df2d6765e81ae135ca7e712456",
+    "internal/controlleradapter/catalystcenter/template_pacing_live_test.go": "4a487bc93162fa40bea0954a9243cb95469b26f51b31d6c0be6ee315229fb0d5",
+    "internal/controlleradapter/catalystcenter/site_execution_live_test.go": "1a284836c614ed5f264704a50b019a475837f31a487fd3fba0a48cfebb2c1b3b"
+  },
+  "gateResult": "ok  \tgithub.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter\t3.060s"
+}

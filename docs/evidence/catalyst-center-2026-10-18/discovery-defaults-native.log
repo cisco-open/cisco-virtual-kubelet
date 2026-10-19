@@ -1,0 +1,11 @@
+=== RUN   TestLiveDiscoveryDefaultsOwnershipLifecycle
+    discovery_owned_live_test.go:240: isolated discovery name and private recovery evidence CVK_DISC_d8bf7e55aef99451 /private/tmp/cvk-discovery-owned-3948078742
+    discovery_owned_live_test.go:502: retained known task restored as uncertain without resubmission Create 01a14c93-83b6-752d-95ba-d32432e6eeec
+    discovery_owned_live_test.go:502: retained known task restored as uncertain without resubmission Delete 01a14c94-01c4-70f5-aed4-c48b9d388439
+    discovery_owned_live_test.go:502: retained known task restored as uncertain without resubmission Create 01a14c94-16fa-71d3-8520-0b3db3825d77
+    discovery_owned_live_test.go:687: owned delete/task/absence/new-create/UUID receipt and no-op verified discovery-record:8e1903dee6bb68addfbec921491269a2375d358b2449d6a1e69623bf2cf342a2:143 discovery-record:8e1903dee6bb68addfbec921491269a2375d358b2449d6a1e69623bf2cf342a2:148
+    discovery_owned_live_test.go:697: public manifest task/UUID receipt, JSON restart and no-op verified CVK_DISC_d8bf7e55aef99451 148 01a14c94-16fa-71d3-8520-0b3db3825d77
+    discovery_owned_live_test.go:794: owned discovery task/UUID/no-replay qualification and exact cleanup completed 148 01a14c94-8161-724c-b7b2-31c5a169c10c
+--- PASS: TestLiveDiscoveryDefaultsOwnershipLifecycle (68.08s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	70.302s

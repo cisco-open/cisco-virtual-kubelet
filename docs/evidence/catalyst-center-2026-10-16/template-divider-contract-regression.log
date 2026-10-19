@@ -1,0 +1,56 @@
+=== RUN   TestTemplateParameterOrderBaseline
+=== RUN   TestTemplateParameterOrderBaseline/unordered
+=== RUN   TestTemplateParameterOrderBaseline/custom
+=== RUN   TestTemplateParameterOrderBaseline/missing
+=== RUN   TestTemplateParameterOrderBaseline/null
+=== RUN   TestTemplateParameterOrderBaseline/value
+=== RUN   TestTemplateParameterOrderBaseline/opaque
+=== RUN   TestTemplateParameterOrderBaseline/id
+=== RUN   TestTemplateParameterOrderBaseline/large-number
+=== RUN   TestTemplateParameterOrderBaseline/flag-change
+=== RUN   TestTemplateParameterOrderBaseline/duplicate
+=== RUN   TestTemplateParameterOrderBaseline/missing-name
+=== RUN   TestTemplateParameterOrderBaseline/bad-record
+=== RUN   TestTemplateParameterOrderBaseline/bad-collection
+=== RUN   TestTemplateParameterOrderBaseline/bad-flag
+--- PASS: TestTemplateParameterOrderBaseline (0.00s)
+    --- PASS: TestTemplateParameterOrderBaseline/unordered (0.00s)
+    --- PASS: TestTemplateParameterOrderBaseline/custom (0.00s)
+    --- PASS: TestTemplateParameterOrderBaseline/missing (0.00s)
+    --- PASS: TestTemplateParameterOrderBaseline/null (0.00s)
+    --- PASS: TestTemplateParameterOrderBaseline/value (0.00s)
+    --- PASS: TestTemplateParameterOrderBaseline/opaque (0.00s)
+    --- PASS: TestTemplateParameterOrderBaseline/id (0.00s)
+    --- PASS: TestTemplateParameterOrderBaseline/large-number (0.00s)
+    --- PASS: TestTemplateParameterOrderBaseline/flag-change (0.00s)
+    --- PASS: TestTemplateParameterOrderBaseline/duplicate (0.00s)
+    --- PASS: TestTemplateParameterOrderBaseline/missing-name (0.00s)
+    --- PASS: TestTemplateParameterOrderBaseline/bad-record (0.00s)
+    --- PASS: TestTemplateParameterOrderBaseline/bad-collection (0.00s)
+    --- PASS: TestTemplateParameterOrderBaseline/bad-flag (0.00s)
+=== RUN   TestTemplateParameterOrderSubmission
+=== RUN   TestTemplateParameterOrderSubmission/unordered
+=== RUN   TestTemplateParameterOrderSubmission/custom-order
+=== RUN   TestTemplateParameterOrderSubmission/flag-missing
+=== RUN   TestTemplateParameterOrderSubmission/flag-null
+=== RUN   TestTemplateParameterOrderSubmission/value-changed
+=== RUN   TestTemplateParameterOrderSubmission/unknown-field
+=== RUN   TestTemplateParameterOrderSubmission/parameter-id
+=== RUN   TestTemplateParameterOrderSubmission/custom-flag
+=== RUN   TestTemplateParameterOrderSubmission/duplicate-name
+=== RUN   TestTemplateParameterOrderSubmission/malformed-row
+=== RUN   TestTemplateParameterOrderSubmission/large-native-number
+--- PASS: TestTemplateParameterOrderSubmission (0.16s)
+    --- PASS: TestTemplateParameterOrderSubmission/unordered (0.02s)
+    --- PASS: TestTemplateParameterOrderSubmission/custom-order (0.01s)
+    --- PASS: TestTemplateParameterOrderSubmission/flag-missing (0.02s)
+    --- PASS: TestTemplateParameterOrderSubmission/flag-null (0.01s)
+    --- PASS: TestTemplateParameterOrderSubmission/value-changed (0.01s)
+    --- PASS: TestTemplateParameterOrderSubmission/unknown-field (0.01s)
+    --- PASS: TestTemplateParameterOrderSubmission/parameter-id (0.01s)
+    --- PASS: TestTemplateParameterOrderSubmission/custom-flag (0.01s)
+    --- PASS: TestTemplateParameterOrderSubmission/duplicate-name (0.02s)
+    --- PASS: TestTemplateParameterOrderSubmission/malformed-row (0.01s)
+    --- PASS: TestTemplateParameterOrderSubmission/large-native-number (0.01s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	2.469s

@@ -1,0 +1,14 @@
+{
+  "sourceSHA256": "abc49311e223396fb0f9f8e34d30b0aaf1c7d96d10c1e488ddacba51abce341e",
+  "boundary": "Optional-null discovery production source; predates private discovery credential projection/identity/verification additions",
+  "command": "go test -race -json ./internal/controlleradapter/catalystcenter -count=1 -timeout=40m",
+  "passedTestEvents": 13627,
+  "failEvents": 0,
+  "terminal": {
+    "Time": "2026-10-18T07:00:10.661045+02:00",
+    "Action": "pass",
+    "Package": "github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter",
+    "Elapsed": 1688.36
+  },
+  "rawLog": "/private/tmp/cvk-discovery-null-full-final.jsonl"
+}

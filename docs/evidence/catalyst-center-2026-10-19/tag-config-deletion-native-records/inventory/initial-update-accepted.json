@@ -1,0 +1,99 @@
+{
+  "baselineDigest": "c2aa1fe47345e5965fd6640b0f9fc334d6ef46dc57563098a2e92298dcaae70b",
+  "configDeletionTimestamp": null,
+  "configFinalizers": [
+    "config.cisco.vk/catalyst-center-discovery-cleanup",
+    "example.com/other"
+  ],
+  "configStatus": {
+    "phase": "InSync",
+    "observedGeneration": 2,
+    "lastAppliedTime": "2026-10-19T00:16:15Z",
+    "lastControllerCheck": "2026-10-19T00:16:15Z",
+    "controllerAPIVersion": "v1/v2",
+    "sectionStatus": [
+      {
+        "name": "inventory",
+        "state": "InSync",
+        "resourceCount": 1
+      }
+    ],
+    "conditions": [
+      {
+        "type": "AdapterAvailable",
+        "status": "True",
+        "observedGeneration": 2,
+        "lastTransitionTime": "2026-10-19T00:16:13Z",
+        "reason": "AdapterAvailable",
+        "message": "Catalyst Center configuration adapter is available"
+      },
+      {
+        "type": "IntentValid",
+        "status": "True",
+        "observedGeneration": 2,
+        "lastTransitionTime": "2026-10-19T00:16:13Z",
+        "reason": "ApplyVerified",
+        "message": "Owned configuration attributes match authoritative controller state"
+      },
+      {
+        "type": "Ready",
+        "status": "True",
+        "observedGeneration": 2,
+        "lastTransitionTime": "2026-10-19T00:16:15Z",
+        "reason": "ApplyVerified",
+        "message": "Owned configuration attributes match authoritative controller state"
+      }
+    ]
+  },
+  "configUID": "47400d42-8867-4978-a05a-1c0ec4a069c6",
+  "configuration": {
+    "actionApplications": [
+      {
+        "section": "inventory",
+        "resource": "tag-created:v1:8cc78fffe4b316023346b6c8ed5ccceb5ddc23cc852df8e2c265e049b4dc00f3:29ea7796-1d1e-439c-87a7-d15d14c6ca70:83d14c343f8f62f87d98b25b247d84bb08a48da96bf3adfd7bd4c8c560c4ceb2:s:033b8014ac2ca5d0bcad802470999729e630bb1207a6626fe1252687ab42ec11",
+        "operation": {
+          "id": "20d3d207e15dfa6be6954ee68167ce46",
+          "configName": "sites",
+          "configUID": "47400d42-8867-4978-a05a-1c0ec4a069c6",
+          "configGeneration": 2,
+          "controllerGeneration": 1,
+          "section": "inventory",
+          "resource": "tag-owned:v1:c:8cc78fffe4b316023346b6c8ed5ccceb5ddc23cc852df8e2c265e049b4dc00f3:83d14c343f8f62f87d98b25b247d84bb08a48da96bf3adfd7bd4c8c560c4ceb2:i",
+          "action": "Create",
+          "phase": "Verified",
+          "submittedAt": "2026-10-19T00:16:13Z",
+          "taskID": "01a15184-17d1-768f-9241-8f3a5133e5b1"
+        },
+        "verifiedAt": "2026-10-19T00:16:14Z"
+      }
+    ],
+    "owners": [
+      {
+        "section": "inventory",
+        "configName": "sites",
+        "configUID": "47400d42-8867-4978-a05a-1c0ec4a069c6"
+      }
+    ],
+    "operation": {
+      "id": "068baa7e6122e3f9b20a7bf2d3415352",
+      "configName": "sites",
+      "configUID": "47400d42-8867-4978-a05a-1c0ec4a069c6",
+      "configGeneration": 3,
+      "controllerGeneration": 1,
+      "section": "inventory",
+      "resource": "tag-owned:v1:u:8cc78fffe4b316023346b6c8ed5ccceb5ddc23cc852df8e2c265e049b4dc00f3:e44684d0d0f989e59c7b23afb580ae33354c30913725354ead379eb872851ce5:i",
+      "targetID": "29ea7796-1d1e-439c-87a7-d15d14c6ca70",
+      "action": "Update",
+      "phase": "Accepted",
+      "submittedAt": "2026-10-19T00:16:15Z",
+      "taskID": "01a15184-20e8-7d66-bc89-df1f94069c06"
+    }
+  },
+  "deletes": 0,
+  "generation": 3,
+  "nativeID": "29ea7796-1d1e-439c-87a7-d15d14c6ca70",
+  "phase": "initial-update-accepted",
+  "posts": 1,
+  "puts": 1,
+  "tagName": "CVK-Q-Tag-Prune-1792368967791292000"
+}

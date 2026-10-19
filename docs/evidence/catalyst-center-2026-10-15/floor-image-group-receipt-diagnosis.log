@@ -1,0 +1,19 @@
+=== RUN   TestLiveCatalystCenterFloorImageManifest
+    site_execution_live_test.go:68: isolated qualification hierarchy: Global/CVK-Q-20261014-224646-000000000
+    site_execution_live_test.go:202: public manifest step=0 status=Waiting operation=Accepted task=01a13c98-c31c-7686-ac73-32df2b2cd6ab reasons=[AdapterAvailable TaskAccepted TaskAccepted]
+    site_execution_live_test.go:202: public manifest Create reached InSync across simulated worker restarts; journal cleared, owner retained, no-op verified
+    site_execution_live_test.go:214: bulk create task=01a13c98-c31c-7686-ac73-32df2b2cd6ab
+    site_execution_live_test.go:240: single native batch created all three site identities; retained member/anchor binding and task tree verified
+    site_execution_live_test.go:269: public manifest step=0 status=Waiting operation=Accepted task=01a13c98-e485-752d-97ba-d537fe1abcba reasons=[AdapterAvailable TaskAccepted TaskAccepted]
+    site_execution_live_test.go:269: public manifest Update reached InSync across simulated worker restarts; journal cleared, owner retained, no-op verified
+    site_execution_live_test.go:276: submitted task=01a13c98-e485-752d-97ba-d537fe1abcba at=2026-10-14T22:46:55Z
+    site_execution_live_test.go:294: verified Update floor
+    site_execution_live_test.go:303: three creates, one floor update, and full hierarchy read-back verified
+    floor_image_live_test.go:58: floor upload receipt HTTP=201 JSON keys=[apCount basementTotalCount buildingCount buildingName contact criticalRadioCount dot11aRadioCount dot11bRadioCount dot11gRadioCount floorCount floorIndex floorTotalCount geometry groupInstanceUuid hierarchyName id imageInfo incomplete instanceUuid isRootDomain lastUpdated location maintainAspectRatio metrics name outdoorAreaCount parentGroupUuid rfModel siteHierarchyId siteName status type unitsOfMeasure wirelessClientsCount] response keys=[]
+    floor_image_live_test.go:68: floor upload DTO binding: instance=false site=false group=true hierarchy=false hierarchyAbsent=false imageMetadata=true
+    site_execution_live_test.go:305: floor upload outcome retained without replay: operation=90ded232309037e9a9e8c1619ff711e2 target=dfd4ba99-616c-4086-9da2-690b4d764c01 task=
+    site_execution_live_test.go:112: retained uncertain hierarchy for inspection: Global/CVK-Q-20261014-224646-000000000
+--- FAIL: TestLiveCatalystCenterFloorImageManifest (14.84s)
+FAIL
+FAIL	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	15.803s
+FAIL

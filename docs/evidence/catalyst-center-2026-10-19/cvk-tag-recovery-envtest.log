@@ -1,0 +1,302 @@
+=== RUN   TestCombinedTagApplyAcrossReconcilerRestarts
+--- PASS: TestCombinedTagApplyAcrossReconcilerRestarts (0.75s)
+=== RUN   TestCombinedDynamicTagApplyAcrossReconcilerRestarts
+--- PASS: TestCombinedDynamicTagApplyAcrossReconcilerRestarts (0.17s)
+=== RUN   TestCombinedDiscoveryPreflightsBeforeTagWrites
+--- PASS: TestCombinedDiscoveryPreflightsBeforeTagWrites (0.01s)
+=== RUN   TestCombinedDiscoveryDoesNotRequireInventoryTags
+--- PASS: TestCombinedDiscoveryDoesNotRequireInventoryTags (0.00s)
+=== RUN   TestTagNamespaceOwnershipAcrossSections
+--- PASS: TestTagNamespaceOwnershipAcrossSections (0.04s)
+=== RUN   TestCombinedTagsUseInventoryPrecedence
+--- PASS: TestCombinedTagsUseInventoryPrecedence (0.02s)
+=== RUN   TestCombinedTagsRetainUnshadowedAndValidateBothLists
+--- PASS: TestCombinedTagsRetainUnshadowedAndValidateBothLists (0.00s)
+=== RUN   TestTagAssociationQueriesRemainScopedWhilePaging
+=== RUN   TestTagAssociationQueriesRemainScopedWhilePaging/networkdevice/
+=== RUN   TestTagAssociationQueriesRemainScopedWhilePaging/networkdevice/DYNAMIC
+=== RUN   TestTagAssociationQueriesRemainScopedWhilePaging/networkdevice/STATIC
+=== RUN   TestTagAssociationQueriesRemainScopedWhilePaging/networkdevice/MIXED
+=== RUN   TestTagAssociationQueriesRemainScopedWhilePaging/template/
+=== RUN   TestTagAssociationQueriesRemainScopedWhilePaging/template/DYNAMIC
+=== RUN   TestTagAssociationQueriesRemainScopedWhilePaging/template/STATIC
+=== RUN   TestTagAssociationQueriesRemainScopedWhilePaging/template/MIXED
+--- PASS: TestTagAssociationQueriesRemainScopedWhilePaging (0.13s)
+    --- PASS: TestTagAssociationQueriesRemainScopedWhilePaging/networkdevice/ (0.02s)
+    --- PASS: TestTagAssociationQueriesRemainScopedWhilePaging/networkdevice/DYNAMIC (0.02s)
+    --- PASS: TestTagAssociationQueriesRemainScopedWhilePaging/networkdevice/STATIC (0.02s)
+    --- PASS: TestTagAssociationQueriesRemainScopedWhilePaging/networkdevice/MIXED (0.02s)
+    --- PASS: TestTagAssociationQueriesRemainScopedWhilePaging/template/ (0.02s)
+    --- PASS: TestTagAssociationQueriesRemainScopedWhilePaging/template/DYNAMIC (0.02s)
+    --- PASS: TestTagAssociationQueriesRemainScopedWhilePaging/template/STATIC (0.02s)
+    --- PASS: TestTagAssociationQueriesRemainScopedWhilePaging/template/MIXED (0.02s)
+=== RUN   TestTagAssociationReadRefusesInvalidScopeAndFallback
+--- PASS: TestTagAssociationReadRefusesInvalidScopeAndFallback (0.01s)
+=== RUN   TestTagExplicitAssociationRejectsPartialClassEvidence
+=== RUN   TestTagExplicitAssociationRejectsPartialClassEvidence/template
+=== RUN   TestTagExplicitAssociationRejectsPartialClassEvidence/networkdevice
+--- PASS: TestTagExplicitAssociationRejectsPartialClassEvidence (0.02s)
+    --- PASS: TestTagExplicitAssociationRejectsPartialClassEvidence/template (0.01s)
+    --- PASS: TestTagExplicitAssociationRejectsPartialClassEvidence/networkdevice (0.01s)
+=== RUN   TestTagAssociationMalformedMemberCannotSupplyPartialEvidence
+--- PASS: TestTagAssociationMalformedMemberCannotSupplyPartialEvidence (0.01s)
+=== RUN   TestTagCreateRequiresOriginalTaskIdentity
+=== RUN   TestTagCreateRequiresOriginalTaskIdentity/valid
+=== RUN   TestTagCreateRequiresOriginalTaskIdentity/pending
+=== RUN   TestTagCreateRequiresOriginalTaskIdentity/failed
+=== RUN   TestTagCreateRequiresOriginalTaskIdentity/foreign-task
+=== RUN   TestTagCreateRequiresOriginalTaskIdentity/missing-time
+=== RUN   TestTagCreateRequiresOriginalTaskIdentity/future-time
+=== RUN   TestTagCreateRequiresOriginalTaskIdentity/wrong-service
+=== RUN   TestTagCreateRequiresOriginalTaskIdentity/missing-result
+=== RUN   TestTagCreateRequiresOriginalTaskIdentity/noncanonical-result
+=== RUN   TestTagCreateRequiresOriginalTaskIdentity/foreign-result
+=== RUN   TestTagCreateRequiresOriginalTaskIdentity/missing-native
+=== RUN   TestTagCreateRequiresOriginalTaskIdentity/protected
+=== RUN   TestTagCreateRequiresOriginalTaskIdentity/taskless
+=== RUN   TestTagCreateRequiresOriginalTaskIdentity/nil-operation
+--- PASS: TestTagCreateRequiresOriginalTaskIdentity (0.12s)
+    --- PASS: TestTagCreateRequiresOriginalTaskIdentity/valid (0.01s)
+    --- PASS: TestTagCreateRequiresOriginalTaskIdentity/pending (0.01s)
+    --- PASS: TestTagCreateRequiresOriginalTaskIdentity/failed (0.01s)
+    --- PASS: TestTagCreateRequiresOriginalTaskIdentity/foreign-task (0.01s)
+    --- PASS: TestTagCreateRequiresOriginalTaskIdentity/missing-time (0.01s)
+    --- PASS: TestTagCreateRequiresOriginalTaskIdentity/future-time (0.01s)
+    --- PASS: TestTagCreateRequiresOriginalTaskIdentity/wrong-service (0.01s)
+    --- PASS: TestTagCreateRequiresOriginalTaskIdentity/missing-result (0.01s)
+    --- PASS: TestTagCreateRequiresOriginalTaskIdentity/noncanonical-result (0.01s)
+    --- PASS: TestTagCreateRequiresOriginalTaskIdentity/foreign-result (0.01s)
+    --- PASS: TestTagCreateRequiresOriginalTaskIdentity/missing-native (0.01s)
+    --- PASS: TestTagCreateRequiresOriginalTaskIdentity/protected (0.01s)
+    --- PASS: TestTagCreateRequiresOriginalTaskIdentity/taskless (0.00s)
+    --- PASS: TestTagCreateRequiresOriginalTaskIdentity/nil-operation (0.00s)
+=== RUN   TestTagMembershipPlansRevalidateWholeSelection
+=== RUN   TestTagMembershipPlansRevalidateWholeSelection/template/valid
+=== RUN   TestTagMembershipPlansRevalidateWholeSelection/template/tag-replaced
+=== RUN   TestTagMembershipPlansRevalidateWholeSelection/template/member-replaced
+=== RUN   TestTagMembershipPlansRevalidateWholeSelection/template/protection-flip
+=== RUN   TestTagMembershipPlansRevalidateWholeSelection/template/during-reobserve-protection
+=== RUN   TestTagMembershipPlansRevalidateWholeSelection/template/later-tag-replaced
+=== RUN   TestTagMembershipPlansRevalidateWholeSelection/template/later-member-replaced
+=== RUN   TestTagMembershipPlansRevalidateWholeSelection/template/became-present
+=== RUN   TestTagMembershipPlansRevalidateWholeSelection/template/frozen
+=== RUN   TestTagMembershipPlansRevalidateWholeSelection/template/unrelated-member
+=== RUN   TestTagMembershipPlansRevalidateWholeSelection/template/missing-receipt
+=== RUN   TestTagMembershipPlansRevalidateWholeSelection/template/read-error
+=== RUN   TestTagMembershipPlansRevalidateWholeSelection/template/project-replaced
+=== RUN   TestTagMembershipPlansRevalidateWholeSelection/networkdevice/valid
+=== RUN   TestTagMembershipPlansRevalidateWholeSelection/networkdevice/tag-replaced
+=== RUN   TestTagMembershipPlansRevalidateWholeSelection/networkdevice/member-replaced
+=== RUN   TestTagMembershipPlansRevalidateWholeSelection/networkdevice/protection-flip
+=== RUN   TestTagMembershipPlansRevalidateWholeSelection/networkdevice/during-reobserve-protection
+=== RUN   TestTagMembershipPlansRevalidateWholeSelection/networkdevice/later-tag-replaced
+=== RUN   TestTagMembershipPlansRevalidateWholeSelection/networkdevice/later-member-replaced
+=== RUN   TestTagMembershipPlansRevalidateWholeSelection/networkdevice/became-present
+=== RUN   TestTagMembershipPlansRevalidateWholeSelection/networkdevice/frozen
+=== RUN   TestTagMembershipPlansRevalidateWholeSelection/networkdevice/unrelated-member
+=== RUN   TestTagMembershipPlansRevalidateWholeSelection/networkdevice/missing-receipt
+=== RUN   TestTagMembershipPlansRevalidateWholeSelection/networkdevice/read-error
+=== RUN   TestTagMembershipPlansRevalidateWholeSelection/networkdevice/project-replaced
+--- PASS: TestTagMembershipPlansRevalidateWholeSelection (0.38s)
+    --- PASS: TestTagMembershipPlansRevalidateWholeSelection/template/valid (0.02s)
+    --- PASS: TestTagMembershipPlansRevalidateWholeSelection/template/tag-replaced (0.01s)
+    --- PASS: TestTagMembershipPlansRevalidateWholeSelection/template/member-replaced (0.01s)
+    --- PASS: TestTagMembershipPlansRevalidateWholeSelection/template/protection-flip (0.01s)
+    --- PASS: TestTagMembershipPlansRevalidateWholeSelection/template/during-reobserve-protection (0.02s)
+    --- PASS: TestTagMembershipPlansRevalidateWholeSelection/template/later-tag-replaced (0.01s)
+    --- PASS: TestTagMembershipPlansRevalidateWholeSelection/template/later-member-replaced (0.01s)
+    --- PASS: TestTagMembershipPlansRevalidateWholeSelection/template/became-present (0.01s)
+    --- PASS: TestTagMembershipPlansRevalidateWholeSelection/template/frozen (0.02s)
+    --- PASS: TestTagMembershipPlansRevalidateWholeSelection/template/unrelated-member (0.02s)
+    --- PASS: TestTagMembershipPlansRevalidateWholeSelection/template/missing-receipt (0.02s)
+    --- PASS: TestTagMembershipPlansRevalidateWholeSelection/template/read-error (0.01s)
+    --- PASS: TestTagMembershipPlansRevalidateWholeSelection/template/project-replaced (0.01s)
+    --- PASS: TestTagMembershipPlansRevalidateWholeSelection/networkdevice/valid (0.02s)
+    --- PASS: TestTagMembershipPlansRevalidateWholeSelection/networkdevice/tag-replaced (0.01s)
+    --- PASS: TestTagMembershipPlansRevalidateWholeSelection/networkdevice/member-replaced (0.01s)
+    --- PASS: TestTagMembershipPlansRevalidateWholeSelection/networkdevice/protection-flip (0.01s)
+    --- PASS: TestTagMembershipPlansRevalidateWholeSelection/networkdevice/during-reobserve-protection (0.02s)
+    --- PASS: TestTagMembershipPlansRevalidateWholeSelection/networkdevice/later-tag-replaced (0.01s)
+    --- PASS: TestTagMembershipPlansRevalidateWholeSelection/networkdevice/later-member-replaced (0.01s)
+    --- PASS: TestTagMembershipPlansRevalidateWholeSelection/networkdevice/became-present (0.01s)
+    --- PASS: TestTagMembershipPlansRevalidateWholeSelection/networkdevice/frozen (0.02s)
+    --- PASS: TestTagMembershipPlansRevalidateWholeSelection/networkdevice/unrelated-member (0.02s)
+    --- PASS: TestTagMembershipPlansRevalidateWholeSelection/networkdevice/missing-receipt (0.02s)
+    --- PASS: TestTagMembershipPlansRevalidateWholeSelection/networkdevice/read-error (0.01s)
+    --- PASS: TestTagMembershipPlansRevalidateWholeSelection/networkdevice/project-replaced (0.02s)
+=== RUN   TestEnvtestTagKnownTaskPublicRestart
+=== RUN   TestEnvtestTagKnownTaskPublicRestart/tag-recovery-inventory-false
+=== RUN   TestEnvtestTagKnownTaskPublicRestart/tag-recovery-inventory-true
+=== RUN   TestEnvtestTagKnownTaskPublicRestart/tag-recovery-templates-false
+=== RUN   TestEnvtestTagKnownTaskPublicRestart/tag-recovery-templates-true
+=== RUN   TestEnvtestTagKnownTaskPublicRestart/tag-recovery-combined-false
+=== RUN   TestEnvtestTagKnownTaskPublicRestart/tag-recovery-combined-true
+--- PASS: TestEnvtestTagKnownTaskPublicRestart (7.16s)
+    --- PASS: TestEnvtestTagKnownTaskPublicRestart/tag-recovery-inventory-false (2.21s)
+    --- PASS: TestEnvtestTagKnownTaskPublicRestart/tag-recovery-inventory-true (0.17s)
+    --- PASS: TestEnvtestTagKnownTaskPublicRestart/tag-recovery-templates-false (0.19s)
+    --- PASS: TestEnvtestTagKnownTaskPublicRestart/tag-recovery-templates-true (0.17s)
+    --- PASS: TestEnvtestTagKnownTaskPublicRestart/tag-recovery-combined-false (0.18s)
+    --- PASS: TestEnvtestTagKnownTaskPublicRestart/tag-recovery-combined-true (0.18s)
+=== RUN   TestTagTaskRecoverySelection
+=== RUN   TestTagTaskRecoverySelection/inventory/create
+=== RUN   TestTagTaskRecoverySelection/inventory/update
+=== RUN   TestTagTaskRecoverySelection/inventory/taskless
+=== RUN   TestTagTaskRecoverySelection/inventory/unselected
+=== RUN   TestTagTaskRecoverySelection/inventory/wrong-path
+=== RUN   TestTagTaskRecoverySelection/inventory/delete
+=== RUN   TestTagTaskRecoverySelection/inventory/parent
+=== RUN   TestTagTaskRecoverySelection/inventory/physical
+=== RUN   TestTagTaskRecoverySelection/inventory/prepared
+=== RUN   TestTagTaskRecoverySelection/inventory/wrong-section
+=== RUN   TestTagTaskRecoverySelection/inventory/wrong-phase
+=== RUN   TestTagTaskRecoverySelection/inventory/no-source-owner
+=== RUN   TestTagTaskRecoverySelection/inventory/future
+=== RUN   TestTagTaskRecoverySelection/templates/create
+=== RUN   TestTagTaskRecoverySelection/templates/update
+=== RUN   TestTagTaskRecoverySelection/templates/taskless
+=== RUN   TestTagTaskRecoverySelection/templates/unselected
+=== RUN   TestTagTaskRecoverySelection/templates/wrong-path
+=== RUN   TestTagTaskRecoverySelection/templates/delete
+=== RUN   TestTagTaskRecoverySelection/templates/parent
+=== RUN   TestTagTaskRecoverySelection/templates/physical
+=== RUN   TestTagTaskRecoverySelection/templates/prepared
+=== RUN   TestTagTaskRecoverySelection/templates/wrong-section
+=== RUN   TestTagTaskRecoverySelection/templates/wrong-phase
+=== RUN   TestTagTaskRecoverySelection/templates/no-source-owner
+=== RUN   TestTagTaskRecoverySelection/templates/future
+--- PASS: TestTagTaskRecoverySelection (0.00s)
+    --- PASS: TestTagTaskRecoverySelection/inventory/create (0.00s)
+    --- PASS: TestTagTaskRecoverySelection/inventory/update (0.00s)
+    --- PASS: TestTagTaskRecoverySelection/inventory/taskless (0.00s)
+    --- PASS: TestTagTaskRecoverySelection/inventory/unselected (0.00s)
+    --- PASS: TestTagTaskRecoverySelection/inventory/wrong-path (0.00s)
+    --- PASS: TestTagTaskRecoverySelection/inventory/delete (0.00s)
+    --- PASS: TestTagTaskRecoverySelection/inventory/parent (0.00s)
+    --- PASS: TestTagTaskRecoverySelection/inventory/physical (0.00s)
+    --- PASS: TestTagTaskRecoverySelection/inventory/prepared (0.00s)
+    --- PASS: TestTagTaskRecoverySelection/inventory/wrong-section (0.00s)
+    --- PASS: TestTagTaskRecoverySelection/inventory/wrong-phase (0.00s)
+    --- PASS: TestTagTaskRecoverySelection/inventory/no-source-owner (0.00s)
+    --- PASS: TestTagTaskRecoverySelection/inventory/future (0.00s)
+    --- PASS: TestTagTaskRecoverySelection/templates/create (0.00s)
+    --- PASS: TestTagTaskRecoverySelection/templates/update (0.00s)
+    --- PASS: TestTagTaskRecoverySelection/templates/taskless (0.00s)
+    --- PASS: TestTagTaskRecoverySelection/templates/unselected (0.00s)
+    --- PASS: TestTagTaskRecoverySelection/templates/wrong-path (0.00s)
+    --- PASS: TestTagTaskRecoverySelection/templates/delete (0.00s)
+    --- PASS: TestTagTaskRecoverySelection/templates/parent (0.00s)
+    --- PASS: TestTagTaskRecoverySelection/templates/physical (0.00s)
+    --- PASS: TestTagTaskRecoverySelection/templates/prepared (0.00s)
+    --- PASS: TestTagTaskRecoverySelection/templates/wrong-section (0.00s)
+    --- PASS: TestTagTaskRecoverySelection/templates/wrong-phase (0.00s)
+    --- PASS: TestTagTaskRecoverySelection/templates/no-source-owner (0.00s)
+    --- PASS: TestTagTaskRecoverySelection/templates/future (0.00s)
+=== RUN   TestTagKnownTaskPublicRestart
+=== RUN   TestTagKnownTaskPublicRestart/inventory/update-false
+=== RUN   TestTagKnownTaskPublicRestart/inventory/update-true
+=== RUN   TestTagKnownTaskPublicRestart/templates/update-false
+=== RUN   TestTagKnownTaskPublicRestart/templates/update-true
+=== RUN   TestTagKnownTaskPublicRestart/combined/update-false
+=== RUN   TestTagKnownTaskPublicRestart/combined/update-true
+--- PASS: TestTagKnownTaskPublicRestart (0.37s)
+    --- PASS: TestTagKnownTaskPublicRestart/inventory/update-false (0.06s)
+    --- PASS: TestTagKnownTaskPublicRestart/inventory/update-true (0.06s)
+    --- PASS: TestTagKnownTaskPublicRestart/templates/update-false (0.06s)
+    --- PASS: TestTagKnownTaskPublicRestart/templates/update-true (0.06s)
+    --- PASS: TestTagKnownTaskPublicRestart/combined/update-false (0.07s)
+    --- PASS: TestTagKnownTaskPublicRestart/combined/update-true (0.06s)
+=== RUN   TestTagEmptyRuleComparisonIsSelectionScoped
+=== RUN   TestTagEmptyRuleComparisonIsSelectionScoped/clear-native-null
+=== RUN   TestTagEmptyRuleComparisonIsSelectionScoped/clear-native-empty
+=== RUN   TestTagEmptyRuleComparisonIsSelectionScoped/clear-native-present
+=== RUN   TestTagEmptyRuleComparisonIsSelectionScoped/omitted-native-present
+=== RUN   TestTagEmptyRuleComparisonIsSelectionScoped/nonempty-native-null
+=== RUN   TestTagEmptyRuleComparisonIsSelectionScoped/nonempty-native-matching
+--- PASS: TestTagEmptyRuleComparisonIsSelectionScoped (0.00s)
+    --- PASS: TestTagEmptyRuleComparisonIsSelectionScoped/clear-native-null (0.00s)
+    --- PASS: TestTagEmptyRuleComparisonIsSelectionScoped/clear-native-empty (0.00s)
+    --- PASS: TestTagEmptyRuleComparisonIsSelectionScoped/clear-native-present (0.00s)
+    --- PASS: TestTagEmptyRuleComparisonIsSelectionScoped/omitted-native-present (0.00s)
+    --- PASS: TestTagEmptyRuleComparisonIsSelectionScoped/nonempty-native-null (0.00s)
+    --- PASS: TestTagEmptyRuleComparisonIsSelectionScoped/nonempty-native-matching (0.00s)
+=== RUN   TestTagUnmanagedRulesArePreserved
+=== RUN   TestTagUnmanagedRulesArePreserved/existing-rules-false
+=== RUN   TestTagUnmanagedRulesArePreserved/existing-rules-true
+--- PASS: TestTagUnmanagedRulesArePreserved (0.02s)
+    --- PASS: TestTagUnmanagedRulesArePreserved/existing-rules-false (0.01s)
+    --- PASS: TestTagUnmanagedRulesArePreserved/existing-rules-true (0.01s)
+=== RUN   TestDynamicTagClearRestorePublicRestartCycle
+--- PASS: TestDynamicTagClearRestorePublicRestartCycle (0.23s)
+=== RUN   TestUnaryTagClearRestorePublicRestartCycle
+--- PASS: TestUnaryTagClearRestorePublicRestartCycle (0.22s)
+=== RUN   TestTagUnaryLogicalRulesPreserveAtomicMeaning
+=== RUN   TestTagUnaryLogicalRulesPreserveAtomicMeaning/AND-EQ
+=== RUN   TestTagUnaryLogicalRulesPreserveAtomicMeaning/AND-LIKE
+=== RUN   TestTagUnaryLogicalRulesPreserveAtomicMeaning/AND-ILIKE
+=== RUN   TestTagUnaryLogicalRulesPreserveAtomicMeaning/AND-IN
+=== RUN   TestTagUnaryLogicalRulesPreserveAtomicMeaning/OR-EQ
+=== RUN   TestTagUnaryLogicalRulesPreserveAtomicMeaning/OR-LIKE
+=== RUN   TestTagUnaryLogicalRulesPreserveAtomicMeaning/OR-ILIKE
+=== RUN   TestTagUnaryLogicalRulesPreserveAtomicMeaning/OR-IN
+--- PASS: TestTagUnaryLogicalRulesPreserveAtomicMeaning (0.00s)
+    --- PASS: TestTagUnaryLogicalRulesPreserveAtomicMeaning/AND-EQ (0.00s)
+    --- PASS: TestTagUnaryLogicalRulesPreserveAtomicMeaning/AND-LIKE (0.00s)
+    --- PASS: TestTagUnaryLogicalRulesPreserveAtomicMeaning/AND-ILIKE (0.00s)
+    --- PASS: TestTagUnaryLogicalRulesPreserveAtomicMeaning/AND-IN (0.00s)
+    --- PASS: TestTagUnaryLogicalRulesPreserveAtomicMeaning/OR-EQ (0.00s)
+    --- PASS: TestTagUnaryLogicalRulesPreserveAtomicMeaning/OR-LIKE (0.00s)
+    --- PASS: TestTagUnaryLogicalRulesPreserveAtomicMeaning/OR-ILIKE (0.00s)
+    --- PASS: TestTagUnaryLogicalRulesPreserveAtomicMeaning/OR-IN (0.00s)
+=== RUN   TestTagUnaryLogicalRulesRefuseAmbiguousMeaning
+--- PASS: TestTagUnaryLogicalRulesRefuseAmbiguousMeaning (0.00s)
+=== RUN   TestTagSubmissionRechecksPaginatedSelection
+=== RUN   TestTagSubmissionRechecksPaginatedSelection/unchanged
+=== RUN   TestTagSubmissionRechecksPaginatedSelection/protection
+=== RUN   TestTagSubmissionRechecksPaginatedSelection/replacement
+=== RUN   TestTagSubmissionRechecksPaginatedSelection/preserved-description
+=== RUN   TestTagSubmissionRechecksPaginatedSelection/later-selected
+=== RUN   TestTagSubmissionRechecksPaginatedSelection/create-race
+=== RUN   TestTagSubmissionRechecksPaginatedSelection/unrelated
+--- PASS: TestTagSubmissionRechecksPaginatedSelection (0.41s)
+    --- PASS: TestTagSubmissionRechecksPaginatedSelection/unchanged (0.06s)
+    --- PASS: TestTagSubmissionRechecksPaginatedSelection/protection (0.06s)
+    --- PASS: TestTagSubmissionRechecksPaginatedSelection/replacement (0.06s)
+    --- PASS: TestTagSubmissionRechecksPaginatedSelection/preserved-description (0.06s)
+    --- PASS: TestTagSubmissionRechecksPaginatedSelection/later-selected (0.06s)
+    --- PASS: TestTagSubmissionRechecksPaginatedSelection/create-race (0.06s)
+    --- PASS: TestTagSubmissionRechecksPaginatedSelection/unrelated (0.06s)
+=== RUN   TestTagEmptyLogicalGroupRejectedBeforeRequests
+--- PASS: TestTagEmptyLogicalGroupRejectedBeforeRequests (0.00s)
+=== RUN   TestTagPlansRevalidateNativeState
+=== RUN   TestTagPlansRevalidateNativeState/valid
+=== RUN   TestTagPlansRevalidateNativeState/create-race
+=== RUN   TestTagPlansRevalidateNativeState/replacement
+=== RUN   TestTagPlansRevalidateNativeState/protection-flip
+=== RUN   TestTagPlansRevalidateNativeState/preserved-rule-change
+=== RUN   TestTagPlansRevalidateNativeState/later-protection-flip
+=== RUN   TestTagPlansRevalidateNativeState/unrelated-change
+=== RUN   TestTagPlansRevalidateNativeState/frozen
+=== RUN   TestTagPlansRevalidateNativeState/frozen-dynamic
+=== RUN   TestTagPlansRevalidateNativeState/missing-receipt
+--- PASS: TestTagPlansRevalidateNativeState (0.11s)
+    --- PASS: TestTagPlansRevalidateNativeState/valid (0.01s)
+    --- PASS: TestTagPlansRevalidateNativeState/create-race (0.01s)
+    --- PASS: TestTagPlansRevalidateNativeState/replacement (0.01s)
+    --- PASS: TestTagPlansRevalidateNativeState/protection-flip (0.01s)
+    --- PASS: TestTagPlansRevalidateNativeState/preserved-rule-change (0.01s)
+    --- PASS: TestTagPlansRevalidateNativeState/later-protection-flip (0.01s)
+    --- PASS: TestTagPlansRevalidateNativeState/unrelated-change (0.01s)
+    --- PASS: TestTagPlansRevalidateNativeState/frozen (0.01s)
+    --- PASS: TestTagPlansRevalidateNativeState/frozen-dynamic (0.01s)
+    --- PASS: TestTagPlansRevalidateNativeState/missing-receipt (0.01s)
+=== RUN   TestTagConflictingValueSelectorsPreflight
+--- PASS: TestTagConflictingValueSelectorsPreflight (0.00s)
+=== RUN   TestTagMultipleValuesMappingAndFrozenRequest
+--- PASS: TestTagMultipleValuesMappingAndFrozenRequest (0.01s)
+=== RUN   TestTagExecution
+--- PASS: TestTagExecution (0.02s)
+=== RUN   TestTagRulesAndProtectedPreflight
+--- PASS: TestTagRulesAndProtectedPreflight (0.01s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	12.588s

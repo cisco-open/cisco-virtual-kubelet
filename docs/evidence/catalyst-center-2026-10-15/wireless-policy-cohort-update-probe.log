@@ -1,0 +1,7 @@
+=== RUN   TestLiveRetainedPolicyCohort
+    zz_policy_cohort_live_test.go:77: cohort fixture task PUT 01a13e5b-822f-7695-8662-7ebb52eaefce
+    zz_policy_cohort_live_test.go:77: cohort fixture task PUT 01a13e5b-8952-7845-93c9-734586a00268
+    zz_policy_cohort_live_test.go:92: individual same-ID updates preserve both disjoint cohort members
+--- PASS: TestLiveRetainedPolicyCohort (4.27s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	6.424s

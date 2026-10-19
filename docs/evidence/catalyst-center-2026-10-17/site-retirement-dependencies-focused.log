@@ -1,0 +1,94 @@
+=== RUN   TestSiteRetirementDependencies
+=== RUN   TestSiteRetirementDependencies/stable
+=== RUN   TestSiteRetirementDependencies/legacy-wireless-alias
+=== RUN   TestSiteRetirementDependencies/unrelated-reference
+=== RUN   TestSiteRetirementDependencies/late-unrelated
+=== RUN   TestSiteRetirementDependencies/global
+=== RUN   TestSiteRetirementDependencies/invalid-id
+=== RUN   TestSiteRetirementDependencies/missing
+=== RUN   TestSiteRetirementDependencies/replacement
+=== RUN   TestSiteRetirementDependencies/child
+=== RUN   TestSiteRetirementDependencies/device
+=== RUN   TestSiteRetirementDependencies/pnp
+=== RUN   TestSiteRetirementDependencies/pnp-unbound
+=== RUN   TestSiteRetirementDependencies/planned-ap
+=== RUN   TestSiteRetirementDependencies/switching
+=== RUN   TestSiteRetirementDependencies/wireless
+=== RUN   TestSiteRetirementDependencies/site-tag
+=== RUN   TestSiteRetirementDependencies/policy-tag
+=== RUN   TestSiteRetirementDependencies/tag-unknown
+=== RUN   TestSiteRetirementDependencies/profile-unknown
+=== RUN   TestSiteRetirementDependencies/profile-collision
+=== RUN   TestSiteRetirementDependencies/other-profile
+=== RUN   TestSiteRetirementDependencies/fabric
+=== RUN   TestSiteRetirementDependencies/zone
+=== RUN   TestSiteRetirementDependencies/reservation
+=== RUN   TestSiteRetirementDependencies/dangling-profile
+=== RUN   TestSiteRetirementDependencies/dangling-fabric
+=== RUN   TestSiteRetirementDependencies/dangling-zone
+=== RUN   TestSiteRetirementDependencies/dangling-reservation
+=== RUN   TestSiteRetirementDependencies/late-device
+=== RUN   TestSiteRetirementDependencies/late-profile
+=== RUN   TestSiteRetirementDependencies/late-native
+=== RUN   TestSiteRetirementDependencies/late-parent
+=== RUN   TestSiteRetirementDependencies/late-replacement
+=== RUN   TestSiteRetirementDependencies/error:/dna/intent/api/v1/sites
+=== RUN   TestSiteRetirementDependencies/error:/dna/intent/api/v1/networkDevices/assignedToSite
+=== RUN   TestSiteRetirementDependencies/error:/dna/intent/api/v1/onboarding/pnp-device
+=== RUN   TestSiteRetirementDependencies/error:/dna/intent/api/v2/floors/11111111-1111-4111-8111-111111111111/plannedAccessPointPositions
+=== RUN   TestSiteRetirementDependencies/error:/api/v1/siteprofile
+=== RUN   TestSiteRetirementDependencies/error:/dna/intent/api/v1/wirelessProfiles
+=== RUN   TestSiteRetirementDependencies/error:/dna/intent/api/v1/networkProfilesForSites/switch-profile/siteAssignments
+=== RUN   TestSiteRetirementDependencies/error:/dna/intent/api/v1/wirelessProfiles/wireless-profile/siteTags
+=== RUN   TestSiteRetirementDependencies/error:/dna/intent/api/v1/sda/fabricSites
+=== RUN   TestSiteRetirementDependencies/error:/dna/intent/api/v1/sda/fabricZones
+=== RUN   TestSiteRetirementDependencies/error:/dna/intent/api/v1/ipam/siteIpAddressPools
+--- PASS: TestSiteRetirementDependencies (0.64s)
+    --- PASS: TestSiteRetirementDependencies/stable (0.03s)
+    --- PASS: TestSiteRetirementDependencies/legacy-wireless-alias (0.02s)
+    --- PASS: TestSiteRetirementDependencies/unrelated-reference (0.03s)
+    --- PASS: TestSiteRetirementDependencies/late-unrelated (0.02s)
+    --- PASS: TestSiteRetirementDependencies/global (0.00s)
+    --- PASS: TestSiteRetirementDependencies/invalid-id (0.00s)
+    --- PASS: TestSiteRetirementDependencies/missing (0.01s)
+    --- PASS: TestSiteRetirementDependencies/replacement (0.01s)
+    --- PASS: TestSiteRetirementDependencies/child (0.01s)
+    --- PASS: TestSiteRetirementDependencies/device (0.01s)
+    --- PASS: TestSiteRetirementDependencies/pnp (0.01s)
+    --- PASS: TestSiteRetirementDependencies/pnp-unbound (0.02s)
+    --- PASS: TestSiteRetirementDependencies/planned-ap (0.01s)
+    --- PASS: TestSiteRetirementDependencies/switching (0.01s)
+    --- PASS: TestSiteRetirementDependencies/wireless (0.01s)
+    --- PASS: TestSiteRetirementDependencies/site-tag (0.01s)
+    --- PASS: TestSiteRetirementDependencies/policy-tag (0.01s)
+    --- PASS: TestSiteRetirementDependencies/tag-unknown (0.01s)
+    --- PASS: TestSiteRetirementDependencies/profile-unknown (0.01s)
+    --- PASS: TestSiteRetirementDependencies/profile-collision (0.01s)
+    --- PASS: TestSiteRetirementDependencies/other-profile (0.01s)
+    --- PASS: TestSiteRetirementDependencies/fabric (0.01s)
+    --- PASS: TestSiteRetirementDependencies/zone (0.01s)
+    --- PASS: TestSiteRetirementDependencies/reservation (0.02s)
+    --- PASS: TestSiteRetirementDependencies/dangling-profile (0.01s)
+    --- PASS: TestSiteRetirementDependencies/dangling-fabric (0.01s)
+    --- PASS: TestSiteRetirementDependencies/dangling-zone (0.01s)
+    --- PASS: TestSiteRetirementDependencies/dangling-reservation (0.01s)
+    --- PASS: TestSiteRetirementDependencies/late-device (0.02s)
+    --- PASS: TestSiteRetirementDependencies/late-profile (0.02s)
+    --- PASS: TestSiteRetirementDependencies/late-native (0.02s)
+    --- PASS: TestSiteRetirementDependencies/late-parent (0.02s)
+    --- PASS: TestSiteRetirementDependencies/late-replacement (0.02s)
+    --- PASS: TestSiteRetirementDependencies/error:/dna/intent/api/v1/sites (0.01s)
+    --- PASS: TestSiteRetirementDependencies/error:/dna/intent/api/v1/networkDevices/assignedToSite (0.01s)
+    --- PASS: TestSiteRetirementDependencies/error:/dna/intent/api/v1/onboarding/pnp-device (0.01s)
+    --- PASS: TestSiteRetirementDependencies/error:/dna/intent/api/v2/floors/11111111-1111-4111-8111-111111111111/plannedAccessPointPositions (0.01s)
+    --- PASS: TestSiteRetirementDependencies/error:/api/v1/siteprofile (0.01s)
+    --- PASS: TestSiteRetirementDependencies/error:/dna/intent/api/v1/wirelessProfiles (0.01s)
+    --- PASS: TestSiteRetirementDependencies/error:/dna/intent/api/v1/networkProfilesForSites/switch-profile/siteAssignments (0.01s)
+    --- PASS: TestSiteRetirementDependencies/error:/dna/intent/api/v1/wirelessProfiles/wireless-profile/siteTags (0.01s)
+    --- PASS: TestSiteRetirementDependencies/error:/dna/intent/api/v1/sda/fabricSites (0.01s)
+    --- PASS: TestSiteRetirementDependencies/error:/dna/intent/api/v1/sda/fabricZones (0.01s)
+    --- PASS: TestSiteRetirementDependencies/error:/dna/intent/api/v1/ipam/siteIpAddressPools (0.01s)
+=== RUN   TestSiteRetirementObservationRedactsNative
+--- PASS: TestSiteRetirementObservationRedactsNative (0.00s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	3.009s

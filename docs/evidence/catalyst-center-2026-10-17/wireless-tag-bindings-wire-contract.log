@@ -1,0 +1,8 @@
+=== RUN   TestWirelessZoneBindingV4EncodingContract
+=== RUN   TestWirelessZoneBindingV4EncodingContract/references
+=== RUN   TestWirelessZoneBindingV4EncodingContract/empty
+--- PASS: TestWirelessZoneBindingV4EncodingContract (0.00s)
+    --- PASS: TestWirelessZoneBindingV4EncodingContract/references (0.00s)
+    --- PASS: TestWirelessZoneBindingV4EncodingContract/empty (0.00s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	2.382s

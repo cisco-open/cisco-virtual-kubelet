@@ -1,0 +1,11 @@
+=== RUN   TestLiveCatalystCenterIntentComplianceEvidence
+    compliance_evidence_live_test.go:45: 198.51.100.100 NETWORK_SETTINGS status=COMPLIANT state=SUCCESS checked_at=2026-10-15T23:00:02Z
+    compliance_evidence_live_test.go:42: 198.51.100.100 NETWORK_PROFILE absent; cannot supply convergence evidence
+    compliance_evidence_live_test.go:45: 198.51.100.101 NETWORK_SETTINGS status=COMPLIANT state=SUCCESS checked_at=2026-10-09T22:23:48Z
+    compliance_evidence_live_test.go:42: 198.51.100.101 NETWORK_PROFILE absent; cannot supply convergence evidence
+    compliance_evidence_live_test.go:45: 198.51.100.103 NETWORK_SETTINGS status=COMPLIANT state=SUCCESS checked_at=2026-10-15T23:00:02Z
+    compliance_evidence_live_test.go:42: 198.51.100.103 NETWORK_PROFILE absent; cannot supply convergence evidence
+    compliance_evidence_live_test.go:48: read-only compliance evidence inspected for three lab identities; no task completion/source correlation, remediation or release was inferred
+--- PASS: TestLiveCatalystCenterIntentComplianceEvidence (2.16s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	4.264s

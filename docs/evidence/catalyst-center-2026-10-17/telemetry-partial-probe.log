@@ -1,0 +1,18 @@
+=== RUN   TestLiveCatalystCenterTelemetryPartialProbe
+    site_execution_live_test.go:111: isolated qualification hierarchy: Global/CVK-Q-20261017-041545-000000000
+    site_execution_live_test.go:452: submitted task=01a14812-af88-7373-97a8-8705c4e8cefd at=2026-10-17T04:15:46.444975Z
+    site_execution_live_test.go:470: verified Create area
+    site_execution_live_test.go:452: submitted task=01a14812-b64c-7120-996f-f4325684343a at=2026-10-17T04:15:48.191706Z
+    site_execution_live_test.go:470: verified Create building
+    site_execution_live_test.go:452: submitted task=01a14812-b8f3-75ee-aeeb-ef922d51bc2b at=2026-10-17T04:15:48.831309Z
+    site_execution_live_test.go:470: verified Create floor
+    site_execution_live_test.go:452: submitted task=01a14812-bfd7-7e23-af65-74b41befa896 at=2026-10-17T04:15:50.576213Z
+    site_execution_live_test.go:470: verified Update floor
+    site_execution_live_test.go:479: three creates, one floor update, and full hierarchy read-back verified
+    site_execution_live_test.go:522: partial telemetry step=1 task=01a14812-cdec-79de-92b0-d35a591eae88 changed groups=[wiredDataCollection wirelessTelemetry syslogs applicationVisibility]
+    site_execution_live_test.go:522: partial native readback unavailable invalid Catalyst Center API response
+    site_execution_live_test.go:158: retained uncertain hierarchy for inspection: Global/CVK-Q-20261017-041545-000000000
+--- FAIL: TestLiveCatalystCenterTelemetryPartialProbe (11.62s)
+FAIL
+FAIL	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	13.001s
+FAIL

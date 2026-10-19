@@ -1,0 +1,25 @@
+=== RUN   TestLiveNetworkApplicationRetainedCleanup
+    network_application_cleanup_live_test.go:155: exact generated cleanup task 01a147f9-f29d-7a08-b659-7a7572fff609
+    network_application_cleanup_live_test.go:155: exact generated cleanup task 01a147f9-fa54-7d55-9fe1-a604922cf8cb
+    network_application_cleanup_live_test.go:155: exact generated cleanup task 01a147fa-0192-7589-b520-902993e80624
+    network_application_cleanup_live_test.go:172: retained application hierarchy removed by exact original creator UUIDs; unchanged geometry/settings, empty assignments, complete delete tasks and final absence verified
+--- PASS: TestLiveNetworkApplicationRetainedCleanup (10.90s)
+=== RUN   TestLiveCatalystCenterDNSOptional
+    site_execution_live_test.go:111: isolated qualification hierarchy: Global/CVK-Q-20261017-034850-000000000
+    site_execution_live_test.go:452: submitted task=01a147fa-09e2-7489-b0e2-8c52fcda33f6 at=2026-10-17T03:48:51.186699Z
+    site_execution_live_test.go:470: verified Create area
+    site_execution_live_test.go:452: submitted task=01a147fa-0c54-7c63-b625-c9a60acaf366 at=2026-10-17T03:48:51.809404Z
+    site_execution_live_test.go:470: verified Create building
+    site_execution_live_test.go:452: submitted task=01a147fa-0eff-7f94-b93f-ffa28b31d2fa at=2026-10-17T03:48:52.443218Z
+    site_execution_live_test.go:470: verified Create floor
+    site_execution_live_test.go:452: submitted task=01a147fa-1d46-7d3e-945c-a2f172aba656 at=2026-10-17T03:48:56.07124Z
+    site_execution_live_test.go:470: verified Update floor
+    site_execution_live_test.go:479: three creates, one floor update, and full hierarchy read-back verified
+    site_execution_live_test.go:513: public DNS mode=omitted task=01a147fa-3458-7a78-a4b3-0179de4ff699 original Unknown recovery, latest receipt, native resolver count=2 and repeated no-op verified
+    site_execution_live_test.go:513: public DNS mode=clear task=01a147fa-55b7-7891-97f2-d1f412d14402 original Unknown recovery, latest receipt, native resolver count=0 and repeated no-op verified
+    site_execution_live_test.go:513: public DNS mode=null task=01a147fa-7766-7671-8e65-69a5d43c9d21 original Unknown recovery, latest receipt, native resolver count=0 and repeated no-op verified
+    site_execution_live_test.go:513: three public DNS revisions, three one-use no-dispatch retirements, three original task recoveries, one latest application; native API with simulated Kubernetes storage/actors
+    site_execution_live_test.go:225: isolated hierarchy cleanup verified
+--- PASS: TestLiveCatalystCenterDNSOptional (40.43s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	53.728s

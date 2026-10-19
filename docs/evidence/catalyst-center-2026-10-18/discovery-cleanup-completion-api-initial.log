@@ -1,0 +1,31 @@
+[controller-runtime] log.SetLogger(...) was never called; logs will not be displayed.
+Detected at:
+	>  goroutine 2442 [running]:
+	>  runtime/debug.Stack()
+	>  	/Users/johalley/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.9.darwin-arm64/src/runtime/debug/stack.go:26 +0x6c
+	>  sigs.k8s.io/controller-runtime/pkg/log.eventuallyFulfillRoot()
+	>  	/Users/johalley/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.23.3/pkg/log/log.go:60 +0xc4
+	>  sigs.k8s.io/controller-runtime/pkg/log.(*delegatingLogSink).Enabled(0xc00013c600, 0x1)
+	>  	/Users/johalley/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.23.3/pkg/log/deleg.go:111 +0x30
+	>  github.com/go-logr/logr.Logger.Info({{0x10ac4f7a8?, 0xc00013c600?}, 0x5?}, {0x1082920d3, 0xf}, {0x0, 0x0, 0x0})
+	>  	/Users/johalley/go/pkg/mod/github.com/go-logr/logr@v1.4.4/logr.go:276 +0x60
+	>  sigs.k8s.io/controller-runtime/pkg/envtest.(*Environment).Start(0xc0011422c8)
+	>  	/Users/johalley/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.23.3/pkg/envtest/server.go:348 +0xfd8
+	>  github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter.qualificationAPIServerClientEnvironment(0xc000cef8c8, 0xc0011422c8)
+	>  	/Users/johalley/Git/cisco-virtual-kubelet/internal/controlleradapter/catalystcenter/configuration_envtest_test.go:27 +0x44
+	>  github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter.qualificationAPIServerClient(0xc000cef8c8, {0xc000861e98, 0x1, 0x0?})
+	>  	/Users/johalley/Git/cisco-virtual-kubelet/internal/controlleradapter/catalystcenter/configuration_envtest_test.go:22 +0x1ac
+	>  github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter.TestEnvtestDiscoveryConfigCleanupCompletion(0xc000cef8c8)
+	>  	/Users/johalley/Git/cisco-virtual-kubelet/internal/controlleradapter/catalystcenter/discovery_config_cleanup_observation_envtest_test.go:80 +0x54
+	>  testing.tRunner(0xc000cef8c8, 0x10abf18a8)
+	>  	/Users/johalley/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.9.darwin-arm64/src/testing/testing.go:2036 +0x168
+	>  created by testing.(*T).Run in goroutine 1
+	>  	/Users/johalley/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.9.darwin-arm64/src/testing/testing.go:2101 +0x7c0
+--- FAIL: TestEnvtestDiscoveryConfigCleanupCompletion (6.91s)
+    --- FAIL: TestEnvtestDiscoveryConfigCleanupCompletion/duplicate (0.03s)
+        discovery_config_cleanup_observation_envtest_test.go:83: NetworkController.cisco.vk "catc" is invalid: status.configuration.actionApplications[1]: Duplicate value: {"resource":"discovery-record:b086de7b32510701e873f3d4ae742917ca1cc1141ffe4a8387d604ef474ef9e4:42","section":"inventory"}
+    --- FAIL: TestEnvtestDiscoveryConfigCleanupCompletion/foreign-alias (0.03s)
+        discovery_config_cleanup_observation_envtest_test.go:83: NetworkController.cisco.vk "catc" is invalid: status.configuration.actionApplications[1]: Duplicate value: {"resource":"discovery-record:b086de7b32510701e873f3d4ae742917ca1cc1141ffe4a8387d604ef474ef9e4:42","section":"inventory"}
+FAIL
+FAIL	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	35.840s
+FAIL

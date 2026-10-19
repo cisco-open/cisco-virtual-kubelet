@@ -6,15 +6,18 @@ controller type is not usable until a product adapter registers itself, and
 the base scaffold contains no Catalyst Center, APIC, Meraki, or other
 product-specific API behavior.
 
-!!! warning "Alpha, report-only foundation"
+!!! warning "Alpha controller integrations"
     `NetworkController` and `NetworkControllerConfig` provide the extension
     boundary. This branch registers Nexus Dashboard and Catalyst Center
-    adapters with endpoint health and read-only inventory. Apply, pruning,
-    remote deletion, and their mutation RBAC role are not implemented; the
-    current configuration contract is report-only. Catalyst Center SWIM is
-    not yet an executable operation.
+    adapters with endpoint health and inventory. Catalyst Center additionally
+    implements bounded configuration, resource-specific lifecycle operations
+    and managed SWIM. Full NetAsCode parity remains incomplete. Review the
+    [alpha operating contract](controllers/catalyst-center-alpha.md) and
+    [remaining roadmap](controllers/catalyst-center-roadmap.md) before enabling
+    mutation; individual adapters retain their own capability boundaries.
 
-    On upgrade, apply both controller CRDs before rolling out the new manager.
+    On upgrade, apply matching CRDs and admission/RBAC before rolling out the
+    matching manager and workers.
     If either is missing, CVK preserves its existing device reconcilers but
     skips NetworkController registration for that manager process; apply the
     CRDs and restart the manager to enable the scaffold.
@@ -289,21 +292,22 @@ Controller reconciliation follows an observe-plan-act-verify loop:
    section states, hashes, and drift metadata.
 
 !!! warning "Hard release gate for remote mutation"
-    The current zero-adapter scaffold exposes section-ownership vocabulary but
-    deliberately grants no Lease permission to the base worker role and does
-    not yet provide a generic `SectionLeaser`. A shared, controller-neutral
-    `SectionLeaser`, its conformance suite, and a separate statically reviewed
-    mutation RBAC profile are hard release gates before the first adapter may
-    support `mode: apply`, `prunePolicy: Delete`, or any remote-deletion path,
-    including `deletionPolicy: Delete`. Tests must prove exclusive acquisition
-    for each `(controller, scope, section)` tuple, renewal, conflict handling,
-    expiry and takeover, cancellation/restart behavior, and that no mutation
-    occurs without a currently held lease. The manager must bind that future
-    role only through an explicit audited allow-list. Registry validation
-    currently accepts only the base report-worker role; a new role, its chart
-    policy, and the manager's `bind` marker must land in one reviewed change.
-    Until all gates land, adapters must remain report-only regardless of the
-    vocabulary exposed by the API.
+    Remote mutation requires a statically reviewed worker RBAC profile,
+    exclusive configuration ownership and an operation journal. The current
+    Catalyst Center implementation uses controller-status ownership CAS and
+    resource-specific receipts; physical effects additionally use the shared
+    device reservation and canonical mutation Lease protocols. The original
+    scaffold's proposed generic `SectionLeaser` is not the implementation and
+    must not be assumed to exist. Review the ownership/CAS design and its
+    admission enforcement as part of the alpha merge boundary.
+
+    Tests must prove conflict refusal, stale actor/source rejection,
+    cancellation and restart behavior, and no dispatch without current
+    authority. A physical-device lease is not authority to adopt controller
+    configuration, and a configuration owner is not authority to mutate a
+    device. Each adapter's descriptor and manager role allow-list must agree
+    with the installed chart. Unsupported Apply/Delete operations remain
+    refused even when the worker possesses broader API permissions.
 
 Adapters must make retries idempotent. An ambiguous timeout is not proof of
 failure: recover by task ID or by observing state before submitting a second
@@ -510,4 +514,28 @@ drivers, and transports building and behaving identically.
 ## Reference adapters
 
 - [Nexus Dashboard](controllers/nexus-dashboard.md): `nexus-dashboard`, health, inventory, and optional device adoption.
-- [Catalyst Center](controllers/catalyst-center.md): `catalyst-center`, health, inventory, and SWIM capability groundwork.
+- [Catalyst Center](controllers/catalyst-center.md): `catalyst-center`, alpha health, inventory, bounded configuration and managed SWIM; see its resource-specific qualification limits.
+
+
+## Optional config finalization
+
+An adapter may register a `ConfigurationLifecycle` policy alongside its factory.
+The finalizer name and the eligibility/completion callbacks are optional; existing
+registrations, including ND, retain their previous behavior when the policy is
+nil. Callbacks are pure metadata validators over copied NetworkController and
+NetworkControllerConfig objects. They must not construct an adapter, access
+credentials, read files or call product APIs.
+
+The central NetworkController manager owns enrollment/removal using uncached
+reads and optimistic metadata-only patches. The worker keeps config-read and
+status-write permissions and performs its resource-specific native cleanup through
+its existing journal. Completion must bind the config UID/generation/spec/deletion
+identity, controller identity and exact retained evidence. A descriptive capability
+alone is not a submission or finalization permit. Deleting-config status events
+wake the manager; ordinary status writes retain the existing event filter.
+
+Catalyst Center's feature-only policy is the first implementation. Its cleanup
+reuses the existing feature pruning/task/ownership machinery, without modifying
+ND or direct-device/SWIM behavior. The chart grants config metadata `patch` only
+to the trusted manager; controller-worker roles remain unchanged. No generic
+adapter factory or product endpoint is invoked during manager finalization.

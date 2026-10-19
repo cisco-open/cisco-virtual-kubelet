@@ -1,0 +1,47 @@
+=== RUN   TestLiveCatalystCenterPrivateSiteDesign
+    site_execution_live_test.go:107: isolated qualification hierarchy: Global/CVK-Q-20261016-230002-000000000
+    site_execution_live_test.go:260: singular manifest create task 01a146f1-b15d-75b7-8de5-488b1462b18a
+    site_execution_live_test.go:260: retained acknowledged singular-site task as Unknown for restarted observation
+    site_execution_live_test.go:260: singular manifest create task 01a146f1-d487-7f89-a7eb-bd54bf12346a
+    site_execution_live_test.go:260: retained acknowledged singular-site task as Unknown for restarted observation
+    site_execution_live_test.go:260: singular manifest create task 01a146f1-f7f8-79f9-a6a1-6e4624b0bda4
+    site_execution_live_test.go:260: retained acknowledged singular-site task as Unknown for restarted observation
+    site_execution_live_test.go:316: three original create-task result UUIDs bind exact native kind, path and parent; creator receipt identity independently verified
+    site_execution_live_test.go:328: three durable original-task site creator receipts retained through restarted reconciliation
+    site_execution_live_test.go:330: three singular manifest creates and complete native hierarchy verified
+    site_execution_live_test.go:441: retained acknowledged singular-site task as Unknown for restarted observation
+    site_execution_live_test.go:441: public manifest step=0 status=Waiting operation=Accepted task=01a146f2-2e98-7356-912b-aa8565ebf69f reasons=[AdapterAvailable TaskAccepted TaskAccepted]
+    site_execution_live_test.go:441: public manifest Update reached InSync across simulated worker restarts; journal cleared, owner retained, no-op verified
+    site_execution_live_test.go:448: submitted task=01a146f2-2e98-7356-912b-aa8565ebf69f at=2026-10-16T23:00:36Z
+    site_execution_live_test.go:466: verified Update floor
+    site_execution_live_test.go:475: three creates, one floor update, and full hierarchy read-back verified
+    site_execution_live_test.go:485: 4 acknowledged Unknown tasks recovered through restarted public reconciliation without resubmission
+    site_design_live_test.go:49: design stage 1 Update plannedAP false
+    planned_ap_live_test.go:40: planned AP native response POST HTTP 202 transportError false
+    site_design_live_test.go:49: design stage 2 Create plannedAP true
+    site_design_live_test.go:49: design task 01a146f2-b091-742b-bf48-b8996612a13f
+    site_design_live_test.go:49: retained acknowledged singular-site task as Unknown for restarted observation
+    site_execution_live_test.go:494: isolated AP UUID 613bd87d-5331-4901-aa40-0bb3d829d2de floor UUID 0f4a751e-3796-4d36-8acf-06e53161c10d
+    site_design_live_test.go:49: design stage 1 Update plannedAP false
+    planned_ap_live_test.go:40: planned AP native response POST HTTP 202 transportError false
+    site_design_live_test.go:49: design stage 1 Update plannedAP true
+    site_design_live_test.go:49: design task 01a146f3-381f-76ac-ac27-07d077601574
+    site_design_live_test.go:49: retained acknowledged singular-site task as Unknown for restarted observation
+    site_execution_live_test.go:494: design stage 1 Update plannedAP false
+    site_execution_live_test.go:494: design task 01a146f3-6efb-7bfa-b930-124acf489722
+    site_execution_live_test.go:494: retained acknowledged singular-site task as Unknown for restarted observation
+    site_design_live_test.go:473: original floor task verified before AP correction; complete predicted native effect matches false
+    site_design_live_test.go:476: fixture AP coordinates before 5.5 6 4 predicted 6.085032307016012 6 4 observed 6.0850325 6 4
+    planned_ap_live_test.go:40: planned AP native response POST HTTP 202 transportError false
+    site_execution_live_test.go:494: design stage 2 Update plannedAP true
+    site_execution_live_test.go:494: design task 01a146f3-b51b-7710-919c-50dfb64f5dc6
+    site_execution_live_test.go:494: retained acknowledged singular-site task as Unknown for restarted observation
+    site_execution_live_test.go:494: complete native AP footprint, exact identities and observed antenna sensor flag preserved across image, AP and geometry edits
+    site_execution_live_test.go:494: floor effect contract not established; protected geometry handoff must remain fenced
+    site_execution_live_test.go:494: private floor/image/AP composition: two synchronous image uploads, AP create/update and later keyed geometry update; exact mutations 6 geometry AP corrections 1 unchanged creators and bounded image/latest receipts
+    site_design_live_test.go:205: exact private planned-AP UUID removed before hierarchy cleanup
+    site_execution_live_test.go:221: isolated hierarchy cleanup verified
+--- FAIL: TestLiveCatalystCenterPrivateSiteDesign (161.49s)
+FAIL
+FAIL	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	162.737s
+FAIL

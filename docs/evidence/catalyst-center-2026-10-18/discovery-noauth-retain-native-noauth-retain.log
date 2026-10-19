@@ -1,0 +1,7 @@
+=== RUN   TestLiveDiscoveryNoAuthRetainPreflightRefusal
+=== RUN   TestLiveDiscoveryNoAuthRetainPreflightRefusal/proven-preflight-refusal
+    discovery_credential_unsubmitted_live_test.go:232: real API/native read path: original Prepared safely retired before fresh planning; injected final post-permit read failure proved no dispatch; only operation retired, inventory owner retained, zero mutation attempts; no credential delivery or automatic retry attempted
+--- PASS: TestLiveDiscoveryNoAuthRetainPreflightRefusal (7.33s)
+    --- PASS: TestLiveDiscoveryNoAuthRetainPreflightRefusal/proven-preflight-refusal (3.47s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	9.517s

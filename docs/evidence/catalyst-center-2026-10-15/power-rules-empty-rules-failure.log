@@ -1,0 +1,7 @@
+=== RUN   TestLiveWirelessPowerRulesRetained
+    zz_power_rules_retained_live_test.go:38: isolated power CVK_R_56557dc063c8d1d8
+    zz_power_rules_retained_live_test.go:123: stage submission uncertain; retain CLEAR_RULES CVK_R_56557dc063c8d1d8 mdiYq1zl-x1jF-nty1-ntDK-yZa2m2m4zdfKoemWvJflmL8ZuJrF REST PUT /dna/intent/api/v1/wirelessSettings/powerProfiles/mdiYq1zl-x1jF-nty1-ntDK-yZa2m2m4zdfKoemWvJflmL8ZuJrF failed with status Bad Request
+--- FAIL: TestLiveWirelessPowerRulesRetained (0.66s)
+FAIL
+FAIL	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	1.696s
+FAIL

@@ -1,0 +1,27 @@
+[
+  {
+    "case": "missing-explicit-kubeconfig",
+    "result": "refused before native client or mutation",
+    "expectedExit": 1
+  },
+  {
+    "case": "wrong-context",
+    "result": "refused before native client or mutation",
+    "expectedExit": 1
+  },
+  {
+    "case": "wrong-cluster-uid",
+    "result": "refused before native client or mutation",
+    "expectedExit": 1
+  },
+  {
+    "case": "wrong-controller-uid",
+    "result": "refused before native client or mutation",
+    "expectedExit": 1
+  },
+  {
+    "case": "unknown-interruption-mode",
+    "result": "refused before native client or mutation",
+    "expectedExit": 1
+  }
+]

@@ -1,0 +1,213 @@
+{
+  "scope": "ordinary Accepted wireless metadata Create complete-tree completion",
+  "branch": "pr/johalley/catc-support",
+  "modelVersion": "0.5.0",
+  "upstreamRevision": "a435555fe828f03cf3311d52fe1ab6572a247916",
+  "fullModelComplete": false,
+  "creatorOwnershipAdded": false,
+  "credentialOrPhysicalCompletionExpanded": false,
+  "installedQualification": false,
+  "nativePersistence": "simulated Kubernetes; separate temporary real API gate",
+  "sourceFingerprints": {
+    "internal/controlleradapter/catalystcenter": "a4970d461cfea98468628b412935f1d5fe6d7ec509543603ce37a3adc209bd57",
+    "internal/controlleradapter/catalystcenter/nacmodel": "3b43f32720303e2587c09a77f25b1c3a3e9d031838e4c8638d0b9f18273fe8d0",
+    "tools/cvk-netascode-migrate": "795c622f7e924ee81759a3940822bebd2b97d25057805c7d36d4aa276106641b"
+  },
+  "gates": {
+    "focusedRace": {
+      "exitCode": 0,
+      "passingTestEvents": 1048,
+      "log": "wireless-accepted-create-focusedRace.log",
+      "sha256": "05aa45061d9f99257766add04d6cc880e7ecfd7dea1a76749e312a963686b5d0"
+    },
+    "temporaryAPI": {
+      "exitCode": 0,
+      "passingTestEvents": 43,
+      "log": "wireless-accepted-create-temporaryAPI.log",
+      "sha256": "5c197ab842f29a7a44d5019c99640949644c7df6da75714eeed21492bfc161b9"
+    },
+    "native": {
+      "exitCode": 0,
+      "passingTestEvents": 8,
+      "log": "wireless-accepted-create-native.log",
+      "sha256": "bdb9350a8eb4fbaa5740aeba3f192531e7621db3cb1b2b914ce8fcd7582e809c"
+    },
+    "productionBuild": {
+      "exitCode": 0,
+      "log": "/private/tmp/cvk-wireless-accepted-create-build.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "strictDocs": {
+      "exitCode": 0,
+      "log": "/private/tmp/cvk-wireless-accepted-create-docs.log",
+      "sha256": "f8fa9ce6b02a251769280d420926a572176d3c73f734fe75e2a0df1ce94bc797"
+    },
+    "regression": {
+      "exitCode": 0,
+      "passingTestEvents": 19621,
+      "passingPackages": [
+        "github.com/cisco/virtual-kubelet-cisco/api/config/v1alpha1",
+        "github.com/cisco/virtual-kubelet-cisco/api/ops/v1alpha1",
+        "github.com/cisco/virtual-kubelet-cisco/api/v1alpha1",
+        "github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter",
+        "github.com/cisco/virtual-kubelet-cisco/internal/managedprotocol",
+        "github.com/cisco/virtual-kubelet-cisco/internal/aggregator",
+        "github.com/cisco/virtual-kubelet-cisco/internal/softwarelifecycle",
+        "github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter/nacmodel",
+        "github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/nexusdashboard",
+        "github.com/cisco/virtual-kubelet-cisco/internal/provider/maintenance",
+        "github.com/cisco/virtual-kubelet-cisco/internal/provider/softwareupgrade",
+        "github.com/cisco/virtual-kubelet-cisco/internal/controllerconfiguration",
+        "github.com/cisco/virtual-kubelet-cisco/internal/controller",
+        "github.com/cisco/virtual-kubelet-cisco/tools/cvk-netascode-migrate",
+        "github.com/cisco/virtual-kubelet-cisco/cmd/cisco-vk",
+        "github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter"
+      ],
+      "log": "/private/tmp/cvk-wireless-accepted-create-regression.log",
+      "sha256": "e70f07d85f9e6c76c6274e2cad7cebcb8da791313ba50f8cd4bfa1471fbd6726"
+    }
+  },
+  "nativeCycles": [
+    {
+      "attempts": 3,
+      "cleaned": true,
+      "deletes": 1,
+      "id": "mde5q1zl-x0rs-xZy5-mJaZ-nJq4mJaWmemWvJflmL8Zrdrsnv82",
+      "name": "CVK_DR_692036482000",
+      "noDispatchRetired": true,
+      "posts": 1,
+      "puts": 1,
+      "recoveredUnknown": true,
+      "staleRefused": true,
+      "tasks": {
+        "Create": "01a1541f-3098-7870-83fd-fa494a955c76",
+        "Delete": "01a1541f-4b20-7660-ba3b-ecf1312e3535",
+        "Update": "01a1541f-3e05-76ed-8ef2-397d6bb5614c"
+      }
+    },
+    {
+      "attempts": 3,
+      "cleaned": true,
+      "deletes": 1,
+      "id": "mde5q1zl-x0rs-xZCW-mta5-odGYotaWmemWvJflmL8Zrdrsnv82",
+      "name": "CVK_DR_701098829000",
+      "noDispatchRetired": true,
+      "posts": 1,
+      "puts": 1,
+      "recoveredUnknown": true,
+      "staleRefused": true,
+      "tasks": {
+        "Create": "01a1541f-527c-718d-8dcc-1ad817d01515",
+        "Delete": "01a1541f-6078-78ad-bbd5-dd69540eba01",
+        "Update": "01a1541f-58ae-7eb3-8975-72cb07a4ff82"
+      }
+    },
+    {
+      "attempts": 3,
+      "cleaned": true,
+      "deletes": 1,
+      "id": "mde5q1zl-x0rs-xZCW-nJu1-odGZodaWmemWvJflmL8Zrdrsnv82",
+      "name": "CVK_DR_706558838000",
+      "noDispatchRetired": true,
+      "posts": 1,
+      "puts": 1,
+      "recoveredUnknown": true,
+      "staleRefused": true,
+      "tasks": {
+        "Create": "01a1541f-67ce-76a4-95c9-5683f76f77e0",
+        "Delete": "01a1541f-75d1-7ea4-8817-0268e1d057c2",
+        "Update": "01a1541f-6e1b-7e6e-9521-d90301051864"
+      }
+    },
+    {
+      "attempts": 3,
+      "cleaned": true,
+      "deletes": 1,
+      "id": "f2ae6fe0-9e8b-3baf-a49f-3dbee4e8bb7e",
+      "name": "CVK_DR_711119628000",
+      "noDispatchRetired": true,
+      "posts": 1,
+      "puts": 1,
+      "recoveredUnknown": true,
+      "staleRefused": true,
+      "tasks": {
+        "Create": "01a1541f-79b0-7053-8f47-af7b45e4780b",
+        "Delete": "01a1541f-87a6-7992-a9f7-8276ac6e1de9",
+        "Update": "01a1541f-801d-7ca0-a06a-27f40a711030"
+      }
+    },
+    {
+      "attempts": 3,
+      "cleaned": true,
+      "deletes": 1,
+      "id": "mdiZq1zl-x0rs-xZq0-m183-mty2mJa3ntGWmdbdmfyXsZjFm0q0",
+      "name": "CVK_DR_443_716620758000",
+      "noDispatchRetired": true,
+      "posts": 1,
+      "puts": 1,
+      "recoveredUnknown": true,
+      "staleRefused": true,
+      "tasks": {
+        "Create": "01a1541f-8f17-787e-ac89-8459367994f5",
+        "Delete": "01a1541f-9d22-7dc5-bda3-93e20cbe7930",
+        "Update": "01a1541f-957d-7481-9186-f3e6b0b42d15"
+      }
+    },
+    {
+      "attempts": 3,
+      "cleaned": true,
+      "deletes": 1,
+      "id": "mdiZq1zl-x0rs-xZeW-mf83-mJeXnJqZoduWmdbdmfyXsZjFm0q0",
+      "name": "CVK_DR_100_721164385000",
+      "noDispatchRetired": true,
+      "posts": 1,
+      "puts": 1,
+      "recoveredUnknown": true,
+      "staleRefused": true,
+      "tasks": {
+        "Create": "01a1541f-a0e3-7eb3-8a49-f57f35b4fbc0",
+        "Delete": "01a1541f-b598-7557-a0f6-cdffe65d8dd0",
+        "Update": "01a1541f-a79f-71ee-9f8c-274e125786ba"
+      }
+    },
+    {
+      "attempts": 3,
+      "cleaned": true,
+      "deletes": 1,
+      "id": "mde5q1zl-x0rs-xZCY-odmX-mZm2otaWmemWvJflmL8Zrdrsnv82",
+      "name": "CVK_DR_728313369000",
+      "noDispatchRetired": true,
+      "posts": 1,
+      "puts": 1,
+      "recoveredUnknown": true,
+      "staleRefused": true,
+      "tasks": {
+        "Create": "01a1541f-bcc2-749f-b20f-af41aba3e4cc",
+        "Delete": "01a1541f-cb9d-7991-bc8b-6d467b181fd2",
+        "Update": "01a1541f-c2f3-76fb-80ef-097cac6f0dc8"
+      }
+    }
+  ],
+  "nativeOrdinaryAcceptedCreates": 7,
+  "nativeUnknownUpdatesRecovered": 7,
+  "nativeMutations": 21,
+  "baselineRestored": true,
+  "activeOperation": false,
+  "remainingGeneratedFixtures": [],
+  "remaining": [
+    "creator identity/custody and destructive lifecycle where still absent, including AP-profile creation correlation",
+    "credential-bearing AP/SSID completion protocols and physical resource admission remain separate existing contracts",
+    "installed metadata Create/recovery and remaining native field combinations",
+    "all other per-resource schema/catalogue, hardware/bulk and lifecycle gates across the complete 93-row model",
+    "partial PnP acquisition cancellation original-manager quiescence proof"
+  ],
+  "history": [
+    "The existing credential-AP/prerequisite fixture answered root task reads only; updated it to the shared complete-tree fixture for its metadata power prerequisite. Credential AP completion behavior was not changed.",
+    "New API-test namespace names contained collection underscores. Replaced those with hyphens to meet RFC1123; all 42 cases pass."
+  ],
+  "resourceCoverage": {
+    "inventoryRows": 93,
+    "qualifiedMetadataFamilies": 7,
+    "completeResourceParity": false
+  }
+}

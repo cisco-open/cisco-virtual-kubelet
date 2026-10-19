@@ -1,0 +1,18 @@
+=== RUN   TestLiveWirelessProfileSiteTagsExecution
+    wireless_profile_execution_live_test.go:53: isolated names CVK_N_787db549eeb02a97 CVK_S_09ab8c58cfe9018f
+    wireless_profile_execution_live_test.go:191: task ssid:8995b7da-5b82-40fd-a706-82150affe92d:CVK_S_09ab8c58cfe9018f Create 01a13e37-50d4-7c6f-9092-4338e4ac80e2
+    wireless_profile_execution_live_test.go:200: owned SSID CVK_S_09ab8c58cfe9018f mdiYq1zl-x1nF-mdLH-yJHJ-ntHJzMu5mde4zKmWvJflmL8ZuZrF
+    wireless_profile_execution_live_test.go:228: task wireless/wireless-profile:CVK_N_787db549eeb02a97:869bb3733dd1968a935236e478107221bc431d82357537e7ecc093ed57fa66c8 Create 01a13e37-5bd6-7948-86f0-f568a12bf0cd
+    wireless_profile_execution_live_test.go:237: owned profile CVK_N_787db549eeb02a97 8889b9f0-358b-4eab-b29b-eeb278d161ef
+    wireless_profile_execution_live_test.go:248: task wireless/wireless-profile:CVK_N_787db549eeb02a97:869bb3733dd1968a935236e478107221bc431d82357537e7ecc093ed57fa66c8 Update 01a13e37-6ae9-7ec3-acda-eac43baf1ec8
+    wireless_profile_execution_live_test.go:271: task Global/CVK_N_787db549eeb02a97_A Create 01a13e37-77a4-7e79-ac5c-4528b6a8db29
+    wireless_profile_execution_live_test.go:284: owned empty area Global/CVK_N_787db549eeb02a97_A b9c8f55a-340f-4d4c-93f8-43e570a561a8
+    wireless_profile_execution_live_test.go:292: task wireless-sites/CVK_N_787db549eeb02a97/5889efb4ac21bf8de701f7d7f76437a3654281dc2ee0f655b884cc1fc651e912 Update 01a13e37-83c9-7453-81be-4495afd56575
+    wireless_profile_execution_live_test.go:271: task Global/CVK_N_787db549eeb02a97_B Create 01a13e37-8c4a-753e-8220-c5cba0a4d47d
+    wireless_profile_execution_live_test.go:284: owned empty area Global/CVK_N_787db549eeb02a97_B c6fcd6db-6416-46f1-8f78-432dc541c9d9
+    wireless_profile_execution_live_test.go:292: task wireless-sites/CVK_N_787db549eeb02a97/115f88a5da98af40dbc9a69bcfb82f1ceb97334c0811596837574d3ab9555c22 Update 01a13e37-97c5-760e-82ef-422437fb16d6
+    wireless_profile_execution_live_test.go:325: submission uncertain; retain wireless-site-tags/site-tag:0f40c64d24458d3cb51007ff796eeb703354bbf2d33d42317f0ecba7f626010f:7d6acee18f92a585ac5b0034418629d6040fa7ab4c8fe1069d866e5c8ece0b3d REST POST /dna/intent/api/v1/wirelessProfiles/8889b9f0-358b-4eab-b29b-eeb278d161ef/siteTags/bulk failed with status Bad Request
+--- FAIL: TestLiveWirelessProfileSiteTagsExecution (24.83s)
+FAIL
+FAIL	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	25.773s
+FAIL

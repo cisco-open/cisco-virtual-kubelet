@@ -1,0 +1,15 @@
+=== RUN   TestLiveCatalystCenterTemplateProject
+    template_projects_live_test.go:121: submitted Create CVK-Q-Project-20261016-114906 01a1448b-656e-7899-9d08-1043090e8997
+    template_projects_live_test.go:121: submitted Update CVK-Q-Project-20261016-114906 01a1448b-7702-70b0-ad21-caa02036aeb2
+    template_projects_live_test.go:147: project create and description update verified
+    template_projects_live_test.go:149: native template operation Create draft:CVK-Q-Project-20261016-114906#CVK-Commit-Qualification 01a1448b-9489-7f0f-a0eb-133eda995a0b
+    template_projects_live_test.go:149: native template operation Update commit:CVK-Q-Project-20261016-114906#CVK-Commit-Qualification 01a1448b-d204-7f83-ae2f-f0809ce4fa79
+    template_projects_live_test.go:149: native template operation Update draft:CVK-Q-Project-20261016-114906#CVK-Commit-Qualification 01a1448c-2366-7529-a015-fa72b6514d23
+    template_projects_live_test.go:149: native template operation Update commit:CVK-Q-Project-20261016-114906#CVK-Commit-Qualification 01a1448c-6260-77ca-8138-2eb13ec65574
+    template_projects_live_test.go:149: native draft create/update and two committed versions verified 65161bee-5422-4d77-b815-a6e3b495216e
+    template_commit_live_test.go:84: template mutation receipt DELETE 01a1448c-8d28-735c-9ef2-1b9c12d58d3d
+    template_commit_live_test.go:95: template fixture cleanup verified 65161bee-5422-4d77-b815-a6e3b495216e
+    template_projects_live_test.go:95: isolated project cleanup verified 4af58e0c-8bd4-4e8e-9c0f-39ba1a7b30cc
+--- PASS: TestLiveCatalystCenterTemplateProject (81.34s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	83.701s

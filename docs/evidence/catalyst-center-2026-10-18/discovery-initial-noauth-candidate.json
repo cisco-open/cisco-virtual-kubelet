@@ -1,0 +1,259 @@
+{
+  "branch": "pr/johalley/catc-support",
+  "modelVersion": "0.5.0",
+  "applied": true,
+  "status": "applied-and-qualified-with-explicit-native-create-limits",
+  "baselinePackageSHA256": "b90ca2f5b58ee816f24dc907ee98818f2a2d4d8b62b3511d3a55d4bfbd338bbd",
+  "candidatePackageSource": {
+    "files": 1640,
+    "sha256": "d637d84a78210c1b8ea5eadcbc8e1104426cd1c280d3c26992fa4a59c2733e67"
+  },
+  "candidateFilesSHA256": {
+    "internal/controlleradapter/catalystcenter/config_apply.go": "3c887e94856be313555b47f34489636b63f95bb2cd38c0d7bc6d981a342461c6",
+    "internal/controlleradapter/catalystcenter/discovery_credential_executor.go": "669bf63d8ada2f5e2bb413bb6111da2ec01cffa1d91241ffa5838d8badda8d5c",
+    "internal/controlleradapter/catalystcenter/discovery_credential_prune.go": "5b6702ef3afcb99c3330131230891ccd66cdf22e3e99f21816d9675b256c2643",
+    "internal/controlleradapter/catalystcenter/discovery_credential_source_scope.go": "e4c48f5b8a65c754fabc814f74909eba636153939fdb63a9a0ddc7f82d9f20ef",
+    "internal/controlleradapter/catalystcenter/discovery_credential_unsubmitted.go": "99f49d5b938f0963773ebab22e72bab546b774b6b55488f0a31b9a3793900dc0",
+    "internal/controlleradapter/catalystcenter/discovery_credential_unsubmitted_handoff.go": "37765a7054d9e34c12568641fc2f6a5a39b17d5e6ffc7465bac110ec3616e932",
+    "internal/controlleradapter/catalystcenter/discovery_credentials.go": "bc8b611f20b3b60aee4056807c2f92edbc9f5a44925e5e087a3b470855a4d621",
+    "internal/controlleradapter/catalystcenter/discovery_metadata_initial.go": "720d8f628dcbdf47492ca49e78652b417e2d0853c78bef51c2d9d7001badba3b",
+    "internal/controlleradapter/catalystcenter/discovery_owned.go": "94a8136588d47d32615f73d215d4cc271c2d467f58a621a421117e8bb0c6778b",
+    "internal/controlleradapter/catalystcenter/discovery_source_scope.go": "1a5782d23225b29da0647f34bbc2d2ed86c2962bfd40877ad4bb757f3e1f34c4",
+    "internal/controlleradapter/catalystcenter/discovery_initial_noauth_test.go": "8afb989e81720da096947df549b14e7b751b144af62dcdbd10815c301bbe5c21",
+    "internal/controlleradapter/catalystcenter/discovery_initial_noauth_envtest_test.go": "4d0b1b0bec35f4d9f19060204b470d70e5cd39b6d8e452ef0054c634443e2954",
+    "internal/controlleradapter/catalystcenter/discovery_credential_custody_cleanup_test.go": "34ea2f93d84999d9f46782a2a62de449b51843e0a7fd669ea75cfb14fc1a5dd3",
+    "internal/controlleradapter/catalystcenter/config_no_dispatch.go": "18d362dce717a637518e267bdfb7fcce73ac18b4ed94a5bd3f15e5b7dddc81e5",
+    "internal/controlleradapter/catalystcenter/discovery_credential_no_dispatch_test.go": "151ee91a105a311187f5c362779d2c7a98731d265ef41aa14098fdf15ac7413f"
+  },
+  "initialFailure": {
+    "resolved": true,
+    "cause": "Final cancellation recheck required a non-nil projected secret snapshot for v4 metadata with zero declared references",
+    "log": "discovery-initial-noauth-candidate-first-failure.log"
+  },
+  "initialNoAuthApplianceMutationQualified": false,
+  "installedActorsQualified": false,
+  "ordinaryTypedAdoptionEnabled": false,
+  "sharedSchemaChanged": false,
+  "fullAffectedCandidateRegressionPassed": true,
+  "fullPinnedModelParity": false,
+  "applicationPending": "Preserve frozen actual source until native bulk qualification and cleanup are terminal; apply exact overlay bytes only after baseline guard and remaining review/tests",
+  "evidenceDocumentationBuild": {
+    "passed": true,
+    "strict": true,
+    "durationSeconds": 7.09,
+    "sourceLog": "/private/tmp/cvk-initial-noauth-evidence-docs.log"
+  },
+  "newTransitionQualification": {
+    "passed": true,
+    "casesPerPersistence": 16,
+    "passingEvents": 34,
+    "durationSeconds": 36.057,
+    "log": "discovery-initial-noauth-candidate-transitions.log",
+    "includes": [
+      "metadata predecessor handoff to version 1",
+      "cancelled first preparation handoff to version 1",
+      "committed proof source loss and handoff",
+      "first same-owner projected delivery at version 1",
+      "return to metadata preserving delivered floor"
+    ],
+    "subsequentTestOnlyChange": "Reset simulated newly-created native metadata before JSON decode, avoiding carryover from prior incarnations; full frozen candidate regression running",
+    "source": {
+      "files": 1640,
+      "sha256": "86d4af0718dbc5f8553b8d8f47500bfda7f26e50f9ddca83147e4d96d27ff713"
+    }
+  },
+  "gatesInProgress": {},
+  "initialTargetedRegression": {
+    "passingEvents": 75,
+    "initialNoAuthCasesPerPersistence": 9,
+    "existingVersionedCancellationCasesPerPersistence": 19,
+    "protocolEvents": 15,
+    "durationSeconds": 32.938,
+    "log": "discovery-initial-noauth-candidate-regression.log",
+    "source": {
+      "files": 1640,
+      "sha256": "20381730a245208245d0189c080deba4484cbf4acf5ec7c471599f374ee745af"
+    },
+    "passed": true
+  },
+  "supersededFullRegression": {
+    "source": {
+      "files": 1640,
+      "sha256": "ba8a73fadee07aacac9b50b0c795fb6e685e6118ac41300a1ba317b36c7ebdd0"
+    },
+    "passed": false,
+    "terminalExitCode": 143,
+    "intentionalStop": true,
+    "reason": "Live NoAuth qualification exposed v4-only preflight refusal retirement gap; stop superseded regression and fix before spending remaining run time",
+    "passingEventsBeforeStop": 1093,
+    "log": "discovery-initial-noauth-candidate-superseded-full.log"
+  },
+  "nativeReadOnlyInitialAttempt": {
+    "source": {
+      "files": 1640,
+      "sha256": "6c92f00f014ab08f0388dcb6bfa173654732f5288ac07ffc64f4abfde0d1775e"
+    },
+    "passed": false,
+    "passingCases": 4,
+    "failingCase": "proven-preflight-refusal",
+    "nativeMutationAttempts": 0,
+    "baselineDiscoveryJobs": 1,
+    "baselineDevices": 3,
+    "reason": "Shared no-dispatch kind predicate recognised v3 scoped inputs only, retaining the v4 operation fence",
+    "log": "discovery-initial-noauth-candidate-native-first-failure.log",
+    "retainedCaseRecords": "discovery-initial-noauth-native-initial-records"
+  },
+  "strictV4RefusalRegression": {
+    "passed": true,
+    "passingEvents": 423,
+    "durationSeconds": 62.03,
+    "source": {
+      "files": 1640,
+      "sha256": "d637d84a78210c1b8ea5eadcbc8e1104426cd1c280d3c26992fa4a59c2733e67"
+    },
+    "log": "discovery-initial-noauth-candidate-refusal-regression.log",
+    "newMetadataFaultCasesPerPersistence": 13
+  },
+  "nativeReadOnlyCancellation": {
+    "passed": true,
+    "source": {
+      "files": 1640,
+      "sha256": "8ddd103677ac2ba5e4faec8e28947cb6016d4844418e27bc3c355e40be19c8e7"
+    },
+    "cases": 5,
+    "durationSeconds": 17.388,
+    "nativeMutationAttempts": 0,
+    "baselineDiscoveryJobs": 1,
+    "baselineDevices": 3,
+    "records": "discovery-initial-noauth-native-records",
+    "log": "discovery-initial-noauth-candidate-native.log",
+    "nativeDiscoveryCreateQualified": false,
+    "installedActors": false,
+    "realIsolatedKubernetesAPI": true
+  },
+  "compatibilityGates": {
+    "mainBuild": {
+      "passed": true,
+      "source": {
+        "files": 1640,
+        "sha256": "d637d84a78210c1b8ea5eadcbc8e1104426cd1c280d3c26992fa4a59c2733e67"
+      },
+      "log": "discovery-initial-noauth-candidate-build.log",
+      "binarySHA256": "a3bce25c93e31279192777b20462e4d4c98781aae522a514a458746f42e70651"
+    },
+    "foundation": {
+      "passed": true,
+      "fresh": true,
+      "race": true,
+      "source": {
+        "files": 1640,
+        "sha256": "d637d84a78210c1b8ea5eadcbc8e1104426cd1c280d3c26992fa4a59c2733e67"
+      },
+      "packages": [
+        "internal/controlleradapter",
+        "internal/controlleradapter/nexusdashboard",
+        "internal/provider/softwareupgrade",
+        "internal/provider/maintenance"
+      ],
+      "log": "discovery-initial-noauth-candidate-foundation.log"
+    },
+    "swim": {
+      "passed": true,
+      "source": {
+        "files": 1640,
+        "sha256": "d637d84a78210c1b8ea5eadcbc8e1104426cd1c280d3c26992fa4a59c2733e67"
+      },
+      "durationSeconds": 3.006,
+      "selection": "SWIM|Reload|XFSU|TransferFallback",
+      "log": "discovery-initial-noauth-candidate-swim.log"
+    },
+    "docs": {
+      "passed": true,
+      "strict": true,
+      "durationSeconds": 7.57,
+      "log": "discovery-initial-noauth-candidate-docs.log"
+    }
+  },
+  "foundationCommandSetupFailure": {
+    "resolved": true,
+    "cause": "Initial command used nonexistent controlleradapter/nd package alias; reran the actual nexusdashboard path and all four packages passed fresh",
+    "log": "discovery-initial-noauth-candidate-foundation-command-setup-failure.log"
+  },
+  "stagedPublicExample": {
+    "applied": true,
+    "qualified": true,
+    "file": "internal/controlleradapter/catalystcenter/report_examples_test.go",
+    "baselineSHA256": "82e122e5a204ca1ed4daf4d91385db8c61e6bae83bdac7ae1901729f3150b171",
+    "candidateSHA256": "ba66eef7431ff238fbbf765e87899bce4ed84380ba254f8dd8295342b4bd15d9",
+    "manifestSHA256": "739200b98b9a1b1bd4597b5895c6e053338520262300ee21104dbe763147c990",
+    "manifestTarget": "examples/configs/catalyst-center/discovery-noauth-apply.yaml",
+    "exampleCompileGate": {
+      "passed": true,
+      "source": {
+        "files": 1641,
+        "sha256": "1be1c64f6aa17d7536f99f0da4a22e8a3f36fbad01412c0fa50e2d0b86c579f0"
+      },
+      "passingEvents": 80,
+      "durationSeconds": 3.397,
+      "log": "discovery-initial-noauth-candidate-examples.log"
+    },
+    "realCRDGate": {
+      "passed": true,
+      "source": {
+        "files": 1641,
+        "sha256": "4c0ab085b95bddafe008e767f1b9789ca96dd62215d51365d8ad5d8d679283ec"
+      },
+      "durationSeconds": 8.448,
+      "log": "discovery-initial-noauth-candidate-example-crd.log"
+    },
+    "qualifierAppliedToRepository": false,
+    "expectedAppliedUnionSource": {
+      "files": 1640,
+      "sha256": "5b60a22320ad19671d60a4c5caaf301d2c03abcb4cede487791ede7a756e588a"
+    }
+  },
+  "integratedPackageSource": {
+    "files": 1640,
+    "sha256": "5b60a22320ad19671d60a4c5caaf301d2c03abcb4cede487791ede7a756e588a"
+  },
+  "candidateFilesStillMatch": true,
+  "nativeQualifierBytesMatched": true,
+  "sharedExampleCompilerBytesMatched": true,
+  "manifestBytesMatched": true,
+  "privateStagingQualifierApplied": false,
+  "actualWorktreeTargetedRegressionPassed": true,
+  "fullAffectedOverlayRegression": {
+    "passed": true,
+    "source": {
+      "files": 1640,
+      "sha256": "d637d84a78210c1b8ea5eadcbc8e1104426cd1c280d3c26992fa4a59c2733e67"
+    },
+    "passingEvents": 2738,
+    "log": "discovery-initial-noauth-candidate-full-regression.log",
+    "durationSeconds": 1281.209
+  },
+  "appliedProductionSource": {
+    "files": 669,
+    "sha256": "eef776d3e57da5d96d73fe8b34da704a54c5002c895e96d5206b19d87aec8246"
+  },
+  "appliedProductionMatchesFullOverlay": true,
+  "appliedProductionMatchesNativeReadOnlyOverlay": true,
+  "appliedPrivateStagingQualifier": false,
+  "actualWorktreeTargetedRegression": {
+    "passed": true,
+    "source": {
+      "files": 1640,
+      "sha256": "5b60a22320ad19671d60a4c5caaf301d2c03abcb4cede487791ede7a756e588a"
+    },
+    "passingEvents": 503,
+    "durationSeconds": 62.378,
+    "log": "discovery-initial-noauth-actual-worktree.log",
+    "includesNewPublicManifest": true
+  },
+  "appliedDocumentationGate": {
+    "passed": true,
+    "strict": true,
+    "durationSeconds": 7.05,
+    "log": "discovery-initial-noauth-applied-docs.log"
+  }
+}

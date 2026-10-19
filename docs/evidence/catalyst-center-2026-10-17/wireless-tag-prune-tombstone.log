@@ -1,0 +1,22 @@
+=== RUN   TestEnvtestWirelessTagPrune
+=== RUN   TestEnvtestWirelessTagPrune/cohort-false/membership-prune-tombstone-tamper
+=== RUN   TestEnvtestWirelessTagPrune/cohort-false/membership-prune-settled-device
+=== RUN   TestEnvtestWirelessTagPrune/cohort-true/membership-prune-tombstone-tamper
+=== RUN   TestEnvtestWirelessTagPrune/cohort-true/membership-prune-settled-device
+--- PASS: TestEnvtestWirelessTagPrune (31.93s)
+    --- PASS: TestEnvtestWirelessTagPrune/cohort-false/membership-prune-tombstone-tamper (8.05s)
+    --- PASS: TestEnvtestWirelessTagPrune/cohort-false/membership-prune-settled-device (5.56s)
+    --- PASS: TestEnvtestWirelessTagPrune/cohort-true/membership-prune-tombstone-tamper (7.26s)
+    --- PASS: TestEnvtestWirelessTagPrune/cohort-true/membership-prune-settled-device (7.49s)
+=== RUN   TestWirelessTagPrune
+=== RUN   TestWirelessTagPrune/cohort-false/membership-prune-tombstone-tamper
+=== RUN   TestWirelessTagPrune/cohort-false/membership-prune-settled-device
+=== RUN   TestWirelessTagPrune/cohort-true/membership-prune-tombstone-tamper
+=== RUN   TestWirelessTagPrune/cohort-true/membership-prune-settled-device
+--- PASS: TestWirelessTagPrune (10.36s)
+    --- PASS: TestWirelessTagPrune/cohort-false/membership-prune-tombstone-tamper (2.07s)
+    --- PASS: TestWirelessTagPrune/cohort-false/membership-prune-settled-device (2.20s)
+    --- PASS: TestWirelessTagPrune/cohort-true/membership-prune-tombstone-tamper (3.00s)
+    --- PASS: TestWirelessTagPrune/cohort-true/membership-prune-settled-device (3.09s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	44.714s

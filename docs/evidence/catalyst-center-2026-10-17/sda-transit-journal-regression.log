@@ -1,0 +1,525 @@
+=== RUN   TestConfigurationGroupRecoveryRetainsJournal
+=== RUN   TestConfigurationGroupRecoveryRetainsJournal/Prepared
+=== RUN   TestConfigurationGroupRecoveryRetainsJournal/Submitting
+=== RUN   TestConfigurationGroupRecoveryRetainsJournal/Accepted
+=== RUN   TestConfigurationGroupRecoveryRetainsJournal/Verifying
+=== RUN   TestConfigurationGroupRecoveryRetainsJournal/Verified
+=== RUN   TestConfigurationGroupRecoveryRetainsJournal/Unknown
+=== RUN   TestConfigurationGroupRecoveryRetainsJournal/Cancelling
+--- PASS: TestConfigurationGroupRecoveryRetainsJournal (0.70s)
+    --- PASS: TestConfigurationGroupRecoveryRetainsJournal/Prepared (0.62s)
+    --- PASS: TestConfigurationGroupRecoveryRetainsJournal/Submitting (0.01s)
+    --- PASS: TestConfigurationGroupRecoveryRetainsJournal/Accepted (0.01s)
+    --- PASS: TestConfigurationGroupRecoveryRetainsJournal/Verifying (0.01s)
+    --- PASS: TestConfigurationGroupRecoveryRetainsJournal/Verified (0.01s)
+    --- PASS: TestConfigurationGroupRecoveryRetainsJournal/Unknown (0.01s)
+    --- PASS: TestConfigurationGroupRecoveryRetainsJournal/Cancelling (0.01s)
+=== RUN   TestFabricPendingEventSubmission
+=== RUN   TestFabricPendingEventSubmission/accepted
+=== RUN   TestFabricPendingEventSubmission/missing
+=== RUN   TestFabricPendingEventSubmission/lost
+=== RUN   TestFabricPendingEventSubmission/auth
+=== RUN   TestFabricPendingEventSubmission/conflict
+=== RUN   TestFabricPendingEventSubmission/async
+=== RUN   TestFabricPendingEventSubmission/missing-task
+=== RUN   TestFabricPendingEventSubmission/bad-task
+=== RUN   TestFabricPendingEventSubmission/late-event
+=== RUN   TestFabricPendingEventSubmission/late-fabric
+=== RUN   TestFabricPendingEventSubmission/late-addition
+=== RUN   TestFabricPendingEventSubmission/no-authority
+=== RUN   TestFabricPendingEventSubmission/denied-authority
+--- PASS: TestFabricPendingEventSubmission (0.20s)
+    --- PASS: TestFabricPendingEventSubmission/accepted (0.02s)
+    --- PASS: TestFabricPendingEventSubmission/missing (0.01s)
+    --- PASS: TestFabricPendingEventSubmission/lost (0.02s)
+    --- PASS: TestFabricPendingEventSubmission/auth (0.02s)
+    --- PASS: TestFabricPendingEventSubmission/conflict (0.01s)
+    --- PASS: TestFabricPendingEventSubmission/async (0.02s)
+    --- PASS: TestFabricPendingEventSubmission/missing-task (0.02s)
+    --- PASS: TestFabricPendingEventSubmission/bad-task (0.02s)
+    --- PASS: TestFabricPendingEventSubmission/late-event (0.01s)
+    --- PASS: TestFabricPendingEventSubmission/late-fabric (0.02s)
+    --- PASS: TestFabricPendingEventSubmission/late-addition (0.02s)
+    --- PASS: TestFabricPendingEventSubmission/no-authority (0.01s)
+    --- PASS: TestFabricPendingEventSubmission/denied-authority (0.01s)
+=== RUN   TestFabricPendingEventJournalReceipt
+=== RUN   TestFabricPendingEventJournalReceipt/accepted
+=== RUN   TestFabricPendingEventJournalReceipt/verifying
+=== RUN   TestFabricPendingEventJournalReceipt/unknown
+=== RUN   TestFabricPendingEventJournalReceipt/prepared
+=== RUN   TestFabricPendingEventJournalReceipt/verified
+=== RUN   TestFabricPendingEventJournalReceipt/missing-task
+=== RUN   TestFabricPendingEventJournalReceipt/missing-group
+=== RUN   TestFabricPendingEventJournalReceipt/changed-group
+=== RUN   TestFabricPendingEventJournalReceipt/foreign-fabric
+=== RUN   TestFabricPendingEventJournalReceipt/foreign-event
+=== RUN   TestFabricPendingEventJournalReceipt/wrong-source
+=== RUN   TestFabricPendingEventJournalReceipt/wrong-site
+=== RUN   TestFabricPendingEventJournalReceipt/replaced-node
+=== RUN   TestFabricPendingEventJournalReceipt/missing-member
+=== RUN   TestFabricPendingEventJournalReceipt/changed-serial
+=== RUN   TestFabricPendingEventJournalReceipt/future-time
+--- PASS: TestFabricPendingEventJournalReceipt (0.01s)
+    --- PASS: TestFabricPendingEventJournalReceipt/accepted (0.00s)
+    --- PASS: TestFabricPendingEventJournalReceipt/verifying (0.00s)
+    --- PASS: TestFabricPendingEventJournalReceipt/unknown (0.00s)
+    --- PASS: TestFabricPendingEventJournalReceipt/prepared (0.00s)
+    --- PASS: TestFabricPendingEventJournalReceipt/verified (0.00s)
+    --- PASS: TestFabricPendingEventJournalReceipt/missing-task (0.00s)
+    --- PASS: TestFabricPendingEventJournalReceipt/missing-group (0.00s)
+    --- PASS: TestFabricPendingEventJournalReceipt/changed-group (0.00s)
+    --- PASS: TestFabricPendingEventJournalReceipt/foreign-fabric (0.00s)
+    --- PASS: TestFabricPendingEventJournalReceipt/foreign-event (0.00s)
+    --- PASS: TestFabricPendingEventJournalReceipt/wrong-source (0.00s)
+    --- PASS: TestFabricPendingEventJournalReceipt/wrong-site (0.00s)
+    --- PASS: TestFabricPendingEventJournalReceipt/replaced-node (0.00s)
+    --- PASS: TestFabricPendingEventJournalReceipt/missing-member (0.00s)
+    --- PASS: TestFabricPendingEventJournalReceipt/changed-serial (0.00s)
+    --- PASS: TestFabricPendingEventJournalReceipt/future-time (0.00s)
+=== RUN   TestFabricPendingEventsModel
+=== RUN   TestFabricPendingEventsModel/enabled
+=== RUN   TestFabricPendingEventsModel/disabled
+=== RUN   TestFabricPendingEventsModel/absent
+=== RUN   TestFabricPendingEventsModel/multiple
+=== RUN   TestFabricPendingEventsModel/zone
+=== RUN   TestFabricPendingEventsModel/multicast
+=== RUN   TestFabricPendingEventsModel/null
+=== RUN   TestFabricPendingEventsModel/string
+=== RUN   TestFabricPendingEventsModel/number
+=== RUN   TestFabricPendingEventsModel/unknown
+=== RUN   TestFabricPendingEventsModel/injected
+=== RUN   TestFabricPendingEventsModel/duplicate
+=== RUN   TestFabricPendingEventsModel/invalid-path
+=== RUN   TestFabricPendingEventsModel/invalid-base
+=== RUN   TestFabricPendingEventsModel/unsupported-wireless
+--- PASS: TestFabricPendingEventsModel (0.00s)
+    --- PASS: TestFabricPendingEventsModel/enabled (0.00s)
+    --- PASS: TestFabricPendingEventsModel/disabled (0.00s)
+    --- PASS: TestFabricPendingEventsModel/absent (0.00s)
+    --- PASS: TestFabricPendingEventsModel/multiple (0.00s)
+    --- PASS: TestFabricPendingEventsModel/zone (0.00s)
+    --- PASS: TestFabricPendingEventsModel/multicast (0.00s)
+    --- PASS: TestFabricPendingEventsModel/null (0.00s)
+    --- PASS: TestFabricPendingEventsModel/string (0.00s)
+    --- PASS: TestFabricPendingEventsModel/number (0.00s)
+    --- PASS: TestFabricPendingEventsModel/unknown (0.00s)
+    --- PASS: TestFabricPendingEventsModel/injected (0.00s)
+    --- PASS: TestFabricPendingEventsModel/duplicate (0.00s)
+    --- PASS: TestFabricPendingEventsModel/invalid-path (0.00s)
+    --- PASS: TestFabricPendingEventsModel/invalid-base (0.00s)
+    --- PASS: TestFabricPendingEventsModel/unsupported-wireless (0.00s)
+=== RUN   TestFabricPendingEventObservation
+=== RUN   TestFabricPendingEventObservation/settled
+=== RUN   TestFabricPendingEventObservation/running
+=== RUN   TestFabricPendingEventObservation/event-pending
+=== RUN   TestFabricPendingEventObservation/unrelated-event
+=== RUN   TestFabricPendingEventObservation/failed-task
+=== RUN   TestFabricPendingEventObservation/foreign-task
+=== RUN   TestFabricPendingEventObservation/old-task
+=== RUN   TestFabricPendingEventObservation/missing-task
+=== RUN   TestFabricPendingEventObservation/wrong-resource
+=== RUN   TestFabricPendingEventObservation/wrong-site
+=== RUN   TestFabricPendingEventObservation/wrong-fabric
+=== RUN   TestFabricPendingEventObservation/late-event
+=== RUN   TestFabricPendingEventObservation/late-site
+=== RUN   TestFabricPendingEventObservation/tree-running
+=== RUN   TestFabricPendingEventObservation/tree-failed
+--- PASS: TestFabricPendingEventObservation (0.20s)
+    --- PASS: TestFabricPendingEventObservation/settled (0.02s)
+    --- PASS: TestFabricPendingEventObservation/running (0.02s)
+    --- PASS: TestFabricPendingEventObservation/event-pending (0.02s)
+    --- PASS: TestFabricPendingEventObservation/unrelated-event (0.02s)
+    --- PASS: TestFabricPendingEventObservation/failed-task (0.01s)
+    --- PASS: TestFabricPendingEventObservation/foreign-task (0.01s)
+    --- PASS: TestFabricPendingEventObservation/old-task (0.01s)
+    --- PASS: TestFabricPendingEventObservation/missing-task (0.00s)
+    --- PASS: TestFabricPendingEventObservation/wrong-resource (0.00s)
+    --- PASS: TestFabricPendingEventObservation/wrong-site (0.01s)
+    --- PASS: TestFabricPendingEventObservation/wrong-fabric (0.01s)
+    --- PASS: TestFabricPendingEventObservation/late-event (0.02s)
+    --- PASS: TestFabricPendingEventObservation/late-site (0.02s)
+    --- PASS: TestFabricPendingEventObservation/tree-running (0.02s)
+    --- PASS: TestFabricPendingEventObservation/tree-failed (0.01s)
+=== RUN   TestFabricPendingEventOwnedRecovery
+=== RUN   TestFabricPendingEventOwnedRecovery/accepted
+=== RUN   TestFabricPendingEventOwnedRecovery/unknown
+=== RUN   TestFabricPendingEventOwnedRecovery/running
+=== RUN   TestFabricPendingEventOwnedRecovery/event-pending
+=== RUN   TestFabricPendingEventOwnedRecovery/foreign-owner
+=== RUN   TestFabricPendingEventOwnedRecovery/late-owner
+=== RUN   TestFabricPendingEventOwnedRecovery/late-source
+=== RUN   TestFabricPendingEventOwnedRecovery/late-node
+=== RUN   TestFabricPendingEventOwnedRecovery/failed-task
+=== RUN   TestFabricPendingEventOwnedRecovery/changed-group
+--- PASS: TestFabricPendingEventOwnedRecovery (0.42s)
+    --- PASS: TestFabricPendingEventOwnedRecovery/accepted (0.05s)
+    --- PASS: TestFabricPendingEventOwnedRecovery/unknown (0.05s)
+    --- PASS: TestFabricPendingEventOwnedRecovery/running (0.05s)
+    --- PASS: TestFabricPendingEventOwnedRecovery/event-pending (0.05s)
+    --- PASS: TestFabricPendingEventOwnedRecovery/foreign-owner (0.02s)
+    --- PASS: TestFabricPendingEventOwnedRecovery/late-owner (0.05s)
+    --- PASS: TestFabricPendingEventOwnedRecovery/late-source (0.05s)
+    --- PASS: TestFabricPendingEventOwnedRecovery/late-node (0.05s)
+    --- PASS: TestFabricPendingEventOwnedRecovery/failed-task (0.04s)
+    --- PASS: TestFabricPendingEventOwnedRecovery/changed-group (0.03s)
+=== RUN   TestFabricPendingEventPreparationFlow
+=== RUN   TestFabricPendingEventPreparationFlow/valid
+=== RUN   TestFabricPendingEventPreparationFlow/disabled
+=== RUN   TestFabricPendingEventPreparationFlow/missing-event
+=== RUN   TestFabricPendingEventPreparationFlow/unmanaged
+=== RUN   TestFabricPendingEventPreparationFlow/late-source
+=== RUN   TestFabricPendingEventPreparationFlow/late-controller
+=== RUN   TestFabricPendingEventPreparationFlow/foreign-owner
+=== RUN   TestFabricPendingEventPreparationFlow/prepared-event-gone
+=== RUN   TestFabricPendingEventPreparationFlow/prepared-node-replaced
+=== RUN   TestFabricPendingEventPreparationFlow/prepared-owner-changed
+=== RUN   TestFabricPendingEventPreparationFlow/prepared-source-changed
+=== RUN   TestFabricPendingEventPreparationFlow/prepared-group-pruned
+=== RUN   TestFabricPendingEventPreparationFlow/prepared-phase-changed
+=== RUN   TestFabricPendingEventPreparationFlow/dispatch-valid
+=== RUN   TestFabricPendingEventPreparationFlow/dispatch-lost
+=== RUN   TestFabricPendingEventPreparationFlow/dispatch-revoked
+=== RUN   TestFabricPendingEventPreparationFlow/dispatch-guard-lost
+=== RUN   TestFabricPendingEventPreparationFlow/dispatch-recovery-public
+=== RUN   TestFabricPendingEventPreparationFlow/dispatch-recovery-valid
+=== RUN   TestFabricPendingEventPreparationFlow/dispatch-recovery-running
+=== RUN   TestFabricPendingEventPreparationFlow/dispatch-recovery-pending
+=== RUN   TestFabricPendingEventPreparationFlow/dispatch-recovery-failed
+=== RUN   TestFabricPendingEventPreparationFlow/dispatch-recovery-denied
+=== RUN   TestFabricPendingEventPreparationFlow/dispatch-recovery-unknown
+--- PASS: TestFabricPendingEventPreparationFlow (1.59s)
+    --- PASS: TestFabricPendingEventPreparationFlow/valid (0.04s)
+    --- PASS: TestFabricPendingEventPreparationFlow/disabled (0.01s)
+    --- PASS: TestFabricPendingEventPreparationFlow/missing-event (0.03s)
+    --- PASS: TestFabricPendingEventPreparationFlow/unmanaged (0.02s)
+    --- PASS: TestFabricPendingEventPreparationFlow/late-source (0.03s)
+    --- PASS: TestFabricPendingEventPreparationFlow/late-controller (0.03s)
+    --- PASS: TestFabricPendingEventPreparationFlow/foreign-owner (0.03s)
+    --- PASS: TestFabricPendingEventPreparationFlow/prepared-event-gone (0.04s)
+    --- PASS: TestFabricPendingEventPreparationFlow/prepared-node-replaced (0.04s)
+    --- PASS: TestFabricPendingEventPreparationFlow/prepared-owner-changed (0.04s)
+    --- PASS: TestFabricPendingEventPreparationFlow/prepared-source-changed (0.03s)
+    --- PASS: TestFabricPendingEventPreparationFlow/prepared-group-pruned (0.03s)
+    --- PASS: TestFabricPendingEventPreparationFlow/prepared-phase-changed (0.03s)
+    --- PASS: TestFabricPendingEventPreparationFlow/dispatch-valid (0.08s)
+    --- PASS: TestFabricPendingEventPreparationFlow/dispatch-lost (0.08s)
+    --- PASS: TestFabricPendingEventPreparationFlow/dispatch-revoked (0.09s)
+    --- PASS: TestFabricPendingEventPreparationFlow/dispatch-guard-lost (0.09s)
+    --- PASS: TestFabricPendingEventPreparationFlow/dispatch-recovery-public (0.16s)
+    --- PASS: TestFabricPendingEventPreparationFlow/dispatch-recovery-valid (0.11s)
+    --- PASS: TestFabricPendingEventPreparationFlow/dispatch-recovery-running (0.12s)
+    --- PASS: TestFabricPendingEventPreparationFlow/dispatch-recovery-pending (0.10s)
+    --- PASS: TestFabricPendingEventPreparationFlow/dispatch-recovery-failed (0.12s)
+    --- PASS: TestFabricPendingEventPreparationFlow/dispatch-recovery-denied (0.12s)
+    --- PASS: TestFabricPendingEventPreparationFlow/dispatch-recovery-unknown (0.11s)
+=== RUN   TestFabricPendingEventAtomicPrepare
+=== RUN   TestFabricPendingEventAtomicPrepare/valid
+=== RUN   TestFabricPendingEventAtomicPrepare/pruned
+=== RUN   TestFabricPendingEventAtomicPrepare/empty
+=== RUN   TestFabricPendingEventAtomicPrepare/missing
+=== RUN   TestFabricPendingEventAtomicPrepare/other-resource
+=== RUN   TestFabricPendingEventAtomicPrepare/wrong-action
+=== RUN   TestFabricPendingEventAtomicPrepare/malformed-resource
+    fabric_pending_events_prepare_test.go:86: handoff format check
+--- PASS: TestFabricPendingEventAtomicPrepare (0.08s)
+    --- PASS: TestFabricPendingEventAtomicPrepare/valid (0.02s)
+    --- PASS: TestFabricPendingEventAtomicPrepare/pruned (0.02s)
+    --- PASS: TestFabricPendingEventAtomicPrepare/empty (0.01s)
+    --- PASS: TestFabricPendingEventAtomicPrepare/missing (0.01s)
+    --- PASS: TestFabricPendingEventAtomicPrepare/other-resource (0.01s)
+    --- PASS: TestFabricPendingEventAtomicPrepare/wrong-action (0.01s)
+    --- SKIP: TestFabricPendingEventAtomicPrepare/malformed-resource (0.01s)
+=== RUN   TestFabricL2HandoffAtomicPrepare
+=== RUN   TestFabricL2HandoffAtomicPrepare/valid
+=== RUN   TestFabricL2HandoffAtomicPrepare/pruned
+=== RUN   TestFabricL2HandoffAtomicPrepare/empty
+=== RUN   TestFabricL2HandoffAtomicPrepare/missing
+=== RUN   TestFabricL2HandoffAtomicPrepare/other-resource
+=== RUN   TestFabricL2HandoffAtomicPrepare/wrong-action
+=== RUN   TestFabricL2HandoffAtomicPrepare/malformed-resource
+--- PASS: TestFabricL2HandoffAtomicPrepare (0.08s)
+    --- PASS: TestFabricL2HandoffAtomicPrepare/valid (0.02s)
+    --- PASS: TestFabricL2HandoffAtomicPrepare/pruned (0.01s)
+    --- PASS: TestFabricL2HandoffAtomicPrepare/empty (0.01s)
+    --- PASS: TestFabricL2HandoffAtomicPrepare/missing (0.01s)
+    --- PASS: TestFabricL2HandoffAtomicPrepare/other-resource (0.01s)
+    --- PASS: TestFabricL2HandoffAtomicPrepare/wrong-action (0.01s)
+    --- PASS: TestFabricL2HandoffAtomicPrepare/malformed-resource (0.01s)
+=== RUN   TestFabricSDAHandoffAtomicPrepare
+=== RUN   TestFabricSDAHandoffAtomicPrepare/valid
+=== RUN   TestFabricSDAHandoffAtomicPrepare/pruned
+=== RUN   TestFabricSDAHandoffAtomicPrepare/empty
+=== RUN   TestFabricSDAHandoffAtomicPrepare/missing
+=== RUN   TestFabricSDAHandoffAtomicPrepare/other-resource
+=== RUN   TestFabricSDAHandoffAtomicPrepare/wrong-action
+=== RUN   TestFabricSDAHandoffAtomicPrepare/malformed-resource
+--- PASS: TestFabricSDAHandoffAtomicPrepare (0.08s)
+    --- PASS: TestFabricSDAHandoffAtomicPrepare/valid (0.02s)
+    --- PASS: TestFabricSDAHandoffAtomicPrepare/pruned (0.01s)
+    --- PASS: TestFabricSDAHandoffAtomicPrepare/empty (0.01s)
+    --- PASS: TestFabricSDAHandoffAtomicPrepare/missing (0.01s)
+    --- PASS: TestFabricSDAHandoffAtomicPrepare/other-resource (0.01s)
+    --- PASS: TestFabricSDAHandoffAtomicPrepare/wrong-action (0.01s)
+    --- PASS: TestFabricSDAHandoffAtomicPrepare/malformed-resource (0.01s)
+=== RUN   TestFabricPendingEventDeclaration
+=== RUN   TestFabricPendingEventDeclaration/valid
+=== RUN   TestFabricPendingEventDeclaration/disabled
+=== RUN   TestFabricPendingEventDeclaration/foreign-site
+=== RUN   TestFabricPendingEventDeclaration/extra-section
+=== RUN   TestFabricPendingEventDeclaration/extra-fabric
+=== RUN   TestFabricPendingEventDeclaration/source
+--- PASS: TestFabricPendingEventDeclaration (0.06s)
+    --- PASS: TestFabricPendingEventDeclaration/valid (0.01s)
+    --- PASS: TestFabricPendingEventDeclaration/disabled (0.01s)
+    --- PASS: TestFabricPendingEventDeclaration/foreign-site (0.01s)
+    --- PASS: TestFabricPendingEventDeclaration/extra-section (0.01s)
+    --- PASS: TestFabricPendingEventDeclaration/extra-fabric (0.01s)
+    --- PASS: TestFabricPendingEventDeclaration/source (0.01s)
+=== RUN   TestFabricPendingEventsSnapshot
+=== RUN   TestFabricPendingEventsSnapshot/stable
+=== RUN   TestFabricPendingEventsSnapshot/empty
+=== RUN   TestFabricPendingEventsSnapshot/missing-fabric
+=== RUN   TestFabricPendingEventsSnapshot/drift
+=== RUN   TestFabricPendingEventsSnapshot/late-site
+=== RUN   TestFabricPendingEventsSnapshot/late-fabric
+=== RUN   TestFabricPendingEventsSnapshot/late-event
+=== RUN   TestFabricPendingEventsSnapshot/late-addition
+=== RUN   TestFabricPendingEventsSnapshot/missing-device
+=== RUN   TestFabricPendingEventsSnapshot/serial-alias
+=== RUN   TestFabricPendingEventsSnapshot/late-member
+=== RUN   TestFabricPendingEventsSnapshot/late-serial
+=== RUN   TestFabricPendingEventsSnapshot/late-role
+--- PASS: TestFabricPendingEventsSnapshot (0.19s)
+    --- PASS: TestFabricPendingEventsSnapshot/stable (0.02s)
+    --- PASS: TestFabricPendingEventsSnapshot/empty (0.02s)
+    --- PASS: TestFabricPendingEventsSnapshot/missing-fabric (0.01s)
+    --- PASS: TestFabricPendingEventsSnapshot/drift (0.01s)
+    --- PASS: TestFabricPendingEventsSnapshot/late-site (0.01s)
+    --- PASS: TestFabricPendingEventsSnapshot/late-fabric (0.01s)
+    --- PASS: TestFabricPendingEventsSnapshot/late-event (0.01s)
+    --- PASS: TestFabricPendingEventsSnapshot/late-addition (0.01s)
+    --- PASS: TestFabricPendingEventsSnapshot/missing-device (0.01s)
+    --- PASS: TestFabricPendingEventsSnapshot/serial-alias (0.01s)
+    --- PASS: TestFabricPendingEventsSnapshot/late-member (0.01s)
+    --- PASS: TestFabricPendingEventsSnapshot/late-serial (0.01s)
+    --- PASS: TestFabricPendingEventsSnapshot/late-role (0.01s)
+=== RUN   TestFabricPendingEventManagedTargets
+=== RUN   TestFabricPendingEventManagedTargets/valid
+=== RUN   TestFabricPendingEventManagedTargets/unmanaged
+=== RUN   TestFabricPendingEventManagedTargets/missing-node
+=== RUN   TestFabricPendingEventManagedTargets/late-alias
+=== RUN   TestFabricPendingEventManagedTargets/late-node-change
+=== RUN   TestFabricPendingEventManagedTargets/late-native
+--- PASS: TestFabricPendingEventManagedTargets (0.12s)
+    --- PASS: TestFabricPendingEventManagedTargets/valid (0.02s)
+    --- PASS: TestFabricPendingEventManagedTargets/unmanaged (0.02s)
+    --- PASS: TestFabricPendingEventManagedTargets/missing-node (0.02s)
+    --- PASS: TestFabricPendingEventManagedTargets/late-alias (0.02s)
+    --- PASS: TestFabricPendingEventManagedTargets/late-node-change (0.02s)
+    --- PASS: TestFabricPendingEventManagedTargets/late-native (0.02s)
+=== RUN   TestFabricPendingEvents
+=== RUN   TestFabricPendingEvents/valid
+=== RUN   TestFabricPendingEvents/empty
+=== RUN   TestFabricPendingEvents/paged
+=== RUN   TestFabricPendingEvents/foreign
+=== RUN   TestFabricPendingEvents/missing-id
+=== RUN   TestFabricPendingEvents/duplicate
+=== RUN   TestFabricPendingEvents/repeat-page
+=== RUN   TestFabricPendingEvents/partial
+=== RUN   TestFabricPendingEvents/missing-response
+--- PASS: TestFabricPendingEvents (0.13s)
+    --- PASS: TestFabricPendingEvents/valid (0.01s)
+    --- PASS: TestFabricPendingEvents/empty (0.01s)
+    --- PASS: TestFabricPendingEvents/paged (0.03s)
+    --- PASS: TestFabricPendingEvents/foreign (0.01s)
+    --- PASS: TestFabricPendingEvents/missing-id (0.01s)
+    --- PASS: TestFabricPendingEvents/duplicate (0.01s)
+    --- PASS: TestFabricPendingEvents/repeat-page (0.03s)
+    --- PASS: TestFabricPendingEvents/partial (0.01s)
+    --- PASS: TestFabricPendingEvents/missing-response (0.01s)
+=== RUN   TestFabricPendingEventPayload
+--- PASS: TestFabricPendingEventPayload (0.00s)
+=== RUN   TestSDATransitJournalPreparation
+=== RUN   TestSDATransitJournalPreparation/valid
+=== RUN   TestSDATransitJournalPreparation/source-mismatch
+=== RUN   TestSDATransitJournalPreparation/missing-member
+=== RUN   TestSDATransitJournalPreparation/foreign-owner
+=== RUN   TestSDATransitJournalPreparation/pruned
+=== RUN   TestSDATransitJournalPreparation/bad-action
+=== RUN   TestSDATransitJournalPreparation/bad-target
+=== RUN   TestSDATransitJournalPreparation/missing-group
+=== RUN   TestSDATransitJournalPreparation/bad-resource
+--- PASS: TestSDATransitJournalPreparation (0.43s)
+    --- PASS: TestSDATransitJournalPreparation/valid (0.06s)
+    --- PASS: TestSDATransitJournalPreparation/source-mismatch (0.03s)
+    --- PASS: TestSDATransitJournalPreparation/missing-member (0.04s)
+    --- PASS: TestSDATransitJournalPreparation/foreign-owner (0.05s)
+    --- PASS: TestSDATransitJournalPreparation/pruned (0.05s)
+    --- PASS: TestSDATransitJournalPreparation/bad-action (0.05s)
+    --- PASS: TestSDATransitJournalPreparation/bad-target (0.05s)
+    --- PASS: TestSDATransitJournalPreparation/missing-group (0.05s)
+    --- PASS: TestSDATransitJournalPreparation/bad-resource (0.05s)
+=== RUN   TestSDATransitPermitDispatchAndRecovery
+=== RUN   TestSDATransitPermitDispatchAndRecovery/accepted
+=== RUN   TestSDATransitPermitDispatchAndRecovery/unknown-task
+=== RUN   TestSDATransitPermitDispatchAndRecovery/public-recovery
+=== RUN   TestSDATransitPermitDispatchAndRecovery/public-unknown
+=== RUN   TestSDATransitPermitDispatchAndRecovery/lost
+=== RUN   TestSDATransitPermitDispatchAndRecovery/nil-permit
+=== RUN   TestSDATransitPermitDispatchAndRecovery/revoked-before
+=== RUN   TestSDATransitPermitDispatchAndRecovery/revoked-after
+=== RUN   TestSDATransitPermitDispatchAndRecovery/source-before
+=== RUN   TestSDATransitPermitDispatchAndRecovery/owner-before
+=== RUN   TestSDATransitPermitDispatchAndRecovery/node-before
+=== RUN   TestSDATransitPermitDispatchAndRecovery/failed-child
+=== RUN   TestSDATransitPermitDispatchAndRecovery/running-child
+=== RUN   TestSDATransitPermitDispatchAndRecovery/missing-readback
+=== RUN   TestSDATransitPermitDispatchAndRecovery/source-after
+=== RUN   TestSDATransitPermitDispatchAndRecovery/denied-verification
+--- PASS: TestSDATransitPermitDispatchAndRecovery (2.96s)
+    --- PASS: TestSDATransitPermitDispatchAndRecovery/accepted (0.23s)
+    --- PASS: TestSDATransitPermitDispatchAndRecovery/unknown-task (0.23s)
+    --- PASS: TestSDATransitPermitDispatchAndRecovery/public-recovery (0.34s)
+    --- PASS: TestSDATransitPermitDispatchAndRecovery/public-unknown (0.34s)
+    --- PASS: TestSDATransitPermitDispatchAndRecovery/lost (0.18s)
+    --- PASS: TestSDATransitPermitDispatchAndRecovery/nil-permit (0.08s)
+    --- PASS: TestSDATransitPermitDispatchAndRecovery/revoked-before (0.13s)
+    --- PASS: TestSDATransitPermitDispatchAndRecovery/revoked-after (0.18s)
+    --- PASS: TestSDATransitPermitDispatchAndRecovery/source-before (0.08s)
+    --- PASS: TestSDATransitPermitDispatchAndRecovery/owner-before (0.08s)
+    --- PASS: TestSDATransitPermitDispatchAndRecovery/node-before (0.09s)
+    --- PASS: TestSDATransitPermitDispatchAndRecovery/failed-child (0.21s)
+    --- PASS: TestSDATransitPermitDispatchAndRecovery/running-child (0.21s)
+    --- PASS: TestSDATransitPermitDispatchAndRecovery/missing-readback (0.21s)
+    --- PASS: TestSDATransitPermitDispatchAndRecovery/source-after (0.19s)
+    --- PASS: TestSDATransitPermitDispatchAndRecovery/denied-verification (0.19s)
+=== RUN   TestSDATransitPublicUnknownWithoutTaskRetainsFence
+--- PASS: TestSDATransitPublicUnknownWithoutTaskRetainsFence (0.18s)
+=== RUN   TestSDATransitReservedFamilyRetainsJournal
+=== RUN   TestSDATransitReservedFamilyRetainsJournal/Prepared
+=== RUN   TestSDATransitReservedFamilyRetainsJournal/Submitting
+=== RUN   TestSDATransitReservedFamilyRetainsJournal/Accepted
+=== RUN   TestSDATransitReservedFamilyRetainsJournal/Unknown
+=== RUN   TestSDATransitReservedFamilyRetainsJournal/Verifying
+=== RUN   TestSDATransitReservedFamilyRetainsJournal/Verified
+=== RUN   TestSDATransitReservedFamilyRetainsJournal/Cancelling
+--- PASS: TestSDATransitReservedFamilyRetainsJournal (0.10s)
+    --- PASS: TestSDATransitReservedFamilyRetainsJournal/Prepared (0.01s)
+    --- PASS: TestSDATransitReservedFamilyRetainsJournal/Submitting (0.01s)
+    --- PASS: TestSDATransitReservedFamilyRetainsJournal/Accepted (0.01s)
+    --- PASS: TestSDATransitReservedFamilyRetainsJournal/Unknown (0.01s)
+    --- PASS: TestSDATransitReservedFamilyRetainsJournal/Verifying (0.01s)
+    --- PASS: TestSDATransitReservedFamilyRetainsJournal/Verified (0.01s)
+    --- PASS: TestSDATransitReservedFamilyRetainsJournal/Cancelling (0.01s)
+=== RUN   TestSDATransitModel
+=== RUN   TestSDATransitModel/pubsub
+=== RUN   TestSDATransitModel/bgp
+=== RUN   TestSDATransitModel/false
+=== RUN   TestSDATransitModel/omitted
+=== RUN   TestSDATransitModel/per-site
+=== RUN   TestSDATransitModel/ip-settings
+=== RUN   TestSDATransitModel/bgp-multicast
+=== RUN   TestSDATransitModel/empty
+=== RUN   TestSDATransitModel/duplicate
+=== RUN   TestSDATransitModel/null
+=== RUN   TestSDATransitModel/unknown
+=== RUN   TestSDATransitModel/wrong-type
+--- PASS: TestSDATransitModel (0.01s)
+    --- PASS: TestSDATransitModel/pubsub (0.00s)
+    --- PASS: TestSDATransitModel/bgp (0.00s)
+    --- PASS: TestSDATransitModel/false (0.00s)
+    --- PASS: TestSDATransitModel/omitted (0.00s)
+    --- PASS: TestSDATransitModel/per-site (0.00s)
+    --- PASS: TestSDATransitModel/ip-settings (0.00s)
+    --- PASS: TestSDATransitModel/bgp-multicast (0.00s)
+    --- PASS: TestSDATransitModel/empty (0.00s)
+    --- PASS: TestSDATransitModel/duplicate (0.00s)
+    --- PASS: TestSDATransitModel/null (0.00s)
+    --- PASS: TestSDATransitModel/unknown (0.00s)
+    --- PASS: TestSDATransitModel/wrong-type (0.00s)
+=== RUN   TestSDATransitCreateGuardsAndRecovery
+=== RUN   TestSDATransitCreateGuardsAndRecovery/create
+=== RUN   TestSDATransitCreateGuardsAndRecovery/bgp
+=== RUN   TestSDATransitCreateGuardsAndRecovery/unprovisioned
+=== RUN   TestSDATransitCreateGuardsAndRecovery/unassigned
+=== RUN   TestSDATransitCreateGuardsAndRecovery/unreachable
+=== RUN   TestSDATransitCreateGuardsAndRecovery/physical-alias
+=== RUN   TestSDATransitCreateGuardsAndRecovery/peer-overlap
+=== RUN   TestSDATransitCreateGuardsAndRecovery/peer-incomplete
+=== RUN   TestSDATransitCreateGuardsAndRecovery/missing-guard
+=== RUN   TestSDATransitCreateGuardsAndRecovery/denied
+=== RUN   TestSDATransitCreateGuardsAndRecovery/late-provision
+=== RUN   TestSDATransitCreateGuardsAndRecovery/late-name
+=== RUN   TestSDATransitCreateGuardsAndRecovery/lost
+=== RUN   TestSDATransitCreateGuardsAndRecovery/frozen-source
+=== RUN   TestSDATransitCreateGuardsAndRecovery/running
+=== RUN   TestSDATransitCreateGuardsAndRecovery/failed-child
+=== RUN   TestSDATransitCreateGuardsAndRecovery/late-task-state
+=== RUN   TestSDATransitCreateGuardsAndRecovery/replaced-CP
+=== RUN   TestSDATransitCreateGuardsAndRecovery/same-name-conflict
+=== RUN   TestSDATransitCreateGuardsAndRecovery/same-state
+--- PASS: TestSDATransitCreateGuardsAndRecovery (0.59s)
+    --- PASS: TestSDATransitCreateGuardsAndRecovery/create (0.04s)
+    --- PASS: TestSDATransitCreateGuardsAndRecovery/bgp (0.04s)
+    --- PASS: TestSDATransitCreateGuardsAndRecovery/unprovisioned (0.02s)
+    --- PASS: TestSDATransitCreateGuardsAndRecovery/unassigned (0.02s)
+    --- PASS: TestSDATransitCreateGuardsAndRecovery/unreachable (0.02s)
+    --- PASS: TestSDATransitCreateGuardsAndRecovery/physical-alias (0.02s)
+    --- PASS: TestSDATransitCreateGuardsAndRecovery/peer-overlap (0.02s)
+    --- PASS: TestSDATransitCreateGuardsAndRecovery/peer-incomplete (0.02s)
+    --- PASS: TestSDATransitCreateGuardsAndRecovery/missing-guard (0.02s)
+    --- PASS: TestSDATransitCreateGuardsAndRecovery/denied (0.03s)
+    --- PASS: TestSDATransitCreateGuardsAndRecovery/late-provision (0.03s)
+    --- PASS: TestSDATransitCreateGuardsAndRecovery/late-name (0.03s)
+    --- PASS: TestSDATransitCreateGuardsAndRecovery/lost (0.03s)
+    --- PASS: TestSDATransitCreateGuardsAndRecovery/frozen-source (0.03s)
+    --- PASS: TestSDATransitCreateGuardsAndRecovery/running (0.03s)
+    --- PASS: TestSDATransitCreateGuardsAndRecovery/failed-child (0.03s)
+    --- PASS: TestSDATransitCreateGuardsAndRecovery/late-task-state (0.04s)
+    --- PASS: TestSDATransitCreateGuardsAndRecovery/replaced-CP (0.03s)
+    --- PASS: TestSDATransitCreateGuardsAndRecovery/same-name-conflict (0.03s)
+    --- PASS: TestSDATransitCreateGuardsAndRecovery/same-state (0.03s)
+=== RUN   TestSDATransitManagedTargets
+=== RUN   TestSDATransitManagedTargets/bound
+=== RUN   TestSDATransitManagedTargets/missing-node
+=== RUN   TestSDATransitManagedTargets/node-replaced
+=== RUN   TestSDATransitManagedTargets/cross-namespace-alias
+--- PASS: TestSDATransitManagedTargets (0.10s)
+    --- PASS: TestSDATransitManagedTargets/bound (0.03s)
+    --- PASS: TestSDATransitManagedTargets/missing-node (0.02s)
+    --- PASS: TestSDATransitManagedTargets/node-replaced (0.02s)
+    --- PASS: TestSDATransitManagedTargets/cross-namespace-alias (0.03s)
+=== RUN   TestSDATransitManagedSubmissionBracket
+=== RUN   TestSDATransitManagedSubmissionBracket/create
+=== RUN   TestSDATransitManagedSubmissionBracket/denied
+=== RUN   TestSDATransitManagedSubmissionBracket/late-address
+=== RUN   TestSDATransitManagedSubmissionBracket/late-native
+=== RUN   TestSDATransitManagedSubmissionBracket/missing-guard
+--- PASS: TestSDATransitManagedSubmissionBracket (0.27s)
+    --- PASS: TestSDATransitManagedSubmissionBracket/create (0.07s)
+    --- PASS: TestSDATransitManagedSubmissionBracket/denied (0.05s)
+    --- PASS: TestSDATransitManagedSubmissionBracket/late-address (0.06s)
+    --- PASS: TestSDATransitManagedSubmissionBracket/late-native (0.06s)
+    --- PASS: TestSDATransitManagedSubmissionBracket/missing-guard (0.03s)
+=== RUN   TestTransitASNAndModel
+--- PASS: TestTransitASNAndModel (0.00s)
+=== RUN   TestTransitManifestRestartReplacementAndReport
+--- PASS: TestTransitManifestRestartReplacementAndReport (0.07s)
+=== RUN   TestCombinedFabricPreflight
+--- PASS: TestCombinedFabricPreflight (0.01s)
+=== RUN   TestTransitInventoryValidation
+=== RUN   TestTransitInventoryValidation/{"response":[{"id":"one","name":"A","type":"IP_BASED_TRANSIT"}]}
+=== RUN   TestTransitInventoryValidation/{"response":[{"id":"one","name":"A","type":"IP_BASED_TRANSIT","ipTransitSettings":{"routingProtocolName":"BGP","autonomousSystemNumber":"0"}}]}
+=== RUN   TestTransitInventoryValidation/{"response":[{"id":"one","name":"A","type":"unknown"}]}
+=== RUN   TestTransitInventoryValidation/{"response":[{"id":"one","name":"A","type":"SDA_LISP_BGP_TRANSIT"},{"id":"two","name":"A","type":"SDA_LISP_BGP_TRANSIT"}]}
+=== RUN   TestTransitInventoryValidation/{"response":[{"id":"one","name":"A","type":"SDA_LISP_BGP_TRANSIT"},{"id":"one","name":"B","type":"SDA_LISP_BGP_TRANSIT"}]}
+--- PASS: TestTransitInventoryValidation (0.05s)
+    --- PASS: TestTransitInventoryValidation/{"response":[{"id":"one","name":"A","type":"IP_BASED_TRANSIT"}]} (0.01s)
+    --- PASS: TestTransitInventoryValidation/{"response":[{"id":"one","name":"A","type":"IP_BASED_TRANSIT","ipTransitSettings":{"routingProtocolName":"BGP","autonomousSystemNumber":"0"}}]} (0.01s)
+    --- PASS: TestTransitInventoryValidation/{"response":[{"id":"one","name":"A","type":"unknown"}]} (0.01s)
+    --- PASS: TestTransitInventoryValidation/{"response":[{"id":"one","name":"A","type":"SDA_LISP_BGP_TRANSIT"},{"id":"two","name":"A","type":"SDA_LISP_BGP_TRANSIT"}]} (0.01s)
+    --- PASS: TestTransitInventoryValidation/{"response":[{"id":"one","name":"A","type":"SDA_LISP_BGP_TRANSIT"},{"id":"one","name":"B","type":"SDA_LISP_BGP_TRANSIT"}]} (0.01s)
+=== RUN   TestTransitInventoryPagination
+--- PASS: TestTransitInventoryPagination (0.02s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	11.027s

@@ -1,0 +1,62 @@
+{
+  "status": "passed",
+  "seconds": 138.76,
+  "goSeconds": 141.191,
+  "sourceSha256": {
+    "internal/controlleradapter/catalystcenter/installed_site_execution_live_test.go": "3b1aaf64594c4d6678cf87c9a3afeec9dc3e0445cd3c76efaa7cd802a99e4adb",
+    "internal/controlleradapter/catalystcenter/installed_floor_images_live_test.go": "c60c303b5001e861ba70e04e3277090f04800472df8f69d3bfe8f192b3a44e72"
+  },
+  "cluster": "cvk-catc-qualification-20261017",
+  "controllerUID": "09b5d0bc-6b2e-43ff-9701-ca9ba5305ee0",
+  "sourceKind": "ConfigMap from initial hierarchy creation",
+  "synchronousImageRevisions": 2,
+  "assetChangesPreservedConfigGeneration": true,
+  "boundedLatestImageReceiptSlots": 1,
+  "floorAndSourceUIDResourceVersionAndSourceDigestBound": true,
+  "asynchronousUploadTaskInferred": false,
+  "nativeImageByteEqualityProven": false,
+  "distinctGeometryTasks": {
+    "01a14aa7-da55-7c84-bef9-1a30dca4e323": "Create",
+    "01a14aa8-3151-7692-b1e6-4dae3b1840a5": "Create",
+    "01a14aa8-8834-74ca-86dc-968250214e20": "Create",
+    "01a14aa8-e3b6-73ed-9ae8-5f818279d326": "Update"
+  },
+  "originalAcknowledgedGeometryUpdateRecovered": "01a14aa8-e3b6-73ed-9ae8-5f818279d326",
+  "independentSupervisedCleanupTasks": [
+    {
+      "type": "floor",
+      "taskID": "01a14aa9-d8d9-7fd2-8fd5-db306c3271ff"
+    },
+    {
+      "type": "building",
+      "taskID": "01a14aa9-df75-7e0e-aa77-4abbdf60856f"
+    },
+    {
+      "type": "area",
+      "taskID": "01a14aa9-e61a-7cdc-8278-55e6eea21ee7"
+    }
+  ],
+  "privateCreatorRows": 3,
+  "privateLatestAppliedRows": 1,
+  "retainedImageRows": 1,
+  "imagePathOmissionObservedGeometryOnlyInSync": true,
+  "settledPodReplacementPreservedAllFiveRows": true,
+  "retainIntentRemoved": true,
+  "typedSiteBaselinesRestored": true,
+  "outstandingOperation": false,
+  "physicalOperationSubmitted": false,
+  "upstreamContract": {
+    "providerCommit": "01058637dd5ed4fca93e1b2a96dd7032aec2d3a1",
+    "providerResourceSha256": "5b20f5d1e8425bba68a6c173b6b1ab77c738e9fcee2e2e9818ffe7ba02b63b4e",
+    "moduleCommit": "a435555fe828f03cf3311d52fe1ab6572a247916",
+    "moduleSiteFileSha256": "8d7f003049677a761a8206e1c1a8fa49f5871886fef61c5e46316c433b88cba9",
+    "readAndDelete": "state-only",
+    "floorIdAndSourcePath": "RequiresReplace"
+  },
+  "remaining": [
+    "Same-byte source_path changes must be reconciled with upstream replacement semantics; current receipt identity omits filename",
+    "Omit/reintroduce same bytes/path lifecycle must distinguish a new declaration from uninterrupted no-op",
+    "Other image formats/size boundaries and migration/lost-response combinations need corresponding qualification",
+    "Public site deletion, key/custody migration and physical/AP cases remain separate"
+  ]
+}

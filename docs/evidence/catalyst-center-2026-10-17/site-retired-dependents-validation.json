@@ -1,0 +1,98 @@
+{
+  "scope": "Staged retired descendant coordination; native empty-area component flows with simulated Kubernetes journal; no installed/public retirement routing",
+  "local_api": {
+    "regression": {
+      "families": 63,
+      "subcases": 893,
+      "seconds": 83.017,
+      "exit_code": 0,
+      "log_sha256": "bafa16a0c06c4a227c233f06108e2ddc7e2f740449f7cc7fe756afdeb4c7995c"
+    },
+    "api": {
+      "families": 7,
+      "subcases": 102,
+      "seconds": 69.74,
+      "exit_code": 0,
+      "log_sha256": "2e4caa42d363d709aeafab3a85b4fa19534e8c110ea761effc76b238cc83a7f0"
+    }
+  },
+  "native": {
+    "parent_child": {
+      "result": {
+        "archivedCohorts": 0,
+        "baselineRestored": true,
+        "deletes": 2,
+        "firstID": "305f97ad-8dbd-44ac-a4ae-a7869b6bea13",
+        "installed": false,
+        "parentChild": true,
+        "posts": 2,
+        "publicRetirementRouting": false,
+        "secondID": "1f5d44ab-7743-47e8-b55c-fcd6d36ad9de"
+      },
+      "task_ids": [
+        "01a14b61-da14-7484-8a99-8e44fb9875f7",
+        "01a14b61-e32a-7d89-bb0c-f13153eacdc6",
+        "01a14b62-11bb-7953-bfc5-225e1b146eec",
+        "01a14b62-3c21-72c1-a41e-e053f687592d"
+      ],
+      "receipt_count": 4,
+      "retained_owners": 1,
+      "active_operation": false,
+      "seconds": 29.71,
+      "go_test_seconds": 31.908,
+      "exit_code": 0,
+      "log_sha256": "b6be6d2ac740e1132948a1fa1a0ad302fbf211219f8aaac5656c3567871dc823",
+      "private_checkpoint": "/private/tmp/cvk-site-lifecycle-1054855263"
+    },
+    "recreation": {
+      "result": {
+        "archivedCohorts": 1,
+        "baselineRestored": true,
+        "deletes": 2,
+        "firstID": "484a4105-209b-4297-ac4a-fb53de8eb5e6",
+        "installed": false,
+        "parentChild": false,
+        "posts": 2,
+        "publicRetirementRouting": false,
+        "secondID": "d6b65c4c-df88-403b-9d2c-99e4f45d489d"
+      },
+      "task_ids": [
+        "01a14b62-f6fc-783f-a8b2-59f5c1adb86f",
+        "01a14b63-2185-72a3-93e9-a000f757f09c",
+        "01a14b63-2f78-7c16-b581-da07b7633f22",
+        "01a14b63-5ba4-76f1-aee3-cc4622c56d07"
+      ],
+      "receipt_count": 4,
+      "retained_owners": 1,
+      "active_operation": false,
+      "seconds": 30.39,
+      "go_test_seconds": 32.755,
+      "exit_code": 0,
+      "log_sha256": "723fbcd514355cfb92243e710ee09de975d19b62d3f4dafbc92f79925bf64553",
+      "private_checkpoint": "/private/tmp/cvk-site-lifecycle-3811087092"
+    }
+  },
+  "source_sha256": {
+    "internal/controlleradapter/catalystcenter/site_retired_dependents.go": "bcde3c2cdefd28ffee37156c8e42adaceeffbcbfdee0882c0ec10c7c7abe25ef",
+    "internal/controlleradapter/catalystcenter/site_retired_dependents_test.go": "ecf7476df6ea3aebce3675aa32f48f13512e24ce18e95a2f5ec44edefde2c161",
+    "internal/controlleradapter/catalystcenter/site_retirement_binding.go": "b733c704ad9a476dcdc6c9c72281d7f37a8a6047e52e93f035e33be64c9cc40d",
+    "internal/controlleradapter/catalystcenter/site_retirement_recovery.go": "9588597d5654eefa9c32598481551ca1f57ac818fd29751bc795f86db6ac9dce",
+    "internal/controlleradapter/catalystcenter/site_retirement_binding_test.go": "742603b2d8cb7eba7579c1c6a10354c5af400858be015725ac53a7bef647857e",
+    "internal/controlleradapter/catalystcenter/site_retirement_dispatch_test.go": "c93f8df043287e1a54145fc550aaf09c50bdb7d70949d39d19001f56dd3951e0",
+    "internal/controlleradapter/catalystcenter/site_recreation_live_test.go": "7bab843fa5b581f3e1103aa279741cb2716c9b2257693e16da8695f4a6d878d8",
+    "internal/controlleradapter/catalystcenter/site_recreation_execution.go": "b3e5cfe0efd67eb86e408b6eb5c718cf0cf7dd30ce7d6d8f34cba67f2dbcbd20",
+    "internal/controlleradapter/catalystcenter/site_retirement_receipt.go": "f9cc17bdc5198fd1b939136adce65646c850433208a52fd98a315b2d891f2043",
+    "internal/controlleradapter/catalystcenter/site_recreation.go": "b64faf3a4b906731081a3d69f87e9071861ac67e27e9391f8f04d6a0ac5301f2"
+  },
+  "pinned_resource_rows": 93,
+  "remaining": [
+    "authenticated parent UUID handoff for child recreation",
+    "complete operational/settings consumer ownership",
+    "public policy/compiler routing",
+    "configuration deletion",
+    "building/floor native lifecycle",
+    "native parent retirement after archived child recreation",
+    "installed complete-cycle qualification"
+  ],
+  "development_finding": "Initial pure authority test exposed an unrecognized retired child row without its creator. Final traversal refuses all reachable non-cohort rows and descendant credentials; final gates above pass."
+}

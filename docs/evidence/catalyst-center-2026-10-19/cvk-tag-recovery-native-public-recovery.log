@@ -1,0 +1,10 @@
+=== RUN   TestLiveTagKnownTaskPublicRestart
+    tag_task_recovery_live_test.go:221: retained original task Create 01a15119-3e64-735c-b75d-96a76ca93e30
+    tag_task_recovery_live_test.go:255: recovered native manifest revision without replay 1 59bc3c00-e871-4315-9563-577da2058809
+    tag_task_recovery_live_test.go:221: retained original task Update 01a15119-46fb-76c5-841f-70681d4e2845
+    tag_task_recovery_live_test.go:255: recovered native manifest revision without replay 2 59bc3c00-e871-4315-9563-577da2058809
+    tag_task_recovery_live_test.go:261: exact native mutation counts 1 1
+    tag_task_recovery_live_test.go:191: supervised exact original-task-bound cleanup and baseline restoration 59bc3c00-e871-4315-9563-577da2058809
+--- PASS: TestLiveTagKnownTaskPublicRestart (11.40s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	13.790s

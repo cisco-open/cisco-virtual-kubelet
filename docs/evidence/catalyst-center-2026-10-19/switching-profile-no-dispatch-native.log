@@ -1,0 +1,47 @@
+=== RUN   TestLiveCatalystCenterTemplateProject
+    template_projects_live_test.go:141: submitted Create CVK-Q-Project-20261019-133758 01a15462-2017-7280-b41d-d48d5d715187
+    template_projects_live_test.go:141: submitted Update CVK-Q-Project-20261019-133758 01a15462-24b0-7740-9773-6562860a8388
+    template_projects_live_test.go:167: project create and description update verified
+    template_projects_live_test.go:169: native template operation Create draft:CVK-Q-Project-20261019-133758#CVK-Commit-Qualification 01a15462-2fe4-74a5-96c0-0045bcf0c6e0
+    template_projects_live_test.go:169: native template operation Update commit:CVK-Q-Project-20261019-133758#CVK-Commit-Qualification 01a15462-4b10-72ea-9659-597617309c13
+    template_projects_live_test.go:169: native template operation Update draft:CVK-Q-Project-20261019-133758#CVK-Commit-Qualification 01a15462-63dd-787f-96a2-d8e315e5cf5d
+    template_projects_live_test.go:169: native template operation Update commit:CVK-Q-Project-20261019-133758#CVK-Commit-Qualification 01a15462-7c62-7faa-aa65-9db71eedb487
+    template_projects_live_test.go:169: native draft create/update and two committed versions verified 43b57a61-4b68-4a4d-8807-9fffc25db351
+    template_projects_live_test.go:169: switching preflight refused before mutation; exact journal retired with owner and receipts preserved
+    template_projects_live_test.go:169: switching preflight refused before mutation; exact journal retired with owner and receipts preserved
+    template_projects_live_test.go:169: public profile operation Create profiles/CVK-Q-Profile-20261019-133826 01a15462-93c2-7b72-8f3d-a93bee9e3cf8
+    template_projects_live_test.go:169: retained original switching definition task for read-only Unknown recovery 01a15462-93c2-7b72-8f3d-a93bee9e3cf8
+    template_projects_live_test.go:169: switching definition original task recovered, journal released and generation InSync
+    template_projects_live_test.go:169: public profile source generation converged 2
+    template_projects_live_test.go:169: switching preflight refused before mutation; exact journal retired with owner and receipts preserved
+    template_projects_live_test.go:169: switching preflight refused before mutation; exact journal retired with owner and receipts preserved
+    template_projects_live_test.go:169: public profile operation Update profiles/CVK-Q-Profile-20261019-133826 01a15462-b71b-7e2e-b831-ead127d74c02
+    template_projects_live_test.go:169: retained original switching definition task for read-only Unknown recovery 01a15462-b71b-7e2e-b831-ead127d74c02
+    template_projects_live_test.go:169: switching definition original task recovered, journal released and generation InSync
+    template_projects_live_test.go:169: public profile source generation converged 3
+    template_projects_live_test.go:169: profile qualification operation sites Create Global/CVK-Q-Profile-20261019-133826-Site 01a15462-daa4-71cd-b390-e3ca93c6ed96
+    template_projects_live_test.go:169: public profile operation Update sites/profile-site-add:v1:a164ccce3bf9e0cb0aba44abd8e7d4818c3012b1f57c8c18f6dd8e7d074beeb4:ef35de5a054a7b534b9ee4b380587998a78937a58b06c3819d9a28bc3bfc5bbb 01a15462-e711-7d76-b40a-c7069c3091df
+    template_projects_live_test.go:169: public profile source generation converged 4
+    template_projects_live_test.go:169: switching preflight refused before mutation; exact journal retired with owner and receipts preserved
+    template_projects_live_test.go:169: switching preflight refused before mutation; exact journal retired with owner and receipts preserved
+    template_projects_live_test.go:169: public profile operation Update profiles/CVK-Q-Profile-20261019-133826 01a15463-143c-72dc-b56a-3ce3c39b35f4
+    template_projects_live_test.go:169: retained original switching definition task for read-only Unknown recovery 01a15463-143c-72dc-b56a-3ce3c39b35f4
+    template_projects_live_test.go:169: switching definition original task recovered, journal released and generation InSync
+    template_projects_live_test.go:169: public profile source generation converged 5
+    template_projects_live_test.go:169: switching preflight refused before mutation; exact journal retired with owner and receipts preserved
+    template_projects_live_test.go:169: switching preflight refused before mutation; exact journal retired with owner and receipts preserved
+    template_projects_live_test.go:169: public profile operation Update profiles/CVK-Q-Profile-20261019-133826 01a15463-435b-763f-98f0-5986a7979857
+    template_projects_live_test.go:169: retained original switching definition task for read-only Unknown recovery 01a15463-435b-763f-98f0-5986a7979857
+    template_projects_live_test.go:169: switching definition original task recovered, journal released and generation InSync
+    template_projects_live_test.go:169: public profile source generation converged 6
+    template_projects_live_test.go:169: native switching profile create, template update, isolated site assignment and restart readback verified 09ad0b42-2849-4428-8415-489fe61c4b66 63118589-2754-4414-ab99-b42b2a1ba52c
+    network_profiles_live_test.go:233: template mutation receipt DELETE 01a15463-71f9-773c-87fe-040de4d6901e
+    network_profiles_live_test.go:240: template mutation receipt DELETE 01a15463-76e3-713b-b7d6-b278712a229d
+    network_profiles_live_test.go:280: template mutation receipt DELETE 01a15463-7c91-7655-89b9-9019c37facdc
+    network_profiles_live_test.go:295: profile, site assignment and isolated site cleanup verified 09ad0b42-2849-4428-8415-489fe61c4b66 63118589-2754-4414-ab99-b42b2a1ba52c
+    template_commit_live_test.go:84: template mutation receipt DELETE 01a15463-830a-78fc-a60e-709fee89ee59
+    template_commit_live_test.go:95: template fixture cleanup verified 43b57a61-4b68-4a4d-8807-9fffc25db351
+    template_projects_live_test.go:115: isolated project cleanup verified 7efa14b8-fc46-49e5-b8d3-fb0f12f57d2a
+--- PASS: TestLiveCatalystCenterTemplateProject (94.04s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	95.180s

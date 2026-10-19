@@ -1,0 +1,5 @@
+=== RUN   TestEnvtestSDATransitManagedIdentity
+    fabric_sda_transits_envtest_test.go:125: real API identities, late Node replacement refusal, immutable rebind rejection, explicit fixture re-enrolment and cross-namespace alias rejection verified; one HTTP-fixture write, no public admission or convergence claim
+--- PASS: TestEnvtestSDATransitManagedIdentity (7.14s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	9.299s

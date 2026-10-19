@@ -1,0 +1,12 @@
+Oct 15 01:35:03 cisco-vk-control-plane containerd[326489]: time="2026-10-15T01:35:03.752335721Z" level=info msg="using experimental NRI integration - disable nri plugin to prevent this"
+Oct 15 01:35:03 cisco-vk-control-plane containerd[326489]: time="2026-10-15T01:35:03.763058305Z" level=info msg=serving... address=/run/containerd/containerd.sock.ttrpc
+Oct 15 01:35:03 cisco-vk-control-plane containerd[326489]: time="2026-10-15T01:35:03.763099222Z" level=info msg=serving... address=/run/containerd/containerd.sock
+Oct 15 01:35:03 cisco-vk-control-plane containerd[326489]: time="2026-10-15T01:35:03.763109347Z" level=info msg="Start subscribing containerd event"
+Oct 15 01:35:03 cisco-vk-control-plane containerd[326489]: time="2026-10-15T01:35:03.763122430Z" level=info msg="Start recovering state"
+Oct 15 01:35:03 cisco-vk-control-plane containerd[326489]: time="2026-10-15T01:35:03.767074430Z" level=error msg="failed to recover sandbox state" error="unable to find sandbox \"55d0ed8dcf2f47e6ccee890e4426d4fec58b9d9d799750c4755deae46dc806be\": not found" sandbox=55d0ed8dcf2f47e6ccee890e4426d4fec58b9d9d799750c4755deae46dc806be
+Oct 15 01:35:03 cisco-vk-control-plane containerd[326489]: time="2026-10-15T01:35:03.767135472Z" level=error msg="failed to recover sandbox state" error="unable to find sandbox \"7c30602e637f24e68461709c8e901a35fdb9a6cdadedba893c25198add94ad53\": not found" sandbox=7c30602e637f24e68461709c8e901a35fdb9a6cdadedba893c25198add94ad53
+Oct 15 01:35:03 cisco-vk-control-plane containerd[326489]: time="2026-10-15T01:35:03.767177597Z" level=error msg="failed to recover sandbox state" error="unable to find sandbox \"8bad476ea57eaa1a14ba8d1c7dd122848d4faf4613ea23ada4041a45a6bcd006\": not found" sandbox=8bad476ea57eaa1a14ba8d1c7dd122848d4faf4613ea23ada4041a45a6bcd006
+Oct 15 01:35:03 cisco-vk-control-plane containerd[326489]: time="2026-10-15T01:35:03.767197680Z" level=fatal msg="Failed to run CRI service" error="failed to recover state: failed to get metadata for stored sandbox \"c9224be7e2fa49ad90ae5795d6c76d12240ad420a5202cd20f9e6aacd052d59d\": not found"
+Oct 15 01:35:03 cisco-vk-control-plane systemd[1]: containerd.service: Main process exited, code=exited, status=1/FAILURE
+Oct 15 01:35:03 cisco-vk-control-plane systemd[1]: containerd.service: Failed with result 'exit-code'.
+Oct 15 01:35:03 cisco-vk-control-plane systemd[1]: Failed to start containerd.service - containerd container runtime.

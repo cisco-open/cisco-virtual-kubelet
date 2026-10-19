@@ -1,0 +1,6 @@
+Terminal child tasks and exact empty parent/child metadata scope verified.
+Exact area deletion and absence verified: 66c64170-c6cd-44c9-8512-a31bcdaf2e1c 01a13fc3-dcee-7d4c-bed9-0fcc10b1cc23
+Exact area deletion and absence verified: 33d45f4f-d3ae-448c-8d5b-8f3bab558bdc 01a13fc3-e46d-766d-bfc8-34993cb2e666
+Exact registration deletion verified: 23ed69a8-230b-4dd0-8730-2b994c6f06b0 01a13fc3-edc5-7ffc-929b-54b561c36d5d
+Exact registration deletion verified: 830d14bc-3c68-41c3-95fa-0e526bb9f648 01a13fc3-f1f4-7a5c-a6dc-b774a951e3b7
+Empty registration baseline restored; no accepted AAA request replayed or Kubernetes journal cleared.

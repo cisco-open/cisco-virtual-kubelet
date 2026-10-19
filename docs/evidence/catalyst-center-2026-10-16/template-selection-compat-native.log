@@ -1,0 +1,39 @@
+=== RUN   TestLiveCatalystCenterTemplateProject
+    template_projects_live_test.go:138: submitted Create CVK-Q-Project-20261016-174609 01a145d2-4aed-7f6a-ad19-5bb5af77d54b
+    template_projects_live_test.go:138: submitted Update CVK-Q-Project-20261016-174609 01a145d2-5c92-76e9-b451-820bdb9fec7c
+    template_projects_live_test.go:164: project create and description update verified
+    template_projects_live_test.go:166: native template operation Create draft:CVK-Q-Project-20261016-174609#CVK-Commit-Qualification 01a145d2-8310-751f-bd3c-8e4cc9be877c
+    template_projects_live_test.go:166: native template operation Update commit:CVK-Q-Project-20261016-174609#CVK-Commit-Qualification 01a145d2-b840-7b8e-99b6-f05e7a348834
+    template_projects_live_test.go:166: native template operation Update draft:CVK-Q-Project-20261016-174609#CVK-Commit-Qualification 01a145d3-0530-7f5c-9c45-de16edbe4143
+    template_projects_live_test.go:166: native template operation Update commit:CVK-Q-Project-20261016-174609#CVK-Commit-Qualification 01a145d3-442d-77da-8398-0c62372de575
+    template_projects_live_test.go:166: native draft create/update and two committed versions verified 4063f94d-801a-4421-a0a0-61884cbadf54
+    template_projects_live_test.go:166: generated template metadata task typed-defaults 01a145d3-8b23-7c01-ac85-f55c55b557f8
+    template_projects_live_test.go:166: generated template metadata task typed-defaults 01a145d3-b2f9-7dc0-a93c-3fdd72ec4673
+    template_projects_live_test.go:166: native variable metadata, scalar coercion and no-op verified typed-defaults
+    template_projects_live_test.go:166: generated template metadata task updated-defaults 01a145d3-f3aa-702e-b831-fc20a3a48e9d
+    template_projects_live_test.go:166: generated template metadata task updated-defaults 01a145d4-1730-7a9e-9331-d553c50c72bf
+    template_projects_live_test.go:166: native variable metadata, scalar coercion and no-op verified updated-defaults
+    template_projects_live_test.go:166: native variable metadata, scalar coercion and no-op verified equivalent-string-inputs
+    template_projects_live_test.go:166: generated template metadata task clear-defaults-and-choices 01a145d4-683a-742b-9d3d-7eb5db54d7e7
+    template_projects_live_test.go:166: generated template metadata task clear-defaults-and-choices 01a145d4-8bf1-79f2-94fe-1c877becbb89
+    template_projects_live_test.go:166: native variable metadata, scalar coercion and no-op verified clear-defaults-and-choices
+    template_projects_live_test.go:166: native variable metadata, scalar coercion and no-op verified cleared-noop
+    template_projects_live_test.go:166: generated template metadata task restore-choices 01a145d4-d9d5-7e35-9586-00deb7d85bb7
+    template_projects_live_test.go:166: generated template metadata task restore-choices 01a145d4-fd49-7d46-af7d-3b05c594b6bd
+    template_projects_live_test.go:166: native variable metadata, scalar coercion and no-op verified restore-choices
+    template_projects_live_test.go:166: generated template metadata task remove-one-choice 01a145d5-339d-70d0-ade3-c6f25e33a217
+    template_projects_live_test.go:166: generated template metadata task remove-one-choice 01a145d5-575d-7256-9257-847f27c23e63
+    template_projects_live_test.go:166: native variable metadata, scalar coercion and no-op verified remove-one-choice
+    template_projects_live_test.go:166: generated template metadata task multi-selection 01a145d5-919f-7549-9283-6f847ef12f26
+    template_projects_live_test.go:166: generated template metadata task multi-selection 01a145d5-b540-7057-a891-6bec856dbd43
+    template_projects_live_test.go:166: native variable metadata, scalar coercion and no-op verified multi-selection
+    template_projects_live_test.go:166: native variable metadata, scalar coercion and no-op verified multi-selection-noop
+    template_projects_live_test.go:166: generated template metadata task single-selection-restored 01a145d6-0331-7ca3-bdf4-2349fbd7e10f
+    template_projects_live_test.go:166: generated template metadata task single-selection-restored 01a145d6-26f9-7258-88d1-bec686ed5b92
+    template_projects_live_test.go:166: native variable metadata, scalar coercion and no-op verified single-selection-restored
+    template_commit_live_test.go:84: template mutation receipt DELETE 01a145d6-4bb8-7588-8140-2ee4365f4720
+    template_commit_live_test.go:95: template fixture cleanup verified 4063f94d-801a-4421-a0a0-61884cbadf54
+    template_projects_live_test.go:112: isolated project cleanup verified a0dd9d94-fdce-44ef-ae9f-33a773a9c803
+--- PASS: TestLiveCatalystCenterTemplateProject (268.49s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	270.638s

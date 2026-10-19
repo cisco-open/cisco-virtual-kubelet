@@ -1,0 +1,3 @@
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/aggregator	3.117s
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controllerconfiguration	5.318s
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controller	3.039s

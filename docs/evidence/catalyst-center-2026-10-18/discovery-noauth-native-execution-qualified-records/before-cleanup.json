@@ -1,0 +1,86 @@
+{
+  "attempts": 1,
+  "configStatus": {
+    "phase": "InSync",
+    "observedGeneration": 2,
+    "lastAppliedTime": "2026-10-18T21:52:31Z",
+    "lastControllerCheck": "2026-10-18T21:52:31Z",
+    "controllerAPIVersion": "v1/v2",
+    "sectionStatus": [
+      {
+        "name": "inventory",
+        "state": "InSync",
+        "resourceCount": 1
+      }
+    ],
+    "conditions": [
+      {
+        "type": "AdapterAvailable",
+        "status": "True",
+        "observedGeneration": 2,
+        "lastTransitionTime": "2026-10-18T21:52:10Z",
+        "reason": "AdapterAvailable",
+        "message": "Catalyst Center configuration adapter is available"
+      },
+      {
+        "type": "IntentValid",
+        "status": "True",
+        "observedGeneration": 2,
+        "lastTransitionTime": "2026-10-18T21:52:10Z",
+        "reason": "ApplyVerified",
+        "message": "Owned configuration attributes match authoritative controller state"
+      },
+      {
+        "type": "Ready",
+        "status": "True",
+        "observedGeneration": 2,
+        "lastTransitionTime": "2026-10-18T21:52:31Z",
+        "reason": "ApplyVerified",
+        "message": "Owned configuration attributes match authoritative controller state"
+      },
+      {
+        "type": "DiscoveryCredentialSourceScope",
+        "status": "True",
+        "observedGeneration": 2,
+        "lastTransitionTime": "2026-10-18T21:52:10Z",
+        "reason": "CredentialDiscoverySource",
+        "message": "{\"ControllerUID\":\"c854f6ec-3f75-4b61-b081-30a53c06c54d\",\"ConfigUID\":\"cb0f9f7c-8a1e-4d55-b76c-8a24d4e846b6\",\"SpecDigest\":\"a4e858c321f116b1ca803bced24333f00c87fd8deab6119ef76f0913373cd5d4\",\"SourceUID\":\"\",\"SourceVersion\":\"\",\"ModelDigest\":\"ebfad0d6d503042f21c5e301b4bb910e803147e298d2c83c1258ab23fe2c79b7\",\"ControllerGeneration\":2,\"ConfigGeneration\":2}"
+      }
+    ]
+  },
+  "deletes": 0,
+  "issue": "",
+  "journal": {
+    "actionApplications": [
+      {
+        "section": "inventory",
+        "resource": "discovery-credential-record:v2:34252de5eac2d0be6c7bf3f81d34e6d48a985593822c22473ece16d8717a50cc:e00f:39480d4152755b89d847bd302cbf89c61ce28a35b6ae2150efdf9c6359571543:248",
+        "operation": {
+          "id": "7c113ff8fc26fd7ef5f2c4230091c1e6",
+          "configName": "sites",
+          "configUID": "cb0f9f7c-8a1e-4d55-b76c-8a24d4e846b6",
+          "configGeneration": 2,
+          "controllerGeneration": 2,
+          "section": "inventory",
+          "resource": "discovery-credential-input:v4:34252de5eac2d0be6c7bf3f81d34e6d48a985593822c22473ece16d8717a50cc:78a56a2644b0b2210ae0e180063723ebf25f1b870d8a35f557cbf1b243ff41b6:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945:e00f:39480d4152755b89d847bd302cbf89c61ce28a35b6ae2150efdf9c6359571543:-",
+          "action": "Create",
+          "phase": "Verified",
+          "submittedAt": "2026-10-18T21:52:11Z",
+          "taskID": "01a15100-3914-70f1-880d-b4094803cde5"
+        },
+        "verifiedAt": "2026-10-18T21:52:29Z"
+      }
+    ],
+    "owners": [
+      {
+        "section": "inventory",
+        "configName": "sites",
+        "configUID": "cb0f9f7c-8a1e-4d55-b76c-8a24d4e846b6"
+      }
+    ]
+  },
+  "nativeID": "248",
+  "originalUnknownRecovered": true,
+  "posts": 1,
+  "success": true
+}

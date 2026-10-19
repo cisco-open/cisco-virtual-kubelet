@@ -1,0 +1,31 @@
+{
+  "scope": "Read-only API capability inspection; no absence, completeness or prune authority inferred",
+  "generatedTemplateFound": true,
+  "observations": [
+    {
+      "endpoint": "/dna/intent/api/v1/templates/{templateId}/networkProfilesForSites/count",
+      "http": 200,
+      "type": "dict",
+      "fields": [
+        "response",
+        "version"
+      ],
+      "responseType": "dict",
+      "responseFields": [
+        "count"
+      ]
+    },
+    {
+      "endpoint": "/dna/intent/api/v1/templates/{templateId}/networkProfilesForSites?offset=1&limit=100",
+      "http": 200,
+      "type": "dict",
+      "fields": [
+        "response",
+        "version"
+      ],
+      "responseType": "list",
+      "returnedItems": 0,
+      "itemFields": []
+    }
+  ]
+}

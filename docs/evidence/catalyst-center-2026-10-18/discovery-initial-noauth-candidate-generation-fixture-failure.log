@@ -1,0 +1,27 @@
+=== RUN   TestEnvtestDiscoveryInitialNoAuthLifecycle
+=== RUN   TestEnvtestDiscoveryInitialNoAuthLifecycle/handoff
+    discovery_initial_noauth_envtest_test.go:14: Catalyst Center worker no longer matches the active controller
+=== RUN   TestEnvtestDiscoveryInitialNoAuthLifecycle/handoff-configmap
+    discovery_initial_noauth_envtest_test.go:14: Catalyst Center worker no longer matches the active controller
+=== RUN   TestEnvtestDiscoveryInitialNoAuthLifecycle/prepared-handoff
+    discovery_initial_noauth_envtest_test.go:14: Catalyst Center worker no longer matches the active controller
+=== RUN   TestEnvtestDiscoveryInitialNoAuthLifecycle/prepared-committed-source-loss-handoff
+    discovery_initial_noauth_envtest_test.go:14: Catalyst Center worker no longer matches the active controller
+--- FAIL: TestEnvtestDiscoveryInitialNoAuthLifecycle (6.36s)
+    --- FAIL: TestEnvtestDiscoveryInitialNoAuthLifecycle/handoff (2.65s)
+    --- FAIL: TestEnvtestDiscoveryInitialNoAuthLifecycle/handoff-configmap (0.03s)
+    --- FAIL: TestEnvtestDiscoveryInitialNoAuthLifecycle/prepared-handoff (0.02s)
+    --- FAIL: TestEnvtestDiscoveryInitialNoAuthLifecycle/prepared-committed-source-loss-handoff (0.03s)
+=== RUN   TestDiscoveryInitialNoAuthLifecycle
+=== RUN   TestDiscoveryInitialNoAuthLifecycle/handoff
+=== RUN   TestDiscoveryInitialNoAuthLifecycle/handoff-configmap
+=== RUN   TestDiscoveryInitialNoAuthLifecycle/prepared-handoff
+=== RUN   TestDiscoveryInitialNoAuthLifecycle/prepared-committed-source-loss-handoff
+--- PASS: TestDiscoveryInitialNoAuthLifecycle (3.81s)
+    --- PASS: TestDiscoveryInitialNoAuthLifecycle/handoff (1.11s)
+    --- PASS: TestDiscoveryInitialNoAuthLifecycle/handoff-configmap (1.14s)
+    --- PASS: TestDiscoveryInitialNoAuthLifecycle/prepared-handoff (0.77s)
+    --- PASS: TestDiscoveryInitialNoAuthLifecycle/prepared-committed-source-loss-handoff (0.79s)
+FAIL
+FAIL	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	11.513s
+FAIL

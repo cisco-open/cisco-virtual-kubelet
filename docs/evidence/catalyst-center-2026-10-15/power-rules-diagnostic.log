@@ -1,0 +1,9 @@
+HTTP 400
+errorCode: NCND86002
+message: Invalid request. Please check the request parameters and resubmit
+detail: For the given Power Profile Description must not be an empty string or consist solely of whitespace characters.
+HTTP 400
+errorCode: NCND86004
+message: Invalid request. Please check the request parameters and resubmit
+detail: The rules for the power profile cannot be null or empty.
+Exact public power baseline unchanged after both rejected requests

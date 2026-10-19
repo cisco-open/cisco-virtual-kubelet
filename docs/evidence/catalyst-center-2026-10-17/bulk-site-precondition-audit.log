@@ -1,0 +1,104 @@
+=== RUN   TestWiredBulkGroupingPinnedSelectionAndChunks
+=== RUN   TestWiredBulkGroupingPinnedSelectionAndChunks/default
+=== RUN   TestWiredBulkGroupingPinnedSelectionAndChunks/root
+=== RUN   TestWiredBulkGroupingPinnedSelectionAndChunks/managed
+=== RUN   TestWiredBulkGroupingPinnedSelectionAndChunks/deep-managed
+=== RUN   TestWiredBulkGroupingPinnedSelectionAndChunks/prefix-boundary
+=== RUN   TestWiredBulkGroupingPinnedSelectionAndChunks/ambiguous
+=== RUN   TestWiredBulkGroupingPinnedSelectionAndChunks/root-precedence
+=== RUN   TestWiredBulkGroupingPinnedSelectionAndChunks/unknown-root
+=== RUN   TestWiredBulkGroupingPinnedSelectionAndChunks/deep-root
+=== RUN   TestWiredBulkGroupingPinnedSelectionAndChunks/unknown-site
+=== RUN   TestWiredBulkGroupingPinnedSelectionAndChunks/dangling-state
+=== RUN   TestWiredBulkGroupingPinnedSelectionAndChunks/bad-state
+=== RUN   TestWiredBulkGroupingPinnedSelectionAndChunks/duplicate-name
+=== RUN   TestWiredBulkGroupingPinnedSelectionAndChunks/wireless
+--- PASS: TestWiredBulkGroupingPinnedSelectionAndChunks (0.01s)
+    --- PASS: TestWiredBulkGroupingPinnedSelectionAndChunks/default (0.00s)
+    --- PASS: TestWiredBulkGroupingPinnedSelectionAndChunks/root (0.00s)
+    --- PASS: TestWiredBulkGroupingPinnedSelectionAndChunks/managed (0.00s)
+    --- PASS: TestWiredBulkGroupingPinnedSelectionAndChunks/deep-managed (0.00s)
+    --- PASS: TestWiredBulkGroupingPinnedSelectionAndChunks/prefix-boundary (0.00s)
+    --- PASS: TestWiredBulkGroupingPinnedSelectionAndChunks/ambiguous (0.00s)
+    --- PASS: TestWiredBulkGroupingPinnedSelectionAndChunks/root-precedence (0.00s)
+    --- PASS: TestWiredBulkGroupingPinnedSelectionAndChunks/unknown-root (0.00s)
+    --- PASS: TestWiredBulkGroupingPinnedSelectionAndChunks/deep-root (0.00s)
+    --- PASS: TestWiredBulkGroupingPinnedSelectionAndChunks/unknown-site (0.00s)
+    --- PASS: TestWiredBulkGroupingPinnedSelectionAndChunks/dangling-state (0.00s)
+    --- PASS: TestWiredBulkGroupingPinnedSelectionAndChunks/bad-state (0.00s)
+    --- PASS: TestWiredBulkGroupingPinnedSelectionAndChunks/duplicate-name (0.00s)
+    --- PASS: TestWiredBulkGroupingPinnedSelectionAndChunks/wireless (0.00s)
+=== RUN   TestWiredBulkPinnedSiteSelectionOptions
+=== RUN   TestWiredBulkPinnedSiteSelectionOptions/subtree
+=== RUN   TestWiredBulkPinnedSiteSelectionOptions/specific
+=== RUN   TestWiredBulkPinnedSiteSelectionOptions/global-only
+=== RUN   TestWiredBulkPinnedSiteSelectionOptions/global-managed
+=== RUN   TestWiredBulkPinnedSiteSelectionOptions/specific-global
+=== RUN   TestWiredBulkPinnedSiteSelectionOptions/root-outside-selection
+=== RUN   TestWiredBulkPinnedSiteSelectionOptions/root-missing-managed
+=== RUN   TestWiredBulkPinnedSiteSelectionOptions/specific-empty
+=== RUN   TestWiredBulkPinnedSiteSelectionOptions/bad-specific
+=== RUN   TestWiredBulkPinnedSiteSelectionOptions/bad-global
+=== RUN   TestWiredBulkPinnedSiteSelectionOptions/disabled-selection
+--- PASS: TestWiredBulkPinnedSiteSelectionOptions (0.71s)
+    --- PASS: TestWiredBulkPinnedSiteSelectionOptions/subtree (0.61s)
+    --- PASS: TestWiredBulkPinnedSiteSelectionOptions/specific (0.01s)
+    --- PASS: TestWiredBulkPinnedSiteSelectionOptions/global-only (0.01s)
+    --- PASS: TestWiredBulkPinnedSiteSelectionOptions/global-managed (0.01s)
+    --- PASS: TestWiredBulkPinnedSiteSelectionOptions/specific-global (0.01s)
+    --- PASS: TestWiredBulkPinnedSiteSelectionOptions/root-outside-selection (0.01s)
+    --- PASS: TestWiredBulkPinnedSiteSelectionOptions/root-missing-managed (0.01s)
+    --- PASS: TestWiredBulkPinnedSiteSelectionOptions/specific-empty (0.01s)
+    --- PASS: TestWiredBulkPinnedSiteSelectionOptions/bad-specific (0.01s)
+    --- PASS: TestWiredBulkPinnedSiteSelectionOptions/bad-global (0.01s)
+    --- PASS: TestWiredBulkPinnedSiteSelectionOptions/disabled-selection (0.01s)
+=== RUN   TestWiredBulkModuleOptionsAndSourceGrouping
+=== RUN   TestWiredBulkModuleOptionsAndSourceGrouping/default
+=== RUN   TestWiredBulkModuleOptionsAndSourceGrouping/root
+=== RUN   TestWiredBulkModuleOptionsAndSourceGrouping/managed
+=== RUN   TestWiredBulkModuleOptionsAndSourceGrouping/root-precedence
+=== RUN   TestWiredBulkModuleOptionsAndSourceGrouping/false
+=== RUN   TestWiredBulkModuleOptionsAndSourceGrouping/bad-bool
+=== RUN   TestWiredBulkModuleOptionsAndSourceGrouping/root-without-bulk
+=== RUN   TestWiredBulkModuleOptionsAndSourceGrouping/deep-root
+=== RUN   TestWiredBulkModuleOptionsAndSourceGrouping/unknown-root
+=== RUN   TestWiredBulkModuleOptionsAndSourceGrouping/null-sites
+=== RUN   TestWiredBulkModuleOptionsAndSourceGrouping/string-sites
+=== RUN   TestWiredBulkModuleOptionsAndSourceGrouping/bad-site
+=== RUN   TestWiredBulkModuleOptionsAndSourceGrouping/duplicate-sites
+=== RUN   TestWiredBulkModuleOptionsAndSourceGrouping/overlapping-sites
+=== RUN   TestWiredBulkModuleOptionsAndSourceGrouping/wrong-section
+--- PASS: TestWiredBulkModuleOptionsAndSourceGrouping (0.14s)
+    --- PASS: TestWiredBulkModuleOptionsAndSourceGrouping/default (0.01s)
+    --- PASS: TestWiredBulkModuleOptionsAndSourceGrouping/root (0.01s)
+    --- PASS: TestWiredBulkModuleOptionsAndSourceGrouping/managed (0.01s)
+    --- PASS: TestWiredBulkModuleOptionsAndSourceGrouping/root-precedence (0.01s)
+    --- PASS: TestWiredBulkModuleOptionsAndSourceGrouping/false (0.01s)
+    --- PASS: TestWiredBulkModuleOptionsAndSourceGrouping/bad-bool (0.01s)
+    --- PASS: TestWiredBulkModuleOptionsAndSourceGrouping/root-without-bulk (0.01s)
+    --- PASS: TestWiredBulkModuleOptionsAndSourceGrouping/deep-root (0.01s)
+    --- PASS: TestWiredBulkModuleOptionsAndSourceGrouping/unknown-root (0.01s)
+    --- PASS: TestWiredBulkModuleOptionsAndSourceGrouping/null-sites (0.01s)
+    --- PASS: TestWiredBulkModuleOptionsAndSourceGrouping/string-sites (0.01s)
+    --- PASS: TestWiredBulkModuleOptionsAndSourceGrouping/bad-site (0.01s)
+    --- PASS: TestWiredBulkModuleOptionsAndSourceGrouping/duplicate-sites (0.01s)
+    --- PASS: TestWiredBulkModuleOptionsAndSourceGrouping/overlapping-sites (0.01s)
+    --- PASS: TestWiredBulkModuleOptionsAndSourceGrouping/wrong-section (0.01s)
+=== RUN   TestWiredBulkPublicOptionsRefuseSingleDeviceFallback
+=== RUN   TestWiredBulkPublicOptionsRefuseSingleDeviceFallback/selected
+=== RUN   TestWiredBulkPublicOptionsRefuseSingleDeviceFallback/invalid
+=== RUN   TestWiredBulkPublicOptionsRefuseSingleDeviceFallback/root-disabled
+=== RUN   TestWiredBulkPublicOptionsRefuseSingleDeviceFallback/resolved-selected
+=== RUN   TestWiredBulkPublicOptionsRefuseSingleDeviceFallback/specific-empty
+=== RUN   TestWiredBulkPublicOptionsRefuseSingleDeviceFallback/invalid-global
+=== RUN   TestWiredBulkPublicOptionsRefuseSingleDeviceFallback/selection-disabled
+--- PASS: TestWiredBulkPublicOptionsRefuseSingleDeviceFallback (0.11s)
+    --- PASS: TestWiredBulkPublicOptionsRefuseSingleDeviceFallback/selected (0.02s)
+    --- PASS: TestWiredBulkPublicOptionsRefuseSingleDeviceFallback/invalid (0.01s)
+    --- PASS: TestWiredBulkPublicOptionsRefuseSingleDeviceFallback/root-disabled (0.01s)
+    --- PASS: TestWiredBulkPublicOptionsRefuseSingleDeviceFallback/resolved-selected (0.02s)
+    --- PASS: TestWiredBulkPublicOptionsRefuseSingleDeviceFallback/specific-empty (0.01s)
+    --- PASS: TestWiredBulkPublicOptionsRefuseSingleDeviceFallback/invalid-global (0.02s)
+    --- PASS: TestWiredBulkPublicOptionsRefuseSingleDeviceFallback/selection-disabled (0.02s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	3.279s

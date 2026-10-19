@@ -1,0 +1,58 @@
+[
+  {
+    "surface": "local",
+    "status": "passed",
+    "goSeconds": 272.154,
+    "families": [
+      {
+        "test": "TestWirelessTagMembershipRemoval",
+        "status": "pass",
+        "passingLifecycleCases": 34,
+        "expectedLifecycleCases": 34,
+        "seconds": 66.01
+      },
+      {
+        "test": "TestWirelessTagPrune",
+        "status": "pass",
+        "passingLifecycleCases": 60,
+        "expectedLifecycleCases": 60,
+        "seconds": 155.7
+      },
+      {
+        "test": "TestWirelessTagReceipts",
+        "status": "pass",
+        "passingLifecycleCases": 46,
+        "expectedLifecycleCases": 46,
+        "seconds": 48.04
+      }
+    ]
+  },
+  {
+    "surface": "api",
+    "status": "passed",
+    "goSeconds": 710.132,
+    "families": [
+      {
+        "test": "TestEnvtestWirelessTagMembershipRemoval",
+        "status": "pass",
+        "passingLifecycleCases": 34,
+        "expectedLifecycleCases": 34,
+        "seconds": 174.26
+      },
+      {
+        "test": "TestEnvtestWirelessTagPrune",
+        "status": "pass",
+        "passingLifecycleCases": 60,
+        "expectedLifecycleCases": 60,
+        "seconds": 405.33
+      },
+      {
+        "test": "TestEnvtestWirelessTagReceipts",
+        "status": "pass",
+        "passingLifecycleCases": 46,
+        "expectedLifecycleCases": 46,
+        "seconds": 128.36
+      }
+    ]
+  }
+]

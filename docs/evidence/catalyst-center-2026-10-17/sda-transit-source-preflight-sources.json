@@ -1,0 +1,63 @@
+{
+  "branch": "pr/johalley/catc-support",
+  "moduleVersion": "0.5.0",
+  "moduleCommit": "a435555fe828f03cf3311d52fe1ab6572a247916",
+  "providerVersion": "0.6.1",
+  "providerCommit": "01058637dd5ed4fca93e1b2a96dd7032aec2d3a1",
+  "upstream": [
+    {
+      "file": "module/cc_fabric.tf",
+      "url": "https://github.com/netascode/terraform-catalystcenter-nac-catalystcenter/blob/a435555fe828f03cf3311d52fe1ab6572a247916/cc_fabric.tf",
+      "sha256": "2452e397e64d686bbe38f261bf7daba2787ba80268e94c2ff72a9c2af60d0b88"
+    },
+    {
+      "file": "module/cc_device_provision.tf",
+      "url": "https://github.com/netascode/terraform-catalystcenter-nac-catalystcenter/blob/a435555fe828f03cf3311d52fe1ab6572a247916/cc_device_provision.tf",
+      "sha256": "4f2b3ee65efe0c023b61112229abb45e45109d4329ee3691bc0fdd010590d7e3"
+    },
+    {
+      "file": "provider/resource_catalystcenter_transit_network.go",
+      "url": "https://github.com/CiscoDevNet/terraform-provider-catalystcenter/blob/01058637dd5ed4fca93e1b2a96dd7032aec2d3a1/internal/provider/resource_catalystcenter_transit_network.go",
+      "sha256": "baaf3d4d69a58293f6ae5e43dfcbbbba0c4ddbd58f38352e1ca8a009a62c49db"
+    },
+    {
+      "file": "provider/model_catalystcenter_transit_network.go",
+      "url": "https://github.com/CiscoDevNet/terraform-provider-catalystcenter/blob/01058637dd5ed4fca93e1b2a96dd7032aec2d3a1/internal/provider/model_catalystcenter_transit_network.go",
+      "sha256": "dfb36643bb8e494d3cf918b76968dc02d965d3bb94d576b00f9ec61456022074"
+    }
+  ],
+  "sourceSha256": {
+    "internal/controlleradapter/catalystcenter/fabric_sda_transits.go": "7b764ace4ea0d6c8cdc288c783b6400c1c6f4f85c9422fc737279ffd8763b622",
+    "internal/controlleradapter/catalystcenter/fabric_sda_transits_test.go": "329a8107a22f634c72262694f47602874a54c46228c8cea0c910bfd5c02a9ea4",
+    "internal/controlleradapter/catalystcenter/fabric_sda_transits_envtest_test.go": "800cd6c81f70c9865017a4a64bf1e5db5b93920c3ee9820962b69f1e6c772c9d",
+    "internal/controlleradapter/catalystcenter/fabric_sda_transits_live_test.go": "337795d06cf812cb57ca5774af47433916c0fdc77883ed23cb5361bfa4ec9c7b",
+    "internal/controlleradapter/catalystcenter/config_group_resources.go": "fe6ddb963ad83eb03b42464eb58f92dbd16e0713e045d780f1859005bb42357c",
+    "internal/controlleradapter/catalystcenter/fabric_transits.go": "c90a489d9223b69cf266493f9cb6adacab014d1460dd7f08ea4defda2e9531a5",
+    "internal/controlleradapter/catalystcenter/config_managed_observation.go": "8d325d8c88ecd0248e9d8df6b5ff2741309d9dc2daaec0c9d4d4193ce1844e0d",
+    "internal/controlleradapter/catalystcenter/config_managed_bindings.go": "414d8b1abf2dc55b6f112bff65c5902f30938ac96d9dd4f7ca522518f0cf4fd6",
+    "internal/controlleradapter/catalystcenter/config_device_identity.go": "262e4a61f695216f237045c322aef05f8d3f3353812bcb1c67830b8a643a594c",
+    "internal/controlleradapter/catalystcenter/wired_device_provision.go": "9cf629eca5c2463e59236376948e386ba095fa6f319aa3c81703d59a1ed205f7",
+    "internal/controlleradapter/catalystcenter/config_task_tree.go": "2fa7f32e0e84c8e97342e824c2bf05a7a49a75feedeed77f64fd87443de935c1",
+    "internal/controlleradapter/catalystcenter/client.go": "11226032ad970e09d818d4d988790854f8c29eef51f6e5b515428ff7973933e2",
+    "internal/controlleradapter/catalystcenter/fabric_sda_transit_journal.go": "12c9f5cd3fb0f9d0813ab2d70775480864ff7a527ad156f39101223dcbcb30ff",
+    "internal/controlleradapter/catalystcenter/fabric_sda_transit_journal_test.go": "dc782a89a4b61557cf8ed8c8e76ebdb90edaab890e79da110146c75df4b9c5f8",
+    "internal/controlleradapter/catalystcenter/fabric_sda_transit_journal_envtest_test.go": "15a6e0deeb3a38cb2258188e5ec78c5fbf34cc64bb736ed3c253c8fe3551768e",
+    "internal/controlleradapter/catalystcenter/config_journal.go": "6cb45055bc6402032d4f5f610f5a63f1b01961de47a9d3df5b9bfadf9c77c3f7",
+    "internal/controlleradapter/catalystcenter/config_group_acknowledged_recovery.go": "9b2a40674195ca2a7594d842fc4618dff82e94050be1829673bcbc9cb296ed06",
+    "internal/controlleradapter/catalystcenter/config_apply.go": "ad8c271e18d7517fafcd0928bd90343acc5f5648a56a373db844ad9f408519bb",
+    "internal/controlleradapter/catalystcenter/fabric_sda_transit_device_evidence.go": "378eb4b4a024888059189d2a98c96c308b4f8e54012debf77d0a1498e8f9bd27",
+    "internal/controlleradapter/catalystcenter/fabric_sda_transit_device_evidence_test.go": "85799a0f06fb05a786e08409d12831dfcde8fab743d58ca74193dc5f110e1515",
+    "internal/controlleradapter/catalystcenter/fabric_sda_transit_device_evidence_envtest_test.go": "5955ebd06d8c49cddd93346243e240d654d9320838b254741605d02d927b7ce1",
+    "internal/controlleradapter/catalystcenter/config_group_device_evidence.go": "8aa96222f8cb531f0ef60f7c78b30044959568ccc60b2f6c89aa0aa2bd7cbe99",
+    "internal/provider/diagnostic/command_validation.go": "ffa45735afb830541fcc7b408028fc2ddfbe5e90749c1b0128613dfc100665f8",
+    "internal/provider/deviceoperation/reconciler.go": "c20651c86b1e3eebb9071dc3662ba16eb7f14949fae4ef1cc0361d04cfd78479",
+    "internal/controlleradapter/catalystcenter/fabric_sda_transit_alias_test.go": "71ab6fee464e18d983eddafdd623f7bcb2aa59adadcdfbaec61caebe461e56d0",
+    "internal/controlleradapter/catalystcenter/fabric_sda_transit_alias_live_test.go": "637dc450be528a3a567b9d5f5ed85bc647c870d8881573d2af0f96aa3c950e21",
+    "internal/controlleradapter/catalystcenter/wired_inventory_compile.go": "1cfa2a86576034b66599b6006e1f06bc84f31ddcb7d0b1c8489d8a448406ca1d",
+    "internal/controlleradapter/catalystcenter/inventory_intent.go": "9c1f083215ac2a6b5911a1056ce797708fa0b4033af36bc2e12cea6cc814160f",
+    "internal/controlleradapter/catalystcenter/device_role.go": "b05b703863ae892ce1bb714eab7386401e8bfb0684f2623ddb9e5bd822575d21",
+    "internal/controlleradapter/catalystcenter/fabric_sda_transit_source_preflight.go": "ec8ed889bc5595690100c52ec97a688321dd2d0e8114a1d91f955b35b6afdf5c",
+    "internal/controlleradapter/catalystcenter/fabric_sda_transit_source_preflight_test.go": "e43efa2cb80d91feeb9c08aee1948686f5061a3a50eb347139c174d4ffeaf296"
+  },
+  "scope": "Whole-source staged SDA prerequisite preflight, observation-local shared native inventories, selected-only action groups, repeated Prepared/Submitting validation and target-specific acknowledged recovery. Race fixtures and five real private API persistence/refusal cases; live three-alias and combined-source read-only negative qualification. No native writes, new public activation, semantic convergence, completion receipt, reservation release or installed actor qualification."
+}

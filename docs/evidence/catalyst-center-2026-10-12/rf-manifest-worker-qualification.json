@@ -1,0 +1,419 @@
+{
+  "result": "PASS",
+  "stage": "cleaned",
+  "image": {
+    "image": "cvk-catc-nac:20261013-d5520c90d6d0",
+    "binary_sha256": "d5520c90d6d0a31fb6c2d2adae3956e6f6d8891a343d94821a1d9b897b58277c"
+  },
+  "configUID": "cffa4b5a-4403-4cf0-b9c2-8825b8daa5f1",
+  "profiles": [
+    "CVK5C3F525EA",
+    "CVK5C3F525EB"
+  ],
+  "resourceIDs": {
+    "CVK5C3F525EA": "mdeYq1zl-numZ-rJuY-nuvb-qZbwmuSYntndndm1rJy1nZi4ntLf",
+    "CVK5C3F525EB": "mdeYq1zl-numZ-rJuY-nuvc-qZbwmuSYntndndm1rJy1nZi4ntLf"
+  },
+  "runs": {
+    "create": {
+      "events": [
+        {
+          "phase": "Drifted",
+          "operation": "9872d2fdb992e7001a9834c99e6b6eda",
+          "operationPhase": "Accepted",
+          "resource": "rf-profile:CVK5C3F525EA",
+          "task": "01a13237-58bb-7bd0-a4f7-756485d42235"
+        },
+        {
+          "phase": "Waiting",
+          "operation": "9872d2fdb992e7001a9834c99e6b6eda",
+          "operationPhase": "Accepted",
+          "resource": "rf-profile:CVK5C3F525EA",
+          "task": "01a13237-58bb-7bd0-a4f7-756485d42235"
+        },
+        {
+          "phase": "Waiting",
+          "operation": "9872d2fdb992e7001a9834c99e6b6eda",
+          "operationPhase": "Verifying",
+          "resource": "rf-profile:CVK5C3F525EA",
+          "task": "01a13237-58bb-7bd0-a4f7-756485d42235"
+        },
+        {
+          "phase": "Verifying",
+          "operation": "9872d2fdb992e7001a9834c99e6b6eda",
+          "operationPhase": "Verified",
+          "resource": "rf-profile:CVK5C3F525EA",
+          "task": "01a13237-58bb-7bd0-a4f7-756485d42235"
+        },
+        {
+          "phase": "Waiting",
+          "operation": null,
+          "operationPhase": null,
+          "resource": null,
+          "task": null
+        },
+        {
+          "phase": "Waiting",
+          "operation": "2603f9f030fc92b8179bee72ee27a18d",
+          "operationPhase": "Accepted",
+          "resource": "rf-profile:CVK5C3F525EB",
+          "task": "01a13237-a689-7896-9192-ab3d7b09b61d"
+        },
+        {
+          "phase": "Waiting",
+          "operation": "2603f9f030fc92b8179bee72ee27a18d",
+          "operationPhase": "Verifying",
+          "resource": "rf-profile:CVK5C3F525EB",
+          "task": "01a13237-a689-7896-9192-ab3d7b09b61d"
+        },
+        {
+          "phase": "Verifying",
+          "operation": "2603f9f030fc92b8179bee72ee27a18d",
+          "operationPhase": "Verified",
+          "resource": "rf-profile:CVK5C3F525EB",
+          "task": "01a13237-a689-7896-9192-ab3d7b09b61d"
+        },
+        {
+          "phase": "Waiting",
+          "operation": null,
+          "operationPhase": null,
+          "resource": null,
+          "task": null
+        },
+        {
+          "phase": "InSync",
+          "operation": null,
+          "operationPhase": null,
+          "resource": null,
+          "task": null
+        }
+      ],
+      "restart": {
+        "operation": "9872d2fdb992e7001a9834c99e6b6eda",
+        "task": "01a13237-58bb-7bd0-a4f7-756485d42235",
+        "oldPodUID": "dc5329ac-6e3b-44bd-a097-4697fe77be40",
+        "newPodUID": "b9f05025-2e85-43fc-8932-4dc47d39fbec"
+      },
+      "generation": 7,
+      "completed": true
+    },
+    "select-default": {
+      "events": [
+        {
+          "phase": "InSync",
+          "operation": "700e90364c077f8e82d53527a85d6bfa",
+          "operationPhase": "Accepted",
+          "resource": "rf-profile:CVK5C3F525EA",
+          "task": "01a13238-0a60-7190-a334-00a8af913bc7"
+        },
+        {
+          "phase": "Waiting",
+          "operation": "700e90364c077f8e82d53527a85d6bfa",
+          "operationPhase": "Accepted",
+          "resource": "rf-profile:CVK5C3F525EA",
+          "task": "01a13238-0a60-7190-a334-00a8af913bc7"
+        },
+        {
+          "phase": "Waiting",
+          "operation": "700e90364c077f8e82d53527a85d6bfa",
+          "operationPhase": "Verifying",
+          "resource": "rf-profile:CVK5C3F525EA",
+          "task": "01a13238-0a60-7190-a334-00a8af913bc7"
+        },
+        {
+          "phase": "Waiting",
+          "operation": "700e90364c077f8e82d53527a85d6bfa",
+          "operationPhase": "Verified",
+          "resource": "rf-profile:CVK5C3F525EA",
+          "task": "01a13238-0a60-7190-a334-00a8af913bc7"
+        },
+        {
+          "phase": "Verifying",
+          "operation": "700e90364c077f8e82d53527a85d6bfa",
+          "operationPhase": "Verified",
+          "resource": "rf-profile:CVK5C3F525EA",
+          "task": "01a13238-0a60-7190-a334-00a8af913bc7"
+        },
+        {
+          "phase": "Waiting",
+          "operation": null,
+          "operationPhase": null,
+          "resource": null,
+          "task": null
+        },
+        {
+          "phase": "InSync",
+          "operation": null,
+          "operationPhase": null,
+          "resource": null,
+          "task": null
+        }
+      ],
+      "generation": 8,
+      "completed": true
+    },
+    "switch-default": {
+      "events": [
+        {
+          "phase": "InSync",
+          "operation": "1b205b71e15d0d546d31adb3bdadde8d",
+          "operationPhase": "Accepted",
+          "resource": "rf-profile:CVK5C3F525EA",
+          "task": "01a13238-660e-7cdf-8c3f-cdd6f23b316c"
+        },
+        {
+          "phase": "Waiting",
+          "operation": "1b205b71e15d0d546d31adb3bdadde8d",
+          "operationPhase": "Accepted",
+          "resource": "rf-profile:CVK5C3F525EA",
+          "task": "01a13238-660e-7cdf-8c3f-cdd6f23b316c"
+        },
+        {
+          "phase": "Waiting",
+          "operation": "1b205b71e15d0d546d31adb3bdadde8d",
+          "operationPhase": "Verifying",
+          "resource": "rf-profile:CVK5C3F525EA",
+          "task": "01a13238-660e-7cdf-8c3f-cdd6f23b316c"
+        },
+        {
+          "phase": "Verifying",
+          "operation": "1b205b71e15d0d546d31adb3bdadde8d",
+          "operationPhase": "Verified",
+          "resource": "rf-profile:CVK5C3F525EA",
+          "task": "01a13238-660e-7cdf-8c3f-cdd6f23b316c"
+        },
+        {
+          "phase": "Waiting",
+          "operation": null,
+          "operationPhase": null,
+          "resource": null,
+          "task": null
+        },
+        {
+          "phase": "Waiting",
+          "operation": "d1934692f50dc32d45d6b5c15eac5488",
+          "operationPhase": "Accepted",
+          "resource": "rf-profile:CVK5C3F525EB",
+          "task": "01a13238-ba90-7534-a9c0-3ce1ec8c416e"
+        },
+        {
+          "phase": "Waiting",
+          "operation": "d1934692f50dc32d45d6b5c15eac5488",
+          "operationPhase": "Verifying",
+          "resource": "rf-profile:CVK5C3F525EB",
+          "task": "01a13238-ba90-7534-a9c0-3ce1ec8c416e"
+        },
+        {
+          "phase": "Verifying",
+          "operation": "d1934692f50dc32d45d6b5c15eac5488",
+          "operationPhase": "Verified",
+          "resource": "rf-profile:CVK5C3F525EB",
+          "task": "01a13238-ba90-7534-a9c0-3ce1ec8c416e"
+        },
+        {
+          "phase": "Waiting",
+          "operation": null,
+          "operationPhase": null,
+          "resource": null,
+          "task": null
+        },
+        {
+          "phase": "InSync",
+          "operation": null,
+          "operationPhase": null,
+          "resource": null,
+          "task": null
+        }
+      ],
+      "generation": 9,
+      "completed": true
+    },
+    "clear-default": {
+      "events": [
+        {
+          "phase": "InSync",
+          "operation": "cd8b69193ce83178b5c7af94237594f6",
+          "operationPhase": "Accepted",
+          "resource": "rf-profile:CVK5C3F525EB",
+          "task": "01a13239-17d6-7319-9eaf-d7404b2dbfcb"
+        },
+        {
+          "phase": "Waiting",
+          "operation": "cd8b69193ce83178b5c7af94237594f6",
+          "operationPhase": "Accepted",
+          "resource": "rf-profile:CVK5C3F525EB",
+          "task": "01a13239-17d6-7319-9eaf-d7404b2dbfcb"
+        },
+        {
+          "phase": "Waiting",
+          "operation": "cd8b69193ce83178b5c7af94237594f6",
+          "operationPhase": "Verifying",
+          "resource": "rf-profile:CVK5C3F525EB",
+          "task": "01a13239-17d6-7319-9eaf-d7404b2dbfcb"
+        },
+        {
+          "phase": "Waiting",
+          "operation": "cd8b69193ce83178b5c7af94237594f6",
+          "operationPhase": "Verified",
+          "resource": "rf-profile:CVK5C3F525EB",
+          "task": "01a13239-17d6-7319-9eaf-d7404b2dbfcb"
+        },
+        {
+          "phase": "Verifying",
+          "operation": "cd8b69193ce83178b5c7af94237594f6",
+          "operationPhase": "Verified",
+          "resource": "rf-profile:CVK5C3F525EB",
+          "task": "01a13239-17d6-7319-9eaf-d7404b2dbfcb"
+        },
+        {
+          "phase": "Verifying",
+          "operation": null,
+          "operationPhase": null,
+          "resource": null,
+          "task": null
+        },
+        {
+          "phase": "Waiting",
+          "operation": null,
+          "operationPhase": null,
+          "resource": null,
+          "task": null
+        },
+        {
+          "phase": "InSync",
+          "operation": null,
+          "operationPhase": null,
+          "resource": null,
+          "task": null
+        }
+      ],
+      "generation": 10,
+      "completed": true
+    }
+  },
+  "cleanupTasks": {
+    "CVK5C3F525EA": "01a13239-79c1-70be-9257-9604093b37eb",
+    "CVK5C3F525EB": "01a13239-7c87-7e2d-ac21-e0489e5ecbea"
+  },
+  "baselineRestored": true,
+  "baselineNames": [
+    "HIGH",
+    "LOW",
+    "TYPICAL"
+  ],
+  "health": {
+    "image": "cvk-catc-nac:20261013-d5520c90d6d0",
+    "deployments": [
+      {
+        "namespace": "cisco-vk-system",
+        "name": "cisco-vk-cisco-virtual-kubelet-controller",
+        "image": "cvk-catc-nac:20261013-d5520c90d6d0",
+        "ready": 1
+      },
+      {
+        "namespace": "cvk-live",
+        "name": "cat9k-lab-101-vk",
+        "image": "cvk-catc-handoff:20261009-merge-admission",
+        "ready": 1
+      },
+      {
+        "namespace": "cvk-live",
+        "name": "cat9k-lab-103-vk",
+        "image": "cvk-catc-handoff:20261009-merge-admission",
+        "ready": 1
+      },
+      {
+        "namespace": "cvk-live",
+        "name": "cat9k-live-vk",
+        "image": "cvk-catc-handoff:20261009-merge-admission",
+        "ready": 1
+      },
+      {
+        "namespace": "cvk-live",
+        "name": "catc-controller-worker",
+        "image": "cvk-catc-nac:20261013-d5520c90d6d0",
+        "ready": 1
+      },
+      {
+        "namespace": "cvk-live",
+        "name": "nexus9300v-live-vk",
+        "image": "docker.io/library/cisco-vk:pr194-ee3b18f",
+        "ready": 1
+      },
+      {
+        "namespace": "cvk-live",
+        "name": "u20f3e68e-b127-4f2e-9a36-b66945135051-network",
+        "image": "cvk-catc-handoff:20261009-merge-admission",
+        "ready": 1
+      },
+      {
+        "namespace": "cvk-live",
+        "name": "u6afd6bd0-284d-4ee2-a6e4-638ca07976b4-network",
+        "image": "cvk-catc-handoff:20261009-merge-admission",
+        "ready": 1
+      },
+      {
+        "namespace": "cvk-live",
+        "name": "u782dc4b2-7e43-4188-8436-87633f0bf4fb-network",
+        "image": "cvk-catc-handoff:20261009-merge-admission",
+        "ready": 1
+      }
+    ],
+    "nodes": [
+      {
+        "name": "cat9k-lab-101",
+        "ready": "True"
+      },
+      {
+        "name": "cat9k-lab-103",
+        "ready": "True"
+      },
+      {
+        "name": "cat9k-live",
+        "ready": "True"
+      }
+    ],
+    "configuration": {
+      "name": "catc-nac-journal-qualification",
+      "uid": "5c9724f7-af1a-4fe2-8b9c-724f996f2470",
+      "generation": 6,
+      "phase": "InSync",
+      "owners": [
+        {
+          "configName": "catc-wireless-features-qualification",
+          "configUID": "f1e12128-6587-4436-8e53-02600399e97b",
+          "section": "feature_templates"
+        },
+        {
+          "configName": "catc-nac-journal-qualification",
+          "configUID": "5c9724f7-af1a-4fe2-8b9c-724f996f2470",
+          "section": "inventory"
+        },
+        {
+          "configName": "catc-global-credential-qualification",
+          "configUID": "3ca01713-4714-48ad-9fe2-b7ad5c39b305",
+          "section": "network_settings"
+        },
+        {
+          "configName": "catc-aaa-qualification",
+          "configUID": "4510b61d-d0e3-41a9-a7b5-72f104d51c4d",
+          "section": "system_settings"
+        },
+        {
+          "configName": "catc-nac-journal-qualification",
+          "configUID": "5c9724f7-af1a-4fe2-8b9c-724f996f2470",
+          "section": "templates"
+        },
+        {
+          "configName": "catc-wireless-qualification",
+          "configUID": "cffa4b5a-4403-4cf0-b9c2-8825b8daa5f1",
+          "section": "wireless"
+        }
+      ]
+    }
+  },
+  "limits": [
+    "No physical AP or WLC provisioning performed",
+    "Other RF field combinations, association ownership, adoption and prune remain pending"
+  ]
+}

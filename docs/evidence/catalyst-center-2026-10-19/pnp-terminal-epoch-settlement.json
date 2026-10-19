@@ -1,0 +1,341 @@
+{
+  "date": "2026-10-19",
+  "branch": "pr/johalley/catc-support",
+  "fullModelComplete": false,
+  "installedMutationQualified": false,
+  "productionRuntimeHooksWired": true,
+  "newExecutionDefaultEnabled": false,
+  "changes": [
+    "Original-epoch terminal settlement v2 digest; corroborated legacy intents retained without migration",
+    "Original generation corroboration of exact fence/worker/owner evidence; new claims retain current-generation requirements",
+    "Guard optional request.subResource in metadata admission policy and pin matching compiled fingerprint",
+    "Preserve original recovery worker between custody retirement and Verified journal finishing through existing pure scope selector"
+  ],
+  "baselineRegressionSourceFingerprints": {
+    "cmd/cisco-vk": {
+      "files": 51,
+      "sha256": "b81d16c72fcb5e71d612244b9beda34e9fc64bb38a90105e6bda780afca1f23c"
+    },
+    "internal/controller": {
+      "files": 94,
+      "sha256": "0b06e0a67a7ed4f4cb7f74f5a3fb9c421430a42b6e8768d6d557e4cfd6e384eb"
+    },
+    "internal/controllerconfiguration": {
+      "files": 165,
+      "sha256": "3c89fe2530dbbc072927cab0e0417dbba8e9bc6f45c7e821c9393af29ce1d429"
+    },
+    "internal/controlleradapter": {
+      "files": 14,
+      "sha256": "56a3957004389d72271d3d7f1dc62492b372f77b594fbc448817840baaf9b52d"
+    },
+    "internal/controlleradapter/catalystcenter": {
+      "files": 1702,
+      "sha256": "3d02e4e66183b8a2ca7d4a54980c81c70fd36425a707e4ef9d53b30e6e29d681"
+    },
+    "internal/controlleradapter/nexusdashboard": {
+      "files": 15,
+      "sha256": "721d2b2d127236e03cef0a92c34f9b33cd12165b629c2253b0aad6f6a35e0427"
+    },
+    "internal/managedprotocol": {
+      "files": 4,
+      "sha256": "3219ec496e993710e5d2cffa3c7ff7156daab082e656642a1ac55b2c5d912e89"
+    },
+    "internal/aggregator": {
+      "files": 11,
+      "sha256": "137bc460cb8794a00d09429e5291a0736a783f60389e6da00ebdf8f5b0631083"
+    },
+    "internal/provider/maintenance": {
+      "files": 13,
+      "sha256": "0427d4e628f3ebf19606730961206fc07e149ba24d61fe0ea06db182a6d2af83"
+    },
+    "internal/provider/softwareupgrade": {
+      "files": 28,
+      "sha256": "570d7e6f46cc8eab03dc0ed709e5bc92f746ddeee253490aec77b8735f0e636b"
+    },
+    "internal/softwarelifecycle": {
+      "files": 7,
+      "sha256": "339a85ef58bb74b7c91d88c4e5813ffad9256f7fc5cf760cd209c587a432ebe6"
+    },
+    "chart": {
+      "charts/cisco-virtual-kubelet/Chart.yaml": "922d4af378d2f0d78b95a4e98a5d899714281cbd52a60287c115aef7901743ce",
+      "charts/cisco-virtual-kubelet/charts/collector/Chart.yaml": "127e77119d722d2d8049c051302f882124f665cee1948a53599b4c6278d39923",
+      "charts/cisco-virtual-kubelet/charts/collector/templates/_helpers.tpl": "59abf21e4160bae89b596e6b3b331b0a48e99de235bf38a27a9d77cc6f0f646a",
+      "charts/cisco-virtual-kubelet/charts/collector/templates/configmap.yaml": "8251c1732ee381531ef8cdb964f5435b5c533d7f6f8a0a2a37e97376bc3ad925",
+      "charts/cisco-virtual-kubelet/charts/collector/templates/deployment.yaml": "d84ab7213f071fd4a729aa25e848b3e27141433f09f3fdb90db402075c4dabe9",
+      "charts/cisco-virtual-kubelet/charts/collector/templates/service.yaml": "14901de17f4ea6b380bd09231b30ab6e2f8c6a77789627ca5c5b2246cb127ada",
+      "charts/cisco-virtual-kubelet/charts/collector/values.yaml": "b05b450c36f5cd88218dd9f80f5efb23b10325254d686120776f1ea766bf7077",
+      "charts/cisco-virtual-kubelet/crds/cisco.vk_ciscodevices.yaml": "4a7171e3dcf27b54006c1ff580e4e9d1f3a22f0c14726becf41b88371f350500",
+      "charts/cisco-virtual-kubelet/crds/cisco.vk_networkcontrollers.yaml": "380d7a1d6eca22bf1245c445b7cac99b1c219f1c4ecf0f5418509b24b24cf0f4",
+      "charts/cisco-virtual-kubelet/crds/config.cisco.vk_iosxeconfigapplylogs.yaml": "b6ae73be1779bf8ec5c905441ab583696397cdc0a7b177edfdad826c0858dd1f",
+      "charts/cisco-virtual-kubelet/crds/config.cisco.vk_iosxeconfigbundles.yaml": "8f84d949c487bd5908494e63dd4454e4ebef8942c763d62f0ea124c048b0aa3a",
+      "charts/cisco-virtual-kubelet/crds/config.cisco.vk_iosxeconfigdefaults.yaml": "b1a7c1a5afd68e16dfa61fcba79cd32dca4f757c6ab7c61c4d37dce94690c074",
+      "charts/cisco-virtual-kubelet/crds/config.cisco.vk_iosxeconfigrevisions.yaml": "1df7923ce06660b21ebf77b993155d0f08e574086c0bc0a8f00c5b7a04f4569f",
+      "charts/cisco-virtual-kubelet/crds/config.cisco.vk_iosxeconfigs.yaml": "5117fb00dd89adcb50f8ef088a652d89f5f77a8a8a3a0f2648682bfbe3efaa14",
+      "charts/cisco-virtual-kubelet/crds/config.cisco.vk_iosxedevicegroupconfigs.yaml": "4b9ae1d24e0815c75de8849b89173369a8bf15e6b3965b744c4ecef0821601d5",
+      "charts/cisco-virtual-kubelet/crds/config.cisco.vk_iosxediagnostics.yaml": "bdcb63a682d4e5c4939b14939c14c6aec6d847409a0785a2b8868fb020178ee6",
+      "charts/cisco-virtual-kubelet/crds/config.cisco.vk_iosxeinterfacegroupconfigs.yaml": "eaf9ab5b8563381a3ded7bdaf2b315eb025f3f9efca3a451b89e82d2d9e5c52c",
+      "charts/cisco-virtual-kubelet/crds/config.cisco.vk_iosxetelemetries.yaml": "cc6253f523d167501b21a31e630d068a53b57d7345182c159e767bece869369d",
+      "charts/cisco-virtual-kubelet/crds/config.cisco.vk_iosxetemplates.yaml": "10359cd876d538ac3c52ea3ae358bf5014554ec591e92195f22671c84554a871",
+      "charts/cisco-virtual-kubelet/crds/config.cisco.vk_networkcontrollerconfigs.yaml": "b1f2b3bad6e498fbb7497ccaffd51468c167b90f187fe9287eb881bc3bc35689",
+      "charts/cisco-virtual-kubelet/crds/config.cisco.vk_nxosconfigs.yaml": "80f42b0411482a23559566560e77a43c8e490d60395894dbd0f9eee88fae7d07",
+      "charts/cisco-virtual-kubelet/crds/ops.cisco.vk_catalystcenterswimhandoffs.yaml": "e58f2b4b9deca18ad57f6b9e6350364af2e4cf0600c6473dec0ef2c601b2c5b3",
+      "charts/cisco-virtual-kubelet/crds/ops.cisco.vk_controllerconfigurationreservations.yaml": "d2b638c5c8cc64192b8131ff750d03964102e1638d39a5d09291f6a4666a7159",
+      "charts/cisco-virtual-kubelet/crds/ops.cisco.vk_deviceoperations.yaml": "e8b521a5b70a9c9014b6ad1eb618bfbff6fe759050efbb6ac74ac1ea2f0ddac3",
+      "charts/cisco-virtual-kubelet/crds/ops.cisco.vk_iosxeoperationalactions.yaml": "fa4396db0d5c705715f0c5841e41fcdaf30a7075c1c284628b14596d0ddba744",
+      "charts/cisco-virtual-kubelet/crds/ops.cisco.vk_iosxesoftwarerollouts.yaml": "19fdfa2bf27e46bebfcd86dddae698aad2116ff0e78ae149ad7eac1618a548c2",
+      "charts/cisco-virtual-kubelet/crds/ops.cisco.vk_iosxesoftwareupgrades.yaml": "c33e36b414e867006c7eaf7275fbdbd3cdda59951a09100e50c527dc62973673",
+      "charts/cisco-virtual-kubelet/dashboards/grafana/cvk-mdt-overview.json": "133b74e02a88f08a006f1937b94192bf3adaf9babab3a3a68d9098902d8d0aaa",
+      "charts/cisco-virtual-kubelet/dashboards/splunk/cvk-overview.json": "698dfc3fd2c67873eeb94a7cbac8c614af15277d138c8b50dd635177097b5314",
+      "charts/cisco-virtual-kubelet/templates/_helpers.tpl": "ec06e116b92f410514bad0be10e3710bbc9d7ae256e98be08d3f01d37f403c88",
+      "charts/cisco-virtual-kubelet/templates/_topology-native-cleanup.tpl": "19e0765ff9d210fca54d892188c1c285c8b141fecfbc1f39a5ef55350a8ec8ba",
+      "charts/cisco-virtual-kubelet/templates/_topology-native-node.tpl": "badd432ee25f52504a01501a93eeb324dd0a794549798ee60f767be44c4f3cf8",
+      "charts/cisco-virtual-kubelet/templates/bootstrap-fence-admission.yaml": "13dbecf38c1d7de5c293fd1b06e056465d89006e20f672f47b85245de0dde19c",
+      "charts/cisco-virtual-kubelet/templates/configuration-reservation-admission.yaml": "7c2a2b33373cd714826c46b96e424f8c922a30b0936da769462f635a085ccfeb",
+      "charts/cisco-virtual-kubelet/templates/controller-rbac.yaml": "6dc3bc4a2800cf2809bc7440f21208cd5a74ce652d15909d0e0a28727b698dcb",
+      "charts/cisco-virtual-kubelet/templates/controller-worker-rbac.yaml": "64afc8a4105d3ffe89b107b0e4f80f3ebecfb08031c8d8e72a735623d0e4a3d8",
+      "charts/cisco-virtual-kubelet/templates/deployment.yaml": "80e9f4ca569e6225020bce8faf5bd61ede5e94a9db156ad9982ee88890927171",
+      "charts/cisco-virtual-kubelet/templates/metadata-handoff-admission.yaml": "e06cf7b857ec7141f1aa90265ad2844f5405701b859e24450fb6e415e57ae8ed",
+      "charts/cisco-virtual-kubelet/templates/networkpolicy.yaml": "22d2a9caf16e5667f2222f8ef3699d5b7cc9f675fdd231a324c5656414387091",
+      "charts/cisco-virtual-kubelet/templates/poddisruptionbudget.yaml": "756cc9e68819b42d73b0d2c7a5440d8ad9e7efda11cdeb902652a874e365446a",
+      "charts/cisco-virtual-kubelet/templates/role.yaml": "4bb7a46eed0d5ca13a90fd0011caf89e321d589e9620aecf280adc558b5cc16a",
+      "charts/cisco-virtual-kubelet/templates/servicemonitor.yaml": "ad36160e52d91b61dd3789065b13daf830f102f0d6d0f6a92d9203a32e81e315",
+      "charts/cisco-virtual-kubelet/templates/swim-handoff-admission.yaml": "3dfe596039be3ecbcb137b57245f4d61f5b621540347571245000fc0be91d6fb",
+      "charts/cisco-virtual-kubelet/templates/topology-admission.yaml": "921e5d1a0fae3f0d679d5c4b1ff5e8a8b5b7ea35f702bcede05bcca4ee9366a2",
+      "charts/cisco-virtual-kubelet/templates/topology-configmaps.yaml": "95cc1bc6836e294d4a69bbd421a949578192b023700659d366bf29946304830d",
+      "charts/cisco-virtual-kubelet/templates/topology-rbac.yaml": "ab2e3ab11b90e7af7faf28b557e771b41c1232c39d6da47383814810c4c351e3",
+      "charts/cisco-virtual-kubelet/templates/topology-worker-admission.yaml": "ccfef22ad1b5bad2bf7016b37a333628b7092b3ee9e54d1b47d296d35b9438a8",
+      "charts/cisco-virtual-kubelet/templates/vk-rbac.yaml": "359c9514998ac267a9d74c05573917a2ec554b1a25fd5edb5026b11fc6083925",
+      "charts/cisco-virtual-kubelet/tests/configuration-protocol-render-test.sh": "4e2581f2eec367e2ff5c594e6a5d77da799e29a5c9171d4d4e482b64029a2b96",
+      "charts/cisco-virtual-kubelet/tests/managed-foreground-cleanup-checks.sh": "a5002fb632eae21b31e10e46a4c42d6bfd81bd5d073e0ad33e3b7c84506202c3",
+      "charts/cisco-virtual-kubelet/tests/managed-lease-rebind-checks.sh": "f8884f0f0ba92db8d95a1b54d892bf1fddb90494d5e54b4bebb47e40e4a8f34d",
+      "charts/cisco-virtual-kubelet/tests/managed-native-node-checks.sh": "fbe0e17a58641f868cf9de1623c3261eb71d666e3302a5113feacc17b126fad3",
+      "charts/cisco-virtual-kubelet/tests/managed-shared-worker-kind-test.sh": "3d758986399e893f13c877720e800cadf59c6540c7a6086813af23bc0d5b7e1c",
+      "charts/cisco-virtual-kubelet/tests/managed-split-drain-checks.sh": "9e18cad2983b3e015d5b3e6080bf699849c270089e5cca241b73bd4aeb78f934",
+      "charts/cisco-virtual-kubelet/tests/metadata-protocol-render-test.sh": "bbe456e28b7c0f80361955580f72bdb057e654675e51e239f22961a6875004b0",
+      "charts/cisco-virtual-kubelet/tests/native-tas-kind-config-v1.37.yaml": "86cc655f8327e3f6cc35be1af64e1bb2d3a7da4e28470a1dde193b3e0e62cd72",
+      "charts/cisco-virtual-kubelet/tests/native-tas-kind-test.sh": "57e827a3a1a04820f3f1cbf5d589083b9b36aba6af4935f0398834d0ca8379fd",
+      "charts/cisco-virtual-kubelet/tests/topology-kind-test.sh": "445c9bc527b8a8a31c1100db6412927d86128745f32a8531118288ee42857a72",
+      "charts/cisco-virtual-kubelet/tests/topology-render-test.sh": "dfa318668cb3fe8af086da9f154516a08a00d651b6626d7703661659942a59af",
+      "charts/cisco-virtual-kubelet/values.schema.json": "ca70d935b6cc187cf36de326fa5134efc36b6ea7bc2ea549e9f23824951d7712",
+      "charts/cisco-virtual-kubelet/values.yaml": "6d6f3cb673d4be3f78b01e34c644baa884e0543d7f3bb5cf469e953c1c5b4542"
+    }
+  },
+  "finalSourceFingerprints": {
+    "cmd/cisco-vk": {
+      "files": 51,
+      "sha256": "b81d16c72fcb5e71d612244b9beda34e9fc64bb38a90105e6bda780afca1f23c"
+    },
+    "internal/controller": {
+      "files": 94,
+      "sha256": "e4670681e23984ec6f1992d5b2ab7c115467e2c9e646c2d28c3857833fbca189"
+    },
+    "internal/controllerconfiguration": {
+      "files": 165,
+      "sha256": "3c89fe2530dbbc072927cab0e0417dbba8e9bc6f45c7e821c9393af29ce1d429"
+    },
+    "internal/controlleradapter": {
+      "files": 14,
+      "sha256": "56a3957004389d72271d3d7f1dc62492b372f77b594fbc448817840baaf9b52d"
+    },
+    "internal/controlleradapter/catalystcenter": {
+      "files": 1702,
+      "sha256": "3d02e4e66183b8a2ca7d4a54980c81c70fd36425a707e4ef9d53b30e6e29d681"
+    },
+    "internal/controlleradapter/nexusdashboard": {
+      "files": 15,
+      "sha256": "721d2b2d127236e03cef0a92c34f9b33cd12165b629c2253b0aad6f6a35e0427"
+    },
+    "internal/managedprotocol": {
+      "files": 4,
+      "sha256": "3219ec496e993710e5d2cffa3c7ff7156daab082e656642a1ac55b2c5d912e89"
+    },
+    "internal/aggregator": {
+      "files": 11,
+      "sha256": "137bc460cb8794a00d09429e5291a0736a783f60389e6da00ebdf8f5b0631083"
+    },
+    "internal/provider/maintenance": {
+      "files": 13,
+      "sha256": "0427d4e628f3ebf19606730961206fc07e149ba24d61fe0ea06db182a6d2af83"
+    },
+    "internal/provider/softwareupgrade": {
+      "files": 28,
+      "sha256": "570d7e6f46cc8eab03dc0ed709e5bc92f746ddeee253490aec77b8735f0e636b"
+    },
+    "internal/softwarelifecycle": {
+      "files": 7,
+      "sha256": "339a85ef58bb74b7c91d88c4e5813ffad9256f7fc5cf760cd209c587a432ebe6"
+    },
+    "chart": {
+      "charts/cisco-virtual-kubelet/Chart.yaml": "922d4af378d2f0d78b95a4e98a5d899714281cbd52a60287c115aef7901743ce",
+      "charts/cisco-virtual-kubelet/charts/collector/Chart.yaml": "127e77119d722d2d8049c051302f882124f665cee1948a53599b4c6278d39923",
+      "charts/cisco-virtual-kubelet/charts/collector/templates/_helpers.tpl": "59abf21e4160bae89b596e6b3b331b0a48e99de235bf38a27a9d77cc6f0f646a",
+      "charts/cisco-virtual-kubelet/charts/collector/templates/configmap.yaml": "8251c1732ee381531ef8cdb964f5435b5c533d7f6f8a0a2a37e97376bc3ad925",
+      "charts/cisco-virtual-kubelet/charts/collector/templates/deployment.yaml": "d84ab7213f071fd4a729aa25e848b3e27141433f09f3fdb90db402075c4dabe9",
+      "charts/cisco-virtual-kubelet/charts/collector/templates/service.yaml": "14901de17f4ea6b380bd09231b30ab6e2f8c6a77789627ca5c5b2246cb127ada",
+      "charts/cisco-virtual-kubelet/charts/collector/values.yaml": "b05b450c36f5cd88218dd9f80f5efb23b10325254d686120776f1ea766bf7077",
+      "charts/cisco-virtual-kubelet/crds/cisco.vk_ciscodevices.yaml": "4a7171e3dcf27b54006c1ff580e4e9d1f3a22f0c14726becf41b88371f350500",
+      "charts/cisco-virtual-kubelet/crds/cisco.vk_networkcontrollers.yaml": "380d7a1d6eca22bf1245c445b7cac99b1c219f1c4ecf0f5418509b24b24cf0f4",
+      "charts/cisco-virtual-kubelet/crds/config.cisco.vk_iosxeconfigapplylogs.yaml": "b6ae73be1779bf8ec5c905441ab583696397cdc0a7b177edfdad826c0858dd1f",
+      "charts/cisco-virtual-kubelet/crds/config.cisco.vk_iosxeconfigbundles.yaml": "8f84d949c487bd5908494e63dd4454e4ebef8942c763d62f0ea124c048b0aa3a",
+      "charts/cisco-virtual-kubelet/crds/config.cisco.vk_iosxeconfigdefaults.yaml": "b1a7c1a5afd68e16dfa61fcba79cd32dca4f757c6ab7c61c4d37dce94690c074",
+      "charts/cisco-virtual-kubelet/crds/config.cisco.vk_iosxeconfigrevisions.yaml": "1df7923ce06660b21ebf77b993155d0f08e574086c0bc0a8f00c5b7a04f4569f",
+      "charts/cisco-virtual-kubelet/crds/config.cisco.vk_iosxeconfigs.yaml": "5117fb00dd89adcb50f8ef088a652d89f5f77a8a8a3a0f2648682bfbe3efaa14",
+      "charts/cisco-virtual-kubelet/crds/config.cisco.vk_iosxedevicegroupconfigs.yaml": "4b9ae1d24e0815c75de8849b89173369a8bf15e6b3965b744c4ecef0821601d5",
+      "charts/cisco-virtual-kubelet/crds/config.cisco.vk_iosxediagnostics.yaml": "bdcb63a682d4e5c4939b14939c14c6aec6d847409a0785a2b8868fb020178ee6",
+      "charts/cisco-virtual-kubelet/crds/config.cisco.vk_iosxeinterfacegroupconfigs.yaml": "eaf9ab5b8563381a3ded7bdaf2b315eb025f3f9efca3a451b89e82d2d9e5c52c",
+      "charts/cisco-virtual-kubelet/crds/config.cisco.vk_iosxetelemetries.yaml": "cc6253f523d167501b21a31e630d068a53b57d7345182c159e767bece869369d",
+      "charts/cisco-virtual-kubelet/crds/config.cisco.vk_iosxetemplates.yaml": "10359cd876d538ac3c52ea3ae358bf5014554ec591e92195f22671c84554a871",
+      "charts/cisco-virtual-kubelet/crds/config.cisco.vk_networkcontrollerconfigs.yaml": "b1f2b3bad6e498fbb7497ccaffd51468c167b90f187fe9287eb881bc3bc35689",
+      "charts/cisco-virtual-kubelet/crds/config.cisco.vk_nxosconfigs.yaml": "80f42b0411482a23559566560e77a43c8e490d60395894dbd0f9eee88fae7d07",
+      "charts/cisco-virtual-kubelet/crds/ops.cisco.vk_catalystcenterswimhandoffs.yaml": "e58f2b4b9deca18ad57f6b9e6350364af2e4cf0600c6473dec0ef2c601b2c5b3",
+      "charts/cisco-virtual-kubelet/crds/ops.cisco.vk_controllerconfigurationreservations.yaml": "d2b638c5c8cc64192b8131ff750d03964102e1638d39a5d09291f6a4666a7159",
+      "charts/cisco-virtual-kubelet/crds/ops.cisco.vk_deviceoperations.yaml": "e8b521a5b70a9c9014b6ad1eb618bfbff6fe759050efbb6ac74ac1ea2f0ddac3",
+      "charts/cisco-virtual-kubelet/crds/ops.cisco.vk_iosxeoperationalactions.yaml": "fa4396db0d5c705715f0c5841e41fcdaf30a7075c1c284628b14596d0ddba744",
+      "charts/cisco-virtual-kubelet/crds/ops.cisco.vk_iosxesoftwarerollouts.yaml": "19fdfa2bf27e46bebfcd86dddae698aad2116ff0e78ae149ad7eac1618a548c2",
+      "charts/cisco-virtual-kubelet/crds/ops.cisco.vk_iosxesoftwareupgrades.yaml": "c33e36b414e867006c7eaf7275fbdbd3cdda59951a09100e50c527dc62973673",
+      "charts/cisco-virtual-kubelet/dashboards/grafana/cvk-mdt-overview.json": "133b74e02a88f08a006f1937b94192bf3adaf9babab3a3a68d9098902d8d0aaa",
+      "charts/cisco-virtual-kubelet/dashboards/splunk/cvk-overview.json": "698dfc3fd2c67873eeb94a7cbac8c614af15277d138c8b50dd635177097b5314",
+      "charts/cisco-virtual-kubelet/templates/_helpers.tpl": "ec06e116b92f410514bad0be10e3710bbc9d7ae256e98be08d3f01d37f403c88",
+      "charts/cisco-virtual-kubelet/templates/_topology-native-cleanup.tpl": "19e0765ff9d210fca54d892188c1c285c8b141fecfbc1f39a5ef55350a8ec8ba",
+      "charts/cisco-virtual-kubelet/templates/_topology-native-node.tpl": "badd432ee25f52504a01501a93eeb324dd0a794549798ee60f767be44c4f3cf8",
+      "charts/cisco-virtual-kubelet/templates/bootstrap-fence-admission.yaml": "13dbecf38c1d7de5c293fd1b06e056465d89006e20f672f47b85245de0dde19c",
+      "charts/cisco-virtual-kubelet/templates/configuration-reservation-admission.yaml": "7c2a2b33373cd714826c46b96e424f8c922a30b0936da769462f635a085ccfeb",
+      "charts/cisco-virtual-kubelet/templates/controller-rbac.yaml": "6dc3bc4a2800cf2809bc7440f21208cd5a74ce652d15909d0e0a28727b698dcb",
+      "charts/cisco-virtual-kubelet/templates/controller-worker-rbac.yaml": "64afc8a4105d3ffe89b107b0e4f80f3ebecfb08031c8d8e72a735623d0e4a3d8",
+      "charts/cisco-virtual-kubelet/templates/deployment.yaml": "80e9f4ca569e6225020bce8faf5bd61ede5e94a9db156ad9982ee88890927171",
+      "charts/cisco-virtual-kubelet/templates/metadata-handoff-admission.yaml": "e06cf7b857ec7141f1aa90265ad2844f5405701b859e24450fb6e415e57ae8ed",
+      "charts/cisco-virtual-kubelet/templates/networkpolicy.yaml": "22d2a9caf16e5667f2222f8ef3699d5b7cc9f675fdd231a324c5656414387091",
+      "charts/cisco-virtual-kubelet/templates/poddisruptionbudget.yaml": "756cc9e68819b42d73b0d2c7a5440d8ad9e7efda11cdeb902652a874e365446a",
+      "charts/cisco-virtual-kubelet/templates/role.yaml": "4bb7a46eed0d5ca13a90fd0011caf89e321d589e9620aecf280adc558b5cc16a",
+      "charts/cisco-virtual-kubelet/templates/servicemonitor.yaml": "ad36160e52d91b61dd3789065b13daf830f102f0d6d0f6a92d9203a32e81e315",
+      "charts/cisco-virtual-kubelet/templates/swim-handoff-admission.yaml": "3dfe596039be3ecbcb137b57245f4d61f5b621540347571245000fc0be91d6fb",
+      "charts/cisco-virtual-kubelet/templates/topology-admission.yaml": "921e5d1a0fae3f0d679d5c4b1ff5e8a8b5b7ea35f702bcede05bcca4ee9366a2",
+      "charts/cisco-virtual-kubelet/templates/topology-configmaps.yaml": "95cc1bc6836e294d4a69bbd421a949578192b023700659d366bf29946304830d",
+      "charts/cisco-virtual-kubelet/templates/topology-rbac.yaml": "ab2e3ab11b90e7af7faf28b557e771b41c1232c39d6da47383814810c4c351e3",
+      "charts/cisco-virtual-kubelet/templates/topology-worker-admission.yaml": "ccfef22ad1b5bad2bf7016b37a333628b7092b3ee9e54d1b47d296d35b9438a8",
+      "charts/cisco-virtual-kubelet/templates/vk-rbac.yaml": "359c9514998ac267a9d74c05573917a2ec554b1a25fd5edb5026b11fc6083925",
+      "charts/cisco-virtual-kubelet/tests/configuration-protocol-render-test.sh": "4e2581f2eec367e2ff5c594e6a5d77da799e29a5c9171d4d4e482b64029a2b96",
+      "charts/cisco-virtual-kubelet/tests/managed-foreground-cleanup-checks.sh": "a5002fb632eae21b31e10e46a4c42d6bfd81bd5d073e0ad33e3b7c84506202c3",
+      "charts/cisco-virtual-kubelet/tests/managed-lease-rebind-checks.sh": "f8884f0f0ba92db8d95a1b54d892bf1fddb90494d5e54b4bebb47e40e4a8f34d",
+      "charts/cisco-virtual-kubelet/tests/managed-native-node-checks.sh": "fbe0e17a58641f868cf9de1623c3261eb71d666e3302a5113feacc17b126fad3",
+      "charts/cisco-virtual-kubelet/tests/managed-shared-worker-kind-test.sh": "3d758986399e893f13c877720e800cadf59c6540c7a6086813af23bc0d5b7e1c",
+      "charts/cisco-virtual-kubelet/tests/managed-split-drain-checks.sh": "9e18cad2983b3e015d5b3e6080bf699849c270089e5cca241b73bd4aeb78f934",
+      "charts/cisco-virtual-kubelet/tests/metadata-protocol-render-test.sh": "bbe456e28b7c0f80361955580f72bdb057e654675e51e239f22961a6875004b0",
+      "charts/cisco-virtual-kubelet/tests/native-tas-kind-config-v1.37.yaml": "86cc655f8327e3f6cc35be1af64e1bb2d3a7da4e28470a1dde193b3e0e62cd72",
+      "charts/cisco-virtual-kubelet/tests/native-tas-kind-test.sh": "57e827a3a1a04820f3f1cbf5d589083b9b36aba6af4935f0398834d0ca8379fd",
+      "charts/cisco-virtual-kubelet/tests/topology-kind-test.sh": "445c9bc527b8a8a31c1100db6412927d86128745f32a8531118288ee42857a72",
+      "charts/cisco-virtual-kubelet/tests/topology-render-test.sh": "dfa318668cb3fe8af086da9f154516a08a00d651b6626d7703661659942a59af",
+      "charts/cisco-virtual-kubelet/values.schema.json": "ca70d935b6cc187cf36de326fa5134efc36b6ea7bc2ea549e9f23824951d7712",
+      "charts/cisco-virtual-kubelet/values.yaml": "6d6f3cb673d4be3f78b01e34c644baa884e0543d7f3bb5cf469e953c1c5b4542"
+    }
+  },
+  "finalManagerCorrectionScope": "Only internal/controller differs from baseline regression inputs; final full controller and cmd/cisco-vk suites rerun after that correction",
+  "gates": {
+    "regression": {
+      "log": "/private/tmp/cvk-metadata-epoch-regression.log",
+      "exitCode": 0,
+      "passingTestEvents": 19301,
+      "passingPackages": [
+        "github.com/cisco/virtual-kubelet-cisco/api/config/v1alpha1",
+        "github.com/cisco/virtual-kubelet-cisco/api/v1alpha1",
+        "github.com/cisco/virtual-kubelet-cisco/api/ops/v1alpha1",
+        "github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter",
+        "github.com/cisco/virtual-kubelet-cisco/internal/softwarelifecycle",
+        "github.com/cisco/virtual-kubelet-cisco/internal/managedprotocol",
+        "github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter/nacmodel",
+        "github.com/cisco/virtual-kubelet-cisco/internal/aggregator",
+        "github.com/cisco/virtual-kubelet-cisco/internal/provider/maintenance",
+        "github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/nexusdashboard",
+        "github.com/cisco/virtual-kubelet-cisco/internal/provider/softwareupgrade",
+        "github.com/cisco/virtual-kubelet-cisco/cmd/cisco-vk",
+        "github.com/cisco/virtual-kubelet-cisco/internal/controller",
+        "github.com/cisco/virtual-kubelet-cisco/internal/controllerconfiguration",
+        "github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter"
+      ]
+    },
+    "finalManagerAndCLI": {
+      "log": "/private/tmp/cvk-metadata-epoch-final-manager.log",
+      "exitCode": 0,
+      "passingTestEvents": 1477,
+      "passingPackages": [
+        "github.com/cisco/virtual-kubelet-cisco/cmd/cisco-vk",
+        "github.com/cisco/virtual-kubelet-cisco/internal/controller"
+      ]
+    },
+    "actualEpochAPIServer": {
+      "log": "/private/tmp/cvk-metadata-epoch-current-api.log",
+      "exitCode": 0,
+      "passingTestEvents": 5,
+      "passingPackages": [
+        "github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter"
+      ]
+    },
+    "actualActorAPIServer": {
+      "log": "/private/tmp/cvk-metadata-epoch-actor-api.log",
+      "exitCode": 0,
+      "passingTestEvents": 46,
+      "passingPackages": [
+        "github.com/cisco/virtual-kubelet-cisco/internal/controllerconfiguration"
+      ]
+    },
+    "race": {
+      "log": "/private/tmp/cvk-metadata-epoch-race.log",
+      "exitCode": 0,
+      "passingTestEvents": 71,
+      "passingPackages": [
+        "github.com/cisco/virtual-kubelet-cisco/internal/controllerconfiguration",
+        "github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter"
+      ]
+    },
+    "chart": {
+      "log": "/private/tmp/cvk-metadata-epoch-chart.log",
+      "exitCode": 0
+    }
+  },
+  "native": {
+    "log": "/private/tmp/cvk-metadata-epoch-native.log",
+    "exitCode": 0,
+    "generatedAndDeleted": [
+      {
+        "uuid": "6ad5da770bc0186771cb1880",
+        "serial": "CVK739EB828"
+      },
+      {
+        "uuid": "6ad5da7a0bc0186771cb1881",
+        "serial": "CVK739EB829"
+      }
+    ],
+    "privateCompletedRecoveryDirectory": "/private/tmp/cvk-pnp-cohort-6875917",
+    "registrationCount": 2,
+    "deleteCount": 2,
+    "originalControllerGeneration": 1,
+    "pausedDesiredGeneration": 2,
+    "creatorRows": 2,
+    "absenceTombstones": 2,
+    "remainingOperation": false,
+    "remainingHandoff": false,
+    "pnpBaselineRestored": true,
+    "managedInventoryBaselineRestored": true,
+    "kubernetesRuntimeAndStorage": "simulated; not installed worker qualification"
+  },
+  "binary": {
+    "path": "/private/tmp/cvk-metadata-epoch-qualified-cisco-vk",
+    "sha256": "3d5ae37fa2a059eed55302814985544dd02604ff4daec66da8ca99b567744779"
+  },
+  "documentation": {
+    "strictBuildLog": "/private/tmp/cvk-metadata-epoch-docs.log"
+  },
+  "coverage": {
+    "modelVersion": "0.5.0",
+    "revision": "a435555fe828f03cf3311d52fe1ab6572a247916",
+    "uniqueResourceRows": 93
+  },
+  "installedBlocker": "Docker local API times out without response; no daemon/cluster restart performed",
+  "remaining": [
+    "Prepared cancellation and partial/unready custody retirement",
+    "Uncertain native outcomes and in-flight generation transitions",
+    "Unverifiable legacy settlement migration",
+    "Deletion-policy PnP cleanup and full claim/provisioning convergence",
+    "Installed process qualification and broader pinned model/hardware parity"
+  ]
+}

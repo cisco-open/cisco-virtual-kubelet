@@ -1,0 +1,119 @@
+=== RUN   TestLiveCatalystCenterTemplateProject
+    template_projects_live_test.go:141: submitted Create CVK-Q-Project-20261017-062255 01a14887-1bfd-7530-aad6-d15c9dab1a48
+    template_projects_live_test.go:141: submitted Update CVK-Q-Project-20261017-062255 01a14887-2147-7522-81b8-7b30d64d1ff0
+    template_projects_live_test.go:167: project create and description update verified
+    template_projects_live_test.go:169: native template operation Create draft:CVK-Q-Project-20261017-062255#CVK-Commit-Qualification 01a14887-2be2-7e4f-b43c-bb61c20f930c
+    template_projects_live_test.go:169: native template operation Update commit:CVK-Q-Project-20261017-062255#CVK-Commit-Qualification 01a14887-47f4-7276-923e-c3f2e117df35
+    template_projects_live_test.go:169: native template operation Update draft:CVK-Q-Project-20261017-062255#CVK-Commit-Qualification 01a14887-6161-7af6-9023-e3135f0d51b6
+    template_projects_live_test.go:169: native template operation Update commit:CVK-Q-Project-20261017-062255#CVK-Commit-Qualification 01a14887-79c5-7fdf-a0d7-d0ffedae8400
+    template_projects_live_test.go:169: native draft create/update and two committed versions verified a173b49a-8667-4fdf-b738-c5e99268d73c
+    template_projects_live_test.go:169: public profile operation Create profiles/CVK-Q-Profile-20261017-062324 01a14887-902d-7a18-98ca-3f1b7062732b
+    template_projects_live_test.go:169: public profile source generation converged 2
+    template_projects_live_test.go:169: public profile operation Update profiles/CVK-Q-Profile-20261017-062324 01a14887-af1d-751a-b642-7c578ae3fbef
+    template_projects_live_test.go:169: public profile source generation converged 3
+    template_projects_live_test.go:169: profile qualification operation sites Create Global/CVK-Q-Profile-20261017-062324-Site 01a14887-ceee-7928-83fb-b0a54e811eef
+    template_projects_live_test.go:169: original acknowledged metadata task retained as Unknown sites/CVK-Q-Profile-20261017-062324/dd9e18ad1073e10293397ffa3a52499be5eac2b5f40f7c5b9090f64313ca5188 01a14887-e682-7f4a-81e7-a5f6222a7363
+    template_projects_live_test.go:169: public refusal retirement, original full-tree recovery and readback verified sites/CVK-Q-Profile-20261017-062324/dd9e18ad1073e10293397ffa3a52499be5eac2b5f40f7c5b9090f64313ca5188 01a14887-e682-7f4a-81e7-a5f6222a7363
+    template_projects_live_test.go:169: 1 public metadata tasks recovered with full trees; 1 proven preflight refusals retired, exact mutation counts and final InSync/no-op verified; Kubernetes actors/storage simulated
+    template_projects_live_test.go:169: switching association original task/full-tree recovery and no-dispatch proof passed through the retained profile journal
+    template_projects_live_test.go:169: public profile operation Update profiles/CVK-Q-Profile-20261017-062324 01a14888-11df-7f43-b618-a55258097ec3
+    template_projects_live_test.go:169: public profile source generation converged 5
+    template_projects_live_test.go:169: public profile operation Update profiles/CVK-Q-Profile-20261017-062324 01a14888-3b35-7937-922b-e60cd1ef3237
+    template_projects_live_test.go:169: public profile source generation converged 6
+    template_projects_live_test.go:169: native switching profile create, template update, isolated site assignment and restart readback verified 02efd04c-6e0f-457d-b68c-827614538073 7be7d7e3-542e-4921-9776-c5cc5e5e9f4b
+    network_profiles_live_test.go:193: template mutation receipt DELETE 01a14888-6321-7ead-8769-ef0f5f68b137
+    network_profiles_live_test.go:200: template mutation receipt DELETE 01a14888-6803-726e-92d3-bba7f2aa65ae
+    network_profiles_live_test.go:240: template mutation receipt DELETE 01a14888-6dcf-7a64-aa6f-db7e3b4e21c2
+    network_profiles_live_test.go:255: profile, site assignment and isolated site cleanup verified 02efd04c-6e0f-457d-b68c-827614538073 7be7d7e3-542e-4921-9776-c5cc5e5e9f4b
+    template_commit_live_test.go:84: template mutation receipt DELETE 01a14888-7a9d-79ce-9e4c-407d9dedd094
+    template_commit_live_test.go:95: template fixture cleanup verified a173b49a-8667-4fdf-b738-c5e99268d73c
+    template_projects_live_test.go:115: isolated project cleanup verified 599c3f26-48a0-4e9d-93a3-f26b51ef5f22
+--- PASS: TestLiveCatalystCenterTemplateProject (93.42s)
+=== RUN   TestLiveWirelessProfilePublicRecovery
+    wireless_profile_execution_live_test.go:120: isolated names CVK_N_f5e09bb91b67f191 CVK_S_abc4497c2a20de6d
+    wireless_profile_execution_live_test.go:277: task ssid:8995b7da-5b82-40fd-a706-82150affe92d:CVK_S_abc4497c2a20de6d Create 01a14888-8a03-709f-a736-c4bdceb8979e
+    wireless_profile_execution_live_test.go:286: owned SSID CVK_S_abc4497c2a20de6d mdiYq1zl-x1nF-ywjJ-ndq5-n2mYytiWzgu2zemWvJflmL8ZuZrF
+    wireless_profile_execution_live_test.go:355: original acknowledged metadata task retained as Unknown wireless/wireless-profile:CVK_N_f5e09bb91b67f191:518439c15a9daaf936ef1737b0d4e89bb21c74bbe1a8ea35a93a44790909e560 01a14888-9ed7-7885-a8be-b11d1111cd2e
+    wireless_profile_execution_live_test.go:355: public refusal retirement, original full-tree recovery and readback verified wireless/wireless-profile:CVK_N_f5e09bb91b67f191:518439c15a9daaf936ef1737b0d4e89bb21c74bbe1a8ea35a93a44790909e560 01a14888-9ed7-7885-a8be-b11d1111cd2e
+    wireless_profile_execution_live_test.go:364: owned profile CVK_N_f5e09bb91b67f191 1b9ef841-c3cc-4570-935e-d20a12c5d87d
+    wireless_profile_execution_live_test.go:381: original acknowledged metadata task retained as Unknown wireless/wireless-profile:CVK_N_f5e09bb91b67f191:518439c15a9daaf936ef1737b0d4e89bb21c74bbe1a8ea35a93a44790909e560 01a14888-c6ec-76d9-a01f-a24e112d0d75
+    wireless_profile_execution_live_test.go:381: public refusal retirement, original full-tree recovery and readback verified wireless/wireless-profile:CVK_N_f5e09bb91b67f191:518439c15a9daaf936ef1737b0d4e89bb21c74bbe1a8ea35a93a44790909e560 01a14888-c6ec-76d9-a01f-a24e112d0d75
+    wireless_profile_execution_live_test.go:404: task Global/CVK_N_f5e09bb91b67f191_A Create 01a14888-e278-781d-be7e-bec22955ecfe
+    wireless_profile_execution_live_test.go:417: owned empty area Global/CVK_N_f5e09bb91b67f191_A 7b885768-9fad-46b8-89fb-226cea47111b
+    wireless_profile_execution_live_test.go:425: original acknowledged metadata task retained as Unknown wireless-sites/CVK_N_f5e09bb91b67f191/fd63c855b77dc57ecc91051145b5976c96061561463bfee5d0dba8f2584b8cb7 01a14889-02c2-7530-abef-7b8d7fffdc14
+    wireless_profile_execution_live_test.go:425: public refusal retirement, original full-tree recovery and readback verified wireless-sites/CVK_N_f5e09bb91b67f191/fd63c855b77dc57ecc91051145b5976c96061561463bfee5d0dba8f2584b8cb7 01a14889-02c2-7530-abef-7b8d7fffdc14
+    wireless_profile_execution_live_test.go:404: task Global/CVK_N_f5e09bb91b67f191_B Create 01a14889-17b1-7a21-a035-d6a25bd937b9
+    wireless_profile_execution_live_test.go:417: owned empty area Global/CVK_N_f5e09bb91b67f191_B c615aaae-8913-498f-879f-96d8d583511c
+    wireless_profile_execution_live_test.go:425: original acknowledged metadata task retained as Unknown wireless-sites/CVK_N_f5e09bb91b67f191/fbe0eff2b576ddcf31dc904d8b69a4317ead3235ccc297c954782c4bd4d130aa 01a14889-364c-7494-8b88-ea9593c7ba31
+    wireless_profile_execution_live_test.go:425: public refusal retirement, original full-tree recovery and readback verified wireless-sites/CVK_N_f5e09bb91b67f191/fbe0eff2b576ddcf31dc904d8b69a4317ead3235ccc297c954782c4bd4d130aa 01a14889-364c-7494-8b88-ea9593c7ba31
+    wireless_profile_execution_live_test.go:469: original acknowledged metadata task retained as Unknown wireless-site-tags/site-tag:913d11780f6746d4af2dcec1816a803c1977489635507ab873ffed42bcdb8e0f:1cb98bb362ed3744bb6e9d1504f0a9507b2cdbbba39734f3c4e286d31a2abe73 01a14889-95a3-76a2-bb98-2e55136d3eed
+    wireless_profile_execution_live_test.go:469: public refusal retirement, original full-tree recovery and readback verified wireless-site-tags/site-tag:913d11780f6746d4af2dcec1816a803c1977489635507ab873ffed42bcdb8e0f:1cb98bb362ed3744bb6e9d1504f0a9507b2cdbbba39734f3c4e286d31a2abe73 01a14889-95a3-76a2-bb98-2e55136d3eed
+    wireless_profile_execution_live_test.go:469: original acknowledged metadata task retained as Unknown wireless-policy-tags/policy-tag:e2558c57bf3ee8282af6d8af7ac6c669671db4f694449dfee5e3e7a0cc1b2b93:a72c24ea35c6016ec64e2ada2ddcea9af931caad3bacabd0c575d842d4356eda 01a1488a-07ab-7ee3-b29c-375866b77373
+    wireless_profile_execution_live_test.go:469: public refusal retirement, original full-tree recovery and readback verified wireless-policy-tags/policy-tag:e2558c57bf3ee8282af6d8af7ac6c669671db4f694449dfee5e3e7a0cc1b2b93:a72c24ea35c6016ec64e2ada2ddcea9af931caad3bacabd0c575d842d4356eda 01a1488a-07ab-7ee3-b29c-375866b77373
+    wireless_profile_execution_live_test.go:476: original accepted operation verified with retained resource identity and unchanged tag inventory; no request replayed
+    wireless_profile_execution_live_test.go:485: overlapping site and policy declarations refused with native inventories unchanged
+    wireless_profile_execution_live_test.go:469: original acknowledged metadata task retained as Unknown wireless-site-tags/site-tag:913d11780f6746d4af2dcec1816a803c1977489635507ab873ffed42bcdb8e0f:343131c69184b14c900dfe680d7c39f17474909d792cbba56fe9c649393f4520 01a1488a-dc6f-7323-9862-e18cbeb604dd
+    wireless_profile_execution_live_test.go:469: public refusal retirement, original full-tree recovery and readback verified wireless-site-tags/site-tag:913d11780f6746d4af2dcec1816a803c1977489635507ab873ffed42bcdb8e0f:343131c69184b14c900dfe680d7c39f17474909d792cbba56fe9c649393f4520 01a1488a-dc6f-7323-9862-e18cbeb604dd
+    wireless_profile_execution_live_test.go:469: original acknowledged metadata task retained as Unknown wireless-policy-tags/policy-tag:e2558c57bf3ee8282af6d8af7ac6c669671db4f694449dfee5e3e7a0cc1b2b93:e57c11c392bc18951be5793ef8cdee6e31096bdf92185afd357b8abbe090a75d 01a1488b-5235-7318-ba3b-dd68f50f5c88
+    wireless_profile_execution_live_test.go:469: public refusal retirement, original full-tree recovery and readback verified wireless-policy-tags/policy-tag:e2558c57bf3ee8282af6d8af7ac6c669671db4f694449dfee5e3e7a0cc1b2b93:e57c11c392bc18951be5793ef8cdee6e31096bdf92185afd357b8abbe090a75d 01a1488b-5235-7318-ba3b-dd68f50f5c88
+    wireless_profile_execution_live_test.go:476: original accepted operation verified with retained resource identity and unchanged tag inventory; no request replayed
+    wireless_profile_execution_live_test.go:485: overlapping site and policy declarations refused with native inventories unchanged
+    wireless_profile_execution_live_test.go:540: wireless empty-site assignment and site/policy tag create/additive-update/fresh-compiler/report verified
+    wireless_profile_execution_live_test.go:550: 8 public metadata tasks recovered with full trees; 8 proven preflight refusals retired, exact mutation counts and final InSync/no-op verified; Kubernetes actors/storage simulated
+    wireless_profile_execution_live_test.go:574: cleanup mdi0q1zl-x05F-zJvL-mdLI-yJKXyJy3zJe5mv9qqZbwmuSYxZno 01a1488c-3c40-763b-bda7-0ad77dbf5dd3
+    wireless_profile_execution_live_test.go:574: cleanup mdi0q1zl-x05F-zJvL-mdLI-yJKXyJy3zJe5mv9tqZbwmuSYxZno 01a1488c-44d3-7e2e-aabb-b795b50460d7
+    wireless_profile_execution_live_test.go:580: cleanup 7b885768-9fad-46b8-89fb-226cea47111b 01a1488c-4d66-7975-8bbf-9915da03da24
+    wireless_profile_execution_live_test.go:580: cleanup c615aaae-8913-498f-879f-96d8d583511c 01a1488c-5532-7e0e-8c1a-b81f193823a0
+    wireless_profile_execution_live_test.go:584: cleanup 1b9ef841-c3cc-4570-935e-d20a12c5d87d 01a1488c-5d25-7a47-a560-288530130265
+    wireless_profile_execution_live_test.go:590: cleanup mdiYq1zl-x1nF-ywjJ-ndq5-n2mYytiWzgu2zemWvJflmL8ZuZrF 01a1488c-643b-7297-be2a-b97668e18ff6
+    wireless_profile_execution_live_test.go:595: cleanup 7b885768-9fad-46b8-89fb-226cea47111b 01a1488c-6b27-7fe5-9e35-e437f1832c15
+    wireless_profile_execution_live_test.go:595: cleanup c615aaae-8913-498f-879f-96d8d583511c 01a1488c-7159-7fe7-aca2-bf73fd0288ab
+    wireless_profile_execution_live_test.go:600: baselines restored; no device assignment, provisioning or device operation submitted
+--- PASS: TestLiveWirelessProfilePublicRecovery (258.94s)
+=== RUN   TestLiveWirelessPolicyCohortPublicRecovery
+    wireless_profile_execution_live_test.go:117: existing RF references HIGH mda0seLh-seGW-stfh-mKGZ-sdrjnuC2sdDioeK5rZeWsdeXsdeY LOW mdaZte9x-tdbp-mvCY-tdnp-nfC1tdzpn1C4tdLpmtbxmtfmmtjp
+    wireless_profile_execution_live_test.go:120: isolated names CVK_N_2108d6092612dfb9 CVK_S_73d6173e47d09e07
+    wireless_profile_execution_live_test.go:277: task ssid:8995b7da-5b82-40fd-a706-82150affe92d:CVK_S_73d6173e47d09e07 Create 01a1488c-7e86-705d-964b-caf6d783f868
+    wireless_profile_execution_live_test.go:286: owned SSID CVK_S_73d6173e47d09e07 mdiYq1zl-x1nF-nZnK-nJe3-m2u0n2qWowuWn0mWvJflmL8ZuZrF
+    wireless_profile_execution_live_test.go:355: original acknowledged metadata task retained as Unknown wireless/wireless-profile:CVK_N_2108d6092612dfb9:f0765581675b831f40676eee102a9f7a39a868c8c5f2a6365c8e169c51dc50de 01a1488c-9f6b-7407-a9c8-13e7c7992ba2
+    wireless_profile_execution_live_test.go:355: public refusal retirement, original full-tree recovery and readback verified wireless/wireless-profile:CVK_N_2108d6092612dfb9:f0765581675b831f40676eee102a9f7a39a868c8c5f2a6365c8e169c51dc50de 01a1488c-9f6b-7407-a9c8-13e7c7992ba2
+    wireless_profile_execution_live_test.go:364: owned profile CVK_N_2108d6092612dfb9 c310db5d-6913-4b0d-94b3-8aaf375753ff
+    wireless_profile_execution_live_test.go:381: original acknowledged metadata task retained as Unknown wireless/wireless-profile:CVK_N_2108d6092612dfb9:f0765581675b831f40676eee102a9f7a39a868c8c5f2a6365c8e169c51dc50de 01a1488c-cc8c-7d28-86da-f45132a9afad
+    wireless_profile_execution_live_test.go:381: public refusal retirement, original full-tree recovery and readback verified wireless/wireless-profile:CVK_N_2108d6092612dfb9:f0765581675b831f40676eee102a9f7a39a868c8c5f2a6365c8e169c51dc50de 01a1488c-cc8c-7d28-86da-f45132a9afad
+    wireless_profile_execution_live_test.go:404: task Global/CVK_N_2108d6092612dfb9_A Create 01a1488c-eccd-7970-bc5d-87e12a6f2bf1
+    wireless_profile_execution_live_test.go:417: owned empty area Global/CVK_N_2108d6092612dfb9_A 30b69a1b-490a-4027-9930-9d72b9fe24bb
+    wireless_profile_execution_live_test.go:425: original acknowledged metadata task retained as Unknown wireless-sites/CVK_N_2108d6092612dfb9/d75ca53b186f69e8582fefe658df0b0247c18bec1d34997cfebf37c74cb7b020 01a1488d-0e5f-7420-aa15-a711c56baa36
+    wireless_profile_execution_live_test.go:425: public refusal retirement, original full-tree recovery and readback verified wireless-sites/CVK_N_2108d6092612dfb9/d75ca53b186f69e8582fefe658df0b0247c18bec1d34997cfebf37c74cb7b020 01a1488d-0e5f-7420-aa15-a711c56baa36
+    wireless_profile_execution_live_test.go:404: task Global/CVK_N_2108d6092612dfb9_B Create 01a1488d-2541-7e7e-8253-18bc0a06a6b2
+    wireless_profile_execution_live_test.go:417: owned empty area Global/CVK_N_2108d6092612dfb9_B 1154c34f-426e-4f8c-9fcf-115337d50ff6
+    wireless_profile_execution_live_test.go:425: original acknowledged metadata task retained as Unknown wireless-sites/CVK_N_2108d6092612dfb9/62432278d48e9d94de1415b74274fc7e5426c8e865e8e7e7050926acf23c41f2 01a1488d-45d4-7701-836a-d82bcfe0a5fe
+    wireless_profile_execution_live_test.go:425: public refusal retirement, original full-tree recovery and readback verified wireless-sites/CVK_N_2108d6092612dfb9/62432278d48e9d94de1415b74274fc7e5426c8e865e8e7e7050926acf23c41f2 01a1488d-45d4-7701-836a-d82bcfe0a5fe
+    wireless_profile_execution_live_test.go:469: original acknowledged metadata task retained as Unknown wireless-site-tags/site-tag:b8fb728fa60e9b4775da622936a1812261ebb1dc4cdeb947701b185b6b998d9c:e95ed73c3d0b151812895e2ad5703b0cfdfcd459eb03532ad476d419c0a83660 01a1488d-c13a-7609-a6f5-df89b189ab38
+    wireless_profile_execution_live_test.go:469: public refusal retirement, original full-tree recovery and readback verified wireless-site-tags/site-tag:b8fb728fa60e9b4775da622936a1812261ebb1dc4cdeb947701b185b6b998d9c:e95ed73c3d0b151812895e2ad5703b0cfdfcd459eb03532ad476d419c0a83660 01a1488d-c13a-7609-a6f5-df89b189ab38
+    wireless_profile_execution_live_test.go:469: original acknowledged metadata task retained as Unknown wireless-policy-tags/policy-tag-cohort:v1:f9a66fa2127a2cba5f0894d38d362e0fa91941d709c4707d54f44722119062e2 01a1488e-4eef-7b55-af53-23967de82bbc
+    wireless_profile_execution_live_test.go:469: public refusal retirement, original full-tree recovery and readback verified wireless-policy-tags/policy-tag-cohort:v1:f9a66fa2127a2cba5f0894d38d362e0fa91941d709c4707d54f44722119062e2 01a1488e-4eef-7b55-af53-23967de82bbc
+    wireless_profile_execution_live_test.go:476: original accepted operation verified with retained resource identity and unchanged tag inventory; no request replayed
+    wireless_profile_execution_live_test.go:485: overlapping site and policy declarations refused with native inventories unchanged
+    wireless_profile_execution_live_test.go:469: original acknowledged metadata task retained as Unknown wireless-site-tags/site-tag:b8fb728fa60e9b4775da622936a1812261ebb1dc4cdeb947701b185b6b998d9c:aca60307751dd65b7d4a62a830973fa31a4807172272ba3ec07ff6de0ba87874 01a1488f-670b-72dc-939d-e5373e88e2bd
+    wireless_profile_execution_live_test.go:469: public refusal retirement, original full-tree recovery and readback verified wireless-site-tags/site-tag:b8fb728fa60e9b4775da622936a1812261ebb1dc4cdeb947701b185b6b998d9c:aca60307751dd65b7d4a62a830973fa31a4807172272ba3ec07ff6de0ba87874 01a1488f-670b-72dc-939d-e5373e88e2bd
+    wireless_profile_execution_live_test.go:469: original acknowledged metadata task retained as Unknown wireless-policy-tags/policy-tag:85b4fea879b7b8529e58153785ae21a0741c3840cf3d1cc4c126b0ff9c21daa9:966e846fab25869e22d46cbf6eef36729ad39da09b48bcac9ded8e0696087b13 01a1488f-f4b3-7472-8f5c-26c81314a29e
+    wireless_profile_execution_live_test.go:469: public refusal retirement, original full-tree recovery and readback verified wireless-policy-tags/policy-tag:85b4fea879b7b8529e58153785ae21a0741c3840cf3d1cc4c126b0ff9c21daa9:966e846fab25869e22d46cbf6eef36729ad39da09b48bcac9ded8e0696087b13 01a1488f-f4b3-7472-8f5c-26c81314a29e
+    wireless_profile_execution_live_test.go:469: original acknowledged metadata task retained as Unknown wireless-policy-tags/policy-tag:2b1024b89b6575642e1b564e36f5458739c90c7b23af583fe8d81496a67619d5:6208f37773d50d0fa515001208670b625215c727c6a84d09c9d7864d9e24b419 01a14890-874a-797d-acab-f5c3b95d9a6c
+    wireless_profile_execution_live_test.go:469: public refusal retirement, original full-tree recovery and readback verified wireless-policy-tags/policy-tag:2b1024b89b6575642e1b564e36f5458739c90c7b23af583fe8d81496a67619d5:6208f37773d50d0fa515001208670b625215c727c6a84d09c9d7864d9e24b419 01a14890-874a-797d-acab-f5c3b95d9a6c
+    wireless_profile_execution_live_test.go:476: original accepted operation verified with retained resource identity and unchanged tag inventory; no request replayed
+    wireless_profile_execution_live_test.go:485: overlapping site and policy declarations refused with native inventories unchanged
+    wireless_profile_execution_live_test.go:540: wireless empty-site assignment and site/policy tag create/additive-update/fresh-compiler/report verified
+    wireless_profile_execution_live_test.go:550: 9 public metadata tasks recovered with full trees; 9 proven preflight refusals retired, exact mutation counts and final InSync/no-op verified; Kubernetes actors/storage simulated
+    wireless_profile_execution_live_test.go:574: cleanup mdi1q1zl-x05F-mJeW-ogq2-mdKYnJeYzgzIov9qmumWvJflmL8Z 01a14891-ba75-7e41-9435-b3b3071a22da
+    wireless_profile_execution_live_test.go:574: cleanup mdi1q1zl-x05F-mJeW-ogq2-mdKYnJeYzgzIov9qmKmWvJflmL8Z 01a14891-c3f0-718c-b735-2b5f06560cd8
+    wireless_profile_execution_live_test.go:574: cleanup mdi0q1zl-x05F-mJeW-ogq2-mdKYnJeYzgzIov9tqZbwmuSYxZno 01a14891-cd30-70e0-a54a-d84c203b32c3
+    wireless_profile_execution_live_test.go:580: cleanup 30b69a1b-490a-4027-9930-9d72b9fe24bb 01a14891-d682-72b1-925d-e80f771df1bb
+    wireless_profile_execution_live_test.go:580: cleanup 1154c34f-426e-4f8c-9fcf-115337d50ff6 01a14891-ec03-7a45-82f4-bbdc39f34db0
+    wireless_profile_execution_live_test.go:584: cleanup c310db5d-6913-4b0d-94b3-8aaf375753ff 01a14891-f05e-7a0a-966f-cf2d8ed05112
+    wireless_profile_execution_live_test.go:590: cleanup mdiYq1zl-x1nF-nZnK-nJe3-m2u0n2qWowuWn0mWvJflmL8ZuZrF 01a14891-f7a6-7fc3-9816-a08ee8c89736
+    wireless_profile_execution_live_test.go:595: cleanup 30b69a1b-490a-4027-9930-9d72b9fe24bb 01a14891-feed-7279-a360-95198a0c4c88
+    wireless_profile_execution_live_test.go:595: cleanup 1154c34f-426e-4f8c-9fcf-115337d50ff6 01a14892-0569-735c-86be-d0780f70aa8a
+    wireless_profile_execution_live_test.go:600: baselines restored; no device assignment, provisioning or device operation submitted
+--- PASS: TestLiveWirelessPolicyCohortPublicRecovery (365.72s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	720.403s

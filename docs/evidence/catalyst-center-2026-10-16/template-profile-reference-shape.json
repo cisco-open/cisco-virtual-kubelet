@@ -1,0 +1,12 @@
+{
+  "count": 1,
+  "itemFields": [
+    "id",
+    "name"
+  ],
+  "knownProfileIdentityFields": [
+    "id"
+  ],
+  "returnedItems": 1,
+  "scope": "Nonempty legacy-created profile association structural inspection only; no removal authority"
+}

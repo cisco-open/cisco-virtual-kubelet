@@ -1,0 +1,9 @@
+=== RUN   TestLiveWirelessPowerRulesRetained
+    zz_power_rules_retained_live_test.go:40: isolated power CVK_R_56557dc063c8d1d8
+    zz_power_rules_retained_live_test.go:133: task OMITTED_DESCRIPTION Update 01a13e10-371c-71f9-8103-4b3f713e973e
+    zz_power_rules_retained_live_test.go:159: qualified OMITTED_DESCRIPTION same UUID, exact rules/description, no-op and baseline
+    zz_power_rules_retained_live_test.go:173: cleanup mdiYq1zl-x1jF-nty1-ntDK-yZa2m2m4zdfKoemWvJflmL8ZuJrF 01a13e10-44db-7c9b-9092-9db4802d17ab
+    zz_power_rules_retained_live_test.go:179: power and AP baselines restored; no assignment or device action submitted
+--- PASS: TestLiveWirelessPowerRulesRetained (5.65s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	7.742s

@@ -1,0 +1,108 @@
+=== RUN   TestTemplateDefinitionDispatchSnapshot
+=== RUN   TestTemplateDefinitionDispatchSnapshot/project/unchanged
+=== RUN   TestTemplateDefinitionDispatchSnapshot/project/project
+=== RUN   TestTemplateDefinitionDispatchSnapshot/project/draft
+=== RUN   TestTemplateDefinitionDispatchSnapshot/project/version
+=== RUN   TestTemplateDefinitionDispatchSnapshot/project/intent
+=== RUN   TestTemplateDefinitionDispatchSnapshot/project/read-failure
+=== RUN   TestTemplateDefinitionDispatchSnapshot/project/lost-receipt
+=== RUN   TestTemplateDefinitionDispatchSnapshot/project/concurrent
+=== RUN   TestTemplateDefinitionDispatchSnapshot/create/unchanged
+=== RUN   TestTemplateDefinitionDispatchSnapshot/create/project
+=== RUN   TestTemplateDefinitionDispatchSnapshot/create/draft
+=== RUN   TestTemplateDefinitionDispatchSnapshot/create/version
+=== RUN   TestTemplateDefinitionDispatchSnapshot/create/intent
+=== RUN   TestTemplateDefinitionDispatchSnapshot/create/read-failure
+=== RUN   TestTemplateDefinitionDispatchSnapshot/create/lost-receipt
+=== RUN   TestTemplateDefinitionDispatchSnapshot/create/concurrent
+=== RUN   TestTemplateDefinitionDispatchSnapshot/update/unchanged
+=== RUN   TestTemplateDefinitionDispatchSnapshot/update/project
+=== RUN   TestTemplateDefinitionDispatchSnapshot/update/draft
+=== RUN   TestTemplateDefinitionDispatchSnapshot/update/version
+=== RUN   TestTemplateDefinitionDispatchSnapshot/update/intent
+=== RUN   TestTemplateDefinitionDispatchSnapshot/update/read-failure
+=== RUN   TestTemplateDefinitionDispatchSnapshot/update/lost-receipt
+=== RUN   TestTemplateDefinitionDispatchSnapshot/update/concurrent
+=== RUN   TestTemplateDefinitionDispatchSnapshot/commit/unchanged
+=== RUN   TestTemplateDefinitionDispatchSnapshot/commit/project
+=== RUN   TestTemplateDefinitionDispatchSnapshot/commit/draft
+=== RUN   TestTemplateDefinitionDispatchSnapshot/commit/version
+=== RUN   TestTemplateDefinitionDispatchSnapshot/commit/intent
+=== RUN   TestTemplateDefinitionDispatchSnapshot/commit/read-failure
+=== RUN   TestTemplateDefinitionDispatchSnapshot/commit/lost-receipt
+=== RUN   TestTemplateDefinitionDispatchSnapshot/commit/concurrent
+--- PASS: TestTemplateDefinitionDispatchSnapshot (0.45s)
+    --- PASS: TestTemplateDefinitionDispatchSnapshot/project/unchanged (0.02s)
+    --- PASS: TestTemplateDefinitionDispatchSnapshot/project/project (0.01s)
+    --- PASS: TestTemplateDefinitionDispatchSnapshot/project/draft (0.01s)
+    --- PASS: TestTemplateDefinitionDispatchSnapshot/project/version (0.01s)
+    --- PASS: TestTemplateDefinitionDispatchSnapshot/project/intent (0.01s)
+    --- PASS: TestTemplateDefinitionDispatchSnapshot/project/read-failure (0.01s)
+    --- PASS: TestTemplateDefinitionDispatchSnapshot/project/lost-receipt (0.01s)
+    --- PASS: TestTemplateDefinitionDispatchSnapshot/project/concurrent (0.01s)
+    --- PASS: TestTemplateDefinitionDispatchSnapshot/create/unchanged (0.01s)
+    --- PASS: TestTemplateDefinitionDispatchSnapshot/create/project (0.01s)
+    --- PASS: TestTemplateDefinitionDispatchSnapshot/create/draft (0.01s)
+    --- PASS: TestTemplateDefinitionDispatchSnapshot/create/version (0.01s)
+    --- PASS: TestTemplateDefinitionDispatchSnapshot/create/intent (0.01s)
+    --- PASS: TestTemplateDefinitionDispatchSnapshot/create/read-failure (0.01s)
+    --- PASS: TestTemplateDefinitionDispatchSnapshot/create/lost-receipt (0.01s)
+    --- PASS: TestTemplateDefinitionDispatchSnapshot/create/concurrent (0.01s)
+    --- PASS: TestTemplateDefinitionDispatchSnapshot/update/unchanged (0.01s)
+    --- PASS: TestTemplateDefinitionDispatchSnapshot/update/project (0.01s)
+    --- PASS: TestTemplateDefinitionDispatchSnapshot/update/draft (0.01s)
+    --- PASS: TestTemplateDefinitionDispatchSnapshot/update/version (0.01s)
+    --- PASS: TestTemplateDefinitionDispatchSnapshot/update/intent (0.01s)
+    --- PASS: TestTemplateDefinitionDispatchSnapshot/update/read-failure (0.01s)
+    --- PASS: TestTemplateDefinitionDispatchSnapshot/update/lost-receipt (0.01s)
+    --- PASS: TestTemplateDefinitionDispatchSnapshot/update/concurrent (0.02s)
+    --- PASS: TestTemplateDefinitionDispatchSnapshot/commit/unchanged (0.01s)
+    --- PASS: TestTemplateDefinitionDispatchSnapshot/commit/project (0.01s)
+    --- PASS: TestTemplateDefinitionDispatchSnapshot/commit/draft (0.01s)
+    --- PASS: TestTemplateDefinitionDispatchSnapshot/commit/version (0.01s)
+    --- PASS: TestTemplateDefinitionDispatchSnapshot/commit/intent (0.01s)
+    --- PASS: TestTemplateDefinitionDispatchSnapshot/commit/read-failure (0.01s)
+    --- PASS: TestTemplateDefinitionDispatchSnapshot/commit/lost-receipt (0.01s)
+    --- PASS: TestTemplateDefinitionDispatchSnapshot/commit/concurrent (0.01s)
+=== RUN   TestTemplateProjectDispatchSnapshot
+=== RUN   TestTemplateProjectDispatchSnapshot/existing=false/unchanged
+=== RUN   TestTemplateProjectDispatchSnapshot/existing=false/identity
+=== RUN   TestTemplateProjectDispatchSnapshot/existing=false/description
+=== RUN   TestTemplateProjectDispatchSnapshot/existing=false/intent
+=== RUN   TestTemplateProjectDispatchSnapshot/existing=false/other-selected
+=== RUN   TestTemplateProjectDispatchSnapshot/existing=true/unchanged
+=== RUN   TestTemplateProjectDispatchSnapshot/existing=true/identity
+=== RUN   TestTemplateProjectDispatchSnapshot/existing=true/description
+=== RUN   TestTemplateProjectDispatchSnapshot/existing=true/intent
+=== RUN   TestTemplateProjectDispatchSnapshot/existing=true/other-selected
+--- PASS: TestTemplateProjectDispatchSnapshot (0.10s)
+    --- PASS: TestTemplateProjectDispatchSnapshot/existing=false/unchanged (0.01s)
+    --- PASS: TestTemplateProjectDispatchSnapshot/existing=false/identity (0.01s)
+    --- PASS: TestTemplateProjectDispatchSnapshot/existing=false/description (0.01s)
+    --- PASS: TestTemplateProjectDispatchSnapshot/existing=false/intent (0.01s)
+    --- PASS: TestTemplateProjectDispatchSnapshot/existing=false/other-selected (0.01s)
+    --- PASS: TestTemplateProjectDispatchSnapshot/existing=true/unchanged (0.01s)
+    --- PASS: TestTemplateProjectDispatchSnapshot/existing=true/identity (0.01s)
+    --- PASS: TestTemplateProjectDispatchSnapshot/existing=true/description (0.01s)
+    --- PASS: TestTemplateProjectDispatchSnapshot/existing=true/intent (0.01s)
+    --- PASS: TestTemplateProjectDispatchSnapshot/existing=true/other-selected (0.01s)
+=== RUN   TestTemplateCompositeDispatchSnapshot
+=== RUN   TestTemplateCompositeDispatchSnapshot/draft/unchanged
+=== RUN   TestTemplateCompositeDispatchSnapshot/draft/member-metadata
+=== RUN   TestTemplateCompositeDispatchSnapshot/draft/composite-draft
+=== RUN   TestTemplateCompositeDispatchSnapshot/draft/during-settle
+=== RUN   TestTemplateCompositeDispatchSnapshot/commit/unchanged
+=== RUN   TestTemplateCompositeDispatchSnapshot/commit/member-metadata
+=== RUN   TestTemplateCompositeDispatchSnapshot/commit/composite-draft
+=== RUN   TestTemplateCompositeDispatchSnapshot/commit/during-settle
+--- PASS: TestTemplateCompositeDispatchSnapshot (0.14s)
+    --- PASS: TestTemplateCompositeDispatchSnapshot/draft/unchanged (0.02s)
+    --- PASS: TestTemplateCompositeDispatchSnapshot/draft/member-metadata (0.02s)
+    --- PASS: TestTemplateCompositeDispatchSnapshot/draft/composite-draft (0.02s)
+    --- PASS: TestTemplateCompositeDispatchSnapshot/draft/during-settle (0.02s)
+    --- PASS: TestTemplateCompositeDispatchSnapshot/commit/unchanged (0.02s)
+    --- PASS: TestTemplateCompositeDispatchSnapshot/commit/member-metadata (0.02s)
+    --- PASS: TestTemplateCompositeDispatchSnapshot/commit/composite-draft (0.02s)
+    --- PASS: TestTemplateCompositeDispatchSnapshot/commit/during-settle (0.02s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	3.059s

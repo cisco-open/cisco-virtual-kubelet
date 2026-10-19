@@ -1,0 +1,10 @@
+=== RUN   TestLiveCatalystCenterAAASettingsManifest
+    aaa_settings_manifest_live_test.go:105: assignment fixture area task Global/CVK-Cred-20261015-123809-000000000 01a13f91-ea9b-767e-9fcb-b06abe34d7f5
+    aaa_settings_manifest_live_test.go:71: isolated site AAA response HTTP 400 transportError false
+    aaa_settings_manifest_live_test.go:91: isolated AAA validation NCND00001 {"response":{"errorCode":"NCND00001","message":"NCND00001: The Common Settings request has validation errors","detail":"[\"NCND01221: AAA settings cannot be saved as there is no AAA server registered in Cisco DNA Center with IP address 192.0.2.240\",\"NCND01221: AAA settings cannot be saved as there is no AAA server registered in Cisco DNA Center with IP address 192.0.2.241\"]"},"version":"1.0"}
+    aaa_settings_manifest_live_test.go:311: AAA operation retained without replay Unknown 
+    site_credentials_live_test.go:82: assignment fixture retained for inspection Global/CVK-Cred-20261015-123809-000000000 f2628d74-eab1-4bf3-af73-7f4047a49cc6
+--- FAIL: TestLiveCatalystCenterAAASettingsManifest (3.50s)
+FAIL
+FAIL	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	4.623s
+FAIL

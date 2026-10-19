@@ -1,0 +1,11 @@
+{
+  "beforePodUID": "2374cbda-4e7e-414a-9346-eb9b11be5da4",
+  "afterPodUID": "6d1f0a06-7aaa-4faa-ad50-d9d759ded417",
+  "beforeIdentityEvidence": "retained Kubernetes pod events for independently observed original pod name",
+  "podReady": true,
+  "sameConfigUID": true,
+  "unchangedIntentAndDrift": true,
+  "beforeCheck": "2026-10-17T15:19:06Z",
+  "afterCheck": "2026-10-17T15:19:56Z",
+  "imageID": "sha256:1b8a21b2eaafdd7a0b9a5a1bf0ed190801446ae969402f63a5acc2f8ecd7bf0e"
+}

@@ -1,0 +1,54 @@
+{
+  "capturedProfileID": "09ad0b42-2849-4428-8415-489fe61c4b66",
+  "originalCreateTaskID": "01a15462-93c2-7b72-8f3d-a93bee9e3cf8",
+  "readOnly": true,
+  "responses": [
+    {
+      "path": "/dna/intent/api/v1/task/01a15462-93c2-7b72-8f3d-a93bee9e3cf8",
+      "httpStatus": 200,
+      "items": 1,
+      "fieldNames": [
+        "endTime",
+        "id",
+        "instanceTenantId",
+        "isError",
+        "progress",
+        "serviceType",
+        "startTime",
+        "username",
+        "version"
+      ],
+      "capturedUUIDLocations": [
+        {
+          "path": "$.response.progress",
+          "exactUUIDValue": false
+        }
+      ],
+      "embeddedJSONFields": []
+    },
+    {
+      "path": "/dna/intent/api/v1/task/01a15462-93c2-7b72-8f3d-a93bee9e3cf8/tree",
+      "httpStatus": 200,
+      "items": 1,
+      "fieldNames": [
+        "endTime",
+        "id",
+        "instanceTenantId",
+        "isError",
+        "progress",
+        "rootId",
+        "serviceType",
+        "startTime",
+        "username",
+        "version"
+      ],
+      "capturedUUIDLocations": [
+        {
+          "path": "$.response[0].progress",
+          "exactUUIDValue": false
+        }
+      ],
+      "embeddedJSONFields": []
+    }
+  ]
+}

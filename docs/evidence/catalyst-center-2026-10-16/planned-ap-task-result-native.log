@@ -1,0 +1,30 @@
+=== RUN   TestLiveCatalystCenterPlannedAPManifest
+    site_execution_live_test.go:107: isolated qualification hierarchy: Global/CVK-Q-20261016-211515-000000000
+    site_execution_live_test.go:371: public manifest step=0 status=Waiting operation=Accepted task=01a14691-bc64-7e57-af33-b3fd0e71aa63 reasons=[AdapterAvailable TaskAccepted TaskAccepted]
+    site_execution_live_test.go:371: public manifest Create reached InSync across simulated worker restarts; journal cleared, owner retained, no-op verified
+    site_execution_live_test.go:383: bulk create task=01a14691-bc64-7e57-af33-b3fd0e71aa63
+    site_execution_live_test.go:409: single native batch created all three site identities; retained member/anchor binding and task tree verified
+    site_execution_live_test.go:438: public manifest step=0 status=Waiting operation=Accepted task=01a14691-ebd8-7656-8f15-d4f43be6fb41 reasons=[AdapterAvailable TaskAccepted TaskAccepted]
+    site_execution_live_test.go:438: public manifest Update reached InSync across simulated worker restarts; journal cleared, owner retained, no-op verified
+    site_execution_live_test.go:445: submitted task=01a14691-ebd8-7656-8f15-d4f43be6fb41 at=2026-10-16T21:15:29Z
+    site_execution_live_test.go:463: verified Update floor
+    site_execution_live_test.go:472: three creates, one floor update, and full hierarchy read-back verified
+    site_execution_live_test.go:497: native floor bounds preflight refused invalid coordinate without mutation x
+    site_execution_live_test.go:497: native floor bounds preflight refused invalid coordinate without mutation y
+    site_execution_live_test.go:497: native floor bounds preflight refused invalid coordinate without mutation z
+    planned_ap_live_test.go:40: planned AP native response POST HTTP 202 transportError false
+    site_execution_live_test.go:497: public manifest step=0 status=Waiting operation=Accepted task=01a14692-29cb-7790-9e95-a118217e09ef reasons=[AdapterAvailable TaskAccepted TaskAccepted]
+    site_execution_live_test.go:497: public manifest Create reached InSync across simulated worker restarts; journal cleared, owner retained, no-op verified
+    site_execution_live_test.go:497: planned AP task result metadata action Create task 01a14692-29cb-7790-9e95-a118217e09ef AP UUID 7a86abb7-b512-4580-8d4b-7978bdae4b15 plainAPMatch false plainFloorMatch false object false array false keys [] arrayLength 0
+    site_execution_live_test.go:497: planned AP public manifest task/readback/restart/no-op verified revision 1 radioCount 1
+    planned_ap_live_test.go:40: planned AP native response POST HTTP 202 transportError false
+    site_execution_live_test.go:497: public manifest step=0 status=Waiting operation=Accepted task=01a14692-7191-7780-aab8-8d7ce38d020e reasons=[AdapterAvailable TaskAccepted TaskAccepted]
+    site_execution_live_test.go:497: public manifest Update reached InSync across simulated worker restarts; journal cleared, owner retained, no-op verified
+    site_execution_live_test.go:497: planned AP task result metadata action Update task 01a14692-7191-7780-aab8-8d7ce38d020e AP UUID 7a86abb7-b512-4580-8d4b-7978bdae4b15 plainAPMatch false plainFloorMatch false object false array false keys [] arrayLength 0
+    site_execution_live_test.go:497: planned AP public manifest task/readback/restart/no-op verified revision 2 radioCount 1
+    planned_ap_live_test.go:40: planned AP native response DELETE HTTP 202 transportError false
+    planned_ap_live_test.go:157: exact planned AP UUID cleanup and empty-floor baseline verified
+    site_execution_live_test.go:218: isolated hierarchy cleanup verified
+--- PASS: TestLiveCatalystCenterPlannedAPManifest (72.03s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	74.456s

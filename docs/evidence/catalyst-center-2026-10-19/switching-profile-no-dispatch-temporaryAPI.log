@@ -1,0 +1,80 @@
+=== RUN   TestEnvtestSwitchingProfileTaskRecovery
+=== RUN   TestEnvtestSwitchingProfileTaskRecovery/sp-false-preflight-read-error
+=== RUN   TestEnvtestSwitchingProfileTaskRecovery/sp-false-known
+=== RUN   TestEnvtestSwitchingProfileTaskRecovery/sp-false-slash-name
+=== RUN   TestEnvtestSwitchingProfileTaskRecovery/sp-false-legacy-empty
+=== RUN   TestEnvtestSwitchingProfileTaskRecovery/sp-false-legacy-unbound
+=== RUN   TestEnvtestSwitchingProfileTaskRecovery/sp-false-project-replaced
+=== RUN   TestEnvtestSwitchingProfileTaskRecovery/sp-false-template-replaced
+=== RUN   TestEnvtestSwitchingProfileTaskRecovery/sp-false-taskless
+=== RUN   TestEnvtestSwitchingProfileTaskRecovery/sp-false-source
+=== RUN   TestEnvtestSwitchingProfileTaskRecovery/sp-false-owner
+=== RUN   TestEnvtestSwitchingProfileTaskRecovery/sp-false-child-failed
+=== RUN   TestEnvtestSwitchingProfileTaskRecovery/sp-false-child-pending
+=== RUN   TestEnvtestSwitchingProfileTaskRecovery/sp-false-tree-missing
+=== RUN   TestEnvtestSwitchingProfileTaskRecovery/sp-false-foreign-root
+=== RUN   TestEnvtestSwitchingProfileTaskRecovery/sp-false-mid-tree-inherited
+=== RUN   TestEnvtestSwitchingProfileTaskRecovery/sp-false-inherited-reordered
+=== RUN   TestEnvtestSwitchingProfileTaskRecovery/sp-false-accepted-child-failed
+=== RUN   TestEnvtestSwitchingProfileTaskRecovery/sp-false-accepted-child-pending
+=== RUN   TestEnvtestSwitchingProfileTaskRecovery/sp-true-preflight-read-error
+=== RUN   TestEnvtestSwitchingProfileTaskRecovery/sp-true-known
+=== RUN   TestEnvtestSwitchingProfileTaskRecovery/sp-true-slash-name
+=== RUN   TestEnvtestSwitchingProfileTaskRecovery/sp-true-legacy-empty
+=== RUN   TestEnvtestSwitchingProfileTaskRecovery/sp-true-legacy-unbound
+=== RUN   TestEnvtestSwitchingProfileTaskRecovery/sp-true-project-replaced
+=== RUN   TestEnvtestSwitchingProfileTaskRecovery/sp-true-template-replaced
+=== RUN   TestEnvtestSwitchingProfileTaskRecovery/sp-true-taskless
+=== RUN   TestEnvtestSwitchingProfileTaskRecovery/sp-true-source
+=== RUN   TestEnvtestSwitchingProfileTaskRecovery/sp-true-owner
+=== RUN   TestEnvtestSwitchingProfileTaskRecovery/sp-true-child-failed
+=== RUN   TestEnvtestSwitchingProfileTaskRecovery/sp-true-child-pending
+=== RUN   TestEnvtestSwitchingProfileTaskRecovery/sp-true-tree-missing
+=== RUN   TestEnvtestSwitchingProfileTaskRecovery/sp-true-foreign-root
+=== RUN   TestEnvtestSwitchingProfileTaskRecovery/sp-true-mid-tree-inherited
+=== RUN   TestEnvtestSwitchingProfileTaskRecovery/sp-true-inherited-reordered
+=== RUN   TestEnvtestSwitchingProfileTaskRecovery/sp-true-accepted-child-failed
+=== RUN   TestEnvtestSwitchingProfileTaskRecovery/sp-true-accepted-child-pending
+=== RUN   TestEnvtestSwitchingProfileTaskRecovery/profile-replaced
+=== RUN   TestEnvtestSwitchingProfileTaskRecovery/mid-tree-profile
+--- PASS: TestEnvtestSwitchingProfileTaskRecovery (26.82s)
+    --- PASS: TestEnvtestSwitchingProfileTaskRecovery/sp-false-preflight-read-error (2.61s)
+    --- PASS: TestEnvtestSwitchingProfileTaskRecovery/sp-false-known (0.62s)
+    --- PASS: TestEnvtestSwitchingProfileTaskRecovery/sp-false-slash-name (0.95s)
+    --- PASS: TestEnvtestSwitchingProfileTaskRecovery/sp-false-legacy-empty (0.76s)
+    --- PASS: TestEnvtestSwitchingProfileTaskRecovery/sp-false-legacy-unbound (0.47s)
+    --- PASS: TestEnvtestSwitchingProfileTaskRecovery/sp-false-project-replaced (1.15s)
+    --- PASS: TestEnvtestSwitchingProfileTaskRecovery/sp-false-template-replaced (0.80s)
+    --- PASS: TestEnvtestSwitchingProfileTaskRecovery/sp-false-taskless (0.51s)
+    --- PASS: TestEnvtestSwitchingProfileTaskRecovery/sp-false-source (0.44s)
+    --- PASS: TestEnvtestSwitchingProfileTaskRecovery/sp-false-owner (0.40s)
+    --- PASS: TestEnvtestSwitchingProfileTaskRecovery/sp-false-child-failed (0.49s)
+    --- PASS: TestEnvtestSwitchingProfileTaskRecovery/sp-false-child-pending (0.73s)
+    --- PASS: TestEnvtestSwitchingProfileTaskRecovery/sp-false-tree-missing (0.60s)
+    --- PASS: TestEnvtestSwitchingProfileTaskRecovery/sp-false-foreign-root (0.62s)
+    --- PASS: TestEnvtestSwitchingProfileTaskRecovery/sp-false-mid-tree-inherited (0.62s)
+    --- PASS: TestEnvtestSwitchingProfileTaskRecovery/sp-false-inherited-reordered (0.60s)
+    --- PASS: TestEnvtestSwitchingProfileTaskRecovery/sp-false-accepted-child-failed (0.64s)
+    --- PASS: TestEnvtestSwitchingProfileTaskRecovery/sp-false-accepted-child-pending (0.63s)
+    --- PASS: TestEnvtestSwitchingProfileTaskRecovery/sp-true-preflight-read-error (0.66s)
+    --- PASS: TestEnvtestSwitchingProfileTaskRecovery/sp-true-known (0.47s)
+    --- PASS: TestEnvtestSwitchingProfileTaskRecovery/sp-true-slash-name (0.47s)
+    --- PASS: TestEnvtestSwitchingProfileTaskRecovery/sp-true-legacy-empty (0.41s)
+    --- PASS: TestEnvtestSwitchingProfileTaskRecovery/sp-true-legacy-unbound (0.44s)
+    --- PASS: TestEnvtestSwitchingProfileTaskRecovery/sp-true-project-replaced (0.54s)
+    --- PASS: TestEnvtestSwitchingProfileTaskRecovery/sp-true-template-replaced (0.54s)
+    --- PASS: TestEnvtestSwitchingProfileTaskRecovery/sp-true-taskless (0.51s)
+    --- PASS: TestEnvtestSwitchingProfileTaskRecovery/sp-true-source (0.46s)
+    --- PASS: TestEnvtestSwitchingProfileTaskRecovery/sp-true-owner (0.40s)
+    --- PASS: TestEnvtestSwitchingProfileTaskRecovery/sp-true-child-failed (0.50s)
+    --- PASS: TestEnvtestSwitchingProfileTaskRecovery/sp-true-child-pending (0.45s)
+    --- PASS: TestEnvtestSwitchingProfileTaskRecovery/sp-true-tree-missing (0.47s)
+    --- PASS: TestEnvtestSwitchingProfileTaskRecovery/sp-true-foreign-root (0.44s)
+    --- PASS: TestEnvtestSwitchingProfileTaskRecovery/sp-true-mid-tree-inherited (0.48s)
+    --- PASS: TestEnvtestSwitchingProfileTaskRecovery/sp-true-inherited-reordered (0.41s)
+    --- PASS: TestEnvtestSwitchingProfileTaskRecovery/sp-true-accepted-child-failed (0.42s)
+    --- PASS: TestEnvtestSwitchingProfileTaskRecovery/sp-true-accepted-child-pending (0.43s)
+    --- PASS: TestEnvtestSwitchingProfileTaskRecovery/profile-replaced (0.44s)
+    --- PASS: TestEnvtestSwitchingProfileTaskRecovery/mid-tree-profile (0.46s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	27.973s

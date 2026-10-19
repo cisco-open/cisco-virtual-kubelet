@@ -1,0 +1,86 @@
+{
+  "status": "Public acknowledged recovery and listed content/reference guards qualified; new public dispatch incomplete",
+  "fullModelComplete": false,
+  "source": {
+    "files": 1687,
+    "sha256": "efd44f73ed9a51bb8a58f9723a7525585e63c737723a3af2abc241e94332225d",
+    "productionSHA256": "ff660cbc653990df5c0a2fb9903355db21a6d5ab9064062acc94d2ec84a3921d"
+  },
+  "gates": {
+    "controlledAndRealAPI": {
+      "result": "PASS",
+      "passingEvents": 106,
+      "seconds": 20.001,
+      "log": "/private/tmp/cvk-pnp-public-content-api.log"
+    },
+    "compatibility": {
+      "result": "PASS",
+      "passingEvents": 1016,
+      "seconds": 59.543,
+      "log": "/private/tmp/cvk-pnp-public-content-compat.log"
+    },
+    "foundations": {
+      "result": "PASS",
+      "packages": [
+        "internal/controlleradapter",
+        "internal/controlleradapter/nexusdashboard",
+        "internal/provider/softwareupgrade",
+        "internal/provider/maintenance",
+        "internal/controller"
+      ],
+      "log": "/private/tmp/cvk-pnp-public-content-foundation.log"
+    },
+    "mainBuild": {
+      "result": "PASS",
+      "binary": "/private/tmp/cvk-pnp-public-content-cisco-vk",
+      "log": "/private/tmp/cvk-pnp-public-content-build.log"
+    },
+    "strictDocumentation": {
+      "result": "PASS",
+      "seconds": 7.64,
+      "log": "/private/tmp/cvk-pnp-public-content-docs.log"
+    },
+    "formatSourceAndLedger": {
+      "result": "PASS",
+      "sourceUnchanged": true,
+      "uniquePinnedResourceRows": 93
+    }
+  },
+  "native": {
+    "result": "PASS",
+    "seconds": 47.1630961894989,
+    "id": "6ad589f80bc0186771cb115f",
+    "serial": "CVK522D5DF0",
+    "POST": 1,
+    "DELETE": 1,
+    "deleteDispatch": "private guarded test flow",
+    "acknowledgementVerificationAndRelease": "public reconciler",
+    "emptySourceBeforeDelete": true,
+    "freshAdapterRecovery": true,
+    "catalogAndNetworkRestored": true,
+    "physicalActions": 0,
+    "kubernetesPersistence": "simulated; real API tests separate"
+  },
+  "guardedContent": [
+    "dayZeroConfig",
+    "dayZeroConfigPreview",
+    "deviceInfo.aaaCredentials",
+    "deviceInfo.httpHeaders",
+    "deviceInfo.projectId/projectName/workflowName/imageFile",
+    "deviceInfo.pnpProfileList/tags",
+    "workflowParameters"
+  ],
+  "privacy": {
+    "valuesOrSecretHashesRetained": false,
+    "refusalBitSurvivesSafePaging": true,
+    "nativeFalseCannotOverrideObservedContent": true,
+    "ordinaryPnPEvidenceUnchanged": true,
+    "cleanLegacyFingerprintUnchanged": true
+  },
+  "remaining": [
+    "New public Delete dispatch and whole-model native ordering/preflight",
+    "Complete future/native consumer census beyond listed protected fields",
+    "No-dispatch retirement, CR/missing-source bindings and manager finalization",
+    "Installed actors, stack/contacted cases and complete 93-resource pinned scope"
+  ]
+}

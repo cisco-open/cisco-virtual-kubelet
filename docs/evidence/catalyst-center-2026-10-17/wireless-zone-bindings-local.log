@@ -1,0 +1,62 @@
+=== RUN   TestWirelessProfileZoneBindings
+=== RUN   TestWirelessProfileZoneBindings/selected
+=== RUN   TestWirelessProfileZoneBindings/all
+=== RUN   TestWirelessProfileZoneBindings/empty
+=== RUN   TestWirelessProfileZoneBindings/builtin
+=== RUN   TestWirelessProfileZoneBindings/no-rf
+=== RUN   TestWirelessProfileZoneBindings/no-ssid
+=== RUN   TestWirelessProfileZoneBindings/missing-rf
+=== RUN   TestWirelessProfileZoneBindings/missing-ssid
+=== RUN   TestWirelessProfileZoneBindings/foreign-ssid
+=== RUN   TestWirelessProfileZoneBindings/sensor-ssid
+=== RUN   TestWirelessProfileZoneBindings/missing-global
+=== RUN   TestWirelessProfileZoneBindings/rf-read-error
+=== RUN   TestWirelessProfileZoneBindings/ssid-read-error
+=== RUN   TestWirelessProfileZoneBindings/sites-read-error
+=== RUN   TestWirelessProfileZoneBindings/unknown-zone
+=== RUN   TestWirelessProfileZoneBindings/duplicate-selection
+=== RUN   TestWirelessProfileZoneBindings/unknown-parent
+=== RUN   TestWirelessProfileZoneBindings/unknown-zone-field
+=== RUN   TestWirelessProfileZoneBindings/duplicate-zone
+=== RUN   TestWirelessProfileZoneBindings/bad-rf-type
+=== RUN   TestWirelessProfileZoneBindings/bad-ssid-type
+=== RUN   TestWirelessProfileZoneBindings/duplicate-ssid
+=== RUN   TestWirelessProfileZoneBindings/orphan-ssid
+=== RUN   TestWirelessProfileZoneBindings/duplicate-parent-ssid
+=== RUN   TestWirelessProfileZoneBindings/bad-parent-ssid-type
+--- PASS: TestWirelessProfileZoneBindings (0.16s)
+    --- PASS: TestWirelessProfileZoneBindings/selected (0.01s)
+    --- PASS: TestWirelessProfileZoneBindings/all (0.01s)
+    --- PASS: TestWirelessProfileZoneBindings/empty (0.00s)
+    --- PASS: TestWirelessProfileZoneBindings/builtin (0.00s)
+    --- PASS: TestWirelessProfileZoneBindings/no-rf (0.01s)
+    --- PASS: TestWirelessProfileZoneBindings/no-ssid (0.01s)
+    --- PASS: TestWirelessProfileZoneBindings/missing-rf (0.01s)
+    --- PASS: TestWirelessProfileZoneBindings/missing-ssid (0.01s)
+    --- PASS: TestWirelessProfileZoneBindings/foreign-ssid (0.01s)
+    --- PASS: TestWirelessProfileZoneBindings/sensor-ssid (0.01s)
+    --- PASS: TestWirelessProfileZoneBindings/missing-global (0.01s)
+    --- PASS: TestWirelessProfileZoneBindings/rf-read-error (0.01s)
+    --- PASS: TestWirelessProfileZoneBindings/ssid-read-error (0.01s)
+    --- PASS: TestWirelessProfileZoneBindings/sites-read-error (0.01s)
+    --- PASS: TestWirelessProfileZoneBindings/unknown-zone (0.00s)
+    --- PASS: TestWirelessProfileZoneBindings/duplicate-selection (0.00s)
+    --- PASS: TestWirelessProfileZoneBindings/unknown-parent (0.00s)
+    --- PASS: TestWirelessProfileZoneBindings/unknown-zone-field (0.00s)
+    --- PASS: TestWirelessProfileZoneBindings/duplicate-zone (0.00s)
+    --- PASS: TestWirelessProfileZoneBindings/bad-rf-type (0.00s)
+    --- PASS: TestWirelessProfileZoneBindings/bad-ssid-type (0.00s)
+    --- PASS: TestWirelessProfileZoneBindings/duplicate-ssid (0.00s)
+    --- PASS: TestWirelessProfileZoneBindings/orphan-ssid (0.00s)
+    --- PASS: TestWirelessProfileZoneBindings/duplicate-parent-ssid (0.00s)
+    --- PASS: TestWirelessProfileZoneBindings/bad-parent-ssid-type (0.00s)
+=== RUN   TestWirelessZoneBindingDetectsSameNameReplacement
+=== RUN   TestWirelessZoneBindingDetectsSameNameReplacement/rf
+=== RUN   TestWirelessZoneBindingDetectsSameNameReplacement/ssid
+=== RUN   TestWirelessZoneBindingDetectsSameNameReplacement/order
+--- PASS: TestWirelessZoneBindingDetectsSameNameReplacement (0.04s)
+    --- PASS: TestWirelessZoneBindingDetectsSameNameReplacement/rf (0.01s)
+    --- PASS: TestWirelessZoneBindingDetectsSameNameReplacement/ssid (0.01s)
+    --- PASS: TestWirelessZoneBindingDetectsSameNameReplacement/order (0.01s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	2.395s

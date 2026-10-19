@@ -1,0 +1,8 @@
+{
+  "example_yaml": "valid structure; not applied",
+  "upstream_resource_types": 93,
+  "ledger_resource_types": 93,
+  "missing": [],
+  "unexpected": [],
+  "scope_only_not_qualification": true
+}

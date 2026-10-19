@@ -1,0 +1,22 @@
+=== RUN   TestEnvtestSitePruneManifestLifecycle
+=== RUN   TestEnvtestSitePruneManifestLifecycle/complete
+=== RUN   TestEnvtestSitePruneManifestLifecycle/consumer
+=== RUN   TestEnvtestSitePruneManifestLifecycle/foreign-child
+=== RUN   TestEnvtestSitePruneManifestLifecycle/missing-owned
+=== RUN   TestEnvtestSitePruneManifestLifecycle/replaced-owned
+=== RUN   TestEnvtestSitePruneManifestLifecycle/reappeared-retired
+=== RUN   TestEnvtestSitePruneManifestLifecycle/lost-ack
+=== RUN   TestEnvtestSitePruneManifestLifecycle/failed-task
+--- PASS: TestEnvtestSitePruneManifestLifecycle (18.96s)
+    --- PASS: TestEnvtestSitePruneManifestLifecycle/complete (7.83s)
+    --- PASS: TestEnvtestSitePruneManifestLifecycle/consumer (1.14s)
+    --- PASS: TestEnvtestSitePruneManifestLifecycle/foreign-child (1.10s)
+    --- PASS: TestEnvtestSitePruneManifestLifecycle/missing-owned (1.01s)
+    --- PASS: TestEnvtestSitePruneManifestLifecycle/replaced-owned (0.99s)
+    --- PASS: TestEnvtestSitePruneManifestLifecycle/reappeared-retired (2.24s)
+    --- PASS: TestEnvtestSitePruneManifestLifecycle/lost-ack (0.31s)
+    --- PASS: TestEnvtestSitePruneManifestLifecycle/failed-task (0.34s)
+=== RUN   TestEnvtestSitePruneHierarchyManifestLifecycle
+--- PASS: TestEnvtestSitePruneHierarchyManifestLifecycle (14.80s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	36.157s

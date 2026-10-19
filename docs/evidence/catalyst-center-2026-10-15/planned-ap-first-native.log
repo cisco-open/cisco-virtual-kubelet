@@ -1,0 +1,23 @@
+=== RUN   TestLiveCatalystCenterPlannedAPManifest
+    site_execution_live_test.go:75: isolated qualification hierarchy: Global/CVK-Q-20261015-120036-000000000
+    site_execution_live_test.go:209: public manifest step=0 status=Waiting operation=Accepted task=01a13f6f-8ea4-77fc-8cb0-b4557a4396e0 reasons=[AdapterAvailable TaskAccepted TaskAccepted]
+    site_execution_live_test.go:209: public manifest Create reached InSync across simulated worker restarts; journal cleared, owner retained, no-op verified
+    site_execution_live_test.go:221: bulk create task=01a13f6f-8ea4-77fc-8cb0-b4557a4396e0
+    site_execution_live_test.go:247: single native batch created all three site identities; retained member/anchor binding and task tree verified
+    site_execution_live_test.go:276: public manifest step=0 status=Waiting operation=Accepted task=01a13f6f-aae5-74f5-a234-0d81207e4089 reasons=[AdapterAvailable TaskAccepted TaskAccepted]
+    site_execution_live_test.go:276: public manifest Update reached InSync across simulated worker restarts; journal cleared, owner retained, no-op verified
+    site_execution_live_test.go:283: submitted task=01a13f6f-aae5-74f5-a234-0d81207e4089 at=2026-10-15T12:00:45Z
+    site_execution_live_test.go:301: verified Update floor
+    site_execution_live_test.go:310: three creates, one floor update, and full hierarchy read-back verified
+    site_execution_live_test.go:315: public manifest step=0 status=Applying operation=Unknown task= reasons=[AdapterAvailable SubmissionRecoveryRequired SubmissionRecoveryRequired]
+    site_execution_live_test.go:315: public manifest step=20 status=Waiting operation=Unknown task= reasons=[AdapterAvailable OperationRecoveryRequired OperationRecoveryRequired]
+    site_execution_live_test.go:315: public manifest step=40 status=Waiting operation=Unknown task= reasons=[AdapterAvailable OperationRecoveryRequired OperationRecoveryRequired]
+    site_execution_live_test.go:315: public manifest step=60 status=Waiting operation=Unknown task= reasons=[AdapterAvailable OperationRecoveryRequired OperationRecoveryRequired]
+    site_execution_live_test.go:315: public manifest step=80 status=Waiting operation=Unknown task= reasons=[AdapterAvailable OperationRecoveryRequired OperationRecoveryRequired]
+    site_execution_live_test.go:315: public manifest step=100 status=Waiting operation=Unknown task= reasons=[AdapterAvailable OperationRecoveryRequired OperationRecoveryRequired]
+    site_execution_live_test.go:315: public manifest did not converge; retain fixture
+    site_execution_live_test.go:119: retained uncertain hierarchy for inspection: Global/CVK-Q-20261015-120036-000000000
+--- FAIL: TestLiveCatalystCenterPlannedAPManifest (135.93s)
+FAIL
+FAIL	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	137.131s
+FAIL

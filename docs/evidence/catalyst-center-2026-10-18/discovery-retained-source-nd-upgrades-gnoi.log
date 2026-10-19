@@ -1,0 +1,3 @@
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/nexusdashboard	4.433s
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/provider/softwareupgrade	14.564s
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/gnoi	5.908s

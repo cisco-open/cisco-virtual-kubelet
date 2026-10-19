@@ -1,0 +1,21 @@
+=== RUN   TestLiveCatalystCenterNetworkSettingsExecution
+    site_execution_live_test.go:39: isolated qualification hierarchy: Global/CVK-Q-20261012-123017-000000000
+    site_execution_live_test.go:178: submitted task=01a13018-c922-7ff1-9031-967d4d83165c at=2026-10-12T12:30:17.863266376Z
+    site_execution_live_test.go:196: verified Create area
+    site_execution_live_test.go:178: submitted task=01a13018-ce28-70a1-9212-ee19216a71ce at=2026-10-12T12:30:19.160956499Z
+    site_execution_live_test.go:196: verified Create building
+    site_execution_live_test.go:178: submitted task=01a13018-d375-7c49-abf3-c69701f6812c at=2026-10-12T12:30:20.437130834Z
+    site_execution_live_test.go:196: verified Create floor
+    site_execution_live_test.go:178: submitted task=01a13018-d9ea-7829-a247-52f8cd2c6dce at=2026-10-12T12:30:21.794847606Z
+    site_execution_live_test.go:196: verified Update floor
+    site_execution_live_test.go:205: three creates, one floor update, and full hierarchy read-back verified
+    site_execution_live_test.go:207: submitted network setting=ntp task=01a13018-e146-7ccc-b9b2-dea13bbd96e4 at=2026-10-12T12:30:24.061076277Z
+    site_execution_live_test.go:207: submitted network setting=dhcp task=01a13018-e8db-7e09-be8e-297a733d8043 at=2026-10-12T12:30:25.980484167Z
+    site_execution_live_test.go:207: submitted network setting=dns task=01a13018-f067-7a69-9a45-bb76ad0c9f07 at=2026-10-12T12:30:27.934721717Z
+    site_execution_live_test.go:207: submitted network setting=timezone task=01a13018-fa1b-726f-bb3a-908d46a09b13 at=2026-10-12T12:30:30.412949041Z
+    site_execution_live_test.go:207: submitted network setting=banner task=01a13019-053b-758c-8072-c8d0494d2c78 at=2026-10-12T12:30:33.267423684Z
+    site_execution_live_test.go:207: submitted network setting=telemetry task=01a13019-0c8a-7dd5-be14-eb7a8dace5b2 at=2026-10-12T12:30:35.130081259Z
+    site_execution_live_test.go:207: six network setting updates verified: NTP, DHCP, DNS, timezone, banner and builtin telemetry; empty isolated site only
+    site_execution_live_test.go:150: isolated hierarchy cleanup verified
+--- PASS: TestLiveCatalystCenterNetworkSettingsExecution (24.49s)
+PASS

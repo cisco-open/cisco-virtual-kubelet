@@ -1,0 +1,24 @@
+=== RUN   TestWiredBulkDeclaredNetworkWorkerComparison
+=== RUN   TestWiredBulkDeclaredNetworkWorkerComparison/matching
+=== RUN   TestWiredBulkDeclaredNetworkWorkerComparison/different-device-policy
+=== RUN   TestWiredBulkDeclaredNetworkWorkerComparison/nonsemantic-output
+=== RUN   TestWiredBulkDeclaredNetworkWorkerComparison/mixed-matching
+=== RUN   TestWiredBulkDeclaredNetworkWorkerComparison/banner-drift
+=== RUN   TestWiredBulkDeclaredNetworkWorkerComparison/banner-incomplete
+=== RUN   TestWiredBulkDeclaredNetworkWorkerComparison/banner-redacted
+=== RUN   TestWiredBulkDeclaredNetworkWorkerComparison/timezone-drift
+=== RUN   TestWiredBulkDeclaredNetworkWorkerComparison/timezone-dst
+=== RUN   TestWiredBulkDeclaredNetworkWorkerComparison/dependency-only
+--- PASS: TestWiredBulkDeclaredNetworkWorkerComparison (5.71s)
+    --- PASS: TestWiredBulkDeclaredNetworkWorkerComparison/matching (1.06s)
+    --- PASS: TestWiredBulkDeclaredNetworkWorkerComparison/different-device-policy (0.45s)
+    --- PASS: TestWiredBulkDeclaredNetworkWorkerComparison/nonsemantic-output (0.46s)
+    --- PASS: TestWiredBulkDeclaredNetworkWorkerComparison/mixed-matching (0.51s)
+    --- PASS: TestWiredBulkDeclaredNetworkWorkerComparison/banner-drift (0.50s)
+    --- PASS: TestWiredBulkDeclaredNetworkWorkerComparison/banner-incomplete (0.51s)
+    --- PASS: TestWiredBulkDeclaredNetworkWorkerComparison/banner-redacted (0.47s)
+    --- PASS: TestWiredBulkDeclaredNetworkWorkerComparison/timezone-drift (0.50s)
+    --- PASS: TestWiredBulkDeclaredNetworkWorkerComparison/timezone-dst (0.50s)
+    --- PASS: TestWiredBulkDeclaredNetworkWorkerComparison/dependency-only (0.75s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	8.059s

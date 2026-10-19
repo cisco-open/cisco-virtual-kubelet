@@ -1,0 +1,5 @@
+=== RUN   TestLiveWirelessProfileExecution
+    wireless_profile_execution_live_test.go:51: provide an existing design VLAN-group name
+--- SKIP: TestLiveWirelessProfileExecution (0.00s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	1.896s

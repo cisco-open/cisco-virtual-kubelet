@@ -1,0 +1,22 @@
+=== RUN   TestLiveWirelessPowerRules
+    wireless_power_rules_live_test.go:36: isolated power CVK_R_29f39ab97efe76a0
+    wireless_power_rules_live_test.go:126: task ETHERNET Create 01a13e11-510f-7c97-941b-f2556bc62e26
+    wireless_power_rules_live_test.go:140: owned power CVK_R_29f39ab97efe76a0 mdiYq1zl-x1jF-mJLM-mZLH-yJK3zwzLnZzHmemWvJflmL8ZuJrF
+    wireless_power_rules_live_test.go:152: qualified ETHERNET same UUID, exact rules/description, no-op and baseline
+    wireless_power_rules_live_test.go:126: task RADIO Update 01a13e11-57ef-785b-b249-6dbf3e50dbc1
+    wireless_power_rules_live_test.go:152: qualified RADIO same UUID, exact rules/description, no-op and baseline
+    wireless_power_rules_live_test.go:126: task USB Update 01a13e11-5ec2-7e19-b8b5-26df70ff7e6f
+    wireless_power_rules_live_test.go:152: qualified USB same UUID, exact rules/description, no-op and baseline
+    wireless_power_rules_live_test.go:126: task COMBINED Update 01a13e11-65be-732b-bf02-f6bbfc570236
+    wireless_power_rules_live_test.go:152: qualified COMBINED same UUID, exact rules/description, no-op and baseline
+    wireless_power_rules_live_test.go:126: task REORDERED Update 01a13e11-6ccc-747c-89c1-e92981d54095
+    wireless_power_rules_live_test.go:152: qualified REORDERED same UUID, exact rules/description, no-op and baseline
+    wireless_power_rules_live_test.go:126: task DESCRIPTION Update 01a13e11-73c1-73d5-a10e-0570dd22d95f
+    wireless_power_rules_live_test.go:152: qualified DESCRIPTION same UUID, exact rules/description, no-op and baseline
+    wireless_power_rules_live_test.go:126: task OMITTED_DESCRIPTION Update 01a13e11-7b06-7673-b7f8-3f83cf47311b
+    wireless_power_rules_live_test.go:152: qualified OMITTED_DESCRIPTION same UUID, exact rules/description, no-op and baseline
+    wireless_power_rules_live_test.go:166: cleanup mdiYq1zl-x1jF-mJLM-mZLH-yJK3zwzLnZzHmemWvJflmL8ZuJrF 01a13e11-81c6-7d44-a80c-f58760d3bf29
+    wireless_power_rules_live_test.go:172: power and AP baselines restored; no assignment or device action submitted
+--- PASS: TestLiveWirelessPowerRules (14.45s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	16.941s

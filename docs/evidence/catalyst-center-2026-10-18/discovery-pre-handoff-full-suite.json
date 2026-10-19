@@ -1,0 +1,13 @@
+{
+  "boundary": "Production before discovery ownership handoff; includes retained-source and site-bulk repairs; not a post-handoff full-suite claim",
+  "command": "go test -race -json ./internal/controlleradapter/catalystcenter -count=1 -timeout=40m",
+  "testPassEvents": 13561,
+  "failEvents": 0,
+  "terminal": {
+    "Time": "2026-10-18T05:46:04.36021+02:00",
+    "Action": "pass",
+    "Package": "github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter",
+    "Elapsed": 1676.28
+  },
+  "log": "/private/tmp/cvk-retained-source-full-final.jsonl"
+}

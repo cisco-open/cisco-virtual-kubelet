@@ -1,0 +1,3 @@
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	17.647s
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controller	2.890s
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter	2.024s

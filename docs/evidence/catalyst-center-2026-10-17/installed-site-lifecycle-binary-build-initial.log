@@ -1,0 +1,2 @@
+# github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter
+internal/controlleradapter/catalystcenter/site_recreation_execution.go:79:27: undefined: siteCreatorForPath

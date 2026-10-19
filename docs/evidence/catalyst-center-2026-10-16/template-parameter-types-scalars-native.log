@@ -1,0 +1,28 @@
+=== RUN   TestLiveCatalystCenterTemplateProject
+    template_projects_live_test.go:138: submitted Create CVK-Q-Project-20261016-180221 01a145e1-1efe-7ea5-85c6-c125fbb2e65f
+    template_projects_live_test.go:138: submitted Update CVK-Q-Project-20261016-180221 01a145e1-3051-7ae4-8272-202ca43ada92
+    template_projects_live_test.go:164: project create and description update verified
+    template_projects_live_test.go:166: native template operation Create draft:CVK-Q-Project-20261016-180221#CVK-Commit-Qualification 01a145e1-4dc9-7c2d-aca1-3a0eb5acf80f
+    template_projects_live_test.go:166: native template operation Update commit:CVK-Q-Project-20261016-180221#CVK-Commit-Qualification 01a145e1-8302-75c1-bc19-118671dbfa90
+    template_projects_live_test.go:166: native template operation Update draft:CVK-Q-Project-20261016-180221#CVK-Commit-Qualification 01a145e1-cd2d-748d-b116-c09457bd4271
+    template_projects_live_test.go:166: native template operation Update commit:CVK-Q-Project-20261016-180221#CVK-Commit-Qualification 01a145e2-0c1b-7adf-a131-909b17b9dff7
+    template_projects_live_test.go:166: native draft create/update and two committed versions verified 06731709-a2e8-4351-a809-fee74d913c6d
+    template_projects_live_test.go:166: generated template metadata task scalar-types 01a145e2-486f-7872-b6c9-e484032638b1
+    template_projects_live_test.go:166: generated template metadata task scalar-types 01a145e2-7020-789a-b87c-ae3ddd06b05f
+    template_projects_live_test.go:166: native parameter types and metadata transition verified scalar-types
+    template_projects_live_test.go:166: generated template metadata task metadata-updated 01a145e2-aaa1-73c6-b24b-69fbf436634d
+    template_projects_live_test.go:166: generated template metadata task metadata-updated 01a145e2-ce22-73c9-85bd-efc38f6af11d
+    template_projects_live_test.go:166: native parameter types and metadata transition verified metadata-updated
+    template_projects_live_test.go:166: generated template metadata task metadata-cleared 01a145e3-0e60-7fdc-8597-9f42244f74c9
+    template_projects_live_test.go:166: generated template metadata task metadata-cleared 01a145e3-31e2-7a63-933a-d27cb3066e98
+    template_projects_live_test.go:166: native parameter types and metadata transition verified metadata-cleared
+    template_projects_live_test.go:166: native parameter types and metadata transition verified cleared-noop
+    template_projects_live_test.go:166: generated template metadata task metadata-restored 01a145e3-8715-70de-8681-6251756cb1a4
+    template_projects_live_test.go:166: generated template metadata task metadata-restored 01a145e3-aa8e-7192-8fdd-c0c009c2a796
+    template_projects_live_test.go:166: native parameter types and metadata transition verified metadata-restored
+    template_commit_live_test.go:84: template mutation receipt DELETE 01a145e3-cb4b-76b8-a5fe-b9cce14507ed
+    template_commit_live_test.go:95: template fixture cleanup verified 06731709-a2e8-4351-a809-fee74d913c6d
+    template_projects_live_test.go:112: isolated project cleanup verified 2d78f92d-4f52-4069-921b-084f001f3f81
+--- PASS: TestLiveCatalystCenterTemplateProject (181.39s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	183.768s

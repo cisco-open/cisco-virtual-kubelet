@@ -1,0 +1,129 @@
+{
+  "status": "Durable retirement prerequisite qualified; ownership transfer remains unimplemented",
+  "fullModelComplete": false,
+  "source": {
+    "files": 1670,
+    "sha256": "12fab56058249cd0117b2d95ed57c2b2210f4360d4a69ac93d37f0a60bb7e7c9",
+    "productionSHA256": "e6a6c2571759801b428a1722df63a4ff5e5985fb45b053a85b89682f8d46d924",
+    "matchesAllNativeGates": true
+  },
+  "gates": {
+    "lifecycleAndIntegrity": {
+      "result": "PASS",
+      "passingEvents": 186,
+      "seconds": 143.981,
+      "log": "/private/tmp/cvk-tag-retirement-api.log"
+    },
+    "compatibility": {
+      "result": "PASS",
+      "passingEvents": 947,
+      "seconds": 123.903,
+      "log": "/private/tmp/cvk-tag-retirement-compat.log"
+    },
+    "foundation": {
+      "result": "PASS",
+      "packages": [
+        "internal/controlleradapter",
+        "internal/controlleradapter/nexusdashboard",
+        "internal/provider/softwareupgrade",
+        "internal/provider/maintenance",
+        "internal/controller"
+      ],
+      "log": "/private/tmp/cvk-tag-retirement-foundation.log"
+    },
+    "swimReloadXFSUTransferFallback": {
+      "result": "PASS",
+      "log": "/private/tmp/cvk-tag-retirement-swim.log"
+    },
+    "mainBuild": {
+      "result": "PASS",
+      "log": "/private/tmp/cvk-tag-retirement-build.log"
+    },
+    "scopedFormattingWhitespaceFingerprint": {
+      "result": "PASS"
+    },
+    "strictDocumentation": {
+      "result": "PASS",
+      "seconds": 7.66,
+      "log": "/private/tmp/cvk-tag-retirement-docs.log"
+    }
+  },
+  "native": [
+    {
+      "scope": "inventory",
+      "exitCode": 0,
+      "seconds": 25.773667097091675,
+      "log": "/private/tmp/cvk-tag-retirement-native-inventory.log",
+      "sourceSHA256": "12fab56058249cd0117b2d95ed57c2b2210f4360d4a69ac93d37f0a60bb7e7c9",
+      "unchanged": true,
+      "nativeID": "c2796a54-f1ee-4444-aa69-6026e4107ba1",
+      "configUID": "48018a56-6c85-4155-adf8-612648928c61",
+      "mutationCounts": {
+        "posts": 1,
+        "puts": 1,
+        "deletes": 1
+      },
+      "originalTasks": [
+        "01a1519b-c04c-759e-946d-37d96f498da9",
+        "01a1519b-ca62-7c1e-8c28-635e7aec9a7a",
+        "01a1519b-e2e8-7f95-82d5-1ee0bcbe6593"
+      ],
+      "oldCRAbsent": true,
+      "ownershipAndReceiptsUnchanged": true,
+      "baselineRestored": true
+    },
+    {
+      "scope": "combined",
+      "exitCode": 0,
+      "seconds": 27.004843950271606,
+      "log": "/private/tmp/cvk-tag-retirement-native-combined.log",
+      "sourceSHA256": "12fab56058249cd0117b2d95ed57c2b2210f4360d4a69ac93d37f0a60bb7e7c9",
+      "unchanged": true,
+      "nativeID": "85b9191d-2f59-4647-80c5-d589fb24f299",
+      "configUID": "c7720a1b-6de3-4416-92f7-1d08da085a9f",
+      "mutationCounts": {
+        "posts": 1,
+        "puts": 1,
+        "deletes": 1
+      },
+      "originalTasks": [
+        "01a1519c-2c01-7a79-a2df-0660b8d5f01e",
+        "01a1519c-3519-701a-8b30-dbf4d0b913b6",
+        "01a1519c-4e17-76eb-a1db-19c1ba6a023b"
+      ],
+      "oldCRAbsent": true,
+      "ownershipAndReceiptsUnchanged": true,
+      "baselineRestored": true
+    },
+    {
+      "scope": "templates",
+      "exitCode": 0,
+      "seconds": 24.20347499847412,
+      "log": "/private/tmp/cvk-tag-retirement-native-templates.log",
+      "sourceSHA256": "12fab56058249cd0117b2d95ed57c2b2210f4360d4a69ac93d37f0a60bb7e7c9",
+      "unchanged": true,
+      "nativeID": "ecef643b-89f3-460b-9310-1c7d4f8ae52f",
+      "configUID": "b3b731c4-c3ba-4040-90b2-aba3a92cfcb9",
+      "mutationCounts": {
+        "posts": 1,
+        "puts": 1,
+        "deletes": 1
+      },
+      "originalTasks": [
+        "01a1519c-8bbc-7bf2-8409-3d70a8425c77",
+        "01a1519c-94ac-7cd2-8c57-52627c0798e5",
+        "01a1519c-addc-70a7-9f0f-3a1fb7c34ffa"
+      ],
+      "oldCRAbsent": true,
+      "ownershipAndReceiptsUnchanged": true,
+      "baselineRestored": true
+    }
+  ],
+  "limitations": [
+    "No successor ownership transfer, section handoff or new dispatch authority is enabled.",
+    "Old configurations removed before a retirement witness exists do not gain retroactive authority.",
+    "Retirement history archival, successor binding and repeated native absence plus old-CR absence checks remain to implement for actual handoff.",
+    "Native ConfigMap, recreated-cohort finalization and installed actors remain unqualified.",
+    "Owned dynamic native lifecycle, shared scale limits and wider pinned93-resource capabilities remain open."
+  ]
+}

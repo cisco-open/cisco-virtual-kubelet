@@ -1,0 +1,18 @@
+First diagnostic fixture: completed task and create-result UUID checks preceded exact generated cleanup.
+Synthetic fixture scope: [('floor', 'Global/CVK-Q-20261016-234958-000000000/TestBuilding/TestFloor'), ('area', 'Global/CVK-Q-20261016-234958-000000000'), ('building', 'Global/CVK-Q-20261016-234958-000000000/TestBuilding')]
+Exact isolated identities, three original create results and completed floor task tree verified; no handoff rebase or replay.
+Exact generated AP removed; empty floor drawing verified.
+Synthetic fixture scope: [('floor', 'Global/CVK-Q-20261016-234958-000000000/TestBuilding/TestFloor'), ('area', 'Global/CVK-Q-20261016-234958-000000000'), ('building', 'Global/CVK-Q-20261016-234958-000000000/TestBuilding')]
+Previously completed AP deletion remains verified; no AP DELETE replay.
+Exact generated floor deletion verified.
+Exact generated building deletion verified.
+Exact generated area deletion verified.
+Known-outcome failed prediction fixture fully removed; no physical device operation or other fixture touched.
+
+Second diagnostic fixture:
+Synthetic fixture scope: [('building', 'Global/CVK-Q-20261017-000552-000000000/TestBuilding'), ('floor', 'Global/CVK-Q-20261017-000552-000000000/TestBuilding/TestFloor'), ('area', 'Global/CVK-Q-20261017-000552-000000000')]
+Exact generated AP removed; empty floor drawing verified.
+Exact generated floor deletion verified.
+Exact generated building deletion verified.
+Exact generated area deletion verified.
+Known-outcome failed prediction fixture fully removed; no physical device operation or other fixture touched.

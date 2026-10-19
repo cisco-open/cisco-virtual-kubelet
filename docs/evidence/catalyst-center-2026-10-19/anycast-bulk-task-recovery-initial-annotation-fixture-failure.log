@@ -1,0 +1,32 @@
+=== RUN   TestEnvtestAnycastBulkAcknowledgedRecovery
+=== RUN   TestEnvtestAnycastBulkAcknowledgedRecovery/public-unknown
+    anycast_gateway_bulk_recovery_envtest_test.go:13: not every original chunk recovered 1
+=== RUN   TestEnvtestAnycastBulkAcknowledgedRecovery/public-partial
+    anycast_gateway_bulk_recovery_envtest_test.go:13: not every original chunk recovered 1
+=== RUN   TestEnvtestAnycastBulkAcknowledgedRecovery/public-option-removed
+    anycast_gateway_bulk_recovery_envtest_test.go:13: not every original chunk recovered 1
+=== RUN   TestEnvtestAnycastBulkAcknowledgedRecovery/public-child-failed
+=== RUN   TestEnvtestAnycastBulkAcknowledgedRecovery/public-child-pending
+=== RUN   TestEnvtestAnycastBulkAcknowledgedRecovery/public-tree-unavailable
+=== RUN   TestEnvtestAnycastBulkAcknowledgedRecovery/public-source-changed
+=== RUN   TestEnvtestAnycastBulkAcknowledgedRecovery/public-parent-replaced
+=== RUN   TestEnvtestAnycastBulkAcknowledgedRecovery/public-taskless
+=== RUN   TestEnvtestAnycastBulkAcknowledgedRecovery/public-binding-changed
+=== RUN   TestEnvtestAnycastBulkAcknowledgedRecovery/public-existing-replaced
+=== RUN   TestEnvtestAnycastBulkAcknowledgedRecovery/public-legacy-known
+--- FAIL: TestEnvtestAnycastBulkAcknowledgedRecovery (21.01s)
+    --- FAIL: TestEnvtestAnycastBulkAcknowledgedRecovery/public-unknown (3.56s)
+    --- FAIL: TestEnvtestAnycastBulkAcknowledgedRecovery/public-partial (1.26s)
+    --- FAIL: TestEnvtestAnycastBulkAcknowledgedRecovery/public-option-removed (1.26s)
+    --- PASS: TestEnvtestAnycastBulkAcknowledgedRecovery/public-child-failed (1.20s)
+    --- PASS: TestEnvtestAnycastBulkAcknowledgedRecovery/public-child-pending (1.20s)
+    --- PASS: TestEnvtestAnycastBulkAcknowledgedRecovery/public-tree-unavailable (1.17s)
+    --- PASS: TestEnvtestAnycastBulkAcknowledgedRecovery/public-source-changed (1.19s)
+    --- PASS: TestEnvtestAnycastBulkAcknowledgedRecovery/public-parent-replaced (1.17s)
+    --- PASS: TestEnvtestAnycastBulkAcknowledgedRecovery/public-taskless (1.16s)
+    --- PASS: TestEnvtestAnycastBulkAcknowledgedRecovery/public-binding-changed (1.20s)
+    --- PASS: TestEnvtestAnycastBulkAcknowledgedRecovery/public-existing-replaced (1.17s)
+    --- PASS: TestEnvtestAnycastBulkAcknowledgedRecovery/public-legacy-known (1.58s)
+FAIL
+FAIL	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	22.071s
+FAIL

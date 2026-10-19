@@ -1,0 +1,34 @@
+=== RUN   TestEnvtestDiscoveryMixedOwnership
+=== RUN   TestEnvtestDiscoveryMixedOwnership/0
+=== RUN   TestEnvtestDiscoveryMixedOwnership/1
+=== RUN   TestEnvtestDiscoveryMixedOwnership/2
+=== RUN   TestEnvtestDiscoveryMixedOwnership/3
+--- PASS: TestEnvtestDiscoveryMixedOwnership (11.17s)
+    --- PASS: TestEnvtestDiscoveryMixedOwnership/0 (3.62s)
+    --- PASS: TestEnvtestDiscoveryMixedOwnership/1 (0.99s)
+    --- PASS: TestEnvtestDiscoveryMixedOwnership/2 (1.01s)
+    --- PASS: TestEnvtestDiscoveryMixedOwnership/3 (1.12s)
+=== RUN   TestDiscoveryManifestCreateRestartAndNoOp
+=== RUN   TestDiscoveryManifestCreateRestartAndNoOp/combined=false
+=== RUN   TestDiscoveryManifestCreateRestartAndNoOp/combined=true
+--- PASS: TestDiscoveryManifestCreateRestartAndNoOp (0.26s)
+    --- PASS: TestDiscoveryManifestCreateRestartAndNoOp/combined=false (0.11s)
+    --- PASS: TestDiscoveryManifestCreateRestartAndNoOp/combined=true (0.15s)
+=== RUN   TestDiscoveryLegacyAcceptedRecovery
+--- PASS: TestDiscoveryLegacyAcceptedRecovery (0.11s)
+=== RUN   TestDiscoveryOwnedReplacementCycle
+--- PASS: TestDiscoveryOwnedReplacementCycle (0.25s)
+=== RUN   TestDiscoveryMixedOwnedReplacement
+=== RUN   TestDiscoveryMixedOwnedReplacement/inventoryOnly=false/reversed=false
+=== RUN   TestDiscoveryMixedOwnedReplacement/inventoryOnly=false/reversed=true
+=== RUN   TestDiscoveryMixedOwnedReplacement/inventoryOnly=true/reversed=false
+--- PASS: TestDiscoveryMixedOwnedReplacement (0.93s)
+    --- PASS: TestDiscoveryMixedOwnedReplacement/inventoryOnly=false/reversed=false (0.30s)
+    --- PASS: TestDiscoveryMixedOwnedReplacement/inventoryOnly=false/reversed=true (0.30s)
+    --- PASS: TestDiscoveryMixedOwnedReplacement/inventoryOnly=true/reversed=false (0.32s)
+=== RUN   TestDiscoveryPureToMixedOwnership
+--- PASS: TestDiscoveryPureToMixedOwnership (0.32s)
+=== RUN   TestDiscoveryMixedLegacyAcceptedRecovery
+--- PASS: TestDiscoveryMixedLegacyAcceptedRecovery (0.15s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	15.454s

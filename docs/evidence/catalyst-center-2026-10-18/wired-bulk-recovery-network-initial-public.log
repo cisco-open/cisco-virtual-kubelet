@@ -1,0 +1,35 @@
+=== RUN   TestWiredBulkDeclaredNetworkRecoveryEvidence
+=== RUN   TestWiredBulkDeclaredNetworkRecoveryEvidence/matching
+    wired_bulk_network_device_evidence_test.go:107: configuration reservation runtime is incomplete or already configured
+=== RUN   TestWiredBulkDeclaredNetworkRecoveryEvidence/different-device-policy
+    wired_bulk_network_device_evidence_test.go:107: configuration reservation runtime is incomplete or already configured
+=== RUN   TestWiredBulkDeclaredNetworkRecoveryEvidence/nonsemantic-output
+    wired_bulk_network_device_evidence_test.go:107: configuration reservation runtime is incomplete or already configured
+=== RUN   TestWiredBulkDeclaredNetworkRecoveryEvidence/mixed-matching
+    wired_bulk_network_device_evidence_test.go:107: configuration reservation runtime is incomplete or already configured
+=== RUN   TestWiredBulkDeclaredNetworkRecoveryEvidence/banner-drift
+    wired_bulk_network_device_evidence_test.go:107: configuration reservation runtime is incomplete or already configured
+=== RUN   TestWiredBulkDeclaredNetworkRecoveryEvidence/banner-incomplete
+    wired_bulk_network_device_evidence_test.go:107: configuration reservation runtime is incomplete or already configured
+=== RUN   TestWiredBulkDeclaredNetworkRecoveryEvidence/banner-redacted
+    wired_bulk_network_device_evidence_test.go:107: configuration reservation runtime is incomplete or already configured
+=== RUN   TestWiredBulkDeclaredNetworkRecoveryEvidence/timezone-drift
+    wired_bulk_network_device_evidence_test.go:107: configuration reservation runtime is incomplete or already configured
+=== RUN   TestWiredBulkDeclaredNetworkRecoveryEvidence/timezone-dst
+    wired_bulk_network_device_evidence_test.go:107: configuration reservation runtime is incomplete or already configured
+=== RUN   TestWiredBulkDeclaredNetworkRecoveryEvidence/dependency-only
+    wired_bulk_network_device_evidence_test.go:107: configuration reservation runtime is incomplete or already configured
+--- FAIL: TestWiredBulkDeclaredNetworkRecoveryEvidence (4.62s)
+    --- FAIL: TestWiredBulkDeclaredNetworkRecoveryEvidence/matching (0.97s)
+    --- FAIL: TestWiredBulkDeclaredNetworkRecoveryEvidence/different-device-policy (0.34s)
+    --- FAIL: TestWiredBulkDeclaredNetworkRecoveryEvidence/nonsemantic-output (0.34s)
+    --- FAIL: TestWiredBulkDeclaredNetworkRecoveryEvidence/mixed-matching (0.38s)
+    --- FAIL: TestWiredBulkDeclaredNetworkRecoveryEvidence/banner-drift (0.37s)
+    --- FAIL: TestWiredBulkDeclaredNetworkRecoveryEvidence/banner-incomplete (0.37s)
+    --- FAIL: TestWiredBulkDeclaredNetworkRecoveryEvidence/banner-redacted (0.37s)
+    --- FAIL: TestWiredBulkDeclaredNetworkRecoveryEvidence/timezone-drift (0.37s)
+    --- FAIL: TestWiredBulkDeclaredNetworkRecoveryEvidence/timezone-dst (0.37s)
+    --- FAIL: TestWiredBulkDeclaredNetworkRecoveryEvidence/dependency-only (0.75s)
+FAIL
+FAIL	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	6.062s
+FAIL

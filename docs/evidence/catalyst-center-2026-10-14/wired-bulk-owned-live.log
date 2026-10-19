@@ -1,0 +1,5 @@
+=== RUN   TestLiveCatalystCenterOwnedWiredBulkRefusal
+    wired_bulk_owned_live_test.go:152: owned source planning passed for three live identities; missing journal and convergence proof refused; no claims, receipts or provisioning writes; Kubernetes state simulated
+--- PASS: TestLiveCatalystCenterOwnedWiredBulkRefusal (10.13s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	10.941s

@@ -1,0 +1,42 @@
+=== RUN   TestWirelessTagBindingEnvelope
+=== RUN   TestWirelessTagBindingEnvelope/write/Create
+=== RUN   TestWirelessTagBindingEnvelope/write/Update
+=== RUN   TestWirelessTagBindingEnvelope/write/Delete
+=== RUN   TestWirelessTagBindingEnvelope/members/Create
+=== RUN   TestWirelessTagBindingEnvelope/members/Update
+=== RUN   TestWirelessTagBindingEnvelope/members/Delete
+=== RUN   TestWirelessTagBindingEnvelope/delete/Create
+=== RUN   TestWirelessTagBindingEnvelope/delete/Update
+=== RUN   TestWirelessTagBindingEnvelope/delete/Delete
+=== RUN   TestWirelessTagBindingEnvelope/future
+=== RUN   TestWirelessTagBindingEnvelope/unknown-mode
+=== RUN   TestWirelessTagBindingEnvelope/no-task
+=== RUN   TestWirelessTagBindingEnvelope/physical
+=== RUN   TestWirelessTagBindingEnvelope/oversized
+=== RUN   TestWirelessTagBindingEnvelope/wrong-delete-group
+=== RUN   TestWirelessTagBindingEnvelope/scope-on-write
+=== RUN   TestWirelessTagBindingEnvelope/cohort-on-members
+=== RUN   TestWirelessTagBindingEnvelope/namespace
+--- PASS: TestWirelessTagBindingEnvelope (0.00s)
+    --- PASS: TestWirelessTagBindingEnvelope/write/Create (0.00s)
+    --- PASS: TestWirelessTagBindingEnvelope/write/Update (0.00s)
+    --- PASS: TestWirelessTagBindingEnvelope/write/Delete (0.00s)
+    --- PASS: TestWirelessTagBindingEnvelope/members/Create (0.00s)
+    --- PASS: TestWirelessTagBindingEnvelope/members/Update (0.00s)
+    --- PASS: TestWirelessTagBindingEnvelope/members/Delete (0.00s)
+    --- PASS: TestWirelessTagBindingEnvelope/delete/Create (0.00s)
+    --- PASS: TestWirelessTagBindingEnvelope/delete/Update (0.00s)
+    --- PASS: TestWirelessTagBindingEnvelope/delete/Delete (0.00s)
+    --- PASS: TestWirelessTagBindingEnvelope/future (0.00s)
+    --- PASS: TestWirelessTagBindingEnvelope/unknown-mode (0.00s)
+    --- PASS: TestWirelessTagBindingEnvelope/no-task (0.00s)
+    --- PASS: TestWirelessTagBindingEnvelope/physical (0.00s)
+    --- PASS: TestWirelessTagBindingEnvelope/oversized (0.00s)
+    --- PASS: TestWirelessTagBindingEnvelope/wrong-delete-group (0.00s)
+    --- PASS: TestWirelessTagBindingEnvelope/scope-on-write (0.00s)
+    --- PASS: TestWirelessTagBindingEnvelope/cohort-on-members (0.00s)
+    --- PASS: TestWirelessTagBindingEnvelope/namespace (0.00s)
+=== RUN   TestWirelessTagBindingPruneVersionCannotChangeCustody
+--- PASS: TestWirelessTagBindingPruneVersionCannotChangeCustody (0.00s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	2.365s

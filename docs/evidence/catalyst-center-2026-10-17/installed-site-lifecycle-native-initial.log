@@ -1,0 +1,7 @@
+=== RUN   TestLiveInstalledSiteLifecycle
+    installed_site_lifecycle_live_test.go:95: private installed lifecycle evidence: /private/tmp/cvk-installed-site-lifecycle-1751583368
+    installed_site_lifecycle_live_test.go:146: NetworkControllerConfig.config.cisco.vk "installed-site-lifecycle" is invalid: spec.driftDetectInterval: Invalid value: "10s": driftDetectInterval must be at least 30s and at most 720h
+--- FAIL: TestLiveInstalledSiteLifecycle (0.44s)
+FAIL
+FAIL	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	1.885s
+FAIL

@@ -1,0 +1,181 @@
+=== RUN   TestSitePruneManifestAdmission
+=== RUN   TestSitePruneManifestAdmission/private
+=== RUN   TestSitePruneManifestAdmission/default-retain
+=== RUN   TestSitePruneManifestAdmission/no-key
+=== RUN   TestSitePruneManifestAdmission/bulk
+=== RUN   TestSitePruneManifestAdmission/delete-config
+=== RUN   TestSitePruneManifestAdmission/report
+=== RUN   TestSitePruneManifestAdmission/mixed-sections
+--- PASS: TestSitePruneManifestAdmission (0.68s)
+    --- PASS: TestSitePruneManifestAdmission/private (0.61s)
+    --- PASS: TestSitePruneManifestAdmission/default-retain (0.01s)
+    --- PASS: TestSitePruneManifestAdmission/no-key (0.01s)
+    --- PASS: TestSitePruneManifestAdmission/bulk (0.01s)
+    --- PASS: TestSitePruneManifestAdmission/delete-config (0.01s)
+    --- PASS: TestSitePruneManifestAdmission/report (0.01s)
+    --- PASS: TestSitePruneManifestAdmission/mixed-sections (0.01s)
+=== RUN   TestSitePruneManifestLifecycle
+=== RUN   TestSitePruneManifestLifecycle/cm-false/complete
+=== RUN   TestSitePruneManifestLifecycle/cm-false/consumer
+=== RUN   TestSitePruneManifestLifecycle/cm-false/foreign-child
+=== RUN   TestSitePruneManifestLifecycle/cm-false/missing-owned
+=== RUN   TestSitePruneManifestLifecycle/cm-false/replaced-owned
+=== RUN   TestSitePruneManifestLifecycle/cm-false/reappeared-retired
+=== RUN   TestSitePruneManifestLifecycle/cm-false/lost-ack
+=== RUN   TestSitePruneManifestLifecycle/cm-false/failed-task
+=== RUN   TestSitePruneManifestLifecycle/cm-true/complete
+=== RUN   TestSitePruneManifestLifecycle/cm-true/consumer
+=== RUN   TestSitePruneManifestLifecycle/cm-true/foreign-child
+=== RUN   TestSitePruneManifestLifecycle/cm-true/missing-owned
+=== RUN   TestSitePruneManifestLifecycle/cm-true/replaced-owned
+=== RUN   TestSitePruneManifestLifecycle/cm-true/reappeared-retired
+=== RUN   TestSitePruneManifestLifecycle/cm-true/lost-ack
+=== RUN   TestSitePruneManifestLifecycle/cm-true/failed-task
+--- PASS: TestSitePruneManifestLifecycle (8.19s)
+    --- PASS: TestSitePruneManifestLifecycle/cm-false/complete (2.03s)
+    --- PASS: TestSitePruneManifestLifecycle/cm-false/consumer (0.37s)
+    --- PASS: TestSitePruneManifestLifecycle/cm-false/foreign-child (0.27s)
+    --- PASS: TestSitePruneManifestLifecycle/cm-false/missing-owned (0.28s)
+    --- PASS: TestSitePruneManifestLifecycle/cm-false/replaced-owned (0.27s)
+    --- PASS: TestSitePruneManifestLifecycle/cm-false/reappeared-retired (0.71s)
+    --- PASS: TestSitePruneManifestLifecycle/cm-false/lost-ack (0.08s)
+    --- PASS: TestSitePruneManifestLifecycle/cm-false/failed-task (0.09s)
+    --- PASS: TestSitePruneManifestLifecycle/cm-true/complete (1.96s)
+    --- PASS: TestSitePruneManifestLifecycle/cm-true/consumer (0.35s)
+    --- PASS: TestSitePruneManifestLifecycle/cm-true/foreign-child (0.29s)
+    --- PASS: TestSitePruneManifestLifecycle/cm-true/missing-owned (0.33s)
+    --- PASS: TestSitePruneManifestLifecycle/cm-true/replaced-owned (0.28s)
+    --- PASS: TestSitePruneManifestLifecycle/cm-true/reappeared-retired (0.70s)
+    --- PASS: TestSitePruneManifestLifecycle/cm-true/lost-ack (0.09s)
+    --- PASS: TestSitePruneManifestLifecycle/cm-true/failed-task (0.09s)
+=== RUN   TestSitePruneHierarchyManifestLifecycle
+=== RUN   TestSitePruneHierarchyManifestLifecycle/cm-false
+    site_prune_apply_test.go:287: unexpected lifecycle read /dna/intent/api/v2/floors/00000003-1111-4111-8111-000000000003/plannedAccessPointPositions
+    site_prune_apply_test.go:287: unexpected lifecycle read /dna/intent/api/v2/floors/00000003-1111-4111-8111-000000000003/plannedAccessPointPositions
+    site_prune_apply_test.go:287: unexpected lifecycle read /dna/intent/api/v2/floors/00000003-1111-4111-8111-000000000003/plannedAccessPointPositions
+    site_prune_apply_test.go:287: unexpected lifecycle read /dna/intent/api/v2/floors/00000003-1111-4111-8111-000000000003/plannedAccessPointPositions
+    site_prune_apply_test.go:287: unexpected lifecycle read /dna/intent/api/v2/floors/00000003-1111-4111-8111-000000000003/plannedAccessPointPositions
+    site_prune_apply_test.go:287: unexpected lifecycle read /dna/intent/api/v2/floors/00000003-1111-4111-8111-000000000003/plannedAccessPointPositions
+    site_prune_apply_test.go:287: unexpected lifecycle read /dna/intent/api/v2/floors/00000003-1111-4111-8111-000000000003/plannedAccessPointPositions
+    site_prune_apply_test.go:287: unexpected lifecycle read /dna/intent/api/v2/floors/00000003-1111-4111-8111-000000000003/plannedAccessPointPositions
+    site_prune_apply_test.go:287: unexpected lifecycle read /dna/intent/api/v2/floors/00000003-1111-4111-8111-000000000003/plannedAccessPointPositions
+    site_prune_apply_test.go:287: unexpected lifecycle read /dna/intent/api/v2/floors/00000003-1111-4111-8111-000000000003/plannedAccessPointPositions
+    site_prune_apply_test.go:287: unexpected lifecycle read /dna/intent/api/v2/floors/00000003-1111-4111-8111-000000000003/plannedAccessPointPositions
+    site_prune_apply_test.go:287: unexpected lifecycle read /dna/intent/api/v2/floors/00000003-1111-4111-8111-000000000003/plannedAccessPointPositions
+    site_prune_apply_test.go:287: unexpected lifecycle read /dna/intent/api/v2/floors/00000003-1111-4111-8111-000000000003/plannedAccessPointPositions
+    site_prune_apply_test.go:287: unexpected lifecycle read /dna/intent/api/v2/floors/00000003-1111-4111-8111-000000000003/plannedAccessPointPositions
+    site_prune_apply_test.go:287: unexpected lifecycle read /dna/intent/api/v2/floors/00000003-1111-4111-8111-000000000003/plannedAccessPointPositions
+    site_prune_apply_test.go:287: unexpected lifecycle read /dna/intent/api/v2/floors/00000003-1111-4111-8111-000000000003/plannedAccessPointPositions
+    site_prune_apply_test.go:287: unexpected lifecycle read /dna/intent/api/v2/floors/00000003-1111-4111-8111-000000000003/plannedAccessPointPositions
+    site_prune_apply_test.go:287: unexpected lifecycle read /dna/intent/api/v2/floors/00000003-1111-4111-8111-000000000003/plannedAccessPointPositions
+    site_prune_apply_test.go:287: unexpected lifecycle read /dna/intent/api/v2/floors/00000003-1111-4111-8111-000000000003/plannedAccessPointPositions
+    site_prune_apply_test.go:287: unexpected lifecycle read /dna/intent/api/v2/floors/00000003-1111-4111-8111-000000000003/plannedAccessPointPositions
+    site_prune_apply_test.go:287: unexpected lifecycle read /dna/intent/api/v2/floors/00000003-1111-4111-8111-000000000003/plannedAccessPointPositions
+    site_prune_apply_test.go:287: unexpected lifecycle read /dna/intent/api/v2/floors/00000003-1111-4111-8111-000000000003/plannedAccessPointPositions
+    site_prune_apply_test.go:287: unexpected lifecycle read /dna/intent/api/v2/floors/00000003-1111-4111-8111-000000000003/plannedAccessPointPositions
+    site_prune_apply_test.go:287: unexpected lifecycle read /dna/intent/api/v2/floors/00000003-1111-4111-8111-000000000003/plannedAccessPointPositions
+    site_prune_apply_test.go:287: unexpected lifecycle read /dna/intent/api/v2/floors/00000003-1111-4111-8111-000000000003/plannedAccessPointPositions
+    site_prune_apply_test.go:287: unexpected lifecycle read /dna/intent/api/v2/floors/00000003-1111-4111-8111-000000000003/plannedAccessPointPositions
+    site_prune_apply_test.go:287: unexpected lifecycle read /dna/intent/api/v2/floors/00000003-1111-4111-8111-000000000003/plannedAccessPointPositions
+    site_prune_apply_test.go:287: unexpected lifecycle read /dna/intent/api/v2/floors/00000003-1111-4111-8111-000000000003/plannedAccessPointPositions
+    site_prune_apply_test.go:287: unexpected lifecycle read /dna/intent/api/v2/floors/00000003-1111-4111-8111-000000000003/plannedAccessPointPositions
+    site_prune_apply_test.go:287: unexpected lifecycle read /dna/intent/api/v2/floors/00000003-1111-4111-8111-000000000003/plannedAccessPointPositions
+    site_prune_apply_test.go:287: unexpected lifecycle read /dna/intent/api/v2/floors/00000003-1111-4111-8111-000000000003/plannedAccessPointPositions
+    site_prune_apply_test.go:287: unexpected lifecycle read /dna/intent/api/v2/floors/00000003-1111-4111-8111-000000000003/plannedAccessPointPositions
+    site_prune_apply_test.go:287: unexpected lifecycle read /dna/intent/api/v2/floors/00000003-1111-4111-8111-000000000003/plannedAccessPointPositions
+    site_prune_apply_test.go:287: unexpected lifecycle read /dna/intent/api/v2/floors/00000003-1111-4111-8111-000000000003/plannedAccessPointPositions
+    site_prune_apply_test.go:287: unexpected lifecycle read /dna/intent/api/v2/floors/00000003-1111-4111-8111-000000000003/plannedAccessPointPositions
+    site_prune_apply_test.go:287: unexpected lifecycle read /dna/intent/api/v2/floors/00000003-1111-4111-8111-000000000003/plannedAccessPointPositions
+    site_prune_apply_test.go:287: unexpected lifecycle read /dna/intent/api/v2/floors/00000003-1111-4111-8111-000000000003/plannedAccessPointPositions
+    site_prune_apply_test.go:287: unexpected lifecycle read /dna/intent/api/v2/floors/00000003-1111-4111-8111-000000000003/plannedAccessPointPositions
+    site_prune_apply_test.go:287: unexpected lifecycle read /dna/intent/api/v2/floors/00000003-1111-4111-8111-000000000003/plannedAccessPointPositions
+    site_prune_apply_test.go:287: unexpected lifecycle read /dna/intent/api/v2/floors/00000003-1111-4111-8111-000000000003/plannedAccessPointPositions
+    site_prune_apply_test.go:287: unexpected lifecycle read /dna/intent/api/v2/floors/00000003-1111-4111-8111-000000000003/plannedAccessPointPositions
+    site_prune_apply_test.go:287: unexpected lifecycle read /dna/intent/api/v2/floors/00000003-1111-4111-8111-000000000003/plannedAccessPointPositions
+    site_prune_apply_test.go:287: unexpected lifecycle read /dna/intent/api/v2/floors/00000003-1111-4111-8111-000000000003/plannedAccessPointPositions
+    site_prune_apply_test.go:287: unexpected lifecycle read /dna/intent/api/v2/floors/00000003-1111-4111-8111-000000000003/plannedAccessPointPositions
+    site_prune_apply_test.go:287: unexpected lifecycle read /dna/intent/api/v2/floors/00000003-1111-4111-8111-000000000003/plannedAccessPointPositions
+    site_prune_apply_test.go:287: unexpected lifecycle read /dna/intent/api/v2/floors/00000003-1111-4111-8111-000000000003/plannedAccessPointPositions
+    site_prune_apply_test.go:287: unexpected lifecycle read /dna/intent/api/v2/floors/00000003-1111-4111-8111-000000000003/plannedAccessPointPositions
+    site_prune_apply_test.go:287: unexpected lifecycle read /dna/intent/api/v2/floors/00000003-1111-4111-8111-000000000003/plannedAccessPointPositions
+    site_prune_apply_test.go:287: unexpected lifecycle read /dna/intent/api/v2/floors/00000003-1111-4111-8111-000000000003/plannedAccessPointPositions
+    site_prune_apply_test.go:287: unexpected lifecycle read /dna/intent/api/v2/floors/00000003-1111-4111-8111-000000000003/plannedAccessPointPositions
+    site_prune_apply_test.go:287: unexpected lifecycle read /dna/intent/api/v2/floors/00000003-1111-4111-8111-000000000003/plannedAccessPointPositions
+    site_prune_apply_test.go:287: unexpected lifecycle read /dna/intent/api/v2/floors/00000003-1111-4111-8111-000000000003/plannedAccessPointPositions
+    site_prune_apply_test.go:287: unexpected lifecycle read /dna/intent/api/v2/floors/00000003-1111-4111-8111-000000000003/plannedAccessPointPositions
+    site_prune_apply_test.go:287: unexpected lifecycle read /dna/intent/api/v2/floors/00000003-1111-4111-8111-000000000003/plannedAccessPointPositions
+    site_prune_apply_test.go:287: unexpected lifecycle read /dna/intent/api/v2/floors/00000003-1111-4111-8111-000000000003/plannedAccessPointPositions
+    site_prune_apply_test.go:287: unexpected lifecycle read /dna/intent/api/v2/floors/00000003-1111-4111-8111-000000000003/plannedAccessPointPositions
+    site_prune_apply_test.go:287: unexpected lifecycle read /dna/intent/api/v2/floors/00000003-1111-4111-8111-000000000003/plannedAccessPointPositions
+    site_prune_apply_test.go:287: unexpected lifecycle read /dna/intent/api/v2/floors/00000003-1111-4111-8111-000000000003/plannedAccessPointPositions
+    site_prune_apply_test.go:287: unexpected lifecycle read /dna/intent/api/v2/floors/00000003-1111-4111-8111-000000000003/plannedAccessPointPositions
+    site_prune_apply_test.go:287: unexpected lifecycle read /dna/intent/api/v2/floors/00000003-1111-4111-8111-000000000003/plannedAccessPointPositions
+    site_prune_apply_test.go:319: manifest lifecycle did not converge Waiting [{AdapterAvailable True 3 2026-10-17 22:55:42 +0200 CEST AdapterAvailable Catalyst Center configuration adapter is available} {IntentValid True 3 2026-10-17 22:55:42 +0200 CEST SiteRetirementBlocked Site lifecycle requires intact private ownership, absent consumers and complete native observations; no mutation was submitted for this plan} {Ready False 3 2026-10-17 22:55:42 +0200 CEST SiteRetirementBlocked Site lifecycle requires intact private ownership, absent consumers and complete native observations; no mutation was submitted for this plan}]
+=== RUN   TestSitePruneHierarchyManifestLifecycle/cm-true
+    site_prune_apply_test.go:287: unexpected lifecycle read /dna/intent/api/v2/floors/00000003-1111-4111-8111-000000000003/plannedAccessPointPositions
+    site_prune_apply_test.go:287: unexpected lifecycle read /dna/intent/api/v2/floors/00000003-1111-4111-8111-000000000003/plannedAccessPointPositions
+    site_prune_apply_test.go:287: unexpected lifecycle read /dna/intent/api/v2/floors/00000003-1111-4111-8111-000000000003/plannedAccessPointPositions
+    site_prune_apply_test.go:287: unexpected lifecycle read /dna/intent/api/v2/floors/00000003-1111-4111-8111-000000000003/plannedAccessPointPositions
+    site_prune_apply_test.go:287: unexpected lifecycle read /dna/intent/api/v2/floors/00000003-1111-4111-8111-000000000003/plannedAccessPointPositions
+    site_prune_apply_test.go:287: unexpected lifecycle read /dna/intent/api/v2/floors/00000003-1111-4111-8111-000000000003/plannedAccessPointPositions
+    site_prune_apply_test.go:287: unexpected lifecycle read /dna/intent/api/v2/floors/00000003-1111-4111-8111-000000000003/plannedAccessPointPositions
+    site_prune_apply_test.go:287: unexpected lifecycle read /dna/intent/api/v2/floors/00000003-1111-4111-8111-000000000003/plannedAccessPointPositions
+    site_prune_apply_test.go:287: unexpected lifecycle read /dna/intent/api/v2/floors/00000003-1111-4111-8111-000000000003/plannedAccessPointPositions
+    site_prune_apply_test.go:287: unexpected lifecycle read /dna/intent/api/v2/floors/00000003-1111-4111-8111-000000000003/plannedAccessPointPositions
+    site_prune_apply_test.go:287: unexpected lifecycle read /dna/intent/api/v2/floors/00000003-1111-4111-8111-000000000003/plannedAccessPointPositions
+    site_prune_apply_test.go:287: unexpected lifecycle read /dna/intent/api/v2/floors/00000003-1111-4111-8111-000000000003/plannedAccessPointPositions
+    site_prune_apply_test.go:287: unexpected lifecycle read /dna/intent/api/v2/floors/00000003-1111-4111-8111-000000000003/plannedAccessPointPositions
+    site_prune_apply_test.go:287: unexpected lifecycle read /dna/intent/api/v2/floors/00000003-1111-4111-8111-000000000003/plannedAccessPointPositions
+    site_prune_apply_test.go:287: unexpected lifecycle read /dna/intent/api/v2/floors/00000003-1111-4111-8111-000000000003/plannedAccessPointPositions
+    site_prune_apply_test.go:287: unexpected lifecycle read /dna/intent/api/v2/floors/00000003-1111-4111-8111-000000000003/plannedAccessPointPositions
+    site_prune_apply_test.go:287: unexpected lifecycle read /dna/intent/api/v2/floors/00000003-1111-4111-8111-000000000003/plannedAccessPointPositions
+    site_prune_apply_test.go:287: unexpected lifecycle read /dna/intent/api/v2/floors/00000003-1111-4111-8111-000000000003/plannedAccessPointPositions
+    site_prune_apply_test.go:287: unexpected lifecycle read /dna/intent/api/v2/floors/00000003-1111-4111-8111-000000000003/plannedAccessPointPositions
+    site_prune_apply_test.go:287: unexpected lifecycle read /dna/intent/api/v2/floors/00000003-1111-4111-8111-000000000003/plannedAccessPointPositions
+    site_prune_apply_test.go:287: unexpected lifecycle read /dna/intent/api/v2/floors/00000003-1111-4111-8111-000000000003/plannedAccessPointPositions
+    site_prune_apply_test.go:287: unexpected lifecycle read /dna/intent/api/v2/floors/00000003-1111-4111-8111-000000000003/plannedAccessPointPositions
+    site_prune_apply_test.go:287: unexpected lifecycle read /dna/intent/api/v2/floors/00000003-1111-4111-8111-000000000003/plannedAccessPointPositions
+    site_prune_apply_test.go:287: unexpected lifecycle read /dna/intent/api/v2/floors/00000003-1111-4111-8111-000000000003/plannedAccessPointPositions
+    site_prune_apply_test.go:287: unexpected lifecycle read /dna/intent/api/v2/floors/00000003-1111-4111-8111-000000000003/plannedAccessPointPositions
+    site_prune_apply_test.go:287: unexpected lifecycle read /dna/intent/api/v2/floors/00000003-1111-4111-8111-000000000003/plannedAccessPointPositions
+    site_prune_apply_test.go:287: unexpected lifecycle read /dna/intent/api/v2/floors/00000003-1111-4111-8111-000000000003/plannedAccessPointPositions
+    site_prune_apply_test.go:287: unexpected lifecycle read /dna/intent/api/v2/floors/00000003-1111-4111-8111-000000000003/plannedAccessPointPositions
+    site_prune_apply_test.go:287: unexpected lifecycle read /dna/intent/api/v2/floors/00000003-1111-4111-8111-000000000003/plannedAccessPointPositions
+    site_prune_apply_test.go:287: unexpected lifecycle read /dna/intent/api/v2/floors/00000003-1111-4111-8111-000000000003/plannedAccessPointPositions
+    site_prune_apply_test.go:287: unexpected lifecycle read /dna/intent/api/v2/floors/00000003-1111-4111-8111-000000000003/plannedAccessPointPositions
+    site_prune_apply_test.go:287: unexpected lifecycle read /dna/intent/api/v2/floors/00000003-1111-4111-8111-000000000003/plannedAccessPointPositions
+    site_prune_apply_test.go:287: unexpected lifecycle read /dna/intent/api/v2/floors/00000003-1111-4111-8111-000000000003/plannedAccessPointPositions
+    site_prune_apply_test.go:287: unexpected lifecycle read /dna/intent/api/v2/floors/00000003-1111-4111-8111-000000000003/plannedAccessPointPositions
+    site_prune_apply_test.go:287: unexpected lifecycle read /dna/intent/api/v2/floors/00000003-1111-4111-8111-000000000003/plannedAccessPointPositions
+    site_prune_apply_test.go:287: unexpected lifecycle read /dna/intent/api/v2/floors/00000003-1111-4111-8111-000000000003/plannedAccessPointPositions
+    site_prune_apply_test.go:287: unexpected lifecycle read /dna/intent/api/v2/floors/00000003-1111-4111-8111-000000000003/plannedAccessPointPositions
+    site_prune_apply_test.go:287: unexpected lifecycle read /dna/intent/api/v2/floors/00000003-1111-4111-8111-000000000003/plannedAccessPointPositions
+    site_prune_apply_test.go:287: unexpected lifecycle read /dna/intent/api/v2/floors/00000003-1111-4111-8111-000000000003/plannedAccessPointPositions
+    site_prune_apply_test.go:287: unexpected lifecycle read /dna/intent/api/v2/floors/00000003-1111-4111-8111-000000000003/plannedAccessPointPositions
+    site_prune_apply_test.go:287: unexpected lifecycle read /dna/intent/api/v2/floors/00000003-1111-4111-8111-000000000003/plannedAccessPointPositions
+    site_prune_apply_test.go:287: unexpected lifecycle read /dna/intent/api/v2/floors/00000003-1111-4111-8111-000000000003/plannedAccessPointPositions
+    site_prune_apply_test.go:287: unexpected lifecycle read /dna/intent/api/v2/floors/00000003-1111-4111-8111-000000000003/plannedAccessPointPositions
+    site_prune_apply_test.go:287: unexpected lifecycle read /dna/intent/api/v2/floors/00000003-1111-4111-8111-000000000003/plannedAccessPointPositions
+    site_prune_apply_test.go:287: unexpected lifecycle read /dna/intent/api/v2/floors/00000003-1111-4111-8111-000000000003/plannedAccessPointPositions
+    site_prune_apply_test.go:287: unexpected lifecycle read /dna/intent/api/v2/floors/00000003-1111-4111-8111-000000000003/plannedAccessPointPositions
+    site_prune_apply_test.go:287: unexpected lifecycle read /dna/intent/api/v2/floors/00000003-1111-4111-8111-000000000003/plannedAccessPointPositions
+    site_prune_apply_test.go:287: unexpected lifecycle read /dna/intent/api/v2/floors/00000003-1111-4111-8111-000000000003/plannedAccessPointPositions
+    site_prune_apply_test.go:287: unexpected lifecycle read /dna/intent/api/v2/floors/00000003-1111-4111-8111-000000000003/plannedAccessPointPositions
+    site_prune_apply_test.go:287: unexpected lifecycle read /dna/intent/api/v2/floors/00000003-1111-4111-8111-000000000003/plannedAccessPointPositions
+    site_prune_apply_test.go:287: unexpected lifecycle read /dna/intent/api/v2/floors/00000003-1111-4111-8111-000000000003/plannedAccessPointPositions
+    site_prune_apply_test.go:287: unexpected lifecycle read /dna/intent/api/v2/floors/00000003-1111-4111-8111-000000000003/plannedAccessPointPositions
+    site_prune_apply_test.go:287: unexpected lifecycle read /dna/intent/api/v2/floors/00000003-1111-4111-8111-000000000003/plannedAccessPointPositions
+    site_prune_apply_test.go:287: unexpected lifecycle read /dna/intent/api/v2/floors/00000003-1111-4111-8111-000000000003/plannedAccessPointPositions
+    site_prune_apply_test.go:287: unexpected lifecycle read /dna/intent/api/v2/floors/00000003-1111-4111-8111-000000000003/plannedAccessPointPositions
+    site_prune_apply_test.go:287: unexpected lifecycle read /dna/intent/api/v2/floors/00000003-1111-4111-8111-000000000003/plannedAccessPointPositions
+    site_prune_apply_test.go:287: unexpected lifecycle read /dna/intent/api/v2/floors/00000003-1111-4111-8111-000000000003/plannedAccessPointPositions
+    site_prune_apply_test.go:287: unexpected lifecycle read /dna/intent/api/v2/floors/00000003-1111-4111-8111-000000000003/plannedAccessPointPositions
+    site_prune_apply_test.go:287: unexpected lifecycle read /dna/intent/api/v2/floors/00000003-1111-4111-8111-000000000003/plannedAccessPointPositions
+    site_prune_apply_test.go:287: unexpected lifecycle read /dna/intent/api/v2/floors/00000003-1111-4111-8111-000000000003/plannedAccessPointPositions
+    site_prune_apply_test.go:319: manifest lifecycle did not converge Waiting [{AdapterAvailable True 3 2026-10-17 22:55:43 +0200 CEST AdapterAvailable Catalyst Center configuration adapter is available} {IntentValid True 3 2026-10-17 22:55:43 +0200 CEST SiteRetirementBlocked Site lifecycle requires intact private ownership, absent consumers and complete native observations; no mutation was submitted for this plan} {Ready False 3 2026-10-17 22:55:44 +0200 CEST SiteRetirementBlocked Site lifecycle requires intact private ownership, absent consumers and complete native observations; no mutation was submitted for this plan}]
+--- FAIL: TestSitePruneHierarchyManifestLifecycle (3.37s)
+    --- FAIL: TestSitePruneHierarchyManifestLifecycle/cm-false (1.66s)
+    --- FAIL: TestSitePruneHierarchyManifestLifecycle/cm-true (1.71s)
+FAIL
+FAIL	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	13.609s
+FAIL

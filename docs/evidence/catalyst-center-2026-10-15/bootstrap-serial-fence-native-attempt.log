@@ -1,0 +1,8 @@
+=== RUN   TestLivePnPPreparedClaimHandoff
+    pnp_registration_stage_live_test.go:93: private registration recovery directory /private/tmp/cvk-pnp-registration-1691719004
+    pnp_registration_stage_live_test.go:93: owned native registration 6ad123500bc0186771caafae CVK441A6CC0
+    pnp_registration_stage_live_test.go:93: native claim preparation context deadline exceeded
+--- FAIL: TestLivePnPPreparedClaimHandoff (62.91s)
+FAIL
+FAIL	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	63.787s
+FAIL

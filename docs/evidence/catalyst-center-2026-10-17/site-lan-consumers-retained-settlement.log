@@ -1,0 +1,6 @@
+=== RUN   TestLiveCatalystCenterRetainedSiteLifecycleSettle
+    site_lifecycle_recovery_live_test.go:236: original acknowledged child task settled without Create 01a14b82-51c8-7886-a0a9-ad2c780a9a1c
+    site_lifecycle_recovery_live_test.go:317: retained cycle completed: zero Creates, two exact Deletes, original task and baseline verified
+--- PASS: TestLiveCatalystCenterRetainedSiteLifecycleSettle (35.78s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	38.209s

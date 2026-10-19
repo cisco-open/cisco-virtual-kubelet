@@ -1,0 +1,68 @@
+=== RUN   TestSwitchingNativeFullObservation
+=== RUN   TestSwitchingNativeFullObservation/same
+=== RUN   TestSwitchingNativeFullObservation/object-order
+=== RUN   TestSwitchingNativeFullObservation/template-order
+=== RUN   TestSwitchingNativeFullObservation/inherited-order
+=== RUN   TestSwitchingNativeFullObservation/unknown-private
+=== RUN   TestSwitchingNativeFullObservation/precision
+=== RUN   TestSwitchingNativeFullObservation/opaque-order
+=== RUN   TestSwitchingNativeFullObservation/unknown-array
+--- PASS: TestSwitchingNativeFullObservation (0.00s)
+    --- PASS: TestSwitchingNativeFullObservation/same (0.00s)
+    --- PASS: TestSwitchingNativeFullObservation/object-order (0.00s)
+    --- PASS: TestSwitchingNativeFullObservation/template-order (0.00s)
+    --- PASS: TestSwitchingNativeFullObservation/inherited-order (0.00s)
+    --- PASS: TestSwitchingNativeFullObservation/unknown-private (0.00s)
+    --- PASS: TestSwitchingNativeFullObservation/precision (0.00s)
+    --- PASS: TestSwitchingNativeFullObservation/opaque-order (0.00s)
+    --- PASS: TestSwitchingNativeFullObservation/unknown-array (0.00s)
+=== RUN   TestSwitchingNativeRejectsMalformedPopulatedState
+=== RUN   TestSwitchingNativeRejectsMalformedPopulatedState/null
+=== RUN   TestSwitchingNativeRejectsMalformedPopulatedState/missing-attrs
+=== RUN   TestSwitchingNativeRejectsMalformedPopulatedState/wrong-id
+=== RUN   TestSwitchingNativeRejectsMalformedPopulatedState/wrong-name
+=== RUN   TestSwitchingNativeRejectsMalformedPopulatedState/wrong-namespace
+=== RUN   TestSwitchingNativeRejectsMalformedPopulatedState/duplicate-group
+=== RUN   TestSwitchingNativeRejectsMalformedPopulatedState/duplicate-template
+=== RUN   TestSwitchingNativeRejectsMalformedPopulatedState/unknown-key-shape
+=== RUN   TestSwitchingNativeRejectsMalformedPopulatedState/invalid-template
+--- PASS: TestSwitchingNativeRejectsMalformedPopulatedState (0.00s)
+    --- PASS: TestSwitchingNativeRejectsMalformedPopulatedState/null (0.00s)
+    --- PASS: TestSwitchingNativeRejectsMalformedPopulatedState/missing-attrs (0.00s)
+    --- PASS: TestSwitchingNativeRejectsMalformedPopulatedState/wrong-id (0.00s)
+    --- PASS: TestSwitchingNativeRejectsMalformedPopulatedState/wrong-name (0.00s)
+    --- PASS: TestSwitchingNativeRejectsMalformedPopulatedState/wrong-namespace (0.00s)
+    --- PASS: TestSwitchingNativeRejectsMalformedPopulatedState/duplicate-group (0.00s)
+    --- PASS: TestSwitchingNativeRejectsMalformedPopulatedState/duplicate-template (0.00s)
+    --- PASS: TestSwitchingNativeRejectsMalformedPopulatedState/unknown-key-shape (0.00s)
+    --- PASS: TestSwitchingNativeRejectsMalformedPopulatedState/invalid-template (0.00s)
+=== RUN   TestSwitchingNativeProtectedComparison
+=== RUN   TestSwitchingNativeProtectedComparison/same
+=== RUN   TestSwitchingNativeProtectedComparison/key
+=== RUN   TestSwitchingNativeProtectedComparison/key-id
+=== RUN   TestSwitchingNativeProtectedComparison/binding
+=== RUN   TestSwitchingNativeProtectedComparison/unknown-native
+=== RUN   TestSwitchingNativeProtectedComparison/missing-key
+=== RUN   TestSwitchingNativeProtectedComparison/short-key
+=== RUN   TestSwitchingNativeProtectedComparison/invalid-key-id
+=== RUN   TestSwitchingNativeProtectedComparison/missing-check
+=== RUN   TestSwitchingNativeProtectedComparison/projection-refused
+=== RUN   TestSwitchingNativeProtectedComparison/projection-changed-during
+=== RUN   TestSwitchingNativeProtectedComparison/nil-native
+--- PASS: TestSwitchingNativeProtectedComparison (0.00s)
+    --- PASS: TestSwitchingNativeProtectedComparison/same (0.00s)
+    --- PASS: TestSwitchingNativeProtectedComparison/key (0.00s)
+    --- PASS: TestSwitchingNativeProtectedComparison/key-id (0.00s)
+    --- PASS: TestSwitchingNativeProtectedComparison/binding (0.00s)
+    --- PASS: TestSwitchingNativeProtectedComparison/unknown-native (0.00s)
+    --- PASS: TestSwitchingNativeProtectedComparison/missing-key (0.00s)
+    --- PASS: TestSwitchingNativeProtectedComparison/short-key (0.00s)
+    --- PASS: TestSwitchingNativeProtectedComparison/invalid-key-id (0.00s)
+    --- PASS: TestSwitchingNativeProtectedComparison/missing-check (0.00s)
+    --- PASS: TestSwitchingNativeProtectedComparison/projection-refused (0.00s)
+    --- PASS: TestSwitchingNativeProtectedComparison/projection-changed-during (0.00s)
+    --- PASS: TestSwitchingNativeProtectedComparison/nil-native (0.00s)
+=== RUN   TestSwitchingMetadataObservationIncludesUnknownNative
+--- PASS: TestSwitchingMetadataObservationIncludesUnknownNative (0.01s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	2.463s

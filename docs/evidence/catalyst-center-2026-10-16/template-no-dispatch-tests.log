@@ -1,0 +1,472 @@
+=== RUN   TestConfigurationNoDispatchProof
+=== RUN   TestConfigurationNoDispatchProof/wireless/refuse
+=== RUN   TestConfigurationNoDispatchProof/wireless/read-error
+=== RUN   TestConfigurationNoDispatchProof/wireless/unknown-phase
+=== RUN   TestConfigurationNoDispatchProof/wireless/cancel
+=== RUN   TestConfigurationNoDispatchProof/wireless/conflict
+=== RUN   TestConfigurationNoDispatchProof/wireless/conflict-exhausted
+=== RUN   TestConfigurationNoDispatchProof/wireless/ordinary-error
+=== RUN   TestConfigurationNoDispatchProof/wireless/lost-ack
+=== RUN   TestConfigurationNoDispatchProof/wireless/foreign-proof
+=== RUN   TestConfigurationNoDispatchProof/wireless/replayed-proof
+=== RUN   TestConfigurationNoDispatchProof/wireless/changed-operation
+=== RUN   TestConfigurationNoDispatchProof/wireless/changed-owner
+=== RUN   TestConfigurationNoDispatchProof/wireless/changed-generation
+=== RUN   TestConfigurationNoDispatchProof/wireless/recorded-task
+=== RUN   TestConfigurationNoDispatchProof/wireless/recorded-receipt
+=== RUN   TestConfigurationNoDispatchProof/wireless/feature-scope
+=== RUN   TestConfigurationNoDispatchProof/wireless/changed-parent
+=== RUN   TestConfigurationNoDispatchProof/wireless/changed-preparation
+=== RUN   TestConfigurationNoDispatchProof/project-create/refuse
+=== RUN   TestConfigurationNoDispatchProof/project-create/read-error
+=== RUN   TestConfigurationNoDispatchProof/project-create/unknown-phase
+=== RUN   TestConfigurationNoDispatchProof/project-create/cancel
+=== RUN   TestConfigurationNoDispatchProof/project-create/conflict
+=== RUN   TestConfigurationNoDispatchProof/project-create/conflict-exhausted
+=== RUN   TestConfigurationNoDispatchProof/project-create/ordinary-error
+=== RUN   TestConfigurationNoDispatchProof/project-create/lost-ack
+=== RUN   TestConfigurationNoDispatchProof/project-create/foreign-proof
+=== RUN   TestConfigurationNoDispatchProof/project-create/replayed-proof
+=== RUN   TestConfigurationNoDispatchProof/project-create/changed-operation
+=== RUN   TestConfigurationNoDispatchProof/project-create/changed-owner
+=== RUN   TestConfigurationNoDispatchProof/project-create/changed-generation
+=== RUN   TestConfigurationNoDispatchProof/project-create/recorded-task
+=== RUN   TestConfigurationNoDispatchProof/project-create/recorded-receipt
+=== RUN   TestConfigurationNoDispatchProof/project-create/changed-parent
+=== RUN   TestConfigurationNoDispatchProof/project-create/changed-preparation
+=== RUN   TestConfigurationNoDispatchProof/project-update/refuse
+=== RUN   TestConfigurationNoDispatchProof/project-update/read-error
+=== RUN   TestConfigurationNoDispatchProof/project-update/unknown-phase
+=== RUN   TestConfigurationNoDispatchProof/project-update/cancel
+=== RUN   TestConfigurationNoDispatchProof/project-update/conflict
+=== RUN   TestConfigurationNoDispatchProof/project-update/conflict-exhausted
+=== RUN   TestConfigurationNoDispatchProof/project-update/ordinary-error
+=== RUN   TestConfigurationNoDispatchProof/project-update/lost-ack
+=== RUN   TestConfigurationNoDispatchProof/project-update/foreign-proof
+=== RUN   TestConfigurationNoDispatchProof/project-update/replayed-proof
+=== RUN   TestConfigurationNoDispatchProof/project-update/changed-operation
+=== RUN   TestConfigurationNoDispatchProof/project-update/changed-owner
+=== RUN   TestConfigurationNoDispatchProof/project-update/changed-generation
+=== RUN   TestConfigurationNoDispatchProof/project-update/recorded-task
+=== RUN   TestConfigurationNoDispatchProof/project-update/recorded-receipt
+=== RUN   TestConfigurationNoDispatchProof/project-update/changed-parent
+=== RUN   TestConfigurationNoDispatchProof/project-update/changed-preparation
+=== RUN   TestConfigurationNoDispatchProof/draft-create/refuse
+=== RUN   TestConfigurationNoDispatchProof/draft-create/read-error
+=== RUN   TestConfigurationNoDispatchProof/draft-create/unknown-phase
+=== RUN   TestConfigurationNoDispatchProof/draft-create/cancel
+=== RUN   TestConfigurationNoDispatchProof/draft-create/conflict
+=== RUN   TestConfigurationNoDispatchProof/draft-create/conflict-exhausted
+=== RUN   TestConfigurationNoDispatchProof/draft-create/ordinary-error
+=== RUN   TestConfigurationNoDispatchProof/draft-create/lost-ack
+=== RUN   TestConfigurationNoDispatchProof/draft-create/foreign-proof
+=== RUN   TestConfigurationNoDispatchProof/draft-create/replayed-proof
+=== RUN   TestConfigurationNoDispatchProof/draft-create/changed-operation
+=== RUN   TestConfigurationNoDispatchProof/draft-create/changed-owner
+=== RUN   TestConfigurationNoDispatchProof/draft-create/changed-generation
+=== RUN   TestConfigurationNoDispatchProof/draft-create/recorded-task
+=== RUN   TestConfigurationNoDispatchProof/draft-create/recorded-receipt
+=== RUN   TestConfigurationNoDispatchProof/draft-create/changed-parent
+=== RUN   TestConfigurationNoDispatchProof/draft-create/changed-preparation
+=== RUN   TestConfigurationNoDispatchProof/draft-update/refuse
+=== RUN   TestConfigurationNoDispatchProof/draft-update/read-error
+=== RUN   TestConfigurationNoDispatchProof/draft-update/unknown-phase
+=== RUN   TestConfigurationNoDispatchProof/draft-update/cancel
+=== RUN   TestConfigurationNoDispatchProof/draft-update/conflict
+=== RUN   TestConfigurationNoDispatchProof/draft-update/conflict-exhausted
+=== RUN   TestConfigurationNoDispatchProof/draft-update/ordinary-error
+=== RUN   TestConfigurationNoDispatchProof/draft-update/lost-ack
+=== RUN   TestConfigurationNoDispatchProof/draft-update/foreign-proof
+=== RUN   TestConfigurationNoDispatchProof/draft-update/replayed-proof
+=== RUN   TestConfigurationNoDispatchProof/draft-update/changed-operation
+=== RUN   TestConfigurationNoDispatchProof/draft-update/changed-owner
+=== RUN   TestConfigurationNoDispatchProof/draft-update/changed-generation
+=== RUN   TestConfigurationNoDispatchProof/draft-update/recorded-task
+=== RUN   TestConfigurationNoDispatchProof/draft-update/recorded-receipt
+=== RUN   TestConfigurationNoDispatchProof/draft-update/changed-parent
+=== RUN   TestConfigurationNoDispatchProof/draft-update/changed-preparation
+=== RUN   TestConfigurationNoDispatchProof/commit/refuse
+=== RUN   TestConfigurationNoDispatchProof/commit/read-error
+=== RUN   TestConfigurationNoDispatchProof/commit/unknown-phase
+=== RUN   TestConfigurationNoDispatchProof/commit/cancel
+=== RUN   TestConfigurationNoDispatchProof/commit/conflict
+=== RUN   TestConfigurationNoDispatchProof/commit/conflict-exhausted
+=== RUN   TestConfigurationNoDispatchProof/commit/ordinary-error
+=== RUN   TestConfigurationNoDispatchProof/commit/lost-ack
+=== RUN   TestConfigurationNoDispatchProof/commit/foreign-proof
+=== RUN   TestConfigurationNoDispatchProof/commit/replayed-proof
+=== RUN   TestConfigurationNoDispatchProof/commit/changed-operation
+=== RUN   TestConfigurationNoDispatchProof/commit/changed-owner
+=== RUN   TestConfigurationNoDispatchProof/commit/changed-generation
+=== RUN   TestConfigurationNoDispatchProof/commit/recorded-task
+=== RUN   TestConfigurationNoDispatchProof/commit/recorded-receipt
+=== RUN   TestConfigurationNoDispatchProof/commit/changed-parent
+=== RUN   TestConfigurationNoDispatchProof/commit/changed-preparation
+=== RUN   TestConfigurationNoDispatchProof/prepared-draft/refuse
+=== RUN   TestConfigurationNoDispatchProof/prepared-draft/read-error
+=== RUN   TestConfigurationNoDispatchProof/prepared-draft/unknown-phase
+=== RUN   TestConfigurationNoDispatchProof/prepared-draft/cancel
+=== RUN   TestConfigurationNoDispatchProof/prepared-draft/conflict
+=== RUN   TestConfigurationNoDispatchProof/prepared-draft/conflict-exhausted
+=== RUN   TestConfigurationNoDispatchProof/prepared-draft/ordinary-error
+=== RUN   TestConfigurationNoDispatchProof/prepared-draft/lost-ack
+=== RUN   TestConfigurationNoDispatchProof/prepared-draft/foreign-proof
+=== RUN   TestConfigurationNoDispatchProof/prepared-draft/replayed-proof
+=== RUN   TestConfigurationNoDispatchProof/prepared-draft/changed-operation
+=== RUN   TestConfigurationNoDispatchProof/prepared-draft/changed-owner
+=== RUN   TestConfigurationNoDispatchProof/prepared-draft/changed-generation
+=== RUN   TestConfigurationNoDispatchProof/prepared-draft/recorded-task
+=== RUN   TestConfigurationNoDispatchProof/prepared-draft/recorded-receipt
+=== RUN   TestConfigurationNoDispatchProof/prepared-draft/changed-parent
+=== RUN   TestConfigurationNoDispatchProof/prepared-draft/changed-preparation
+=== RUN   TestConfigurationNoDispatchProof/prepared-commit/refuse
+=== RUN   TestConfigurationNoDispatchProof/prepared-commit/read-error
+=== RUN   TestConfigurationNoDispatchProof/prepared-commit/unknown-phase
+=== RUN   TestConfigurationNoDispatchProof/prepared-commit/cancel
+=== RUN   TestConfigurationNoDispatchProof/prepared-commit/conflict
+=== RUN   TestConfigurationNoDispatchProof/prepared-commit/conflict-exhausted
+=== RUN   TestConfigurationNoDispatchProof/prepared-commit/ordinary-error
+=== RUN   TestConfigurationNoDispatchProof/prepared-commit/lost-ack
+=== RUN   TestConfigurationNoDispatchProof/prepared-commit/foreign-proof
+=== RUN   TestConfigurationNoDispatchProof/prepared-commit/replayed-proof
+=== RUN   TestConfigurationNoDispatchProof/prepared-commit/changed-operation
+=== RUN   TestConfigurationNoDispatchProof/prepared-commit/changed-owner
+=== RUN   TestConfigurationNoDispatchProof/prepared-commit/changed-generation
+=== RUN   TestConfigurationNoDispatchProof/prepared-commit/recorded-task
+=== RUN   TestConfigurationNoDispatchProof/prepared-commit/recorded-receipt
+=== RUN   TestConfigurationNoDispatchProof/prepared-commit/changed-parent
+=== RUN   TestConfigurationNoDispatchProof/prepared-commit/changed-preparation
+--- PASS: TestConfigurationNoDispatchProof (5.48s)
+    --- PASS: TestConfigurationNoDispatchProof/wireless/refuse (0.62s)
+    --- PASS: TestConfigurationNoDispatchProof/wireless/read-error (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/wireless/unknown-phase (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/wireless/cancel (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/wireless/conflict (0.03s)
+    --- PASS: TestConfigurationNoDispatchProof/wireless/conflict-exhausted (0.34s)
+    --- PASS: TestConfigurationNoDispatchProof/wireless/ordinary-error (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/wireless/lost-ack (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/wireless/foreign-proof (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/wireless/replayed-proof (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/wireless/changed-operation (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/wireless/changed-owner (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/wireless/changed-generation (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/wireless/recorded-task (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/wireless/recorded-receipt (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/wireless/feature-scope (0.01s)
+    --- PASS: TestConfigurationNoDispatchProof/wireless/changed-parent (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/wireless/changed-preparation (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/project-create/refuse (0.01s)
+    --- PASS: TestConfigurationNoDispatchProof/project-create/read-error (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/project-create/unknown-phase (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/project-create/cancel (0.01s)
+    --- PASS: TestConfigurationNoDispatchProof/project-create/conflict (0.03s)
+    --- PASS: TestConfigurationNoDispatchProof/project-create/conflict-exhausted (0.33s)
+    --- PASS: TestConfigurationNoDispatchProof/project-create/ordinary-error (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/project-create/lost-ack (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/project-create/foreign-proof (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/project-create/replayed-proof (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/project-create/changed-operation (0.01s)
+    --- PASS: TestConfigurationNoDispatchProof/project-create/changed-owner (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/project-create/changed-generation (0.01s)
+    --- PASS: TestConfigurationNoDispatchProof/project-create/recorded-task (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/project-create/recorded-receipt (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/project-create/changed-parent (0.01s)
+    --- PASS: TestConfigurationNoDispatchProof/project-create/changed-preparation (0.01s)
+    --- PASS: TestConfigurationNoDispatchProof/project-update/refuse (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/project-update/read-error (0.01s)
+    --- PASS: TestConfigurationNoDispatchProof/project-update/unknown-phase (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/project-update/cancel (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/project-update/conflict (0.03s)
+    --- PASS: TestConfigurationNoDispatchProof/project-update/conflict-exhausted (0.33s)
+    --- PASS: TestConfigurationNoDispatchProof/project-update/ordinary-error (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/project-update/lost-ack (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/project-update/foreign-proof (0.01s)
+    --- PASS: TestConfigurationNoDispatchProof/project-update/replayed-proof (0.01s)
+    --- PASS: TestConfigurationNoDispatchProof/project-update/changed-operation (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/project-update/changed-owner (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/project-update/changed-generation (0.01s)
+    --- PASS: TestConfigurationNoDispatchProof/project-update/recorded-task (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/project-update/recorded-receipt (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/project-update/changed-parent (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/project-update/changed-preparation (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/draft-create/refuse (0.01s)
+    --- PASS: TestConfigurationNoDispatchProof/draft-create/read-error (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/draft-create/unknown-phase (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/draft-create/cancel (0.01s)
+    --- PASS: TestConfigurationNoDispatchProof/draft-create/conflict (0.03s)
+    --- PASS: TestConfigurationNoDispatchProof/draft-create/conflict-exhausted (0.34s)
+    --- PASS: TestConfigurationNoDispatchProof/draft-create/ordinary-error (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/draft-create/lost-ack (0.01s)
+    --- PASS: TestConfigurationNoDispatchProof/draft-create/foreign-proof (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/draft-create/replayed-proof (0.01s)
+    --- PASS: TestConfigurationNoDispatchProof/draft-create/changed-operation (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/draft-create/changed-owner (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/draft-create/changed-generation (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/draft-create/recorded-task (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/draft-create/recorded-receipt (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/draft-create/changed-parent (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/draft-create/changed-preparation (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/draft-update/refuse (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/draft-update/read-error (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/draft-update/unknown-phase (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/draft-update/cancel (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/draft-update/conflict (0.03s)
+    --- PASS: TestConfigurationNoDispatchProof/draft-update/conflict-exhausted (0.34s)
+    --- PASS: TestConfigurationNoDispatchProof/draft-update/ordinary-error (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/draft-update/lost-ack (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/draft-update/foreign-proof (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/draft-update/replayed-proof (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/draft-update/changed-operation (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/draft-update/changed-owner (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/draft-update/changed-generation (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/draft-update/recorded-task (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/draft-update/recorded-receipt (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/draft-update/changed-parent (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/draft-update/changed-preparation (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/commit/refuse (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/commit/read-error (0.01s)
+    --- PASS: TestConfigurationNoDispatchProof/commit/unknown-phase (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/commit/cancel (0.01s)
+    --- PASS: TestConfigurationNoDispatchProof/commit/conflict (0.03s)
+    --- PASS: TestConfigurationNoDispatchProof/commit/conflict-exhausted (0.33s)
+    --- PASS: TestConfigurationNoDispatchProof/commit/ordinary-error (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/commit/lost-ack (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/commit/foreign-proof (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/commit/replayed-proof (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/commit/changed-operation (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/commit/changed-owner (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/commit/changed-generation (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/commit/recorded-task (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/commit/recorded-receipt (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/commit/changed-parent (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/commit/changed-preparation (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/prepared-draft/refuse (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/prepared-draft/read-error (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/prepared-draft/unknown-phase (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/prepared-draft/cancel (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/prepared-draft/conflict (0.03s)
+    --- PASS: TestConfigurationNoDispatchProof/prepared-draft/conflict-exhausted (0.34s)
+    --- PASS: TestConfigurationNoDispatchProof/prepared-draft/ordinary-error (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/prepared-draft/lost-ack (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/prepared-draft/foreign-proof (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/prepared-draft/replayed-proof (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/prepared-draft/changed-operation (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/prepared-draft/changed-owner (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/prepared-draft/changed-generation (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/prepared-draft/recorded-task (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/prepared-draft/recorded-receipt (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/prepared-draft/changed-parent (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/prepared-draft/changed-preparation (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/prepared-commit/refuse (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/prepared-commit/read-error (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/prepared-commit/unknown-phase (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/prepared-commit/cancel (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/prepared-commit/conflict (0.03s)
+    --- PASS: TestConfigurationNoDispatchProof/prepared-commit/conflict-exhausted (0.35s)
+    --- PASS: TestConfigurationNoDispatchProof/prepared-commit/ordinary-error (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/prepared-commit/lost-ack (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/prepared-commit/foreign-proof (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/prepared-commit/replayed-proof (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/prepared-commit/changed-operation (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/prepared-commit/changed-owner (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/prepared-commit/changed-generation (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/prepared-commit/recorded-task (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/prepared-commit/recorded-receipt (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/prepared-commit/changed-parent (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/prepared-commit/changed-preparation (0.02s)
+=== RUN   TestTemplateDefinitionDispatchSnapshot
+=== RUN   TestTemplateDefinitionDispatchSnapshot/project/unchanged
+=== RUN   TestTemplateDefinitionDispatchSnapshot/project/project
+=== RUN   TestTemplateDefinitionDispatchSnapshot/project/draft
+=== RUN   TestTemplateDefinitionDispatchSnapshot/project/version
+=== RUN   TestTemplateDefinitionDispatchSnapshot/project/intent
+=== RUN   TestTemplateDefinitionDispatchSnapshot/project/read-failure
+=== RUN   TestTemplateDefinitionDispatchSnapshot/project/lost-receipt
+=== RUN   TestTemplateDefinitionDispatchSnapshot/project/concurrent
+=== RUN   TestTemplateDefinitionDispatchSnapshot/create/unchanged
+=== RUN   TestTemplateDefinitionDispatchSnapshot/create/project
+=== RUN   TestTemplateDefinitionDispatchSnapshot/create/draft
+=== RUN   TestTemplateDefinitionDispatchSnapshot/create/version
+=== RUN   TestTemplateDefinitionDispatchSnapshot/create/intent
+=== RUN   TestTemplateDefinitionDispatchSnapshot/create/read-failure
+=== RUN   TestTemplateDefinitionDispatchSnapshot/create/lost-receipt
+=== RUN   TestTemplateDefinitionDispatchSnapshot/create/concurrent
+=== RUN   TestTemplateDefinitionDispatchSnapshot/update/unchanged
+=== RUN   TestTemplateDefinitionDispatchSnapshot/update/project
+=== RUN   TestTemplateDefinitionDispatchSnapshot/update/draft
+=== RUN   TestTemplateDefinitionDispatchSnapshot/update/version
+=== RUN   TestTemplateDefinitionDispatchSnapshot/update/intent
+=== RUN   TestTemplateDefinitionDispatchSnapshot/update/read-failure
+=== RUN   TestTemplateDefinitionDispatchSnapshot/update/lost-receipt
+=== RUN   TestTemplateDefinitionDispatchSnapshot/update/concurrent
+=== RUN   TestTemplateDefinitionDispatchSnapshot/commit/unchanged
+=== RUN   TestTemplateDefinitionDispatchSnapshot/commit/project
+=== RUN   TestTemplateDefinitionDispatchSnapshot/commit/draft
+=== RUN   TestTemplateDefinitionDispatchSnapshot/commit/version
+=== RUN   TestTemplateDefinitionDispatchSnapshot/commit/intent
+=== RUN   TestTemplateDefinitionDispatchSnapshot/commit/read-failure
+=== RUN   TestTemplateDefinitionDispatchSnapshot/commit/lost-receipt
+=== RUN   TestTemplateDefinitionDispatchSnapshot/commit/concurrent
+--- PASS: TestTemplateDefinitionDispatchSnapshot (0.45s)
+    --- PASS: TestTemplateDefinitionDispatchSnapshot/project/unchanged (0.02s)
+    --- PASS: TestTemplateDefinitionDispatchSnapshot/project/project (0.01s)
+    --- PASS: TestTemplateDefinitionDispatchSnapshot/project/draft (0.01s)
+    --- PASS: TestTemplateDefinitionDispatchSnapshot/project/version (0.02s)
+    --- PASS: TestTemplateDefinitionDispatchSnapshot/project/intent (0.01s)
+    --- PASS: TestTemplateDefinitionDispatchSnapshot/project/read-failure (0.01s)
+    --- PASS: TestTemplateDefinitionDispatchSnapshot/project/lost-receipt (0.01s)
+    --- PASS: TestTemplateDefinitionDispatchSnapshot/project/concurrent (0.01s)
+    --- PASS: TestTemplateDefinitionDispatchSnapshot/create/unchanged (0.01s)
+    --- PASS: TestTemplateDefinitionDispatchSnapshot/create/project (0.01s)
+    --- PASS: TestTemplateDefinitionDispatchSnapshot/create/draft (0.01s)
+    --- PASS: TestTemplateDefinitionDispatchSnapshot/create/version (0.01s)
+    --- PASS: TestTemplateDefinitionDispatchSnapshot/create/intent (0.01s)
+    --- PASS: TestTemplateDefinitionDispatchSnapshot/create/read-failure (0.01s)
+    --- PASS: TestTemplateDefinitionDispatchSnapshot/create/lost-receipt (0.01s)
+    --- PASS: TestTemplateDefinitionDispatchSnapshot/create/concurrent (0.01s)
+    --- PASS: TestTemplateDefinitionDispatchSnapshot/update/unchanged (0.01s)
+    --- PASS: TestTemplateDefinitionDispatchSnapshot/update/project (0.01s)
+    --- PASS: TestTemplateDefinitionDispatchSnapshot/update/draft (0.01s)
+    --- PASS: TestTemplateDefinitionDispatchSnapshot/update/version (0.02s)
+    --- PASS: TestTemplateDefinitionDispatchSnapshot/update/intent (0.01s)
+    --- PASS: TestTemplateDefinitionDispatchSnapshot/update/read-failure (0.01s)
+    --- PASS: TestTemplateDefinitionDispatchSnapshot/update/lost-receipt (0.02s)
+    --- PASS: TestTemplateDefinitionDispatchSnapshot/update/concurrent (0.01s)
+    --- PASS: TestTemplateDefinitionDispatchSnapshot/commit/unchanged (0.01s)
+    --- PASS: TestTemplateDefinitionDispatchSnapshot/commit/project (0.01s)
+    --- PASS: TestTemplateDefinitionDispatchSnapshot/commit/draft (0.01s)
+    --- PASS: TestTemplateDefinitionDispatchSnapshot/commit/version (0.01s)
+    --- PASS: TestTemplateDefinitionDispatchSnapshot/commit/intent (0.01s)
+    --- PASS: TestTemplateDefinitionDispatchSnapshot/commit/read-failure (0.01s)
+    --- PASS: TestTemplateDefinitionDispatchSnapshot/commit/lost-receipt (0.01s)
+    --- PASS: TestTemplateDefinitionDispatchSnapshot/commit/concurrent (0.01s)
+=== RUN   TestTemplateProjectDispatchSnapshot
+=== RUN   TestTemplateProjectDispatchSnapshot/existing=false/unchanged
+=== RUN   TestTemplateProjectDispatchSnapshot/existing=false/identity
+=== RUN   TestTemplateProjectDispatchSnapshot/existing=false/description
+=== RUN   TestTemplateProjectDispatchSnapshot/existing=false/intent
+=== RUN   TestTemplateProjectDispatchSnapshot/existing=false/other-selected
+=== RUN   TestTemplateProjectDispatchSnapshot/existing=true/unchanged
+=== RUN   TestTemplateProjectDispatchSnapshot/existing=true/identity
+=== RUN   TestTemplateProjectDispatchSnapshot/existing=true/description
+=== RUN   TestTemplateProjectDispatchSnapshot/existing=true/intent
+=== RUN   TestTemplateProjectDispatchSnapshot/existing=true/other-selected
+--- PASS: TestTemplateProjectDispatchSnapshot (0.10s)
+    --- PASS: TestTemplateProjectDispatchSnapshot/existing=false/unchanged (0.01s)
+    --- PASS: TestTemplateProjectDispatchSnapshot/existing=false/identity (0.01s)
+    --- PASS: TestTemplateProjectDispatchSnapshot/existing=false/description (0.01s)
+    --- PASS: TestTemplateProjectDispatchSnapshot/existing=false/intent (0.01s)
+    --- PASS: TestTemplateProjectDispatchSnapshot/existing=false/other-selected (0.01s)
+    --- PASS: TestTemplateProjectDispatchSnapshot/existing=true/unchanged (0.01s)
+    --- PASS: TestTemplateProjectDispatchSnapshot/existing=true/identity (0.01s)
+    --- PASS: TestTemplateProjectDispatchSnapshot/existing=true/description (0.01s)
+    --- PASS: TestTemplateProjectDispatchSnapshot/existing=true/intent (0.01s)
+    --- PASS: TestTemplateProjectDispatchSnapshot/existing=true/other-selected (0.01s)
+=== RUN   TestTemplateCompositeDispatchSnapshot
+=== RUN   TestTemplateCompositeDispatchSnapshot/draft/unchanged
+=== RUN   TestTemplateCompositeDispatchSnapshot/draft/member-metadata
+=== RUN   TestTemplateCompositeDispatchSnapshot/draft/composite-draft
+=== RUN   TestTemplateCompositeDispatchSnapshot/draft/during-settle
+=== RUN   TestTemplateCompositeDispatchSnapshot/commit/unchanged
+=== RUN   TestTemplateCompositeDispatchSnapshot/commit/member-metadata
+=== RUN   TestTemplateCompositeDispatchSnapshot/commit/composite-draft
+=== RUN   TestTemplateCompositeDispatchSnapshot/commit/during-settle
+--- PASS: TestTemplateCompositeDispatchSnapshot (0.14s)
+    --- PASS: TestTemplateCompositeDispatchSnapshot/draft/unchanged (0.02s)
+    --- PASS: TestTemplateCompositeDispatchSnapshot/draft/member-metadata (0.02s)
+    --- PASS: TestTemplateCompositeDispatchSnapshot/draft/composite-draft (0.02s)
+    --- PASS: TestTemplateCompositeDispatchSnapshot/draft/during-settle (0.02s)
+    --- PASS: TestTemplateCompositeDispatchSnapshot/commit/unchanged (0.02s)
+    --- PASS: TestTemplateCompositeDispatchSnapshot/commit/member-metadata (0.02s)
+    --- PASS: TestTemplateCompositeDispatchSnapshot/commit/composite-draft (0.02s)
+    --- PASS: TestTemplateCompositeDispatchSnapshot/commit/during-settle (0.02s)
+=== RUN   TestTemplateNoDispatchReplan
+=== RUN   TestTemplateNoDispatchReplan/project-create/field-edit
+=== RUN   TestTemplateNoDispatchReplan/project-create/read-error
+=== RUN   TestTemplateNoDispatchReplan/project-create/lost-ack
+=== RUN   TestTemplateNoDispatchReplan/project-update/field-edit
+=== RUN   TestTemplateNoDispatchReplan/project-update/read-error
+=== RUN   TestTemplateNoDispatchReplan/project-update/lost-ack
+=== RUN   TestTemplateNoDispatchReplan/draft-create/field-edit
+=== RUN   TestTemplateNoDispatchReplan/draft-create/read-error
+=== RUN   TestTemplateNoDispatchReplan/draft-create/lost-ack
+=== RUN   TestTemplateNoDispatchReplan/draft-update/field-edit
+=== RUN   TestTemplateNoDispatchReplan/draft-update/read-error
+=== RUN   TestTemplateNoDispatchReplan/draft-update/lost-ack
+=== RUN   TestTemplateNoDispatchReplan/commit/field-edit
+=== RUN   TestTemplateNoDispatchReplan/commit/read-error
+=== RUN   TestTemplateNoDispatchReplan/commit/lost-ack
+=== RUN   TestTemplateNoDispatchReplan/composite-draft/field-edit
+=== RUN   TestTemplateNoDispatchReplan/composite-draft/read-error
+=== RUN   TestTemplateNoDispatchReplan/composite-draft/lost-ack
+=== RUN   TestTemplateNoDispatchReplan/composite-commit/field-edit
+=== RUN   TestTemplateNoDispatchReplan/composite-commit/read-error
+=== RUN   TestTemplateNoDispatchReplan/composite-commit/lost-ack
+--- PASS: TestTemplateNoDispatchReplan (2.34s)
+    --- PASS: TestTemplateNoDispatchReplan/project-create/field-edit (0.08s)
+    --- PASS: TestTemplateNoDispatchReplan/project-create/read-error (0.08s)
+    --- PASS: TestTemplateNoDispatchReplan/project-create/lost-ack (0.05s)
+    --- PASS: TestTemplateNoDispatchReplan/project-update/field-edit (0.08s)
+    --- PASS: TestTemplateNoDispatchReplan/project-update/read-error (0.08s)
+    --- PASS: TestTemplateNoDispatchReplan/project-update/lost-ack (0.05s)
+    --- PASS: TestTemplateNoDispatchReplan/draft-create/field-edit (0.15s)
+    --- PASS: TestTemplateNoDispatchReplan/draft-create/read-error (0.14s)
+    --- PASS: TestTemplateNoDispatchReplan/draft-create/lost-ack (0.05s)
+    --- PASS: TestTemplateNoDispatchReplan/draft-update/field-edit (0.15s)
+    --- PASS: TestTemplateNoDispatchReplan/draft-update/read-error (0.15s)
+    --- PASS: TestTemplateNoDispatchReplan/draft-update/lost-ack (0.06s)
+    --- PASS: TestTemplateNoDispatchReplan/commit/field-edit (0.11s)
+    --- PASS: TestTemplateNoDispatchReplan/commit/read-error (0.11s)
+    --- PASS: TestTemplateNoDispatchReplan/commit/lost-ack (0.06s)
+    --- PASS: TestTemplateNoDispatchReplan/composite-draft/field-edit (0.23s)
+    --- PASS: TestTemplateNoDispatchReplan/composite-draft/read-error (0.22s)
+    --- PASS: TestTemplateNoDispatchReplan/composite-draft/lost-ack (0.08s)
+    --- PASS: TestTemplateNoDispatchReplan/composite-commit/field-edit (0.16s)
+    --- PASS: TestTemplateNoDispatchReplan/composite-commit/read-error (0.15s)
+    --- PASS: TestTemplateNoDispatchReplan/composite-commit/lost-ack (0.08s)
+=== RUN   TestTemplateNoDispatchEnvelope
+=== RUN   TestTemplateNoDispatchEnvelope/draft
+=== RUN   TestTemplateNoDispatchEnvelope/prepared-draft
+=== RUN   TestTemplateNoDispatchEnvelope/commit
+=== RUN   TestTemplateNoDispatchEnvelope/project
+=== RUN   TestTemplateNoDispatchEnvelope/builtin-project
+=== RUN   TestTemplateNoDispatchEnvelope/commit-create
+=== RUN   TestTemplateNoDispatchEnvelope/malformed-key
+=== RUN   TestTemplateNoDispatchEnvelope/missing-parent
+=== RUN   TestTemplateNoDispatchEnvelope/wrong-parent
+=== RUN   TestTemplateNoDispatchEnvelope/deployment
+=== RUN   TestTemplateNoDispatchEnvelope/membership
+=== RUN   TestTemplateNoDispatchEnvelope/delete
+=== RUN   TestTemplateNoDispatchEnvelope/task
+=== RUN   TestTemplateNoDispatchEnvelope/creator
+=== RUN   TestTemplateNoDispatchEnvelope/serial
+=== RUN   TestTemplateNoDispatchEnvelope/cancel
+=== RUN   TestTemplateNoDispatchEnvelope/zero-floor
+=== RUN   TestTemplateNoDispatchEnvelope/future-floor
+=== RUN   TestTemplateNoDispatchEnvelope/project-floor
+=== RUN   TestTemplateNoDispatchEnvelope/missing-time
+=== RUN   TestTemplateNoDispatchEnvelope/missing-owner
+--- PASS: TestTemplateNoDispatchEnvelope (0.00s)
+    --- PASS: TestTemplateNoDispatchEnvelope/draft (0.00s)
+    --- PASS: TestTemplateNoDispatchEnvelope/prepared-draft (0.00s)
+    --- PASS: TestTemplateNoDispatchEnvelope/commit (0.00s)
+    --- PASS: TestTemplateNoDispatchEnvelope/project (0.00s)
+    --- PASS: TestTemplateNoDispatchEnvelope/builtin-project (0.00s)
+    --- PASS: TestTemplateNoDispatchEnvelope/commit-create (0.00s)
+    --- PASS: TestTemplateNoDispatchEnvelope/malformed-key (0.00s)
+    --- PASS: TestTemplateNoDispatchEnvelope/missing-parent (0.00s)
+    --- PASS: TestTemplateNoDispatchEnvelope/wrong-parent (0.00s)
+    --- PASS: TestTemplateNoDispatchEnvelope/deployment (0.00s)
+    --- PASS: TestTemplateNoDispatchEnvelope/membership (0.00s)
+    --- PASS: TestTemplateNoDispatchEnvelope/delete (0.00s)
+    --- PASS: TestTemplateNoDispatchEnvelope/task (0.00s)
+    --- PASS: TestTemplateNoDispatchEnvelope/creator (0.00s)
+    --- PASS: TestTemplateNoDispatchEnvelope/serial (0.00s)
+    --- PASS: TestTemplateNoDispatchEnvelope/cancel (0.00s)
+    --- PASS: TestTemplateNoDispatchEnvelope/zero-floor (0.00s)
+    --- PASS: TestTemplateNoDispatchEnvelope/future-floor (0.00s)
+    --- PASS: TestTemplateNoDispatchEnvelope/project-floor (0.00s)
+    --- PASS: TestTemplateNoDispatchEnvelope/missing-time (0.00s)
+    --- PASS: TestTemplateNoDispatchEnvelope/missing-owner (0.00s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	10.861s

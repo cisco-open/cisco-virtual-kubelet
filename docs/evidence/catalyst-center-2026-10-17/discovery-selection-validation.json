@@ -1,0 +1,152 @@
+{
+  "scope": "Pinned discovery deployment selection exported offline; existing public discovery execution/ownership/pruning/recovery; real appliance with simulated Kubernetes persistence and separate real API gate; no site-assignment semantics",
+  "source_sha256": {
+    "internal/controlleradapter/catalystcenter/discovery_export_selection.go": "706b2659ac6f93f2c919b72dbf54308e69d94c79e88e3ed0b3c7f9e56d7635f3",
+    "internal/controlleradapter/catalystcenter/discovery_export_selection_test.go": "6c301b33eeeb15dbb9b4a4637160c0b8e7137aca8e6a3329994a147b4c728ce2",
+    "internal/controlleradapter/catalystcenter/discovery_export_selection_envtest_test.go": "7162e22f9853b913ad0ab7ce4a40cd335590615ed057d1641de29e890408ab1d",
+    "internal/controlleradapter/catalystcenter/discovery_test.go": "a86a08feb8edeb6e68ad09693c7f794c0934440eb3ba14b9c65e77fb60a46f35",
+    "internal/controlleradapter/catalystcenter/discovery_owned_live_test.go": "534eafdd98b35f7b660f7677815aa6d1fbe0394df061e01e978aacb563f2e139",
+    "internal/controlleradapter/catalystcenter/discovery.go": "7b371814bf430b8f0b701952295fa616cb9d084ae39d12e380b7c60de84d50bf",
+    "internal/controlleradapter/catalystcenter/sites.go": "e561cb50f4959a3e079bdddbd8629dd7fd3974a47aa49ca264c44dd4f937882a",
+    "internal/controlleradapter/catalystcenter/nacmodel/site_selection.go": "858c31a378f49d3ab5f9d908cb24577aea8071560ad3b95eb51b710604b1fdb2",
+    "tools/cvk-netascode-migrate/controller_export_discovery.go": "32d8d5c8b988f88fd6a20cc707455d931f03736ed39f865062dc81f48668d253",
+    "tools/cvk-netascode-migrate/controller_export_discovery_test.go": "32f8d1cc30b811c1ad07a46f0b55f7c5d3352d5e2aef5137c344cf9def4db718",
+    "tools/cvk-netascode-migrate/controller_export_network.go": "0e195dbd53843279e7606d46f8c59dd5c705ad105d2fcc8cd69bf97e3da3ac82",
+    "tools/cvk-netascode-migrate/controller_export_io.go": "f7acbc6a30dd66ce77a68cecd823b5306c2af9c799de21b5f51640bbb76db37e",
+    "tools/cvk-netascode-migrate/main.go": "5d6091752872611f908510bec3cd001a8dcba381293acd30958067c0a09bc1a3"
+  },
+  "gates": {
+    "focused": {
+      "families": 3,
+      "subcases": 5,
+      "seconds": 3.263,
+      "exit_code": 0,
+      "log_sha256": "8afa1d89b22f7f27c61c8cdb92e9899fbc38bec4d0dc20be3f9e2754c6aff0d7"
+    },
+    "regression": {
+      "families": 37,
+      "subcases": 86,
+      "seconds": 8.863,
+      "exit_code": 0,
+      "log_sha256": "9a8dad43e9dd5b98bd014c5ce72c4a7fbb8e037ca2776530ebee9fb86655e665"
+    },
+    "cli": {
+      "families": 6,
+      "subcases": 9,
+      "seconds": 1.956,
+      "exit_code": 0,
+      "log_sha256": "b46c5cd4365f75e2d3806ca0306bf86100bc6d610b4e0a15c9859934920708f1"
+    },
+    "cli-regression": {
+      "families": 19,
+      "subcases": 9,
+      "seconds": 2.057,
+      "exit_code": 0,
+      "log_sha256": "e3e7cc9350dac5935478df0d1f156dc0d8e5aa4384daba67bea5e9f814a948dc"
+    },
+    "api": {
+      "families": 1,
+      "subcases": 0,
+      "seconds": 9.149,
+      "exit_code": 0,
+      "log_sha256": "86449113cb265700650d9673496ed9ed1c0326a11c16a45355abdcf68cfbe429"
+    },
+    "native": {
+      "families": 1,
+      "subcases": 0,
+      "seconds": 71.916,
+      "exit_code": 0,
+      "log_sha256": "96be8d0558de0411601fa7727c21d300f9335397872dbe4b4581eb29095575a0"
+    }
+  },
+  "native": {
+    "outcome": {
+      "cleaned": true,
+      "deletes": 2,
+      "knownTaskRecoveries": 4,
+      "posts": 2,
+      "publicPrune": true,
+      "siteSelection": true
+    },
+    "selection_provenance": {
+      "exporter": "cvk-discovery-selected-v1:policy-sha256:0e51ed7a33d4ce4a2a02641fb3208e7564c8c179fd45e0e077b00b5219f04b4e",
+      "format": "netascode-catalyst-center",
+      "modelVersion": "0.5.0",
+      "upstreamRevision": "a435555fe828f03cf3311d52fe1ab6572a247916",
+      "policySHA256": "0e51ed7a33d4ce4a2a02641fb3208e7564c8c179fd45e0e077b00b5219f04b4e",
+      "inputSHA256": "96ddb69a93f5ca44e0512f9befea2ee2983482c5881123ddb86a15cc19d0b00b",
+      "outputSHA256": "3551139380b571aab344721241b44256b403de2adaaa0a74f3336c727989bc45",
+      "optionsSHA256": "f07437c0ef92661671fdc1c99469789002e46e6c0b3ded62fab0bf58d1bd2835",
+      "declaredJobs": 2,
+      "selectedJobs": 1,
+      "perSiteMode": true,
+      "executionSyntaxValidated": true,
+      "leafSchemaValidated": false,
+      "configurationParity": false,
+      "limitations": [
+        "Selection only: fields/defaults must already be resolved; no multi-file merging or full nested schema validation.",
+        "create_per_site is deployment selection, not native site assignment; discovery names remain globally unique.",
+        "Site declarations validate selection and are not emitted as site mutation intent; credentials resolve through existing named native lookups.",
+        "No ownership adoption, API execution or automatic rerun is authorized by this export; runtime retention and physical safeguards still apply.",
+        "Inline credentials and other model sections remain unsupported by this exporter; full pinned-model parity is not claimed."
+      ]
+    },
+    "tasks": [
+      {
+        "action": "Create",
+        "taskID": "01a14bc6-7746-7933-a14f-47bc906032c4"
+      },
+      {
+        "action": "Delete",
+        "taskID": "01a14bc6-e99c-71de-9c1b-581c9af33d9e"
+      },
+      {
+        "action": "Create",
+        "taskID": "01a14bc6-ffcf-7327-b288-b04558b65cb3"
+      },
+      {
+        "action": "Delete",
+        "taskID": "01a14bc7-695a-72e7-b720-55843690c247"
+      }
+    ],
+    "installed": false,
+    "private_checkpoint": "/private/tmp/cvk-discovery-owned-3064262718"
+  },
+  "cli_demonstration": {
+    "provenance": {
+      "exporter": "cvk-discovery-selected-v1:policy-sha256:0e51ed7a33d4ce4a2a02641fb3208e7564c8c179fd45e0e077b00b5219f04b4e",
+      "format": "netascode-catalyst-center",
+      "modelVersion": "0.5.0",
+      "upstreamRevision": "a435555fe828f03cf3311d52fe1ab6572a247916",
+      "policySHA256": "0e51ed7a33d4ce4a2a02641fb3208e7564c8c179fd45e0e077b00b5219f04b4e",
+      "inputSHA256": "8f7649345b43cbd9f71710e78825974aed380597ec5e7241e335512bcce5e238",
+      "outputSHA256": "8b6bc5adbbe6ee9a55318eb4a52d54a18feb43a9fe1c585f85842a235f59490d",
+      "optionsSHA256": "f07437c0ef92661671fdc1c99469789002e46e6c0b3ded62fab0bf58d1bd2835",
+      "declaredJobs": 2,
+      "selectedJobs": 1,
+      "perSiteMode": true,
+      "executionSyntaxValidated": true,
+      "leafSchemaValidated": false,
+      "configurationParity": false,
+      "limitations": [
+        "Selection only: fields/defaults must already be resolved; no multi-file merging or full nested schema validation.",
+        "create_per_site is deployment selection, not native site assignment; discovery names remain globally unique.",
+        "Site declarations validate selection and are not emitted as site mutation intent; credentials resolve through existing named native lookups.",
+        "No ownership adoption, API execution or automatic rerun is authorized by this export; runtime retention and physical safeguards still apply.",
+        "Inline credentials and other model sections remain unsupported by this exporter; full pinned-model parity is not claimed."
+      ]
+    },
+    "outputMode": "0600",
+    "outputHashVerified": true,
+    "binarySHA256": "e3cc95047c3438074513e9b36d9c90c5dd8514c5742149a0a957886e48e7793e"
+  },
+  "example_sha256": {
+    "examples/configs/catalyst-center/discovery-site-selection.yaml": "8f7649345b43cbd9f71710e78825974aed380597ec5e7241e335512bcce5e238"
+  },
+  "upstream_selection_reference": {
+    "file": "cc_discovery.tf",
+    "pinnedRevision": "a435555fe828f03cf3311d52fe1ab6572a247916",
+    "local_snapshot_sha256": "114f165a3fabd312de99d37c79ed85fdc9119a145225152d949246161bcf246c",
+    "predicate": "manage_global_settings || managed_sites is empty || (!manage_global_settings && managed_sites is nonempty && create_per_site)"
+  }
+}

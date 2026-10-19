@@ -1,0 +1,38 @@
+{
+  "scope": "Production creator publication and synthetic-proof status CAS; no native recreation or installed rollout",
+  "gates": {
+    "regression": {
+      "families": 61,
+      "subcases": 829,
+      "seconds": 75.669,
+      "exit_code": 0,
+      "log_sha256": "495f95c3e2c332667a84955cca49499d99d6f37ae464d1bb2bbd54cd0ed1e4dd"
+    },
+    "api": {
+      "families": 6,
+      "subcases": 89,
+      "seconds": 57.573,
+      "exit_code": 0,
+      "log_sha256": "63c7bd7f3daee702c6c8cf6e474ce3b636dcd8355eb7f20da94bfcd4d41a6c2b"
+    }
+  },
+  "source_sha256": {
+    "internal/controlleradapter/catalystcenter/site_creation_publication.go": "a25b46022fc8f2681b518cc1777c5e32563b51350ec853e2103279805fa782d2",
+    "internal/controlleradapter/catalystcenter/site_creation_publication_test.go": "1b620ca6f2c94c89b6b08c7929b593a141dc98f621406a04aa99ea09032d5bb1",
+    "internal/controlleradapter/catalystcenter/site_ownership.go": "ae5efdf035b4607942506f8ff233f8dd497d2beb9537392fe042370e169ba898",
+    "internal/controlleradapter/catalystcenter/site_recreation.go": "b64faf3a4b906731081a3d69f87e9071861ac67e27e9391f8f04d6a0ac5301f2",
+    "internal/controlleradapter/catalystcenter/site_recreation_test.go": "ac883414d3f80cd03c28711bc7ecf702a64e4007d6a07a245fabc8a9099aacc0",
+    "internal/controlleradapter/catalystcenter/site_recreation_envtest_test.go": "8522cf03cf130978e7b76b95ec3970fdc8ae23d1a52c335aeaa60e00541c3c64"
+  },
+  "pinned_resource_rows": 93,
+  "remaining": [
+    "native absence/ancestry planning",
+    "guarded recreation dispatch and original-task recovery",
+    "public compiler/policy routing",
+    "full consumer protection",
+    "parent/child retirement coordination",
+    "configuration deletion",
+    "installed native complete-cycle qualification"
+  ],
+  "historical_logs": "Initial runs exposed in-memory vs serialized timestamp differences in the new fixture; retained in /private/tmp/site-creation-publication-{regression,api,focused}.log. The final gates use the persisted operation and second-precision verification time."
+}

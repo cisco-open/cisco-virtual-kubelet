@@ -1,0 +1,6 @@
+=== RUN   TestLiveWirelessTagRecreationPublicRecovery
+    wireless_profile_execution_live_test.go:87: qualification timeout must be between 1m and 45m
+--- FAIL: TestLiveWirelessTagRecreationPublicRecovery (0.00s)
+FAIL
+FAIL	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	1.412s
+FAIL

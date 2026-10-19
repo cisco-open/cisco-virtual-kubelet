@@ -1,0 +1,16 @@
+{
+  "moduleVersion": "0.5.0",
+  "moduleCommit": "a435555fe828f03cf3311d52fe1ab6572a247916",
+  "providerConstraint": "~> 0.6.1",
+  "reviewedProviderTag": "v0.6.1",
+  "sources": [
+    {
+      "url": "https://github.com/CiscoDevNet/terraform-provider-catalystcenter/blob/v0.6.1/internal/provider/model_catalystcenter_aaa_settings.go",
+      "sha256": "cbd39365501f5c841b3aceb03d223506be2c79dd33697817ae39b57bb13a834c"
+    },
+    {
+      "url": "https://github.com/CiscoDevNet/terraform-provider-catalystcenter/blob/v0.6.1/internal/provider/resource_catalystcenter_aaa_settings.go",
+      "sha256": "a99fac570991edbfb82f2b166d93b11f57e74c4158fd05ab0ffb0d6e48217b40"
+    }
+  ]
+}

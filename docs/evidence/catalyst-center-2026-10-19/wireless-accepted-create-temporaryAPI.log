@@ -1,0 +1,88 @@
+=== RUN   TestEnvtestWirelessAcceptedMetadataCreates
+=== RUN   TestEnvtestWirelessAcceptedMetadataCreates/anchor_groups/known
+=== RUN   TestEnvtestWirelessAcceptedMetadataCreates/anchor_groups/child-failed
+=== RUN   TestEnvtestWirelessAcceptedMetadataCreates/anchor_groups/child-pending
+=== RUN   TestEnvtestWirelessAcceptedMetadataCreates/anchor_groups/child-foreign
+=== RUN   TestEnvtestWirelessAcceptedMetadataCreates/anchor_groups/tree-unavailable
+=== RUN   TestEnvtestWirelessAcceptedMetadataCreates/anchor_groups/changed-source
+=== RUN   TestEnvtestWirelessAcceptedMetadataCreates/interfaces/known
+=== RUN   TestEnvtestWirelessAcceptedMetadataCreates/interfaces/child-failed
+=== RUN   TestEnvtestWirelessAcceptedMetadataCreates/interfaces/child-pending
+=== RUN   TestEnvtestWirelessAcceptedMetadataCreates/interfaces/child-foreign
+=== RUN   TestEnvtestWirelessAcceptedMetadataCreates/interfaces/tree-unavailable
+=== RUN   TestEnvtestWirelessAcceptedMetadataCreates/interfaces/changed-source
+=== RUN   TestEnvtestWirelessAcceptedMetadataCreates/power_profiles/known
+=== RUN   TestEnvtestWirelessAcceptedMetadataCreates/power_profiles/child-failed
+=== RUN   TestEnvtestWirelessAcceptedMetadataCreates/power_profiles/child-pending
+=== RUN   TestEnvtestWirelessAcceptedMetadataCreates/power_profiles/child-foreign
+=== RUN   TestEnvtestWirelessAcceptedMetadataCreates/power_profiles/tree-unavailable
+=== RUN   TestEnvtestWirelessAcceptedMetadataCreates/power_profiles/changed-source
+=== RUN   TestEnvtestWirelessAcceptedMetadataCreates/dot11be_profiles/known
+=== RUN   TestEnvtestWirelessAcceptedMetadataCreates/dot11be_profiles/child-failed
+=== RUN   TestEnvtestWirelessAcceptedMetadataCreates/dot11be_profiles/child-pending
+=== RUN   TestEnvtestWirelessAcceptedMetadataCreates/dot11be_profiles/child-foreign
+=== RUN   TestEnvtestWirelessAcceptedMetadataCreates/dot11be_profiles/tree-unavailable
+=== RUN   TestEnvtestWirelessAcceptedMetadataCreates/dot11be_profiles/changed-source
+=== RUN   TestEnvtestWirelessAcceptedMetadataCreates/security_settings/known
+=== RUN   TestEnvtestWirelessAcceptedMetadataCreates/security_settings/child-failed
+=== RUN   TestEnvtestWirelessAcceptedMetadataCreates/security_settings/child-pending
+=== RUN   TestEnvtestWirelessAcceptedMetadataCreates/security_settings/child-foreign
+=== RUN   TestEnvtestWirelessAcceptedMetadataCreates/security_settings/tree-unavailable
+=== RUN   TestEnvtestWirelessAcceptedMetadataCreates/security_settings/changed-source
+=== RUN   TestEnvtestWirelessAcceptedMetadataCreates/rf_profiles/known
+=== RUN   TestEnvtestWirelessAcceptedMetadataCreates/rf_profiles/child-failed
+=== RUN   TestEnvtestWirelessAcceptedMetadataCreates/rf_profiles/child-pending
+=== RUN   TestEnvtestWirelessAcceptedMetadataCreates/rf_profiles/child-foreign
+=== RUN   TestEnvtestWirelessAcceptedMetadataCreates/rf_profiles/tree-unavailable
+=== RUN   TestEnvtestWirelessAcceptedMetadataCreates/rf_profiles/changed-source
+=== RUN   TestEnvtestWirelessAcceptedMetadataCreates/ap_profiles/known
+=== RUN   TestEnvtestWirelessAcceptedMetadataCreates/ap_profiles/child-failed
+=== RUN   TestEnvtestWirelessAcceptedMetadataCreates/ap_profiles/child-pending
+=== RUN   TestEnvtestWirelessAcceptedMetadataCreates/ap_profiles/child-foreign
+=== RUN   TestEnvtestWirelessAcceptedMetadataCreates/ap_profiles/tree-unavailable
+=== RUN   TestEnvtestWirelessAcceptedMetadataCreates/ap_profiles/changed-source
+--- PASS: TestEnvtestWirelessAcceptedMetadataCreates (9.13s)
+    --- PASS: TestEnvtestWirelessAcceptedMetadataCreates/anchor_groups/known (2.18s)
+    --- PASS: TestEnvtestWirelessAcceptedMetadataCreates/anchor_groups/child-failed (0.09s)
+    --- PASS: TestEnvtestWirelessAcceptedMetadataCreates/anchor_groups/child-pending (0.08s)
+    --- PASS: TestEnvtestWirelessAcceptedMetadataCreates/anchor_groups/child-foreign (0.08s)
+    --- PASS: TestEnvtestWirelessAcceptedMetadataCreates/anchor_groups/tree-unavailable (0.08s)
+    --- PASS: TestEnvtestWirelessAcceptedMetadataCreates/anchor_groups/changed-source (0.08s)
+    --- PASS: TestEnvtestWirelessAcceptedMetadataCreates/interfaces/known (0.10s)
+    --- PASS: TestEnvtestWirelessAcceptedMetadataCreates/interfaces/child-failed (0.08s)
+    --- PASS: TestEnvtestWirelessAcceptedMetadataCreates/interfaces/child-pending (0.07s)
+    --- PASS: TestEnvtestWirelessAcceptedMetadataCreates/interfaces/child-foreign (0.07s)
+    --- PASS: TestEnvtestWirelessAcceptedMetadataCreates/interfaces/tree-unavailable (0.07s)
+    --- PASS: TestEnvtestWirelessAcceptedMetadataCreates/interfaces/changed-source (0.08s)
+    --- PASS: TestEnvtestWirelessAcceptedMetadataCreates/power_profiles/known (0.10s)
+    --- PASS: TestEnvtestWirelessAcceptedMetadataCreates/power_profiles/child-failed (0.07s)
+    --- PASS: TestEnvtestWirelessAcceptedMetadataCreates/power_profiles/child-pending (0.07s)
+    --- PASS: TestEnvtestWirelessAcceptedMetadataCreates/power_profiles/child-foreign (0.08s)
+    --- PASS: TestEnvtestWirelessAcceptedMetadataCreates/power_profiles/tree-unavailable (0.07s)
+    --- PASS: TestEnvtestWirelessAcceptedMetadataCreates/power_profiles/changed-source (0.07s)
+    --- PASS: TestEnvtestWirelessAcceptedMetadataCreates/dot11be_profiles/known (0.10s)
+    --- PASS: TestEnvtestWirelessAcceptedMetadataCreates/dot11be_profiles/child-failed (0.07s)
+    --- PASS: TestEnvtestWirelessAcceptedMetadataCreates/dot11be_profiles/child-pending (0.08s)
+    --- PASS: TestEnvtestWirelessAcceptedMetadataCreates/dot11be_profiles/child-foreign (0.08s)
+    --- PASS: TestEnvtestWirelessAcceptedMetadataCreates/dot11be_profiles/tree-unavailable (0.07s)
+    --- PASS: TestEnvtestWirelessAcceptedMetadataCreates/dot11be_profiles/changed-source (0.09s)
+    --- PASS: TestEnvtestWirelessAcceptedMetadataCreates/security_settings/known (0.10s)
+    --- PASS: TestEnvtestWirelessAcceptedMetadataCreates/security_settings/child-failed (0.08s)
+    --- PASS: TestEnvtestWirelessAcceptedMetadataCreates/security_settings/child-pending (0.09s)
+    --- PASS: TestEnvtestWirelessAcceptedMetadataCreates/security_settings/child-foreign (0.08s)
+    --- PASS: TestEnvtestWirelessAcceptedMetadataCreates/security_settings/tree-unavailable (0.07s)
+    --- PASS: TestEnvtestWirelessAcceptedMetadataCreates/security_settings/changed-source (0.08s)
+    --- PASS: TestEnvtestWirelessAcceptedMetadataCreates/rf_profiles/known (0.10s)
+    --- PASS: TestEnvtestWirelessAcceptedMetadataCreates/rf_profiles/child-failed (0.08s)
+    --- PASS: TestEnvtestWirelessAcceptedMetadataCreates/rf_profiles/child-pending (0.07s)
+    --- PASS: TestEnvtestWirelessAcceptedMetadataCreates/rf_profiles/child-foreign (0.07s)
+    --- PASS: TestEnvtestWirelessAcceptedMetadataCreates/rf_profiles/tree-unavailable (0.08s)
+    --- PASS: TestEnvtestWirelessAcceptedMetadataCreates/rf_profiles/changed-source (0.09s)
+    --- PASS: TestEnvtestWirelessAcceptedMetadataCreates/ap_profiles/known (0.09s)
+    --- PASS: TestEnvtestWirelessAcceptedMetadataCreates/ap_profiles/child-failed (0.08s)
+    --- PASS: TestEnvtestWirelessAcceptedMetadataCreates/ap_profiles/child-pending (0.08s)
+    --- PASS: TestEnvtestWirelessAcceptedMetadataCreates/ap_profiles/child-foreign (0.08s)
+    --- PASS: TestEnvtestWirelessAcceptedMetadataCreates/ap_profiles/tree-unavailable (0.08s)
+    --- PASS: TestEnvtestWirelessAcceptedMetadataCreates/ap_profiles/changed-source (0.08s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	10.139s

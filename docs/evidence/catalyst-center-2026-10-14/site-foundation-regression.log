@@ -1,0 +1,7 @@
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter	2.170s
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	528.657s
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter/nacmodel	1.223s
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/nexusdashboard	4.774s
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controllerconfiguration	32.105s
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controller	35.067s
+ok  	github.com/cisco/virtual-kubelet-cisco/cmd/cisco-vk	10.626s

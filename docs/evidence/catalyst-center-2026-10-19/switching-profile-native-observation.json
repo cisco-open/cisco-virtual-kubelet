@@ -1,0 +1,125 @@
+{
+  "scope": "Complete private native observations in switching dispatch/recovery, with protected comparison prerequisite",
+  "branch": "pr/johalley/catc-support",
+  "modelVersion": "0.5.0",
+  "upstreamRevision": "a435555fe828f03cf3311d52fe1ab6572a247916",
+  "fullModelComplete": false,
+  "resourceComplete": false,
+  "durableLatestEffectPublicationImplemented": false,
+  "adoptionOrPruneAuthorityAdded": false,
+  "installedQualification": false,
+  "sourceFingerprints": {
+    "internal/controlleradapter/catalystcenter": "34ac4cf6638cb0e2e3b6fe0b0fe63eb88d79ee81dff10e1c097bd4fd8f7651a1",
+    "internal/controlleradapter/catalystcenter/nacmodel": "1827e09b755df6480bf7d80a78e51ed4ccd8ef02a4bf923ac460e7262dd96b82",
+    "tools/cvk-netascode-migrate": "49e5e6ea5ef31b4c3204a5fec1714a6a2e410f36046031692dc0905e4e046ed4"
+  },
+  "gates": {
+    "focusedRace": {
+      "exitCode": 0,
+      "log": "switching-profile-native-observation-focusedRace.log",
+      "sha256": "6ebaa3697227c0fa507245ada508a68a251fe992b05acda4db1a22517303c0ec",
+      "passingTestEvents": 563
+    },
+    "finalObservationRace": {
+      "exitCode": 0,
+      "log": "switching-profile-native-observation-finalObservationRace.log",
+      "sha256": "dedfb738545517a98601a01fc48bd7956cf62f2320124be5793961d74d4d08d6",
+      "passingTestEvents": 33
+    },
+    "temporaryAPI": {
+      "exitCode": 0,
+      "log": "switching-profile-native-observation-temporaryAPI.log",
+      "sha256": "4b2509b992ad6ef5e8ad01e007f1ca09989f68d867dd9b33e1f854c7d52d8371",
+      "passingTestEvents": 64
+    },
+    "native": {
+      "exitCode": 0,
+      "log": "switching-profile-native-observation-native.log",
+      "sha256": "ade7f4ada7b736b3f77324d3dc3b43787380f3e47325c68bdf901bcc341df131",
+      "passingTestEvents": 1
+    },
+    "productionBuild": {
+      "exitCode": 0,
+      "log": "/private/tmp/cvk-switching-native-build.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "strictDocs": {
+      "exitCode": 0,
+      "log": "/private/tmp/cvk-switching-native-docs.log",
+      "sha256": "0876ac8dc9e146853047ef4866141b5c2059aa4515ec1c40d6de1b50f228e100"
+    },
+    "diffCheck": {
+      "exitCode": 0,
+      "log": "/private/tmp/cvk-switching-native-diffcheck.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "regression": {
+      "exitCode": 0,
+      "passingTestEvents": 19903,
+      "passingPackages": [
+        "github.com/cisco/virtual-kubelet-cisco/api/config/v1alpha1",
+        "github.com/cisco/virtual-kubelet-cisco/api/ops/v1alpha1",
+        "github.com/cisco/virtual-kubelet-cisco/api/v1alpha1",
+        "github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter",
+        "github.com/cisco/virtual-kubelet-cisco/internal/managedprotocol",
+        "github.com/cisco/virtual-kubelet-cisco/internal/softwarelifecycle",
+        "github.com/cisco/virtual-kubelet-cisco/internal/aggregator",
+        "github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/nexusdashboard",
+        "github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter/nacmodel",
+        "github.com/cisco/virtual-kubelet-cisco/internal/provider/maintenance",
+        "github.com/cisco/virtual-kubelet-cisco/internal/provider/softwareupgrade",
+        "github.com/cisco/virtual-kubelet-cisco/internal/controllerconfiguration",
+        "github.com/cisco/virtual-kubelet-cisco/internal/controller",
+        "github.com/cisco/virtual-kubelet-cisco/tools/cvk-netascode-migrate",
+        "github.com/cisco/virtual-kubelet-cisco/cmd/cisco-vk",
+        "github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter"
+      ],
+      "log": "/private/tmp/cvk-switching-native-regression.jsonl",
+      "sha256": "a174d260a92784d15c243952037f9f523a292231fe147e2306489eca3749cea8"
+    }
+  },
+  "testScopeNote": "A final test-only metadata-observer assertion was added after initial gates compiled. Production sources did not change; the separate final observation race gate covers that addition.",
+  "nativeCycle": {
+    "operations": [
+      {
+        "action": "Create",
+        "resource": "profiles/#created:v1:8bbe8f47ce4b4c9b126e7ce2ad427e1ce571c7ade08e960d6cd2f2c822973abd",
+        "taskID": "01a1549a-dc66-7bf7-bbf9-14f7ebcd0b9e"
+      },
+      {
+        "action": "Update",
+        "resource": "sites/profile-site-add:v1:6f36ea888e464ef90fc75ccab856ae3264741cdf70d8ce27b117278adb214d3e:d7dfb4afa572a648e2832ec0975ca524279f9153f663dbb3e40c89c3f1885f1b",
+        "taskID": "01a1549b-1a62-7be3-83aa-f473b8d36973"
+      },
+      {
+        "action": "Update",
+        "resource": "profiles/CVK-Q-Profile-20261019-143953",
+        "taskID": "01a1549b-4c08-736b-895b-729bed456819"
+      },
+      {
+        "action": "Update",
+        "resource": "profiles/CVK-Q-Profile-20261019-143953",
+        "taskID": "01a1549b-7ece-71cc-b902-bb85606b6ec5"
+      }
+    ],
+    "profileID": "95a04dae-c70e-4bb6-9ea1-a7ae804b7705",
+    "stableNativeComparisons": 4,
+    "observedNativeFieldCount": 10,
+    "approvedGeneratedProjectionKeyUsed": true,
+    "creatorReceiptRetained": true,
+    "durableLatestEffectReceiptPublished": false,
+    "generatedArtifactsCleaned": true,
+    "nativeKubernetesPersistence": "simulated; no new status persistence path in this prerequisite",
+    "realDeviceTargeted": false,
+    "templateDeploymentPerformed": false
+  },
+  "remaining": [
+    "Versioned latest applied operations with native/key/predecessor source binding",
+    "Capacity/bookkeeping and mandatory atomic latest-effect receipt publication before journal release",
+    "Projection/key history and rotation; no retroactive native fingerprint for old creator-only rows",
+    "Adoption/prune/source/config/controller deletion and handoff/retirement",
+    "Installed actors, native schema/default/catalogue/physical coverage across the 93-resource model",
+    "Partial PnP acquisition cancellation original-manager quiescence proof"
+  ],
+  "resourceChecklistDistinctRows": 93
+}

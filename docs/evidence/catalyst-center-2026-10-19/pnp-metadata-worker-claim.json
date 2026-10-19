@@ -1,0 +1,76 @@
+{
+  "fullModelComplete": false,
+  "branch": "pr/johalley/catc-support",
+  "scope": "Immutable manager readiness and shared one-shot claim of the original metadata operation journal; no native submission/settlement integration",
+  "source": {
+    "api/v1alpha1": {
+      "files": 27,
+      "sha256": "8a0371712cdf00969303e8451b99b98029d70deda7da0ff47c6fc82b199c4c38"
+    },
+    "internal/controlleradapter": {
+      "files": 14,
+      "sha256": "eb32904d69c5427ac7151f98f4bcaea237eff5eaa6fdf468f232cee2e0251887"
+    },
+    "internal/controlleradapter/catalystcenter": {
+      "files": 1695,
+      "sha256": "4291ce11414d64ef1eff577cef7697f1f9b19b69d8e1fa871e196e3165beb12d"
+    },
+    "internal/controllerconfiguration": {
+      "files": 156,
+      "sha256": "2bbbc1265f87b5704398a1a6d01dd3d58a6669bb96e1e32126467adcfee52b7d"
+    },
+    "internal/controller": {
+      "files": 93,
+      "sha256": "8ffa14352644c314420221e7660422148c13901a50306ae636293d219327f412"
+    },
+    "manifests": {
+      "config/crd/cisco.vk_networkcontrollers.yaml": "9742625699c2de1eaef0c18a041cbe4a5d1579b035aa482d3f9fefccb4697737",
+      "charts/cisco-virtual-kubelet/crds/cisco.vk_networkcontrollers.yaml": "9742625699c2de1eaef0c18a041cbe4a5d1579b035aa482d3f9fefccb4697737",
+      "charts/cisco-virtual-kubelet/templates/metadata-handoff-admission.yaml": "96abff78b668f7d2b3e361135c6109e631d9a04818d133e0e8b6f3df22390d79"
+    }
+  },
+  "gates": {
+    "realAPI": {
+      "result": "PASS",
+      "passingEvents": 79,
+      "packages": 1,
+      "packageSeconds": 24.023,
+      "log": "/private/tmp/cvk-metadata-claim-qualified-api.log"
+    },
+    "sharedFoundations": {
+      "result": "PASS",
+      "passingEvents": 3382,
+      "packages": 7,
+      "packageSeconds": 38.987,
+      "log": "/private/tmp/cvk-metadata-claim-foundation.log"
+    },
+    "PnPAndSWIMCompatibility": {
+      "result": "PASS",
+      "passingEvents": 1193,
+      "packages": 1,
+      "packageSeconds": 18.449,
+      "log": "/private/tmp/cvk-metadata-claim-compat.log"
+    }
+  },
+  "mainBuild": "PASS",
+  "chartRender": "PASS",
+  "sourceAndFormat": "PASS",
+  "uniquePinnedResourceRows": 93,
+  "metadataProtectionDigest": "e97c37032d2c4d8aae0ef30e2b44e5372521ecf1de29975035c5948b39500999",
+  "automaticActivation": false,
+  "labMutations": false,
+  "limits": [
+    "Real isolated API actor policy, journal CAS, original Lease UIDs and copied permit consumption qualified",
+    "Broad test RBAC; worker readiness, background compiler publication and remaining deployed compatibility staged",
+    "Worker authorization callback must still verify actual runtime identity/contract; native product eligibility is supplied by the future adapter journal-start integration",
+    "Existing adapter prepare/start/finish barriers remain unchanged; no public new prune/native dispatch path enabled"
+  ],
+  "remaining": [
+    "Reconstruct typed original Prepared PnP removal plan with full native cohort and ownership preflight",
+    "Delegate existing adapter start CAS to shared metadata claim and retain original process authority around guarded submission",
+    "Original outcome verification, certified-refusal/verified-absence settlement, exact UID deletion and manager release/restart/uncertain-outcome recovery",
+    "Installed/native full lifecycle, complete consumer protection, deletion/missing-source finalization and wider pinned resource hardware/execution gaps"
+  ],
+  "strictDocumentation": "PASS",
+  "pinnedGeneratedHandoffSchemas": "PASS"
+}

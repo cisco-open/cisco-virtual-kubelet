@@ -73,10 +73,12 @@ Kubernetes API
   drift detection and verify-after-apply reconciliation. IOS-XE includes
   defaults, group targeting, templates, bundles, revisions, and apply logs;
   NX-OS starts with per-device `NXOSConfig` over NX-API REST/DME.
-- **Controller extension scaffold (Alpha)** - generic `NetworkController`
+- **Controller integrations (Alpha)** - generic `NetworkController`
   endpoint and `NetworkControllerConfig` intent APIs with an isolated-worker
-  registry. The current scaffold registers zero product adapters and the
-  boundary is report-only; it cannot apply, prune, or remotely delete state.
+  registry with Nexus Dashboard and Catalyst Center adapters. Catalyst Center
+  has bounded configuration and managed SWIM support; see the
+  [alpha scope](controllers/catalyst-center-alpha.md) and
+  [remaining parity roadmap](controllers/catalyst-center-roadmap.md).
 - **Operations and upgrades** - read-only diagnostics, gNOI probes,
   write-class operational actions, and multi-phase IOS-XE software upgrades
   behind explicit RBAC and runtime gates.
@@ -145,10 +147,9 @@ This project is under active development and is published as open source under
 - **Drivers** - `XE` is production-focused; `NXOS` has working NX-API CLI
   app-hosting and an NX-API REST/DME `NXOSConfig` runtime slice; `FAKE` is for
   testing; `XR` and `OPENCONFIG` are reserved driver names in the API surface.
-- **Controller adapters** - the generic Alpha controller CRDs and
-  isolated-worker scaffold are installed, but the current scaffold contains no
-  product adapter. It does not integrate Catalyst Center or another external
-  controller.
+- **Controller adapters** - Alpha controller CRDs and isolated workers support
+  Nexus Dashboard and Catalyst Center. Controller configuration parity and
+  lifecycle qualification remain resource specific and incomplete.
 - **Images and chart** - signed monthly images are published at
   `ghcr.io/cisco-open/cisco-virtual-kubelet`, with the Helm chart at
   `oci://ghcr.io/cisco-open/charts/cisco-virtual-kubelet`. Build locally only
@@ -171,7 +172,7 @@ summarises the current release state.
 |---|---|---|
 | Pod lifecycle (App-Hosting create / update / delete) | **Stable** | Supported on Catalyst 8000V 17.15+, Catalyst 9000 17.18+, IR1100 Series 17.12+, and IE3500 Series 17.18+. |
 | `CiscoDevice` and VK deployment lifecycle | **Stable** | Controller-managed per-device VK pods. |
-| **Network controller scaffold** (`NetworkController`, `NetworkControllerConfig`) | **Alpha** | Generic endpoint, controller-centric Network as Code intent, registry, and isolated-worker contracts. Zero adapters ship; the boundary is report-only and does not integrate an external controller. |
+| **Network controller integrations** (`NetworkController`, `NetworkControllerConfig`) | **Alpha** | Nexus Dashboard and Catalyst Center adapters share controller/worker contracts. Catalyst Center adds bounded configuration and managed SWIM; full NetAsCode parity remains incomplete. |
 | **Network as Code config driver** (`IOSXEConfig`, `NXOSConfig`) | **Beta** | Declarative IOS-XE and NX-OS config CRDs with drift detection and verification. IOS-XE also provides revision/apply-log history and broader family coverage; NX-OS starts with `system`, `feature`, `feature_set`, `vlan`, and `interface_ethernet` over NX-API REST/DME, without revision rollback. Schema is `v1alpha1`; family coverage and wire-format behaviour are still expanding. |
 | **Operations** (`DeviceOperation`, `IOSXEOperationalAction`) | **Beta** | Read-only diagnostics and gNOI probes are stable in intent; write-class actions require an explicit runtime gate and carry additional operational risk. |
 | **Software Lifecycle** (`IOSXESoftwareUpgrade`) | **Beta** | Content-addressed gNOI install/activate/verify with optional IOS-XE RESTCONF device-file registration. Disabled by default; unsupported or ambiguous native lifecycle state fails closed. |

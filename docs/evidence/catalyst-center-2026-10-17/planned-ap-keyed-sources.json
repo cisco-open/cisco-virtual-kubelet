@@ -1,0 +1,25 @@
+{
+  "branch": "pr/johalley/catc-support",
+  "moduleVersion": "0.5.0",
+  "moduleCommit": "a435555fe828f03cf3311d52fe1ab6572a247916",
+  "providerVersion": "0.6.1",
+  "providerCommit": "01058637dd5ed4fca93e1b2a96dd7032aec2d3a1",
+  "scope": "Explicit opt-in keyed AP observed/native state and bounded latest rows; exact prior and intended-result MAC admission; geometry handoff remains gated for retained protected APs. No exclusive creator/delete authority. Final test-only producer refusal cases, example and catalog changes have separate focused/API/example/catalog validation; runtime code is unchanged from native/broad cycles.",
+  "sourceSha256": {
+    "internal/controlleradapter/catalystcenter/planned_ap_baseline.go": "ef6d15af6d2a367cecebb2192722ad0ce342e0c75801ab5ed844ad92775e0aff",
+    "internal/controlleradapter/catalystcenter/planned_ap_baseline_test.go": "462fb7914fbc39f57e54bfa79acc40b7834c0dc19493b680a81e1f4cd7485718",
+    "internal/controlleradapter/catalystcenter/planned_ap_identity.go": "d5a31fd16197f3c1ece6a982954a7b66511198f9ef98dee4f9083b9f614ee15e",
+    "internal/controlleradapter/catalystcenter/planned_ap_execution.go": "8853d2e100f6cf3445aa8bfd87cf51f57e83d1ae2e1cf540a3fdcc501ddc2c81",
+    "internal/controlleradapter/catalystcenter/floor_image_apply.go": "36cbef221d74e2781ef71faa303c5720c70e85623fd3266053e1d6f6fda95248",
+    "internal/controlleradapter/catalystcenter/site_design_dispatch.go": "6ade7c0f20779757c2802c9a26b8444cce31e6fe9291676125c38b20ecdf8858",
+    "internal/controlleradapter/catalystcenter/site_task_recovery.go": "b64d2bbb8ca29469efd58ea6838ea14f660c9cfeeba0ae0d9a9e5a6cee40c439",
+    "internal/controlleradapter/catalystcenter/config_journal.go": "99dec361880c5f37e735984b968b04fedd70bf2404b364e2a1ae7d365053d075",
+    "internal/controlleradapter/catalystcenter/site_planned_ap_execution.go": "ea3a3e5b5580ed5e72a89c3fdc20a6e77f1ab4334a9e8a4ce268c037e3584f27",
+    "internal/controlleradapter/catalystcenter/planned_ap_manifest_test.go": "a8877ee2d5ae475aed3fa5ea58f28cccf14109fe74d4ec2ea8013a91ccbfd108",
+    "internal/controlleradapter/catalystcenter/site_design_envtest_test.go": "de14495ed58f42d8873081aad7f68cb864e1c41dbf0eb1b70c33d5136e891bcd",
+    "internal/controlleradapter/catalystcenter/site_design_live_test.go": "f6021a643b514824f26da25c4e1c31823631231f6c2e1d080d9634d11887e370",
+    "internal/controlleradapter/catalystcenter/site_native_comparison_test.go": "cd44cf207211247e14ce334fd7bfcd92864a09500da9a5f6e5be33ea712ae208",
+    "internal/controlleradapter/catalystcenter/nacmodel/catalog.go": "103d774382d671b8678d6061463da532d14cdf0faac985b3548cdee717c59bba",
+    "examples/configs/catalyst-center/planned-ap-private-state.yaml": "e81fb2582dbc402673e253398537be2359cf0146e50503415539c090a5bcae4d"
+  }
+}

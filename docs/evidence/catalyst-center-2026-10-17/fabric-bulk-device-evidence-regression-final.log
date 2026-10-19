@@ -1,0 +1,512 @@
+=== RUN   TestConfigurationDeviceRecoveryRetainsJournal
+=== RUN   TestConfigurationDeviceRecoveryRetainsJournal/Prepared
+=== RUN   TestConfigurationDeviceRecoveryRetainsJournal/Submitting
+=== RUN   TestConfigurationDeviceRecoveryRetainsJournal/Accepted
+=== RUN   TestConfigurationDeviceRecoveryRetainsJournal/Verifying
+=== RUN   TestConfigurationDeviceRecoveryRetainsJournal/Verified
+=== RUN   TestConfigurationDeviceRecoveryRetainsJournal/Unknown
+--- PASS: TestConfigurationDeviceRecoveryRetainsJournal (0.80s)
+    --- PASS: TestConfigurationDeviceRecoveryRetainsJournal/Prepared (0.74s)
+    --- PASS: TestConfigurationDeviceRecoveryRetainsJournal/Submitting (0.01s)
+    --- PASS: TestConfigurationDeviceRecoveryRetainsJournal/Accepted (0.01s)
+    --- PASS: TestConfigurationDeviceRecoveryRetainsJournal/Verifying (0.01s)
+    --- PASS: TestConfigurationDeviceRecoveryRetainsJournal/Verified (0.01s)
+    --- PASS: TestConfigurationDeviceRecoveryRetainsJournal/Unknown (0.01s)
+=== RUN   TestConfigurationDeviceIdentity
+=== RUN   TestConfigurationDeviceIdentity/fqdn
+=== RUN   TestConfigurationDeviceIdentity/ip
+=== RUN   TestConfigurationDeviceIdentity/serial
+=== RUN   TestConfigurationDeviceIdentity/conflict
+=== RUN   TestConfigurationDeviceIdentity/stale-ip
+=== RUN   TestConfigurationDeviceIdentity/stale-serial
+=== RUN   TestConfigurationDeviceIdentity/ap-ip
+=== RUN   TestConfigurationDeviceIdentity/ap-name
+=== RUN   TestConfigurationDeviceIdentity/ap-serial
+=== RUN   TestConfigurationDeviceIdentity/invalid-ip
+--- PASS: TestConfigurationDeviceIdentity (0.00s)
+    --- PASS: TestConfigurationDeviceIdentity/fqdn (0.00s)
+    --- PASS: TestConfigurationDeviceIdentity/ip (0.00s)
+    --- PASS: TestConfigurationDeviceIdentity/serial (0.00s)
+    --- PASS: TestConfigurationDeviceIdentity/conflict (0.00s)
+    --- PASS: TestConfigurationDeviceIdentity/stale-ip (0.00s)
+    --- PASS: TestConfigurationDeviceIdentity/stale-serial (0.00s)
+    --- PASS: TestConfigurationDeviceIdentity/ap-ip (0.00s)
+    --- PASS: TestConfigurationDeviceIdentity/ap-name (0.00s)
+    --- PASS: TestConfigurationDeviceIdentity/ap-serial (0.00s)
+    --- PASS: TestConfigurationDeviceIdentity/invalid-ip (0.00s)
+=== RUN   TestFabricDevicesBulkApplicationRequiresIndependentProof
+=== RUN   TestFabricDevicesBulkApplicationRequiresIndependentProof/foreign-owner
+=== RUN   TestFabricDevicesBulkApplicationRequiresIndependentProof/missing-owner
+=== RUN   TestFabricDevicesBulkApplicationRequiresIndependentProof/controller-race
+=== RUN   TestFabricDevicesBulkApplicationRequiresIndependentProof/record
+=== RUN   TestFabricDevicesBulkApplicationRequiresIndependentProof/missing-proof
+=== RUN   TestFabricDevicesBulkApplicationRequiresIndependentProof/denied-proof
+=== RUN   TestFabricDevicesBulkApplicationRequiresIndependentProof/mutated-proof-input
+=== RUN   TestFabricDevicesBulkApplicationRequiresIndependentProof/native-race
+=== RUN   TestFabricDevicesBulkApplicationRequiresIndependentProof/managed-race
+=== RUN   TestFabricDevicesBulkApplicationRequiresIndependentProof/source-race
+=== RUN   TestFabricDevicesBulkApplicationRequiresIndependentProof/completion-race
+=== RUN   TestFabricDevicesBulkApplicationRequiresIndependentProof/future-end
+=== RUN   TestFabricDevicesBulkApplicationRequiresIndependentProof/partial
+=== RUN   TestFabricDevicesBulkApplicationRequiresIndependentProof/failed-task
+=== RUN   TestFabricDevicesBulkApplicationRequiresIndependentProof/missing-member
+=== RUN   TestFabricDevicesBulkApplicationRequiresIndependentProof/authorization-denied
+=== RUN   TestFabricDevicesBulkApplicationRequiresIndependentProof/authorization-race
+=== RUN   TestFabricDevicesBulkApplicationRequiresIndependentProof/lost-response
+--- PASS: TestFabricDevicesBulkApplicationRequiresIndependentProof (9.55s)
+    --- PASS: TestFabricDevicesBulkApplicationRequiresIndependentProof/foreign-owner (0.49s)
+    --- PASS: TestFabricDevicesBulkApplicationRequiresIndependentProof/missing-owner (0.61s)
+    --- PASS: TestFabricDevicesBulkApplicationRequiresIndependentProof/controller-race (0.52s)
+    --- PASS: TestFabricDevicesBulkApplicationRequiresIndependentProof/record (0.55s)
+    --- PASS: TestFabricDevicesBulkApplicationRequiresIndependentProof/missing-proof (0.44s)
+    --- PASS: TestFabricDevicesBulkApplicationRequiresIndependentProof/denied-proof (0.81s)
+    --- PASS: TestFabricDevicesBulkApplicationRequiresIndependentProof/mutated-proof-input (0.67s)
+    --- PASS: TestFabricDevicesBulkApplicationRequiresIndependentProof/native-race (0.47s)
+    --- PASS: TestFabricDevicesBulkApplicationRequiresIndependentProof/managed-race (0.57s)
+    --- PASS: TestFabricDevicesBulkApplicationRequiresIndependentProof/source-race (0.46s)
+    --- PASS: TestFabricDevicesBulkApplicationRequiresIndependentProof/completion-race (0.48s)
+    --- PASS: TestFabricDevicesBulkApplicationRequiresIndependentProof/future-end (0.45s)
+    --- PASS: TestFabricDevicesBulkApplicationRequiresIndependentProof/partial (0.46s)
+    --- PASS: TestFabricDevicesBulkApplicationRequiresIndependentProof/failed-task (0.58s)
+    --- PASS: TestFabricDevicesBulkApplicationRequiresIndependentProof/missing-member (0.48s)
+    --- PASS: TestFabricDevicesBulkApplicationRequiresIndependentProof/authorization-denied (0.51s)
+    --- PASS: TestFabricDevicesBulkApplicationRequiresIndependentProof/authorization-race (0.49s)
+    --- PASS: TestFabricDevicesBulkApplicationRequiresIndependentProof/lost-response (0.49s)
+=== RUN   TestFabricDevicesBulkDeviceEvidence
+=== RUN   TestFabricDevicesBulkDeviceEvidence/observed
+=== RUN   TestFabricDevicesBulkDeviceEvidence/zone
+=== RUN   TestFabricDevicesBulkDeviceEvidence/pending
+=== RUN   TestFabricDevicesBulkDeviceEvidence/missing-peer-query
+=== RUN   TestFabricDevicesBulkDeviceEvidence/extra-query
+=== RUN   TestFabricDevicesBulkDeviceEvidence/identity-only
+=== RUN   TestFabricDevicesBulkDeviceEvidence/bad-query
+=== RUN   TestFabricDevicesBulkDeviceEvidence/duplicate-query
+=== RUN   TestFabricDevicesBulkDeviceEvidence/query-change
+=== RUN   TestFabricDevicesBulkDeviceEvidence/wrong-worker
+=== RUN   TestFabricDevicesBulkDeviceEvidence/wrong-owner
+=== RUN   TestFabricDevicesBulkDeviceEvidence/wrong-serial
+=== RUN   TestFabricDevicesBulkDeviceEvidence/wrong-command
+=== RUN   TestFabricDevicesBulkDeviceEvidence/redacted
+=== RUN   TestFabricDevicesBulkDeviceEvidence/truncated
+=== RUN   TestFabricDevicesBulkDeviceEvidence/artifact
+=== RUN   TestFabricDevicesBulkDeviceEvidence/stale-result
+=== RUN   TestFabricDevicesBulkDeviceEvidence/before-task
+=== RUN   TestFabricDevicesBulkDeviceEvidence/old-generation
+=== RUN   TestFabricDevicesBulkDeviceEvidence/unbound
+=== RUN   TestFabricDevicesBulkDeviceEvidence/failed
+=== RUN   TestFabricDevicesBulkDeviceEvidence/missing-member
+=== RUN   TestFabricDevicesBulkDeviceEvidence/revoked
+=== RUN   TestFabricDevicesBulkDeviceEvidence/source-race
+=== RUN   TestFabricDevicesBulkDeviceEvidence/journal-race
+=== RUN   TestFabricDevicesBulkDeviceEvidence/native-race
+=== RUN   TestFabricDevicesBulkDeviceEvidence/managed-peer-race
+=== RUN   TestFabricDevicesBulkDeviceEvidence/completion-race
+=== RUN   TestFabricDevicesBulkDeviceEvidence/native-id-race
+=== RUN   TestFabricDevicesBulkDeviceEvidence/query-callback-race
+--- PASS: TestFabricDevicesBulkDeviceEvidence (18.96s)
+    --- PASS: TestFabricDevicesBulkDeviceEvidence/observed (0.72s)
+    --- PASS: TestFabricDevicesBulkDeviceEvidence/zone (0.91s)
+    --- PASS: TestFabricDevicesBulkDeviceEvidence/pending (0.64s)
+    --- PASS: TestFabricDevicesBulkDeviceEvidence/missing-peer-query (0.58s)
+    --- PASS: TestFabricDevicesBulkDeviceEvidence/extra-query (0.59s)
+    --- PASS: TestFabricDevicesBulkDeviceEvidence/identity-only (0.59s)
+    --- PASS: TestFabricDevicesBulkDeviceEvidence/bad-query (0.64s)
+    --- PASS: TestFabricDevicesBulkDeviceEvidence/duplicate-query (0.59s)
+    --- PASS: TestFabricDevicesBulkDeviceEvidence/query-change (0.65s)
+    --- PASS: TestFabricDevicesBulkDeviceEvidence/wrong-worker (0.65s)
+    --- PASS: TestFabricDevicesBulkDeviceEvidence/wrong-owner (0.61s)
+    --- PASS: TestFabricDevicesBulkDeviceEvidence/wrong-serial (0.61s)
+    --- PASS: TestFabricDevicesBulkDeviceEvidence/wrong-command (0.68s)
+    --- PASS: TestFabricDevicesBulkDeviceEvidence/redacted (0.60s)
+    --- PASS: TestFabricDevicesBulkDeviceEvidence/truncated (0.59s)
+    --- PASS: TestFabricDevicesBulkDeviceEvidence/artifact (0.59s)
+    --- PASS: TestFabricDevicesBulkDeviceEvidence/stale-result (0.64s)
+    --- PASS: TestFabricDevicesBulkDeviceEvidence/before-task (0.65s)
+    --- PASS: TestFabricDevicesBulkDeviceEvidence/old-generation (0.63s)
+    --- PASS: TestFabricDevicesBulkDeviceEvidence/unbound (0.72s)
+    --- PASS: TestFabricDevicesBulkDeviceEvidence/failed (0.65s)
+    --- PASS: TestFabricDevicesBulkDeviceEvidence/missing-member (0.57s)
+    --- PASS: TestFabricDevicesBulkDeviceEvidence/revoked (0.57s)
+    --- PASS: TestFabricDevicesBulkDeviceEvidence/source-race (0.61s)
+    --- PASS: TestFabricDevicesBulkDeviceEvidence/journal-race (0.62s)
+    --- PASS: TestFabricDevicesBulkDeviceEvidence/native-race (0.57s)
+    --- PASS: TestFabricDevicesBulkDeviceEvidence/managed-peer-race (0.56s)
+    --- PASS: TestFabricDevicesBulkDeviceEvidence/completion-race (0.64s)
+    --- PASS: TestFabricDevicesBulkDeviceEvidence/native-id-race (0.63s)
+    --- PASS: TestFabricDevicesBulkDeviceEvidence/query-callback-race (0.66s)
+=== RUN   TestFabricDevicesBulkEvidencePostTaskBoundary
+--- PASS: TestFabricDevicesBulkEvidencePostTaskBoundary (0.43s)
+=== RUN   TestFabricDevicesBulkPublicDeviceEvidence
+--- PASS: TestFabricDevicesBulkPublicDeviceEvidence (0.75s)
+=== RUN   TestFabricDevicesBulkDispatchUsesSharedPermit
+=== RUN   TestFabricDevicesBulkDispatchUsesSharedPermit/accepted
+=== RUN   TestFabricDevicesBulkDispatchUsesSharedPermit/partial
+=== RUN   TestFabricDevicesBulkDispatchUsesSharedPermit/lost
+=== RUN   TestFabricDevicesBulkDispatchUsesSharedPermit/denied
+=== RUN   TestFabricDevicesBulkDispatchUsesSharedPermit/missing-permit
+=== RUN   TestFabricDevicesBulkDispatchUsesSharedPermit/changed-source
+=== RUN   TestFabricDevicesBulkDispatchUsesSharedPermit/replaced-peer
+=== RUN   TestFabricDevicesBulkDispatchUsesSharedPermit/revoked-after-acceptance
+--- PASS: TestFabricDevicesBulkDispatchUsesSharedPermit (2.12s)
+    --- PASS: TestFabricDevicesBulkDispatchUsesSharedPermit/accepted (0.36s)
+    --- PASS: TestFabricDevicesBulkDispatchUsesSharedPermit/partial (0.36s)
+    --- PASS: TestFabricDevicesBulkDispatchUsesSharedPermit/lost (0.36s)
+    --- PASS: TestFabricDevicesBulkDispatchUsesSharedPermit/denied (0.29s)
+    --- PASS: TestFabricDevicesBulkDispatchUsesSharedPermit/missing-permit (0.12s)
+    --- PASS: TestFabricDevicesBulkDispatchUsesSharedPermit/changed-source (0.12s)
+    --- PASS: TestFabricDevicesBulkDispatchUsesSharedPermit/replaced-peer (0.13s)
+    --- PASS: TestFabricDevicesBulkDispatchUsesSharedPermit/revoked-after-acceptance (0.37s)
+=== RUN   TestFabricDevicesBulkPinnedGroupsAndStableChunks
+--- PASS: TestFabricDevicesBulkPinnedGroupsAndStableChunks (0.00s)
+=== RUN   TestFabricDevicesBulkPublicManifestPreparation
+=== RUN   TestFabricDevicesBulkPublicManifestPreparation/prepare
+=== RUN   TestFabricDevicesBulkPublicManifestPreparation/bootstrap-parent
+=== RUN   TestFabricDevicesBulkPublicManifestPreparation/mixed-zone
+=== RUN   TestFabricDevicesBulkPublicManifestPreparation/noop
+=== RUN   TestFabricDevicesBulkPublicManifestPreparation/missing-peer
+=== RUN   TestFabricDevicesBulkPublicManifestPreparation/missing-runtime
+=== RUN   TestFabricDevicesBulkPublicManifestPreparation/bad-bool
+=== RUN   TestFabricDevicesBulkPublicManifestPreparation/wrong-section
+=== RUN   TestFabricDevicesBulkPublicManifestPreparation/delete
+=== RUN   TestFabricDevicesBulkPublicManifestPreparation/unsupported
+=== RUN   TestFabricDevicesBulkPublicManifestPreparation/late-zone
+--- PASS: TestFabricDevicesBulkPublicManifestPreparation (1.09s)
+    --- PASS: TestFabricDevicesBulkPublicManifestPreparation/prepare (0.16s)
+    --- PASS: TestFabricDevicesBulkPublicManifestPreparation/bootstrap-parent (0.18s)
+    --- PASS: TestFabricDevicesBulkPublicManifestPreparation/mixed-zone (0.18s)
+    --- PASS: TestFabricDevicesBulkPublicManifestPreparation/noop (0.15s)
+    --- PASS: TestFabricDevicesBulkPublicManifestPreparation/missing-peer (0.07s)
+    --- PASS: TestFabricDevicesBulkPublicManifestPreparation/missing-runtime (0.05s)
+    --- PASS: TestFabricDevicesBulkPublicManifestPreparation/bad-bool (0.04s)
+    --- PASS: TestFabricDevicesBulkPublicManifestPreparation/wrong-section (0.04s)
+    --- PASS: TestFabricDevicesBulkPublicManifestPreparation/delete (0.04s)
+    --- PASS: TestFabricDevicesBulkPublicManifestPreparation/unsupported (0.04s)
+    --- PASS: TestFabricDevicesBulkPublicManifestPreparation/late-zone (0.12s)
+=== RUN   TestFabricDevicesBulkIncomingIdentity
+=== RUN   TestFabricDevicesBulkIncomingIdentity/v2
+=== RUN   TestFabricDevicesBulkIncomingIdentity/v2-declared-peer
+=== RUN   TestFabricDevicesBulkIncomingIdentity/v2-parent-projection
+=== RUN   TestFabricDevicesBulkIncomingIdentity/zone-only-parent-refused
+=== RUN   TestFabricDevicesBulkIncomingIdentity/legacy
+=== RUN   TestFabricDevicesBulkIncomingIdentity/legacy-declared-peer
+--- PASS: TestFabricDevicesBulkIncomingIdentity (0.43s)
+    --- PASS: TestFabricDevicesBulkIncomingIdentity/v2 (0.08s)
+    --- PASS: TestFabricDevicesBulkIncomingIdentity/v2-declared-peer (0.08s)
+    --- PASS: TestFabricDevicesBulkIncomingIdentity/v2-parent-projection (0.08s)
+    --- PASS: TestFabricDevicesBulkIncomingIdentity/zone-only-parent-refused (0.03s)
+    --- PASS: TestFabricDevicesBulkIncomingIdentity/legacy (0.09s)
+    --- PASS: TestFabricDevicesBulkIncomingIdentity/legacy-declared-peer (0.08s)
+=== RUN   TestFabricDevicesBulkIdentityRejectsMalformedIncomingSet
+--- PASS: TestFabricDevicesBulkIdentityRejectsMalformedIncomingSet (0.00s)
+=== RUN   TestFabricDevicesBulkDeferredParentPreflightIsNotAuthority
+=== RUN   TestFabricDevicesBulkDeferredParentPreflightIsNotAuthority/valid
+=== RUN   TestFabricDevicesBulkDeferredParentPreflightIsNotAuthority/wrong-fabric
+=== RUN   TestFabricDevicesBulkDeferredParentPreflightIsNotAuthority/undeclared-parent
+=== RUN   TestFabricDevicesBulkDeferredParentPreflightIsNotAuthority/wrong-role
+=== RUN   TestFabricDevicesBulkDeferredParentPreflightIsNotAuthority/bad-body
+=== RUN   TestFabricDevicesBulkDeferredParentPreflightIsNotAuthority/missing-managed-parent
+--- PASS: TestFabricDevicesBulkDeferredParentPreflightIsNotAuthority (0.24s)
+    --- PASS: TestFabricDevicesBulkDeferredParentPreflightIsNotAuthority/valid (0.05s)
+    --- PASS: TestFabricDevicesBulkDeferredParentPreflightIsNotAuthority/wrong-fabric (0.04s)
+    --- PASS: TestFabricDevicesBulkDeferredParentPreflightIsNotAuthority/undeclared-parent (0.04s)
+    --- PASS: TestFabricDevicesBulkDeferredParentPreflightIsNotAuthority/wrong-role (0.04s)
+    --- PASS: TestFabricDevicesBulkDeferredParentPreflightIsNotAuthority/bad-body (0.04s)
+    --- PASS: TestFabricDevicesBulkDeferredParentPreflightIsNotAuthority/missing-managed-parent (0.04s)
+=== RUN   TestFabricDevicesBulkDeferredParentsRequireFreshNativeReadback
+--- PASS: TestFabricDevicesBulkDeferredParentsRequireFreshNativeReadback (0.22s)
+=== RUN   TestFabricDevicesBulkSourceBoundPreparation
+=== RUN   TestFabricDevicesBulkSourceBoundPreparation/prepare
+=== RUN   TestFabricDevicesBulkSourceBoundPreparation/noop
+=== RUN   TestFabricDevicesBulkSourceBoundPreparation/changed-source
+=== RUN   TestFabricDevicesBulkSourceBoundPreparation/foreign-owner
+=== RUN   TestFabricDevicesBulkSourceBoundPreparation/undeclared-member
+=== RUN   TestFabricDevicesBulkSourceBoundPreparation/changed-role
+=== RUN   TestFabricDevicesBulkSourceBoundPreparation/missing-peer
+=== RUN   TestFabricDevicesBulkSourceBoundPreparation/missing-runtime
+--- PASS: TestFabricDevicesBulkSourceBoundPreparation (0.33s)
+    --- PASS: TestFabricDevicesBulkSourceBoundPreparation/prepare (0.07s)
+    --- PASS: TestFabricDevicesBulkSourceBoundPreparation/noop (0.05s)
+    --- PASS: TestFabricDevicesBulkSourceBoundPreparation/changed-source (0.03s)
+    --- PASS: TestFabricDevicesBulkSourceBoundPreparation/foreign-owner (0.07s)
+    --- PASS: TestFabricDevicesBulkSourceBoundPreparation/undeclared-member (0.02s)
+    --- PASS: TestFabricDevicesBulkSourceBoundPreparation/changed-role (0.02s)
+    --- PASS: TestFabricDevicesBulkSourceBoundPreparation/missing-peer (0.04s)
+    --- PASS: TestFabricDevicesBulkSourceBoundPreparation/missing-runtime (0.02s)
+=== RUN   TestFabricDevicesBulkPublicAcknowledgedRecovery
+=== RUN   TestFabricDevicesBulkPublicAcknowledgedRecovery/accepted
+=== RUN   TestFabricDevicesBulkPublicAcknowledgedRecovery/unknown
+=== RUN   TestFabricDevicesBulkPublicAcknowledgedRecovery/declared-peer
+=== RUN   TestFabricDevicesBulkPublicAcknowledgedRecovery/running
+=== RUN   TestFabricDevicesBulkPublicAcknowledgedRecovery/failed
+=== RUN   TestFabricDevicesBulkPublicAcknowledgedRecovery/partial
+=== RUN   TestFabricDevicesBulkPublicAcknowledgedRecovery/revoked
+=== RUN   TestFabricDevicesBulkPublicAcknowledgedRecovery/changed-source
+=== RUN   TestFabricDevicesBulkPublicAcknowledgedRecovery/pruned-group
+--- PASS: TestFabricDevicesBulkPublicAcknowledgedRecovery (4.23s)
+    --- PASS: TestFabricDevicesBulkPublicAcknowledgedRecovery/accepted (0.49s)
+    --- PASS: TestFabricDevicesBulkPublicAcknowledgedRecovery/unknown (0.53s)
+    --- PASS: TestFabricDevicesBulkPublicAcknowledgedRecovery/declared-peer (0.52s)
+    --- PASS: TestFabricDevicesBulkPublicAcknowledgedRecovery/running (0.45s)
+    --- PASS: TestFabricDevicesBulkPublicAcknowledgedRecovery/failed (0.46s)
+    --- PASS: TestFabricDevicesBulkPublicAcknowledgedRecovery/partial (0.49s)
+    --- PASS: TestFabricDevicesBulkPublicAcknowledgedRecovery/revoked (0.47s)
+    --- PASS: TestFabricDevicesBulkPublicAcknowledgedRecovery/changed-source (0.42s)
+    --- PASS: TestFabricDevicesBulkPublicAcknowledgedRecovery/pruned-group (0.42s)
+=== RUN   TestFabricDevicesBulkManagedFootprint
+=== RUN   TestFabricDevicesBulkManagedFootprint/valid
+=== RUN   TestFabricDevicesBulkManagedFootprint/zone
+=== RUN   TestFabricDevicesBulkManagedFootprint/missing-incoming
+=== RUN   TestFabricDevicesBulkManagedFootprint/missing-peer
+=== RUN   TestFabricDevicesBulkManagedFootprint/peer-alias
+=== RUN   TestFabricDevicesBulkManagedFootprint/wrong-address
+=== RUN   TestFabricDevicesBulkManagedFootprint/wrong-driver
+=== RUN   TestFabricDevicesBulkManagedFootprint/node-replaced
+=== RUN   TestFabricDevicesBulkManagedFootprint/guard-peer-node-race
+=== RUN   TestFabricDevicesBulkManagedFootprint/guard-incoming-address-race
+=== RUN   TestFabricDevicesBulkManagedFootprint/native-peer-race
+--- PASS: TestFabricDevicesBulkManagedFootprint (0.63s)
+    --- PASS: TestFabricDevicesBulkManagedFootprint/valid (0.10s)
+    --- PASS: TestFabricDevicesBulkManagedFootprint/zone (0.12s)
+    --- PASS: TestFabricDevicesBulkManagedFootprint/missing-incoming (0.03s)
+    --- PASS: TestFabricDevicesBulkManagedFootprint/missing-peer (0.03s)
+    --- PASS: TestFabricDevicesBulkManagedFootprint/peer-alias (0.03s)
+    --- PASS: TestFabricDevicesBulkManagedFootprint/wrong-address (0.03s)
+    --- PASS: TestFabricDevicesBulkManagedFootprint/wrong-driver (0.03s)
+    --- PASS: TestFabricDevicesBulkManagedFootprint/node-replaced (0.03s)
+    --- PASS: TestFabricDevicesBulkManagedFootprint/guard-peer-node-race (0.09s)
+    --- PASS: TestFabricDevicesBulkManagedFootprint/guard-incoming-address-race (0.08s)
+    --- PASS: TestFabricDevicesBulkManagedFootprint/native-peer-race (0.09s)
+=== RUN   TestFabricDevicesBulkPhysicalFootprintAndRecovery
+=== RUN   TestFabricDevicesBulkPhysicalFootprintAndRecovery/create
+=== RUN   TestFabricDevicesBulkPhysicalFootprintAndRecovery/legacy
+=== RUN   TestFabricDevicesBulkPhysicalFootprintAndRecovery/zone
+=== RUN   TestFabricDevicesBulkPhysicalFootprintAndRecovery/existing
+=== RUN   TestFabricDevicesBulkPhysicalFootprintAndRecovery/noop
+=== RUN   TestFabricDevicesBulkPhysicalFootprintAndRecovery/partial
+=== RUN   TestFabricDevicesBulkPhysicalFootprintAndRecovery/lost
+=== RUN   TestFabricDevicesBulkPhysicalFootprintAndRecovery/denied
+=== RUN   TestFabricDevicesBulkPhysicalFootprintAndRecovery/missing-guard
+=== RUN   TestFabricDevicesBulkPhysicalFootprintAndRecovery/duplicate
+=== RUN   TestFabricDevicesBulkPhysicalFootprintAndRecovery/alias
+=== RUN   TestFabricDevicesBulkPhysicalFootprintAndRecovery/late-peer
+=== RUN   TestFabricDevicesBulkPhysicalFootprintAndRecovery/guard-target
+=== RUN   TestFabricDevicesBulkPhysicalFootprintAndRecovery/recovery-peer
+=== RUN   TestFabricDevicesBulkPhysicalFootprintAndRecovery/existing-replaced
+=== RUN   TestFabricDevicesBulkPhysicalFootprintAndRecovery/wrong-role
+=== RUN   TestFabricDevicesBulkPhysicalFootprintAndRecovery/caller-change
+--- PASS: TestFabricDevicesBulkPhysicalFootprintAndRecovery (0.48s)
+    --- PASS: TestFabricDevicesBulkPhysicalFootprintAndRecovery/create (0.04s)
+    --- PASS: TestFabricDevicesBulkPhysicalFootprintAndRecovery/legacy (0.04s)
+    --- PASS: TestFabricDevicesBulkPhysicalFootprintAndRecovery/zone (0.05s)
+    --- PASS: TestFabricDevicesBulkPhysicalFootprintAndRecovery/existing (0.04s)
+    --- PASS: TestFabricDevicesBulkPhysicalFootprintAndRecovery/noop (0.02s)
+    --- PASS: TestFabricDevicesBulkPhysicalFootprintAndRecovery/partial (0.03s)
+    --- PASS: TestFabricDevicesBulkPhysicalFootprintAndRecovery/lost (0.03s)
+    --- PASS: TestFabricDevicesBulkPhysicalFootprintAndRecovery/denied (0.02s)
+    --- PASS: TestFabricDevicesBulkPhysicalFootprintAndRecovery/missing-guard (0.02s)
+    --- PASS: TestFabricDevicesBulkPhysicalFootprintAndRecovery/duplicate (0.01s)
+    --- PASS: TestFabricDevicesBulkPhysicalFootprintAndRecovery/alias (0.01s)
+    --- PASS: TestFabricDevicesBulkPhysicalFootprintAndRecovery/late-peer (0.02s)
+    --- PASS: TestFabricDevicesBulkPhysicalFootprintAndRecovery/guard-target (0.02s)
+    --- PASS: TestFabricDevicesBulkPhysicalFootprintAndRecovery/recovery-peer (0.04s)
+    --- PASS: TestFabricDevicesBulkPhysicalFootprintAndRecovery/existing-replaced (0.03s)
+    --- PASS: TestFabricDevicesBulkPhysicalFootprintAndRecovery/wrong-role (0.03s)
+    --- PASS: TestFabricDevicesBulkPhysicalFootprintAndRecovery/caller-change (0.04s)
+=== RUN   TestFabricDevicesBulkCannotUseLogicalAdmission
+--- PASS: TestFabricDevicesBulkCannotUseLogicalAdmission (0.01s)
+=== RUN   TestSDATransitDeviceEvidence
+=== RUN   TestSDATransitDeviceEvidence/observed
+=== RUN   TestSDATransitDeviceEvidence/opaque-session-text
+=== RUN   TestSDATransitDeviceEvidence/pending
+=== RUN   TestSDATransitDeviceEvidence/missing-member
+=== RUN   TestSDATransitDeviceEvidence/unbound
+=== RUN   TestSDATransitDeviceEvidence/wrong-worker
+=== RUN   TestSDATransitDeviceEvidence/wrong-owner
+=== RUN   TestSDATransitDeviceEvidence/wrong-command
+=== RUN   TestSDATransitDeviceEvidence/wrong-serial
+=== RUN   TestSDATransitDeviceEvidence/truncated
+=== RUN   TestSDATransitDeviceEvidence/redacted
+=== RUN   TestSDATransitDeviceEvidence/artifact
+=== RUN   TestSDATransitDeviceEvidence/before-task
+=== RUN   TestSDATransitDeviceEvidence/stale-result
+=== RUN   TestSDATransitDeviceEvidence/future-result
+=== RUN   TestSDATransitDeviceEvidence/failed
+=== RUN   TestSDATransitDeviceEvidence/old-generation
+=== RUN   TestSDATransitDeviceEvidence/duplicate-ready
+=== RUN   TestSDATransitDeviceEvidence/source-race
+=== RUN   TestSDATransitDeviceEvidence/native-race
+=== RUN   TestSDATransitDeviceEvidence/completion-race
+=== RUN   TestSDATransitDeviceEvidence/authority-denied
+=== RUN   TestSDATransitDeviceEvidence/result-replaced
+=== RUN   TestSDATransitDeviceEvidence/foreign-owner
+=== RUN   TestSDATransitDeviceEvidence/disabled
+--- PASS: TestSDATransitDeviceEvidence (11.98s)
+    --- PASS: TestSDATransitDeviceEvidence/observed (0.49s)
+    --- PASS: TestSDATransitDeviceEvidence/opaque-session-text (0.50s)
+    --- PASS: TestSDATransitDeviceEvidence/pending (0.53s)
+    --- PASS: TestSDATransitDeviceEvidence/missing-member (0.43s)
+    --- PASS: TestSDATransitDeviceEvidence/unbound (0.50s)
+    --- PASS: TestSDATransitDeviceEvidence/wrong-worker (0.50s)
+    --- PASS: TestSDATransitDeviceEvidence/wrong-owner (0.50s)
+    --- PASS: TestSDATransitDeviceEvidence/wrong-command (0.46s)
+    --- PASS: TestSDATransitDeviceEvidence/wrong-serial (0.45s)
+    --- PASS: TestSDATransitDeviceEvidence/truncated (0.45s)
+    --- PASS: TestSDATransitDeviceEvidence/redacted (0.46s)
+    --- PASS: TestSDATransitDeviceEvidence/artifact (0.45s)
+    --- PASS: TestSDATransitDeviceEvidence/before-task (0.50s)
+    --- PASS: TestSDATransitDeviceEvidence/stale-result (0.50s)
+    --- PASS: TestSDATransitDeviceEvidence/future-result (0.53s)
+    --- PASS: TestSDATransitDeviceEvidence/failed (0.51s)
+    --- PASS: TestSDATransitDeviceEvidence/old-generation (0.50s)
+    --- PASS: TestSDATransitDeviceEvidence/duplicate-ready (0.50s)
+    --- PASS: TestSDATransitDeviceEvidence/source-race (0.46s)
+    --- PASS: TestSDATransitDeviceEvidence/native-race (0.43s)
+    --- PASS: TestSDATransitDeviceEvidence/completion-race (0.52s)
+    --- PASS: TestSDATransitDeviceEvidence/authority-denied (0.45s)
+    --- PASS: TestSDATransitDeviceEvidence/result-replaced (0.50s)
+    --- PASS: TestSDATransitDeviceEvidence/foreign-owner (0.42s)
+    --- PASS: TestSDATransitDeviceEvidence/disabled (0.42s)
+=== RUN   TestWiredBulkDeviceWorkerEvidence
+=== RUN   TestWiredBulkDeviceWorkerEvidence/observed
+=== RUN   TestWiredBulkDeviceWorkerEvidence/pending
+=== RUN   TestWiredBulkDeviceWorkerEvidence/missing-member
+=== RUN   TestWiredBulkDeviceWorkerEvidence/missing-query
+=== RUN   TestWiredBulkDeviceWorkerEvidence/extra-query
+=== RUN   TestWiredBulkDeviceWorkerEvidence/identity-only
+=== RUN   TestWiredBulkDeviceWorkerEvidence/bad-query
+=== RUN   TestWiredBulkDeviceWorkerEvidence/failed
+=== RUN   TestWiredBulkDeviceWorkerEvidence/old-generation
+=== RUN   TestWiredBulkDeviceWorkerEvidence/unbound
+=== RUN   TestWiredBulkDeviceWorkerEvidence/wrong-worker
+=== RUN   TestWiredBulkDeviceWorkerEvidence/wrong-owner
+=== RUN   TestWiredBulkDeviceWorkerEvidence/wrong-command
+=== RUN   TestWiredBulkDeviceWorkerEvidence/wrong-serial
+=== RUN   TestWiredBulkDeviceWorkerEvidence/truncated
+=== RUN   TestWiredBulkDeviceWorkerEvidence/redacted
+=== RUN   TestWiredBulkDeviceWorkerEvidence/artifact
+=== RUN   TestWiredBulkDeviceWorkerEvidence/before-task
+=== RUN   TestWiredBulkDeviceWorkerEvidence/future-result
+=== RUN   TestWiredBulkDeviceWorkerEvidence/stale-result
+=== RUN   TestWiredBulkDeviceWorkerEvidence/duplicate-ready
+=== RUN   TestWiredBulkDeviceWorkerEvidence/source-race
+=== RUN   TestWiredBulkDeviceWorkerEvidence/native-race
+=== RUN   TestWiredBulkDeviceWorkerEvidence/completion-race
+=== RUN   TestWiredBulkDeviceWorkerEvidence/authority-revoked
+=== RUN   TestWiredBulkDeviceWorkerEvidence/journal-race
+=== RUN   TestWiredBulkDeviceWorkerEvidence/query-change
+=== RUN   TestWiredBulkDeviceWorkerEvidence/foreign-section-owner
+--- PASS: TestWiredBulkDeviceWorkerEvidence (9.02s)
+    --- PASS: TestWiredBulkDeviceWorkerEvidence/observed (0.37s)
+    --- PASS: TestWiredBulkDeviceWorkerEvidence/pending (0.34s)
+    --- PASS: TestWiredBulkDeviceWorkerEvidence/missing-member (0.30s)
+    --- PASS: TestWiredBulkDeviceWorkerEvidence/missing-query (0.30s)
+    --- PASS: TestWiredBulkDeviceWorkerEvidence/extra-query (0.31s)
+    --- PASS: TestWiredBulkDeviceWorkerEvidence/identity-only (0.30s)
+    --- PASS: TestWiredBulkDeviceWorkerEvidence/bad-query (0.30s)
+    --- PASS: TestWiredBulkDeviceWorkerEvidence/failed (0.34s)
+    --- PASS: TestWiredBulkDeviceWorkerEvidence/old-generation (0.34s)
+    --- PASS: TestWiredBulkDeviceWorkerEvidence/unbound (0.34s)
+    --- PASS: TestWiredBulkDeviceWorkerEvidence/wrong-worker (0.33s)
+    --- PASS: TestWiredBulkDeviceWorkerEvidence/wrong-owner (0.32s)
+    --- PASS: TestWiredBulkDeviceWorkerEvidence/wrong-command (0.33s)
+    --- PASS: TestWiredBulkDeviceWorkerEvidence/wrong-serial (0.33s)
+    --- PASS: TestWiredBulkDeviceWorkerEvidence/truncated (0.32s)
+    --- PASS: TestWiredBulkDeviceWorkerEvidence/redacted (0.32s)
+    --- PASS: TestWiredBulkDeviceWorkerEvidence/artifact (0.32s)
+    --- PASS: TestWiredBulkDeviceWorkerEvidence/before-task (0.34s)
+    --- PASS: TestWiredBulkDeviceWorkerEvidence/future-result (0.33s)
+    --- PASS: TestWiredBulkDeviceWorkerEvidence/stale-result (0.33s)
+    --- PASS: TestWiredBulkDeviceWorkerEvidence/duplicate-ready (0.34s)
+    --- PASS: TestWiredBulkDeviceWorkerEvidence/source-race (0.30s)
+    --- PASS: TestWiredBulkDeviceWorkerEvidence/native-race (0.33s)
+    --- PASS: TestWiredBulkDeviceWorkerEvidence/completion-race (0.31s)
+    --- PASS: TestWiredBulkDeviceWorkerEvidence/authority-revoked (0.30s)
+    --- PASS: TestWiredBulkDeviceWorkerEvidence/journal-race (0.30s)
+    --- PASS: TestWiredBulkDeviceWorkerEvidence/query-change (0.33s)
+    --- PASS: TestWiredBulkDeviceWorkerEvidence/foreign-section-owner (0.31s)
+=== RUN   TestWiredBulkDeviceEvidenceWaitsForPostTaskBoundary
+--- PASS: TestWiredBulkDeviceEvidenceWaitsForPostTaskBoundary (0.22s)
+=== RUN   TestWiredBulkNetworkCLIRequiresExactScopedIntent
+=== RUN   TestWiredBulkNetworkCLIRequiresExactScopedIntent/match
+=== RUN   TestWiredBulkNetworkCLIRequiresExactScopedIntent/split-dns
+=== RUN   TestWiredBulkNetworkCLIRequiresExactScopedIntent/domain-alias
+=== RUN   TestWiredBulkNetworkCLIRequiresExactScopedIntent/canonical-ipv6
+=== RUN   TestWiredBulkNetworkCLIRequiresExactScopedIntent/ntp-hostname
+=== RUN   TestWiredBulkNetworkCLIRequiresExactScopedIntent/wrong-ntp
+=== RUN   TestWiredBulkNetworkCLIRequiresExactScopedIntent/extra-ntp
+=== RUN   TestWiredBulkNetworkCLIRequiresExactScopedIntent/duplicate-ntp
+=== RUN   TestWiredBulkNetworkCLIRequiresExactScopedIntent/ntp-options
+=== RUN   TestWiredBulkNetworkCLIRequiresExactScopedIntent/wrong-dns
+=== RUN   TestWiredBulkNetworkCLIRequiresExactScopedIntent/dns-order
+=== RUN   TestWiredBulkNetworkCLIRequiresExactScopedIntent/extra-dns
+=== RUN   TestWiredBulkNetworkCLIRequiresExactScopedIntent/duplicate-dns
+=== RUN   TestWiredBulkNetworkCLIRequiresExactScopedIntent/dns-vrf
+=== RUN   TestWiredBulkNetworkCLIRequiresExactScopedIntent/wrong-domain
+=== RUN   TestWiredBulkNetworkCLIRequiresExactScopedIntent/extra-domain
+=== RUN   TestWiredBulkNetworkCLIRequiresExactScopedIntent/dns-option
+=== RUN   TestWiredBulkNetworkCLIRequiresExactScopedIntent/cli-error
+=== RUN   TestWiredBulkNetworkCLIRequiresExactScopedIntent/missing-output
+=== RUN   TestWiredBulkNetworkCLIRequiresExactScopedIntent/unsupported-kind
+=== RUN   TestWiredBulkNetworkCLIRequiresExactScopedIntent/duplicate-kind
+--- PASS: TestWiredBulkNetworkCLIRequiresExactScopedIntent (0.00s)
+    --- PASS: TestWiredBulkNetworkCLIRequiresExactScopedIntent/match (0.00s)
+    --- PASS: TestWiredBulkNetworkCLIRequiresExactScopedIntent/split-dns (0.00s)
+    --- PASS: TestWiredBulkNetworkCLIRequiresExactScopedIntent/domain-alias (0.00s)
+    --- PASS: TestWiredBulkNetworkCLIRequiresExactScopedIntent/canonical-ipv6 (0.00s)
+    --- PASS: TestWiredBulkNetworkCLIRequiresExactScopedIntent/ntp-hostname (0.00s)
+    --- PASS: TestWiredBulkNetworkCLIRequiresExactScopedIntent/wrong-ntp (0.00s)
+    --- PASS: TestWiredBulkNetworkCLIRequiresExactScopedIntent/extra-ntp (0.00s)
+    --- PASS: TestWiredBulkNetworkCLIRequiresExactScopedIntent/duplicate-ntp (0.00s)
+    --- PASS: TestWiredBulkNetworkCLIRequiresExactScopedIntent/ntp-options (0.00s)
+    --- PASS: TestWiredBulkNetworkCLIRequiresExactScopedIntent/wrong-dns (0.00s)
+    --- PASS: TestWiredBulkNetworkCLIRequiresExactScopedIntent/dns-order (0.00s)
+    --- PASS: TestWiredBulkNetworkCLIRequiresExactScopedIntent/extra-dns (0.00s)
+    --- PASS: TestWiredBulkNetworkCLIRequiresExactScopedIntent/duplicate-dns (0.00s)
+    --- PASS: TestWiredBulkNetworkCLIRequiresExactScopedIntent/dns-vrf (0.00s)
+    --- PASS: TestWiredBulkNetworkCLIRequiresExactScopedIntent/wrong-domain (0.00s)
+    --- PASS: TestWiredBulkNetworkCLIRequiresExactScopedIntent/extra-domain (0.00s)
+    --- PASS: TestWiredBulkNetworkCLIRequiresExactScopedIntent/dns-option (0.00s)
+    --- PASS: TestWiredBulkNetworkCLIRequiresExactScopedIntent/cli-error (0.00s)
+    --- PASS: TestWiredBulkNetworkCLIRequiresExactScopedIntent/missing-output (0.00s)
+    --- PASS: TestWiredBulkNetworkCLIRequiresExactScopedIntent/unsupported-kind (0.00s)
+    --- PASS: TestWiredBulkNetworkCLIRequiresExactScopedIntent/duplicate-kind (0.00s)
+=== RUN   TestWiredBulkNetworkContextUsesPinnedModel
+=== RUN   TestWiredBulkNetworkContextUsesPinnedModel/inherited
+=== RUN   TestWiredBulkNetworkContextUsesPinnedModel/nearest
+=== RUN   TestWiredBulkNetworkContextUsesPinnedModel/per-kind
+=== RUN   TestWiredBulkNetworkContextUsesPinnedModel/undefined
+=== RUN   TestWiredBulkNetworkContextUsesPinnedModel/bad-profile
+=== RUN   TestWiredBulkNetworkContextUsesPinnedModel/bad-geometry
+=== RUN   TestWiredBulkNetworkContextUsesPinnedModel/missing-context
+=== RUN   TestWiredBulkNetworkContextUsesPinnedModel/unknown-section
+=== RUN   TestWiredBulkNetworkContextUsesPinnedModel/credential-profile
+--- PASS: TestWiredBulkNetworkContextUsesPinnedModel (0.03s)
+    --- PASS: TestWiredBulkNetworkContextUsesPinnedModel/inherited (0.01s)
+    --- PASS: TestWiredBulkNetworkContextUsesPinnedModel/nearest (0.01s)
+    --- PASS: TestWiredBulkNetworkContextUsesPinnedModel/per-kind (0.01s)
+    --- PASS: TestWiredBulkNetworkContextUsesPinnedModel/undefined (0.00s)
+    --- PASS: TestWiredBulkNetworkContextUsesPinnedModel/bad-profile (0.00s)
+    --- PASS: TestWiredBulkNetworkContextUsesPinnedModel/bad-geometry (0.00s)
+    --- PASS: TestWiredBulkNetworkContextUsesPinnedModel/missing-context (0.00s)
+    --- PASS: TestWiredBulkNetworkContextUsesPinnedModel/unknown-section (0.00s)
+    --- PASS: TestWiredBulkNetworkContextUsesPinnedModel/credential-profile (0.00s)
+=== RUN   TestWiredBulkNetworkContextFencesPreparationAndRecovery
+=== RUN   TestWiredBulkNetworkContextFencesPreparationAndRecovery/matching
+=== RUN   TestWiredBulkNetworkContextFencesPreparationAndRecovery/changed-before-prepare
+=== RUN   TestWiredBulkNetworkContextFencesPreparationAndRecovery/changed-after-prepare
+=== RUN   TestWiredBulkNetworkContextFencesPreparationAndRecovery/changed-during-dispatch
+=== RUN   TestWiredBulkNetworkContextFencesPreparationAndRecovery/changed-after-acceptance
+=== RUN   TestWiredBulkNetworkContextFencesPreparationAndRecovery/changed-source
+=== RUN   TestWiredBulkNetworkContextFencesPreparationAndRecovery/changed-during-device-proof
+--- PASS: TestWiredBulkNetworkContextFencesPreparationAndRecovery (1.47s)
+    --- PASS: TestWiredBulkNetworkContextFencesPreparationAndRecovery/matching (0.29s)
+    --- PASS: TestWiredBulkNetworkContextFencesPreparationAndRecovery/changed-before-prepare (0.05s)
+    --- PASS: TestWiredBulkNetworkContextFencesPreparationAndRecovery/changed-after-prepare (0.13s)
+    --- PASS: TestWiredBulkNetworkContextFencesPreparationAndRecovery/changed-during-dispatch (0.19s)
+    --- PASS: TestWiredBulkNetworkContextFencesPreparationAndRecovery/changed-after-acceptance (0.30s)
+    --- PASS: TestWiredBulkNetworkContextFencesPreparationAndRecovery/changed-source (0.15s)
+    --- PASS: TestWiredBulkNetworkContextFencesPreparationAndRecovery/changed-during-device-proof (0.38s)
+=== RUN   TestWiredBulkNetworkQueriesUseExistingWorkerPolicy
+--- PASS: TestWiredBulkNetworkQueriesUseExistingWorkerPolicy (0.00s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	65.373s

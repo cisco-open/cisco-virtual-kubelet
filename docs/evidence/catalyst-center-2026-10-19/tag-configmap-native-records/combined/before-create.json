@@ -1,0 +1,29 @@
+{
+  "baselineDigest": "c2aa1fe47345e5965fd6640b0f9fc334d6ef46dc57563098a2e92298dcaae70b",
+  "configDeletionTimestamp": null,
+  "configFinalizers": [
+    "config.cisco.vk/catalyst-center-tag-cleanup",
+    "example.com/other"
+  ],
+  "configGone": false,
+  "configStatus": {},
+  "configUID": "a7e4b170-9804-4405-8b66-7467466d3ca7",
+  "configuration": null,
+  "controllerConditions": null,
+  "deletes": 0,
+  "generation": 3,
+  "nativeID": "",
+  "phase": "before-create",
+  "posts": 0,
+  "projectedEpochs": [
+    {
+      "digest": "6e5d7258d79856b0194d2faae5c63cc96c10279ff8967ea114a2674c041a05cb",
+      "uid": "d11f6726-b9ee-4255-b6ba-f7f743db6aab",
+      "version": "214"
+    }
+  ],
+  "projectedSource": true,
+  "puts": 0,
+  "staleSourceRefusals": 0,
+  "tagName": "CVK-Q-Tag-Prune-1792373676884032000"
+}
