@@ -1,0 +1,19 @@
+sdwan:
+  feature_profiles:
+    service_profiles:
+      - name: CVK-SERVICE-SVI-PROFILE
+        lan_vpns:
+          - name: CVK-SERVICE-SVI-VPN
+            vpn_id: 118
+            svi_interfaces:
+              - name: CVK-SERVICE-SVI
+                interface_name: Vlan118
+                shutdown: true
+                ipv4_address: 192.0.2.118
+                ipv4_subnet_mask: 255.255.255.0
+                ipv6_address: 2001:db8:118::1/64
+                interface_mtu: 1500
+                ip_mtu: 1500
+                arp_entries:
+                  - ip_address: 192.0.2.119
+                    mac_address: 00:11:22:33:44:66

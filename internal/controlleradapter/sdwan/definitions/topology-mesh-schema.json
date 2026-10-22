@@ -1,0 +1,148 @@
+{
+  "additionalProperties": false,
+  "oneOf": [
+    {
+      "required": [
+        "sites",
+        "target"
+      ]
+    },
+    {
+      "required": [
+        "hierarchyUuid",
+        "target"
+      ]
+    },
+    {
+      "required": [
+        "siteRule",
+        "target"
+      ]
+    }
+  ],
+  "properties": {
+    "hierarchyUuid": {
+      "oneOf": [
+        {
+          "additionalProperties": false,
+          "properties": {
+            "optionType": {
+              "enum": [
+                "global"
+              ],
+              "type": "string"
+            },
+            "value": {
+              "items": {
+                "pattern": "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}",
+                "type": "string"
+              },
+              "minItems": 1,
+              "type": "array",
+              "uniqueItems": true
+            }
+          },
+          "required": [
+            "optionType",
+            "value"
+          ]
+        }
+      ],
+      "type": "object"
+    },
+    "siteRule": {
+      "additionalProperties": false,
+      "properties": {
+        "ruleId": {
+          "additionalProperties": false,
+          "properties": {
+            "optionType": {
+              "enum": [
+                "global"
+              ],
+              "type": "string"
+            },
+            "value": {
+              "pattern": "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}",
+              "type": "string"
+            }
+          },
+          "required": [
+            "optionType",
+            "value"
+          ]
+        }
+      },
+      "required": [
+        "ruleId"
+      ],
+      "type": "object"
+    },
+    "sites": {
+      "oneOf": [
+        {
+          "additionalProperties": false,
+          "properties": {
+            "optionType": {
+              "enum": [
+                "global"
+              ],
+              "type": "string"
+            },
+            "value": {
+              "items": {
+                "type": "string"
+              },
+              "minItems": 1,
+              "type": "array",
+              "uniqueItems": true
+            }
+          },
+          "required": [
+            "optionType",
+            "value"
+          ]
+        }
+      ],
+      "type": "object"
+    },
+    "target": {
+      "description": "Target Vpn",
+      "properties": {
+        "vpn": {
+          "oneOf": [
+            {
+              "additionalProperties": false,
+              "properties": {
+                "optionType": {
+                  "enum": [
+                    "global"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "minItems": 1,
+                  "type": "array",
+                  "uniqueItems": true
+                }
+              },
+              "required": [
+                "optionType",
+                "value"
+              ]
+            }
+          ],
+          "type": "object"
+        }
+      },
+      "required": [
+        "vpn"
+      ],
+      "type": "object"
+    }
+  },
+  "type": "object"
+}

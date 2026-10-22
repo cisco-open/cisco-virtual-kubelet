@@ -1,0 +1,39 @@
+# This profile stays unattached; controller and router login settings are unchanged.
+sdwan:
+  feature_profiles:
+    system_profiles:
+      - name: CVK-AAA-FEATURES
+        aaa:
+          authorization_config_commands: false
+          authorization_console: false
+          users:
+            - name: cvk-fixture-user
+              password_variable: fixture_user_password
+          radius_groups:
+            - vpn: 0
+              source_interface: GigabitEthernet1
+              servers:
+                - address: 192.0.2.181
+                  accounting_port: 1813
+                  authentication_port: 1812
+                  key_variable: fixture_radius_key
+                  timeout: 5
+          tacacs_groups:
+            - vpn: 0
+              source_interface: GigabitEthernet1
+              servers:
+                - address: 192.0.2.49
+                  port: 49
+                  key_variable: fixture_tacacs_key
+                  timeout: 5
+          accounting_rules:
+            - id: CVK-ACCOUNTING
+              groups: [radius-0-0]
+              method: exec
+              start_stop: true
+          authorization_rules:
+            - id: CVK-AUTHORIZATION
+              groups: [tacacs-0-0]
+              method: commands
+              level: "15"
+              authenticated: false

@@ -1,0 +1,12 @@
+sdwan:
+  edge_feature_templates:
+    bgp_templates:
+      - name: CVK-CLASSIC-BGP
+        description: CVK isolated BGP template
+        device_types: [C8000V]
+        as_number: 65000
+        router_id: 192.0.2.1
+        ipv4_address_family:
+          maximum_paths: 2
+          networks:
+            - prefix: 192.0.2.0/24

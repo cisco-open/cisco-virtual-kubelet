@@ -1,0 +1,25 @@
+sdwan:
+  manager_version: "20.18"
+  feature_profiles:
+    transport_profiles:
+      - name: CVK-TRANSPORT-MGMT-IF-PROFILE
+        management_vpn:
+          name: CVK-TRANSPORT-MGMT-IF-VPN
+          ethernet_interfaces:
+            - name: CVK-MGMT-ETHERNET
+              interface_name: GigabitEthernet1
+              interface_description: CVK management interface
+              shutdown: true
+              ipv4_address_type: static
+              ipv4_address: 192.0.2.10
+              ipv4_subnet_mask: 255.255.255.0
+              ipv4_secondary_addresses:
+                - address: 192.0.2.11
+                  subnet_mask: 255.255.255.0
+              ipv6_address_type: static
+              ipv6_address: 2001:db8::10/64
+              arp_entries:
+                - ip_address: 192.0.2.20
+                  mac_address: 00:11:22:33:44:55
+              ip_mtu: 1500
+              interface_mtu: 1500

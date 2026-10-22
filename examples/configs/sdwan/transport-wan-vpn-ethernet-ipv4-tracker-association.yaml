@@ -1,0 +1,18 @@
+sdwan:
+  feature_profiles:
+    transport_profiles:
+      - name: CVK-WAN-IPV4-TRACKER-PROFILE
+        ipv4_trackers:
+          - name: CVK-WAN-IPV4-TRACKER-A
+            tracker_name: cvkipv4etha
+            endpoint_tracker_type: icmp
+            endpoint_ip: 192.0.2.101
+            interval: 60
+        wan_vpn:
+          name: CVK-WAN-IPV4-TRACKER-VPN
+          ethernet_interfaces:
+            - name: CVK-WAN-IPV4-TRACKER-IF
+              interface_name: GigabitEthernet0/0/4
+              shutdown: true
+              tunnel_interface: false
+              ipv4_tracker: CVK-WAN-IPV4-TRACKER-A

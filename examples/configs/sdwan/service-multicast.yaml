@@ -1,0 +1,18 @@
+sdwan:
+  feature_profiles:
+    service_profiles:
+      - name: CVK-MULTICAST-SERVICE
+        description: Unattached multicast service fixture
+        multicast_features:
+          - name: CVK-SERVICE-MULTICAST
+            pim_source_specific_multicast: true
+            auto_rp: false
+            igmp_interfaces:
+              - interface_name: GigabitEthernet1
+                version: 3
+                join_groups:
+                  - group_address: 239.1.1.1
+                    source_address: 192.0.2.1
+            pim_interfaces:
+              - interface_name: GigabitEthernet1
+                join_prune_interval: 60

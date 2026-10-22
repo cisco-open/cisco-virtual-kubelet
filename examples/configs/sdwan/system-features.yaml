@@ -1,0 +1,63 @@
+sdwan:
+  feature_profiles:
+    system_profiles:
+      - name: CVK-SYS-FEATURES
+        description: CVK system feature parcel fixtures
+        security:
+          anti_replay_window: "512"
+          extended_anti_replay_window: 256
+          integrity_types: [ip-udp-esp]
+          ipsec_pairwise_keying: false
+          rekey_time: 86400
+        ntp:
+          servers:
+            - hostname_ip: time.example.com
+              vpn_id: 0
+              ntp_version: 4
+              prefer: true
+        logging:
+          disk_file_rotate: 10
+          disk_file_size: 10
+          ipv4_servers:
+            - hostname_ip: 192.0.2.125
+              severity: informational
+              vpn_id: 0
+        basic:
+          timezone: UTC
+          system_description: CVK system fixture
+          port_hopping: true
+          device_groups: [CVK-fixture]
+          affinity_per_vrfs:
+            - affinity_group_number: 1
+              vrf_range: "1-10"
+        global:
+          cdp: true
+          lldp: true
+          telnet_outbound: false
+          ssh_version: "2"
+        omp:
+          graceful_restart: true
+          send_path_limit: 4
+          ecmp_limit: 4
+          advertise_ipv4_connected: true
+          advertise_ipv4_static: true
+        bfd:
+          multiplier: 6
+          default_dscp: 48
+          colors:
+            - color: blue
+              hello_interval: 1000
+              multiplier: 7
+              path_mtu_discovery: true
+        flexible_port_speed:
+          port_type: 12 ports of 1/10GE + 3 ports 40GE
+        mrf:
+          role: edge-router
+        performance_monitoring:
+          app_perf_monitor_enabled: false
+          monitoring_config_enabled: false
+          event_driven_config_enabled: false
+    cli_profiles:
+      - name: CVK-CLI-FEATURES
+        config:
+          cli_configuration: "banner motd ^CVK isolated fixture^\n"

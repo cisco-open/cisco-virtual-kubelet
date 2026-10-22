@@ -1,0 +1,34 @@
+sdwan:
+  edge_feature_templates:
+    snmp_templates:
+      - name: CVK-CLASSIC-SNMP
+        description: CVK unattached SNMP template
+        device_types: [C8000V]
+        contact: cvk-fixture
+        location: lab
+        shutdown: true
+        views:
+          - name: cvkview
+            oids:
+              - id: 1.3.6.1
+                exclude: false
+        communities:
+          - name: cvk-fixture-community
+            view: cvkview
+        groups:
+          - name: cvkgroup
+            security_level: auth-priv
+            view: cvkview
+        users:
+          - name: cvkuser
+            group: cvkgroup
+            authentication_protocol: sha
+            authentication_password_variable: fixture_snmp_auth
+            privacy_protocol: aes-cfb-128
+            privacy_password_variable: fixture_snmp_privacy
+        trap_target_servers:
+          - ip: 192.0.2.100
+            vpn_id: 10
+            udp_port: 162
+            user: cvkuser
+            source_interface: GigabitEthernet1

@@ -1,0 +1,34 @@
+sdwan:
+  feature_profiles:
+    policy_object_profile:
+      name: CVK-ACL-OBJECTS
+      ipv4_data_prefix_lists:
+        - name: CVK-ACL-SOURCES
+          prefixes: [192.0.2.0/24]
+      mirrors:
+        - name: CVK-ACL-MIRROR
+          remote_destination_ip: 192.0.2.10
+          source_ip: 192.0.2.11
+      policers:
+        - name: CVK-ACL-POLICER
+          burst_bytes: 15000
+          rate_bps: 1000000
+          exceed_action: drop
+    service_profiles:
+      - name: CVK-ACL-REFERENCES
+        ipv4_acls:
+          - name: CVK-SERVICE-ACL-REFERENCES
+            default_action: drop
+            sequences:
+              - id: 10
+                name: MIRROR
+                base_action: accept
+                match_entries:
+                  source_data_prefix_list: CVK-ACL-SOURCES
+                actions:
+                  mirror: CVK-ACL-MIRROR
+              - id: 20
+                name: POLICE
+                base_action: accept
+                actions:
+                  policer: CVK-ACL-POLICER

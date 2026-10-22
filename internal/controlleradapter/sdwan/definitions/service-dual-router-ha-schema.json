@@ -1,0 +1,116 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "enableOptimizePaths": {
+      "description": "The operation mode is configured for each router in 2 configuration groups",
+      "oneOf": [
+        {
+          "additionalProperties": false,
+          "properties": {
+            "optionType": {
+              "enum": [
+                "global"
+              ],
+              "type": "string"
+            },
+            "value": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "optionType",
+            "value"
+          ]
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "optionType": {
+              "enum": [
+                "default"
+              ],
+              "type": "string"
+            },
+            "value": {
+              "enum": [
+                true
+              ],
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "optionType",
+            "value"
+          ]
+        }
+      ],
+      "type": "object"
+    },
+    "redundancyGroups": {
+      "description": "Service VPN Id List",
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "groupId": {
+            "maximum": 2,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "tagName": {
+            "maxLength": 128,
+            "minLength": 1,
+            "pattern": "^[^&<>! \",]+$",
+            "type": "string"
+          },
+          "vpnIds": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "refId": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "optionType": {
+                      "enum": [
+                        "global"
+                      ],
+                      "type": "string"
+                    },
+                    "value": {
+                      "pattern": "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "optionType",
+                    "value"
+                  ]
+                }
+              },
+              "required": [
+                "refId"
+              ],
+              "type": "object"
+            },
+            "minItems": 1,
+            "type": "array",
+            "uniqueItems": true
+          }
+        },
+        "required": [
+          "groupId",
+          "vpnIds"
+        ],
+        "type": "object"
+      },
+      "maxItems": 2,
+      "minItems": 1,
+      "type": "array",
+      "uniqueItems": true
+    }
+  },
+  "required": [
+    "redundancyGroups",
+    "enableOptimizePaths"
+  ],
+  "type": "object"
+}

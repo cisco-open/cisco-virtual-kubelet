@@ -1,0 +1,20 @@
+sdwan:
+  feature_profiles:
+    transport_profiles:
+      - name: CVK-TRANSPORT-GRE-TRACKER-PROFILE
+        ipv4_trackers:
+          - name: CVK-TRANSPORT-GRE-TRACKER
+            tracker_name: cvkgreprobe
+            endpoint_ip: 192.0.2.100
+            interval: 60
+            multiplier: 3
+            threshold: 300
+        wan_vpn:
+          name: CVK-TRANSPORT-GRE-TRACKER-VPN
+          gre_interfaces:
+            - name: CVK-TRANSPORT-GRE-TRACKER-IF
+              interface_name: gre125
+              shutdown: true
+              tunnel_source_ipv4_address: 198.51.100.5
+              tunnel_destination_ipv4_address: 198.51.100.6
+              ipv4_tracker: CVK-TRANSPORT-GRE-TRACKER

@@ -1,0 +1,29 @@
+sdwan:
+  feature_profiles:
+    policy_object_profile:
+      name: CVK-ROUTE-OBJECTS
+      as_path_lists:
+        - name: CVK-ROUTE-ASPATH
+          id: 400
+          as_paths: ["^65000_"]
+      ipv4_prefix_lists:
+        - name: CVK-ROUTE-PREFIX
+          entries:
+            - prefix: 198.51.100.0/24
+              ge: 25
+              le: 28
+    service_profiles:
+      - name: CVK-ROUTE-REFERENCES
+        route_policies:
+          - name: CVK-SERVICE-ROUTE-REFERENCES
+            default_action: reject
+            sequences:
+              - id: 10
+                name: MATCH-ROUTE
+                base_action: accept
+                protocol: ipv4
+                match_entries:
+                  as_path_list: CVK-ROUTE-ASPATH
+                  ipv4_address_prefix_list: CVK-ROUTE-PREFIX
+                actions:
+                  origin: igp

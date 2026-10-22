@@ -1,0 +1,17 @@
+sdwan:
+  edge_feature_templates:
+    gre_interface_templates:
+      - name: CVK-CLASSIC-GRE
+        description: CVK unattached GRE template
+        device_types: [C8000V]
+        interface_name: gre101
+        interface_description: CVK fixture GRE tunnel
+        ip_address: 192.0.2.1/30
+        shutdown: true
+        tunnel_source_interface_variable: fixture_gre_source
+        tunnel_destination: 198.51.100.1
+        ip_mtu: 1400
+        tcp_mss: 1360
+        clear_dont_fragment: false
+        ipv4_ingress_access_list_variable: fixture_gre_ingress_acl
+        ipv4_egress_access_list_variable: fixture_gre_egress_acl

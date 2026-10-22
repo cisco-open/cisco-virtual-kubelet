@@ -1,0 +1,15 @@
+sdwan:
+  feature_profiles:
+    transport_profiles:
+      - name: CVK-TRANSPORT-IPSEC-PROFILE
+        wan_vpn:
+          name: CVK-TRANSPORT-IPSEC-VPN
+          ipsec_interfaces:
+            - name: CVK-TRANSPORT-IPSEC
+              interface_name: ipsec125
+              shutdown: true
+              ipv4_address: 192.0.2.128
+              ipv4_subnet_mask: 255.255.255.252
+              tunnel_source_ipv4_address: 198.51.100.9
+              tunnel_destination_ipv4_address: 198.51.100.10
+              ike_preshared_key_variable: cvkIPSecKey

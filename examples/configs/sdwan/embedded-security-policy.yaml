@@ -1,0 +1,14 @@
+sdwan:
+  feature_profiles:
+    ngfw_security_profiles:
+      - name: CVK-EMBEDDED-PROFILE
+        policies:
+          - name: CVK-EMBEDDED-NGFW
+            default_action: drop
+            source_zone: self
+            destination_zones: [untrusted]
+            sequences:
+              - sequence_id: 1
+                sequence_name: CVK-EMBEDDED-RULE
+                base_action: pass
+                source_data_ipv4_prefixes: [10.0.0.0/8]

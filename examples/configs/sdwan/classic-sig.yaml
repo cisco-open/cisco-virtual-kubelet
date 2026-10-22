@@ -1,0 +1,12 @@
+sdwan:
+  edge_feature_templates:
+    secure_internet_gateway_templates:
+      - name: CVK-CLASSIC-SIG
+        description: CVK isolated secure internet gateway template
+        device_types: [C8000V]
+        sig_provider: other
+        interfaces:
+          - name: Tunnel1
+            tunnel_type: gre
+            tunnel_source_interface: GigabitEthernet1
+            tunnel_destination: 192.0.2.10

@@ -1,0 +1,23 @@
+apiVersion: config.cisco.vk/v1alpha1
+kind: NetworkControllerConfig
+metadata:
+  name: classic-omp-fixture
+  namespace: sdwan-lab
+spec:
+  controllerRef:
+    name: sdwan-lab
+  scope: global
+  managedSections: [edge_feature_templates]
+  modelSource:
+    format: netascode-sdwan
+    modelVersion: 1.5.0
+    resolved: true
+    sourceRevision: fixture-classic-omp-v1
+  source:
+    configMapRef:
+      name: sdwan-classic-omp-fixture
+      key: model.yaml
+  mode: report
+  prunePolicy: Retain
+  deletionPolicy: Retain
+  driftDetectInterval: 30s

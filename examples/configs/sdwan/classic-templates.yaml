@@ -1,0 +1,26 @@
+sdwan:
+  edge_feature_templates:
+    cli_templates:
+      - name: CVK-CLASSIC-CLI
+        description: CVK unattached CLI feature template
+        cli_config: "banner motd ^CVK isolated fixture^\n"
+    global_settings_templates:
+      - name: CVK-CLASSIC-GLOBAL
+        description: CVK unattached global settings template
+        device_types: [C8000V]
+        cdp: true
+        lldp: true
+        ignore_bootp: true
+        http_server: false
+        https_server: false
+        telnet_outbound: false
+        ssh_version: 2
+        nat64_tcp_timeout: 3600
+        source_interface_variable: fixture_source_interface
+    multicast_templates:
+      - name: CVK-CLASSIC-MULTICAST
+        description: CVK unattached multicast template
+        device_types: [C8000V]
+        spt_only: true
+        local_replicator: false
+        threshold: 100

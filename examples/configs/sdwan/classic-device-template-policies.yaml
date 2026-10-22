@@ -1,0 +1,43 @@
+sdwan:
+  edge_feature_templates:
+    system_templates:
+      - name: CVK-POLICY-DEVICE-SYSTEM
+        description: CVK isolated policy device system
+        device_types: [C8000V]
+        hostname_variable: cvkHostname
+        system_ip_variable: cvkSystemIP
+        site_id_variable: cvkSiteID
+    secure_app_hosting_templates:
+      - name: CVK-POLICY-DEVICE-CONTAINER
+        description: CVK isolated security container profile
+        device_types: [C8000V]
+        nat: false
+        resource_profile: low
+  localized_policies:
+    feature_policies:
+      - name: CVK-POLICY-DEVICE-LOCALIZED
+        description: CVK isolated device localized policy
+        ipv4_flow_visibility: true
+  security_policies:
+    definitions:
+      intrusion_prevention:
+        - name: CVK-POLICY-DEVICE-IPS
+          description: CVK isolated device IPS
+          inspection_mode: detection
+          log_level: warning
+          signature_set: balanced
+          target_vpns: [10]
+    feature_policies:
+      - name: CVK-POLICY-DEVICE-SECURITY
+        description: CVK isolated device security policy
+        use_case: custom
+        intrusion_prevention_policy: CVK-POLICY-DEVICE-IPS
+  edge_device_templates:
+    - name: CVK-POLICY-DEVICE-TEMPLATE
+      description: CVK isolated policy device template
+      device_model: C8000V
+      system_template: CVK-POLICY-DEVICE-SYSTEM
+      localized_policy: CVK-POLICY-DEVICE-LOCALIZED
+      security_policy:
+        name: CVK-POLICY-DEVICE-SECURITY
+        container_profile: CVK-POLICY-DEVICE-CONTAINER

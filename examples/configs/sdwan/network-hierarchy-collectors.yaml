@@ -1,0 +1,28 @@
+sdwan:
+  network_hierarchy:
+    collectors:
+      cflowd:
+        settings:
+          flow_active_timeout: 600
+          flow_inactive_timeout: 60
+          flow_refresh_time: 600
+          flow_sampling_interval: 1
+          collect_tloc_loopback: false
+          protocol: ipv4
+          collect_tos: false
+          collect_dscp_output: false
+        servers:
+          - vpn_id: 10
+            address: 192.0.2.10
+            udp_port: 4739
+            export_spread: false
+            bfd_metrics_export: true
+            export_interval: 600
+      security_logging:
+        high_speed_logging_servers:
+          - lan_vpn_name: "10"
+            server_ip: 192.0.2.11
+            port: 2055
+        external_syslog_server:
+          lan_vpn_name: "10"
+          server_ip: 192.0.2.12

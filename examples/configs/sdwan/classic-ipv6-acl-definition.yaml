@@ -1,0 +1,13 @@
+sdwan:
+  localized_policies:
+    definitions:
+      ipv6_access_control_lists:
+        - name: CVK-CLASSIC-ACL6
+          description: Managed by CVK
+          default_action: drop
+          sequences:
+            - id: 1
+              name: CVK-ALLOW-V6-PREFIX
+              base_action: accept
+              match_criterias:
+                source_ip_prefix: 2001:db8::/32

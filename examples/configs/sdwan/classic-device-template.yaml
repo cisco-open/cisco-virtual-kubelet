@@ -1,0 +1,20 @@
+sdwan:
+  edge_feature_templates:
+    banner_templates:
+      - name: CVK-DEVICE-BANNER
+        description: CVK isolated banner
+        device_types: [C8000V]
+        login: CVK lab fixture
+    system_templates:
+      - name: CVK-DEVICE-SYSTEM
+        description: CVK isolated system
+        device_types: [C8000V]
+        hostname_variable: cvkHostname
+        system_ip_variable: cvkSystemIP
+        site_id_variable: cvkSiteID
+  edge_device_templates:
+    - name: CVK-DEVICE-TEMPLATE
+      description: CVK isolated device template
+      device_model: C8000V
+      system_template: CVK-DEVICE-SYSTEM
+      banner_template: CVK-DEVICE-BANNER
