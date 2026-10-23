@@ -64,6 +64,9 @@ func (*inventoryRunnable) NeedLeaderElection() bool { return false }
 
 func (r *inventoryRunnable) Start(ctx context.Context) error {
 	a := r.adapter
+	if !a.devices.enabled() {
+		a.clearDeviceAdoptionStatus(ctx)
+	}
 	a.syncInventory(ctx)
 	for {
 		select {
@@ -135,6 +138,27 @@ func (a *adapter) publishCapability(ctx context.Context, name string, ok bool, m
 		}
 		return a.statusWriter.Status().Update(ctx, &nc)
 	})
+}
+
+// clearDeviceAdoptionStatus drops a device-adoption capability left behind by
+// an earlier run, so status never claims adoption is active once the operator
+// has disabled it or removed spec.deviceAdoption.
+func (a *adapter) clearDeviceAdoptionStatus(ctx context.Context) {
+	err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		var nc ciskov1.NetworkController
+		if err := a.statusWriter.Get(ctx, a.key, &nc); err != nil {
+			return err
+		}
+		before := nc.DeepCopy()
+		removeCapability(&nc.Status, CapabilityDeviceAdoption)
+		if equalStatus(before, &nc) {
+			return nil
+		}
+		return a.statusWriter.Status().Update(ctx, &nc)
+	})
+	if err != nil && ctx.Err() == nil {
+		ctrl.Log.WithName("nexus-dashboard").WithValues("networkController", a.key).Error(err, "clear device-adoption status")
+	}
 }
 
 // summarize reports counts only: no serials, hostnames or addresses.
