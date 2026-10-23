@@ -67,9 +67,9 @@ with `enabled: false`, only reads and reports ND inventory and never creates,
 updates or deletes a `CiscoDevice`. No Helm value turns it on. Setting
 `enabled` back to `false` stops all further writes: devices that were already
 adopted stay in place, unchanged, and are not pruned.
-The `device-adoption` capability is removed from status when the worker
-starts with adoption off, so status never reports adoption as active when it
-is not.
+The `device-adoption` capability appears in status only while adoption is
+enabled and has run: the worker rebuilds the whole `status.capabilities` list
+on every publish, so status never reports adoption as active when it is not.
 
 ```yaml
 spec:

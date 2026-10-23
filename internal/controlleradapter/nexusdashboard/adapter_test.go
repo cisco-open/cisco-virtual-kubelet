@@ -34,7 +34,7 @@ import (
 
 func testController(endpoint string) *ciskov1.NetworkController {
 	return &ciskov1.NetworkController{
-		ObjectMeta: metav1.ObjectMeta{Namespace: "ns", Name: "nd1", Generation: 3},
+		ObjectMeta: metav1.ObjectMeta{Namespace: "ns", Name: "nd1", Generation: 3, UID: testUID},
 		Spec: ciskov1.NetworkControllerSpec{
 			Type:                ciskov1.NetworkControllerType(TypeName),
 			Endpoint:            endpoint,
@@ -80,6 +80,7 @@ func newTestAdapter(t *testing.T, probe func(context.Context) error) (*adapter, 
 	a := &adapter{
 		key: types.NamespacedName{Namespace: "ns", Name: "nd1"}, statusWriter: cl, probe: probe,
 		invalidate: func() {}, now: time.Now, interval: time.Hour,
+		uid: testUID, generation: 3,
 	}
 	get := func() *ciskov1.NetworkController {
 		var out ciskov1.NetworkController

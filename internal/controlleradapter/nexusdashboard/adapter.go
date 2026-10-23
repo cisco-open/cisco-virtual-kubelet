@@ -16,6 +16,7 @@ package nexusdashboard
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -23,7 +24,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/util/retry"
 	ctrl "sigs.k8s.io/controller-runtime"
 	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -53,6 +53,8 @@ type adapter struct {
 	statusWriter      ctrlclient.Client // set in SetupWithManager
 	adoption          *ciskov1.NetworkControllerDeviceAdoption
 	uid               string
+	generation        int64 // generation the worker was started for; status is published only while it is current
+	obs               observed
 	devices           *deviceSyncer // nil unless adoption is enabled
 }
 
@@ -105,6 +107,7 @@ func newAdapter(opts controlleradapter.Options) (controlleradapter.Adapter, erro
 		now:               time.Now,
 		adoption:          nc.Spec.DeviceAdoption.DeepCopy(),
 		uid:               string(nc.UID),
+		generation:        nc.Generation,
 	}, nil
 }
 
@@ -112,6 +115,9 @@ func newAdapter(opts controlleradapter.Options) (controlleradapter.Adapter, erro
 func (a *adapter) SetupWithManager(mgr ctrl.Manager) error {
 	a.statusWriter = mgr.GetClient()
 	a.setupDevices()
+	// Until the first refresh completes, say so instead of omitting the entry,
+	// so a restart does not make the inventory capability disappear and return.
+	a.obs.setCapability(CapabilityInventory, false, "inventory refresh pending")
 	if err := mgr.Add(&healthRunnable{adapter: a}); err != nil {
 		return err
 	}
@@ -153,29 +159,25 @@ func (r *healthRunnable) Start(ctx context.Context) error {
 // check probes ND and publishes the result; status write failures are logged
 // by the next tick and never stop the manager.
 func (a *adapter) check(ctx context.Context) {
-	log := ctrl.Log.WithName("nexus-dashboard").WithValues("networkController", a.key)
 	result := classify(a.probe(ctx))
 	if ctx.Err() != nil {
 		return
 	}
-	if err := a.publish(ctx, result); err != nil {
-		log.Error(err, "publish NetworkController status")
-	}
+	a.obs.setHealth(result)
+	a.logPublish("publish NetworkController status", a.publishStatus(ctx, true))
 }
 
-func (a *adapter) publish(ctx context.Context, res healthResult) error {
-	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		var nc ciskov1.NetworkController
-		if err := a.statusWriter.Get(ctx, a.key, &nc); err != nil {
-			return err
-		}
-		before := nc.DeepCopy()
-		applyHealth(&nc, res, a.now())
-		if equalStatus(before, &nc) {
-			return nil
-		}
-		return a.statusWriter.Status().Update(ctx, &nc)
-	})
+// logPublish keeps a worker that was superseded quiet: that is expected during
+// a rollout, not an error.
+func (a *adapter) logPublish(msg string, err error) {
+	log := ctrl.Log.WithName("nexus-dashboard").WithValues("networkController", a.key)
+	switch {
+	case err == nil:
+	case errors.Is(err, errBindingInactive):
+		log.Info("not publishing status: " + err.Error())
+	default:
+		log.Error(err, msg)
+	}
 }
 
 func applyHealth(nc *ciskov1.NetworkController, res healthResult, now time.Time) {
@@ -200,5 +202,4 @@ func applyHealth(nc *ciskov1.NetworkController, res healthResult, now time.Time)
 	set(ciskov1.NetworkControllerConditionAuthenticated, res.authenticated, "LoginSucceeded", res.reason, res.authMessage())
 	set(ciskov1.NetworkControllerConditionAPICompatible, res.compatible, "ManageAPIAvailable", res.reason, res.compatMessage())
 	set(ciskov1.NetworkControllerConditionReady, res.ready(), "Connected", res.reason, res.message)
-	setCapability(st, CapabilityHealth, res.ready(), res.message)
 }

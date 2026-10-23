@@ -89,27 +89,6 @@ func bound(s string) string {
 	return s
 }
 
-func setCapability(st *ciskov1.NetworkControllerStatus, name string, supported bool, message string) {
-	entry := ciskov1.NetworkControllerCapabilityStatus{Name: name, Supported: supported, Message: bound(message)}
-	for i := range st.Capabilities {
-		if st.Capabilities[i].Name == name {
-			st.Capabilities[i] = entry
-			return
-		}
-	}
-	st.Capabilities = append(st.Capabilities, entry)
-}
-
-func removeCapability(st *ciskov1.NetworkControllerStatus, name string) {
-	kept := st.Capabilities[:0]
-	for _, c := range st.Capabilities {
-		if c.Name != name {
-			kept = append(kept, c)
-		}
-	}
-	st.Capabilities = kept
-}
-
 // equalStatus ignores LastAttemptTime so unchanged health does not churn the API.
 func equalStatus(a, b *ciskov1.NetworkController) bool {
 	x, y := a.Status.DeepCopy(), b.Status.DeepCopy()

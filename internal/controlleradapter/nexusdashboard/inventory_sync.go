@@ -21,10 +21,7 @@ import (
 	"sync"
 	"time"
 
-	"k8s.io/client-go/util/retry"
 	ctrl "sigs.k8s.io/controller-runtime"
-
-	ciskov1 "github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
 )
 
 const (
@@ -64,9 +61,6 @@ func (*inventoryRunnable) NeedLeaderElection() bool { return false }
 
 func (r *inventoryRunnable) Start(ctx context.Context) error {
 	a := r.adapter
-	if !a.devices.enabled() {
-		a.clearDeviceAdoptionStatus(ctx)
-	}
 	a.syncInventory(ctx)
 	for {
 		select {
@@ -99,9 +93,7 @@ func (a *adapter) syncInventory(ctx context.Context) {
 		a.inventory.set(items, a.now())
 		msg = summarize(items)
 	}
-	if perr := a.publishCapability(ctx, CapabilityInventory, ok, msg); perr != nil {
-		log.Error(perr, "publish inventory status")
-	}
+	a.logPublish("publish inventory status", a.publishCapability(ctx, CapabilityInventory, ok, msg))
 	if err == nil && a.devices.enabled() {
 		a.syncDevices(ctx, items)
 	}
@@ -120,45 +112,7 @@ func (a *adapter) syncDevices(ctx context.Context, items []InventoryItem) {
 		ok, msg = false, bound(fmt.Sprintf("device adoption failed: %s", err))
 		log.Info("device adoption failed", "error", err.Error())
 	}
-	if perr := a.publishCapability(ctx, CapabilityDeviceAdoption, ok, bound(msg)); perr != nil {
-		log.Error(perr, "publish device-adoption status")
-	}
-}
-
-func (a *adapter) publishCapability(ctx context.Context, name string, ok bool, msg string) error {
-	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		var nc ciskov1.NetworkController
-		if err := a.statusWriter.Get(ctx, a.key, &nc); err != nil {
-			return err
-		}
-		before := nc.DeepCopy()
-		setCapability(&nc.Status, name, ok, msg)
-		if equalStatus(before, &nc) {
-			return nil
-		}
-		return a.statusWriter.Status().Update(ctx, &nc)
-	})
-}
-
-// clearDeviceAdoptionStatus drops a device-adoption capability left behind by
-// an earlier run, so status never claims adoption is active once the operator
-// has disabled it or removed spec.deviceAdoption.
-func (a *adapter) clearDeviceAdoptionStatus(ctx context.Context) {
-	err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		var nc ciskov1.NetworkController
-		if err := a.statusWriter.Get(ctx, a.key, &nc); err != nil {
-			return err
-		}
-		before := nc.DeepCopy()
-		removeCapability(&nc.Status, CapabilityDeviceAdoption)
-		if equalStatus(before, &nc) {
-			return nil
-		}
-		return a.statusWriter.Status().Update(ctx, &nc)
-	})
-	if err != nil && ctx.Err() == nil {
-		ctrl.Log.WithName("nexus-dashboard").WithValues("networkController", a.key).Error(err, "clear device-adoption status")
-	}
+	a.logPublish("publish device-adoption status", a.publishCapability(ctx, CapabilityDeviceAdoption, ok, bound(msg)))
 }
 
 // summarize reports counts only: no serials, hostnames or addresses. A switch

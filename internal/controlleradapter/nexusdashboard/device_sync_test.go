@@ -383,27 +383,3 @@ func TestDisablingAdoptionLeavesDevicesUntouched(t *testing.T) {
 		t.Fatalf("device changed after disabling adoption:\nbefore %+v\nafter  %+v", before.Items[0], after.Items[0])
 	}
 }
-
-func TestDisabledAdoptionClearsStaleCapability(t *testing.T) {
-	a, _, get := newTestAdapter(t, func(context.Context) error { return nil })
-	ctx := context.Background()
-	if err := a.publishCapability(ctx, CapabilityDeviceAdoption, true, "1 created"); err != nil {
-		t.Fatal(err)
-	}
-	if err := a.publishCapability(ctx, CapabilityInventory, true, "1 switches in 1 fabrics"); err != nil {
-		t.Fatal(err)
-	}
-	a.clearDeviceAdoptionStatus(ctx)
-	nc := get()
-	if hasCapability(nc, CapabilityDeviceAdoption) {
-		t.Fatal("stale device-adoption capability must be removed")
-	}
-	if !hasCapability(nc, CapabilityInventory) {
-		t.Fatal("other capabilities must be kept")
-	}
-	rv := nc.ResourceVersion
-	a.clearDeviceAdoptionStatus(ctx) // nothing to remove: no write
-	if got := get().ResourceVersion; got != rv {
-		t.Fatalf("clearing an absent capability must not write: %s -> %s", rv, got)
-	}
-}

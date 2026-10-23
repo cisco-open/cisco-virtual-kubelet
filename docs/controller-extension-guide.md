@@ -114,6 +114,16 @@ support in `status.capabilities`, authentication state, product/API versions,
 and compatibility conditions are adapter-owned observations. The manager must
 not infer those values from descriptor metadata.
 
+`status.capabilities` is one complete list with a single writer. An adapter
+rebuilds the whole list on every publish and replaces it; it never edits one
+entry in place. An adapter with several independent loops (health, inventory
+and so on) keeps each loop's last result in memory, and one publisher composes
+the list from them, so a loop that fails or is disabled cannot leave a stale
+entry behind or wipe another loop's entry. Before every write the adapter
+re-reads its NetworkController and publishes nothing if the UID or generation
+changed, or if it is paused or being deleted; the manager rolls the worker for
+the new generation.
+
 ### Bootstrap and descriptor binding
 
 The manager-to-worker bootstrap is an immutable, non-sensitive ConfigMap. Its
