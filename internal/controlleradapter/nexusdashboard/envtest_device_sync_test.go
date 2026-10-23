@@ -208,3 +208,37 @@ func TestEnvtest_NDDeviceSyncAgainstRealAPIServer(t *testing.T) {
 		t.Fatal("foreign device must survive pruning")
 	}
 }
+
+// Adoption is opt-in: a controller without deviceAdoption, or with it
+// disabled and no defaults, is valid, stays disabled, and the adapter never
+// creates a CiscoDevice for it.
+func TestEnvtest_NDAdoptionIsOptIn(t *testing.T) {
+	c, ctx := startAPIServer(t, "nd-envtest")
+	off := &ciskov1.NetworkControllerDeviceAdoption{Enabled: false}
+	for name, spec := range map[string]*ciskov1.NetworkControllerDeviceAdoption{"omitted": nil, "disabled": off} {
+		nc := envtestController("optin-"+name, spec)
+		if err := c.Create(ctx, nc); err != nil {
+			t.Fatalf("%s: must be admitted: %v", name, err)
+		}
+		var got ciskov1.NetworkController
+		if err := c.Get(ctx, ctrlclient.ObjectKeyFromObject(nc), &got); err != nil {
+			t.Fatal(err)
+		}
+		if got.Spec.DeviceAdoption != nil && got.Spec.DeviceAdoption.Enabled {
+			t.Fatalf("%s: adoption must not default to enabled: %+v", name, got.Spec.DeviceAdoption)
+		}
+		a := &adapter{
+			key: ctrlclient.ObjectKeyFromObject(nc), statusWriter: c, uid: string(got.UID),
+			adoption: got.Spec.DeviceAdoption.DeepCopy(), now: time.Now,
+			interval: time.Hour, invalidate: func() {},
+			list: func(context.Context) ([]InventoryItem, error) {
+				return []InventoryItem{item("SER1", "leaf1", "fab-a")}, nil
+			},
+		}
+		a.setupDevices()
+		a.syncInventory(ctx)
+	}
+	if devs := listNames(t, ctx, c); len(devs) != 0 {
+		t.Fatalf("no CiscoDevice may be created without opt-in, got %d", len(devs))
+	}
+}

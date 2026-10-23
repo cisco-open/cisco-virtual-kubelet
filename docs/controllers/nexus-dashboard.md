@@ -59,6 +59,12 @@ Off by default. With `spec.deviceAdoption.enabled: true`, every reachable
 NX-OS switch from a complete inventory refresh becomes a standalone
 `CiscoDevice` (driver `NXOS`) in the NetworkController's namespace.
 
+Adoption is never automatic. A NetworkController without `deviceAdoption`, or
+with `enabled: false`, only reads and reports ND inventory and never creates,
+updates or deletes a `CiscoDevice`. No Helm value turns it on. Setting
+`enabled` back to `false` stops all further writes: devices that were already
+adopted stay in place, unchanged, and are not pruned.
+
 ```yaml
 spec:
   deviceAdoption:

@@ -17,6 +17,7 @@ package nexusdashboard
 import (
 	"context"
 	"errors"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -317,4 +318,68 @@ func hasCapability(nc *ciskov1.NetworkController, name string) bool {
 		}
 	}
 	return false
+}
+
+func TestAdoptionIsOptIn(t *testing.T) {
+	disabled := adoptionSpec()
+	disabled.Enabled = false
+	for name, spec := range map[string]*ciskov1.NetworkControllerDeviceAdoption{"omitted": nil, "enabled=false": disabled} {
+		t.Run(name, func(t *testing.T) {
+			a, _, get := newTestAdapter(t, func(context.Context) error { return nil })
+			a.uid = testUID
+			a.adoption = spec
+			a.setupDevices()
+			if a.devices != nil {
+				t.Fatal("no device syncer may exist unless adoption is enabled")
+			}
+			a.list = func(context.Context) ([]InventoryItem, error) {
+				return []InventoryItem{item("SER1", "leaf1", "fab-a")}, nil
+			}
+			a.syncInventory(context.Background())
+			var list ciskov1.CiscoDeviceList
+			if err := a.statusWriter.List(context.Background(), &list); err != nil || len(list.Items) != 0 {
+				t.Fatalf("inventory must not create devices: %d err=%v", len(list.Items), err)
+			}
+			nc := get()
+			if !hasCapability(nc, CapabilityInventory) {
+				t.Fatal("inventory must still be read and reported")
+			}
+			if hasCapability(nc, CapabilityDeviceAdoption) {
+				t.Fatal("no device-adoption status without opt-in")
+			}
+		})
+	}
+}
+
+func TestDisablingAdoptionLeavesDevicesUntouched(t *testing.T) {
+	a, _, _ := newTestAdapter(t, func(context.Context) error { return nil })
+	a.uid = testUID
+	a.adoption = adoptionSpec()
+	a.setupDevices()
+	a.list = func(context.Context) ([]InventoryItem, error) {
+		return []InventoryItem{item("SER1", "leaf1", "fab-a")}, nil
+	}
+	ctx := context.Background()
+	a.syncInventory(ctx)
+	var before ciskov1.CiscoDeviceList
+	if err := a.statusWriter.List(ctx, &before); err != nil || len(before.Items) != 1 {
+		t.Fatalf("setup: expected one device, got %d err=%v", len(before.Items), err)
+	}
+
+	// The operator turns adoption off (the worker restarts with the new spec)
+	// and ND now reports nothing at all.
+	off := adoptionSpec()
+	off.Enabled = false
+	a.adoption, a.devices = off, nil
+	a.setupDevices()
+	a.list = func(context.Context) ([]InventoryItem, error) { return nil, nil }
+	a.syncInventory(ctx)
+
+	var after ciskov1.CiscoDeviceList
+	if err := a.statusWriter.List(ctx, &after); err != nil || len(after.Items) != 1 {
+		t.Fatalf("devices must survive disabling adoption: %d err=%v", len(after.Items), err)
+	}
+	if !reflect.DeepEqual(before.Items[0], after.Items[0]) {
+		t.Fatalf("device changed after disabling adoption:\nbefore %+v\nafter  %+v", before.Items[0], after.Items[0])
+	}
 }

@@ -111,13 +111,20 @@ func newAdapter(opts controlleradapter.Options) (controlleradapter.Adapter, erro
 // SetupWithManager registers the health loop as a manager-owned Runnable.
 func (a *adapter) SetupWithManager(mgr ctrl.Manager) error {
 	a.statusWriter = mgr.GetClient()
-	if a.adoption != nil && a.adoption.Enabled {
-		a.devices = &deviceSyncer{client: a.statusWriter, namespace: a.key.Namespace, uid: a.uid, adoption: a.adoption, now: a.now}
-	}
+	a.setupDevices()
 	if err := mgr.Add(&healthRunnable{adapter: a}); err != nil {
 		return err
 	}
 	return mgr.Add(&inventoryRunnable{adapter: a})
+}
+
+// setupDevices builds the CiscoDevice syncer only when the operator opted in
+// with spec.deviceAdoption.enabled. Otherwise a.devices stays nil and the
+// adapter never writes a CiscoDevice.
+func (a *adapter) setupDevices() {
+	if a.adoption != nil && a.adoption.Enabled {
+		a.devices = &deviceSyncer{client: a.statusWriter, namespace: a.key.Namespace, uid: a.uid, adoption: a.adoption, now: a.now}
+	}
 }
 
 type healthRunnable struct{ adapter *adapter }

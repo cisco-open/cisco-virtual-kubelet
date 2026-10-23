@@ -357,10 +357,13 @@ therefore constrained to the worker's namespace and grants only:
 - read-only source ConfigMaps;
 - Events for bounded, sanitized operational feedback.
 
+Adoption must be an explicit operator opt-in (`spec.deviceAdoption.enabled`,
+default off); an adapter must never create `CiscoDevice` objects on its own.
 Adapters that adopt controller inventory as `CiscoDevice` objects use the
 separate `cisco-virtual-kubelet-nd-worker` role: the
-same rules plus get/list/watch/create/update/patch on `ciscodevices`, with no
-delete grant and no Secrets access. Any new worker role must be added in one
+same rules plus get/list/watch/create/update/patch/delete on `ciscodevices`
+(delete serves only the opt-in Prune policy), with no deletecollection and no
+Secrets access. Any new worker role must be added in one
 reviewed change to the chart, the registry allow-list, and the manager `bind`
 marker; `chart_rbac_test.go` checks the three stay aligned.
 
