@@ -161,19 +161,25 @@ func (a *adapter) clearDeviceAdoptionStatus(ctx context.Context) {
 	}
 }
 
-// summarize reports counts only: no serials, hostnames or addresses.
+// summarize reports counts only: no serials, hostnames or addresses. A switch
+// is adoptable when it is NX-OS and ND can reach it, the same rule device
+// adoption applies, so the two capabilities agree.
 func summarize(items []InventoryItem) string {
 	fabrics := map[string]struct{}{}
-	nxos, skipped := 0, 0
+	adoptable, unreachable, skipped := 0, 0, 0
 	for _, it := range items {
 		fabrics[it.Fabric] = struct{}{}
-		if it.SkipReason != "" {
+		switch {
+		case it.SkipReason != "":
 			skipped++
-		} else {
-			nxos++
+		case !it.Reachable:
+			unreachable++
+		default:
+			adoptable++
 		}
 	}
-	return fmt.Sprintf("%d switches in %d fabrics; %d adoptable NX-OS, %d skipped", len(items), len(fabrics), nxos, skipped)
+	return fmt.Sprintf("%d switches in %d fabrics; %d adoptable NX-OS, %d unreachable, %d skipped",
+		len(items), len(fabrics), adoptable, unreachable, skipped)
 }
 
 func redactedErr(err error) string { return bound(classify(err).message) }

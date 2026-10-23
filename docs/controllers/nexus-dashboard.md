@@ -44,7 +44,10 @@ Every 5 minutes (jittered by 10%) the worker lists fabrics with
 - A switch is adoptable only if its model looks like NX-OS (`N9K-...`), and it
   has a serial and a management address. Others are skipped with a reason.
 - The `inventory` capability in `status.capabilities` reports counts only, for
-  example `3 switches in 1 fabrics; 2 adoptable NX-OS, 1 skipped`. Serials,
+  example `4 switches in 1 fabrics; 2 adoptable NX-OS, 1 unreachable, 1
+  skipped`. Adoptable means NX-OS and reachable (ND `discoveryStatus` is `ok`),
+  the same rule device adoption applies; `unreachable` counts NX-OS switches ND
+  cannot currently reach. This is reported even when adoption is off. Serials,
   hostnames, and addresses are never written to status or logs.
 - If any fabric fails to list, the whole refresh fails and the last complete
   snapshot is kept; the capability shows `Supported=false` with a redacted

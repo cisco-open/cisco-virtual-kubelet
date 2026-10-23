@@ -162,7 +162,7 @@ func TestListInventoryPaginatesAcrossFabrics(t *testing.T) {
 	if byKey["X1"].SkipReason == "" || byKey["X2"].Reachable || byKey["X2"].SkipReason != "" {
 		t.Fatalf("unexpected mapping: %+v %+v", byKey["X1"], byKey["X2"])
 	}
-	if got := summarize(items); got != "252 switches in 2 fabrics; 251 adoptable NX-OS, 1 skipped" {
+	if got := summarize(items); got != "252 switches in 2 fabrics; 250 adoptable NX-OS, 1 unreachable, 1 skipped" {
 		t.Fatalf("summary = %q", got)
 	}
 }
@@ -222,14 +222,15 @@ func TestSyncInventoryKeepsLastGoodAndReportsCounts(t *testing.T) {
 			return nil, fmt.Errorf("list fabrics: connection refused")
 		}
 		return []InventoryItem{
-			{Serial: "S1", Fabric: "f1", Platform: PlatformNXOS},
+			{Serial: "S1", Fabric: "f1", Platform: PlatformNXOS, Reachable: true},
 			{Serial: "S2", Fabric: "f1", SkipReason: "platform other"},
+			{Serial: "S3", Fabric: "f1", Platform: PlatformNXOS},
 		}, nil
 	}
 	a.syncInventory(context.Background())
 	cap := get().Status.Capabilities
 	if len(cap) != 1 || cap[0].Name != CapabilityInventory || !cap[0].Supported ||
-		cap[0].Message != "2 switches in 1 fabrics; 1 adoptable NX-OS, 1 skipped" {
+		cap[0].Message != "3 switches in 1 fabrics; 1 adoptable NX-OS, 1 unreachable, 1 skipped" {
 		t.Fatalf("capabilities = %+v", cap)
 	}
 	if strings.Contains(cap[0].Message, "S1") {
@@ -239,10 +240,10 @@ func TestSyncInventoryKeepsLastGoodAndReportsCounts(t *testing.T) {
 	fail = true
 	a.syncInventory(context.Background())
 	cap = get().Status.Capabilities
-	if cap[0].Supported || !strings.Contains(cap[0].Message, "keeping last good snapshot of 2 switches") {
+	if cap[0].Supported || !strings.Contains(cap[0].Message, "keeping last good snapshot of 3 switches") {
 		t.Fatalf("capabilities after failure = %+v", cap)
 	}
-	if items, at := a.inventory.Snapshot(); len(items) != 2 || at.IsZero() {
+	if items, at := a.inventory.Snapshot(); len(items) != 3 || at.IsZero() {
 		t.Fatal("last good snapshot lost")
 	}
 }
