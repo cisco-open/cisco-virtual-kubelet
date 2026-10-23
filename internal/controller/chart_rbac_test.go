@@ -156,22 +156,22 @@ func workerClusterRoles(t *testing.T) map[string]rbacv1.ClusterRole {
 	return roles
 }
 
-func TestDeviceAdoptionWorkerRoleExtendsBaseOnlyByCiscoDevices(t *testing.T) {
+func TestNDWorkerRoleExtendsBaseOnlyByCiscoDevices(t *testing.T) {
 	roles := workerClusterRoles(t)
 	base, ok := roles[controlleradapter.DefaultWorkerClusterRole]
 	if !ok {
 		t.Fatal("base worker ClusterRole missing from chart")
 	}
-	adopt, ok := roles[controlleradapter.DeviceAdoptionWorkerClusterRole]
+	adopt, ok := roles[controlleradapter.NDWorkerClusterRole]
 	if !ok {
-		t.Fatal("device-adoption worker ClusterRole missing from chart")
+		t.Fatal("ND worker ClusterRole missing from chart")
 	}
 	if len(adopt.Rules) != len(base.Rules)+1 {
-		t.Fatalf("adoption role has %d rules, want base (%d) + 1", len(adopt.Rules), len(base.Rules))
+		t.Fatalf("ND worker role has %d rules, want base (%d) + 1", len(adopt.Rules), len(base.Rules))
 	}
 	for i, rule := range base.Rules {
 		if !reflect.DeepEqual(rule, adopt.Rules[i]) {
-			t.Fatalf("adoption role drifted from base at rule %d: %+v vs %+v", i, adopt.Rules[i], rule)
+			t.Fatalf("ND worker role drifted from base at rule %d: %+v vs %+v", i, adopt.Rules[i], rule)
 		}
 	}
 	extra := adopt.Rules[len(adopt.Rules)-1]
@@ -186,12 +186,12 @@ func TestDeviceAdoptionWorkerRoleExtendsBaseOnlyByCiscoDevices(t *testing.T) {
 	for _, rule := range adopt.Rules {
 		for _, res := range rule.Resources {
 			if res == "secrets" || res == "ciscodevices/status" || res == "ciscodevices/finalizers" {
-				t.Fatalf("adoption role must not grant %q", res)
+				t.Fatalf("ND worker role must not grant %q", res)
 			}
 		}
 		for _, verb := range rule.Verbs {
 			if verb == "deletecollection" || verb == "*" {
-				t.Fatalf("adoption role must not grant verb %q", verb)
+				t.Fatalf("ND worker role must not grant verb %q", verb)
 			}
 		}
 	}
@@ -208,7 +208,7 @@ func TestManagerBindMarkerCoversEveryAuditedWorkerRole(t *testing.T) {
 			marker = line
 		}
 	}
-	for _, role := range []string{controlleradapter.DefaultWorkerClusterRole, controlleradapter.DeviceAdoptionWorkerClusterRole} {
+	for _, role := range []string{controlleradapter.DefaultWorkerClusterRole, controlleradapter.NDWorkerClusterRole} {
 		if !strings.Contains(marker, role) {
 			t.Errorf("manager bind marker does not cover %q: %s", role, marker)
 		}

@@ -43,7 +43,7 @@ func Descriptor() controlleradapter.Descriptor {
 			Sections:      []string{"nd"},
 		},
 		Capabilities:      []string{CapabilityHealth, CapabilityInventory, CapabilityDeviceAdoption},
-		WorkerClusterRole: controlleradapter.DeviceAdoptionWorkerClusterRole,
+		WorkerClusterRole: controlleradapter.NDWorkerClusterRole,
 	}
 }
 

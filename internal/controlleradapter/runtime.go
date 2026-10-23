@@ -32,12 +32,12 @@ const (
 	// in their Descriptor.
 	DefaultWorkerClusterRole = "cisco-virtual-kubelet-controller-worker"
 
-	// DeviceAdoptionWorkerClusterRole is the base worker role plus create,
+	// NDWorkerClusterRole is the base worker role plus create,
 	// update, patch and delete on CiscoDevice objects in the worker's own
 	// namespace. Delete serves only the opt-in prune policy. It deliberately
 	// has no deletecollection and no access to Secrets. Adapters that turn
 	// controller inventory into CiscoDevices select it.
-	DeviceAdoptionWorkerClusterRole = "cisco-virtual-kubelet-controller-worker-device-adoption"
+	NDWorkerClusterRole = "cisco-virtual-kubelet-nd-worker"
 
 	// DefaultCredentialPath is the read-only mount point offered to controller
 	// adapters for controller authentication material. The foundation passes a

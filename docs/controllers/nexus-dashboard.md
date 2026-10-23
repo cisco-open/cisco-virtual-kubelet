@@ -165,7 +165,7 @@ Safety rules:
   `2 created, 0 updated, 1 unchanged; 0 unreachable, 0 invalid, 0 name
   conflicts, 0 failed`.
 
-The ND worker is bound to `cisco-virtual-kubelet-controller-worker-device-adoption`:
+The ND worker is bound to `cisco-virtual-kubelet-nd-worker`:
 the base worker role plus get/list/watch/create/update/patch on `ciscodevices`
 (delete but no deletecollection, no Secrets, no `ciscodevices/status`). The role is static, so an
 ND worker holds it even when adoption is disabled.

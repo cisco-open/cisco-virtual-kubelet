@@ -358,7 +358,7 @@ therefore constrained to the worker's namespace and grants only:
 - Events for bounded, sanitized operational feedback.
 
 Adapters that adopt controller inventory as `CiscoDevice` objects use the
-separate `cisco-virtual-kubelet-controller-worker-device-adoption` role: the
+separate `cisco-virtual-kubelet-nd-worker` role: the
 same rules plus get/list/watch/create/update/patch on `ciscodevices`, with no
 delete grant and no Secrets access. Any new worker role must be added in one
 reviewed change to the chart, the registry allow-list, and the manager `bind`
