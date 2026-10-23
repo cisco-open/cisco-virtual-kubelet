@@ -172,7 +172,7 @@ Safety rules:
   adopted.
 - The `device-adoption` capability reports counts only, for example
   `2 created, 0 updated, 1 unchanged; 0 unreachable, 0 invalid, 0 name
-  conflicts, 0 failed`.
+  conflicts, 0 failed; 0 missing, 0 pruned, 0 prune-guarded`.
 
 The ND worker is bound to `cisco-virtual-kubelet-nd-worker`:
 the base worker role plus get/list/watch/create/update/patch on `ciscodevices`
