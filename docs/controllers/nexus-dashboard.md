@@ -4,9 +4,11 @@ The `nexus-dashboard` adapter connects a `NetworkController` to Cisco Nexus
 Dashboard (ND) 4.x through the `/api/v1` APIs (Infra login, Manage). It does
 not use the NDFC legacy `/appcenter/...` APIs.
 
-**Current scope (phases 1-2):** connect, authenticate, report health, and read
-the switch inventory (read-only). Node creation is planned for a later phase;
-intent reconciliation is not implemented. The Network as Code stripe is `nd`, declared but not reconciled.
+**Scope:** the adapter connects and authenticates, reports health and the ND
+version, reads the switch inventory, and can optionally adopt the switches as
+standalone `CiscoDevice` objects (see [Device adoption](#device-adoption)). It
+does not reconcile Network as Code intent: the stripe is `nd`, declared but not
+reconciled.
 
 ## What it checks
 
