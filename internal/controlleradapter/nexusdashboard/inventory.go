@@ -162,7 +162,7 @@ func (c *client) listPaged(ctx context.Context, path, key string) ([]json.RawMes
 		// the last complete snapshot is kept. A missing list is accepted only
 		// as the first page of a collection ND itself reports as empty.
 		if !listed {
-			if total, ok := env.Meta.total(); !(page == 0 && ok && total == 0 && remaining <= 0) {
+			if total, ok := env.Meta.total(); page != 0 || !ok || total != 0 || remaining > 0 {
 				return nil, fmt.Errorf("GET %s: response has no %q list", path, key)
 			}
 		}
