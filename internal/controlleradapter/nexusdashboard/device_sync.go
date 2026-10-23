@@ -17,6 +17,7 @@ package nexusdashboard
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"reflect"
 	"sort"
@@ -88,6 +89,25 @@ type deviceSyncer struct {
 	uid       string
 	adoption  *ciskov1.NetworkControllerDeviceAdoption
 	now       func() time.Time
+	// guard runs before every create, patch, annotation and delete. A non-nil
+	// error means the controller binding is no longer active, and the whole
+	// sync stops. Nil (tests) permits everything.
+	guard func(context.Context) error
+}
+
+// permit runs the guard before a mutation. Any error is treated as an inactive
+// binding so a stale or unverifiable worker writes nothing.
+func (s *deviceSyncer) permit(ctx context.Context) error {
+	if s.guard == nil {
+		return nil
+	}
+	if err := s.guard(ctx); err != nil {
+		if errors.Is(err, errBindingInactive) {
+			return err
+		}
+		return fmt.Errorf("%w: %v", errBindingInactive, err)
+	}
+	return nil
 }
 
 func (s *deviceSyncer) clock() time.Time {
@@ -155,6 +175,8 @@ func (s *deviceSyncer) Sync(ctx context.Context, items []InventoryItem) (deviceS
 		}
 		out, err := s.apply(ctx, name, it, access, cur, hostnames[it.Hostname] == 1, takenNodes)
 		switch {
+		case errors.Is(err, errBindingInactive):
+			return res, err // superseded, paused or deleted: stop, write nothing more
 		case apierrors.IsAlreadyExists(err):
 			res.Conflicts++ // appeared since the list; decided next sync
 		case err != nil:
@@ -167,16 +189,18 @@ func (s *deviceSyncer) Sync(ctx context.Context, items []InventoryItem) (deviceS
 			res.Unchanged++
 		}
 	}
-	s.reconcileMissing(ctx, list.Items, items, &res)
+	if err := s.reconcileMissing(ctx, list.Items, items, &res); err != nil {
+		return res, err
+	}
 	return res, nil
 }
 
 // reconcileMissing handles owned devices whose switch is not in the snapshot.
 // An unreachable or skipped switch is still in ND and therefore not missing.
 // An empty snapshot is treated as suspect and changes nothing.
-func (s *deviceSyncer) reconcileMissing(ctx context.Context, devices []ciskov1.CiscoDevice, items []InventoryItem, res *deviceSyncResult) {
+func (s *deviceSyncer) reconcileMissing(ctx context.Context, devices []ciskov1.CiscoDevice, items []InventoryItem, res *deviceSyncResult) error {
 	if len(items) == 0 {
-		return
+		return nil
 	}
 	names := make(map[string]struct{}, len(items))
 	serials := make(map[string]struct{}, len(items))
@@ -204,8 +228,13 @@ func (s *deviceSyncer) reconcileMissing(ctx context.Context, devices []ciskov1.C
 		_, bySerial := serials[d.Spec.PhysicalIdentity]
 		since, annotated := d.Annotations[annotationMissingSince]
 		if byName || (d.Spec.PhysicalIdentity != "" && bySerial) {
-			if annotated && s.patchMissingSince(ctx, d, nil) != nil {
-				res.Failed++
+			if annotated {
+				if err := s.patchMissingSince(ctx, d, nil); err != nil {
+					if errors.Is(err, errBindingInactive) {
+						return err
+					}
+					res.Failed++
+				}
 			}
 			continue
 		}
@@ -213,7 +242,10 @@ func (s *deviceSyncer) reconcileMissing(ctx context.Context, devices []ciskov1.C
 		first, perr := time.Parse(time.RFC3339, since)
 		if !annotated || perr != nil {
 			stamp := now.UTC().Format(time.RFC3339)
-			if s.patchMissingSince(ctx, d, &stamp) != nil {
+			if err := s.patchMissingSince(ctx, d, &stamp); err != nil {
+				if errors.Is(err, errBindingInactive) {
+					return err
+				}
 				res.Failed++
 			}
 			continue
@@ -223,7 +255,7 @@ func (s *deviceSyncer) reconcileMissing(ctx context.Context, devices []ciskov1.C
 		}
 	}
 	if len(due) == 0 {
-		return
+		return nil
 	}
 	// At least one device may always be pruned; beyond that the fraction of
 	// the fleet is capped so a bad inventory cannot empty the cluster.
@@ -233,9 +265,12 @@ func (s *deviceSyncer) reconcileMissing(ctx context.Context, devices []ciskov1.C
 	}
 	if len(due) > limit {
 		res.PruneGuarded += len(due)
-		return
+		return nil
 	}
 	for _, d := range due {
+		if err := s.permit(ctx); err != nil {
+			return err
+		}
 		uid := d.UID
 		err := s.client.Delete(ctx, d, ctrlclient.Preconditions{UID: &uid})
 		switch {
@@ -245,10 +280,14 @@ func (s *deviceSyncer) reconcileMissing(ctx context.Context, devices []ciskov1.C
 			res.Failed++
 		}
 	}
+	return nil
 }
 
 // patchMissingSince sets the annotation to *stamp, or removes it when nil.
 func (s *deviceSyncer) patchMissingSince(ctx context.Context, d *ciskov1.CiscoDevice, stamp *string) error {
+	if err := s.permit(ctx); err != nil {
+		return err
+	}
 	var v any
 	if stamp != nil {
 		v = *stamp
@@ -307,6 +346,9 @@ func (s *deviceSyncer) apply(ctx context.Context, name string, it InventoryItem,
 				takenNodes[nn] = struct{}{}
 			}
 		}
+		if err := s.permit(ctx); err != nil {
+			return outcomeUnchanged, err
+		}
 		return outcomeCreated, s.client.Create(ctx, dev)
 	}
 
@@ -316,6 +358,9 @@ func (s *deviceSyncer) apply(ctx context.Context, name string, it InventoryItem,
 	}
 	raw, err := json.Marshal(patch)
 	if err != nil {
+		return outcomeUnchanged, err
+	}
+	if err := s.permit(ctx); err != nil {
 		return outcomeUnchanged, err
 	}
 	if err := s.client.Patch(ctx, cur, ctrlclient.RawPatch(types.MergePatchType, raw)); err != nil {

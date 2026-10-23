@@ -57,7 +57,12 @@ Every 5 minutes (jittered by 10%) the worker lists fabrics with
   hostnames, and addresses are never written to status or logs.
 - If any fabric fails to list, the whole refresh fails and the last complete
   snapshot is kept; the capability shows `Supported=false` with a redacted
-  reason.
+  reason. The same applies to a response that cannot be trusted to be
+  complete: an empty page while ND still reports items remaining, or a
+  response with no `fabrics`/`switches` list (a missing list is accepted only
+  as the first page of a collection ND itself reports as empty). A partial
+  snapshot is never used, so it can never cause a device to be marked missing
+  or pruned.
 - There is no fabric or role filter. `role` comes from ND's `switchRole`.
 - Inventory only becomes `CiscoDevice` objects when device adoption is
   enabled (next section).
@@ -172,6 +177,13 @@ Safety rules:
   are kept.
 - Adoption runs only after a complete successful refresh. A failed or empty
   refresh changes nothing.
+- Before every device write (create, update, annotate, delete) the worker
+  re-reads its NetworkController from the API server and writes nothing unless
+  it is still the active binding: same UID and generation, not paused or being
+  deleted, and `spec.deviceAdoption.enabled` still true. A worker that was
+  superseded during a rollout, or that cannot confirm this, stops without
+  writing, so it cannot keep creating, updating or pruning devices after
+  adoption was disabled or the controller paused.
 - A device whose switch is missing from a complete refresh gets the annotation
   `cisco.vk/nd-missing-since` (first-seen time, RFC 3339). It is removed again
   if the switch returns. An unreachable or non-NX-OS switch is still in ND and

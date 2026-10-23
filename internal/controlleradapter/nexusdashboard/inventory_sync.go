@@ -16,6 +16,7 @@ package nexusdashboard
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math/rand"
 	"sync"
@@ -93,7 +94,11 @@ func (a *adapter) syncInventory(ctx context.Context) {
 		a.inventory.set(items, a.now())
 		msg = summarize(items)
 	}
-	a.logPublish("publish inventory status", a.publishCapability(ctx, CapabilityInventory, ok, msg))
+	perr := a.publishCapability(ctx, CapabilityInventory, ok, msg)
+	a.logPublish("publish inventory status", perr)
+	if errors.Is(perr, errBindingInactive) {
+		return // superseded, paused or deleting: do not touch devices either
+	}
 	if err == nil && a.devices.enabled() {
 		a.syncDevices(ctx, items)
 	}
@@ -105,6 +110,10 @@ func (a *adapter) syncDevices(ctx context.Context, items []InventoryItem) {
 	log := ctrl.Log.WithName("nexus-dashboard").WithValues("networkController", a.key)
 	res, err := a.devices.Sync(ctx, items)
 	if ctx.Err() != nil {
+		return
+	}
+	if errors.Is(err, errBindingInactive) {
+		log.Info("device adoption stopped: " + err.Error())
 		return
 	}
 	ok, msg := res.ok() && err == nil, res.String()

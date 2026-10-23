@@ -94,10 +94,11 @@ type ndFabric struct {
 // reports meta.counts.{remaining,total} while the fabric list reports
 // meta.{remaining,total} directly, so both shapes are accepted.
 type pageMetaBody struct {
-	Remaining int `json:"remaining"`
+	Remaining int  `json:"remaining"`
+	Total     *int `json:"total"`
 	Counts    struct {
-		Remaining int `json:"remaining"`
-		Total     int `json:"total"`
+		Remaining int  `json:"remaining"`
+		Total     *int `json:"total"`
 	} `json:"counts"`
 }
 
@@ -112,9 +113,21 @@ func (m pageMetaBody) remaining() int {
 	return m.Remaining
 }
 
+// total returns the item total when ND sent one.
+func (m pageMetaBody) total() (int, bool) {
+	switch {
+	case m.Counts.Total != nil:
+		return *m.Counts.Total, true
+	case m.Total != nil:
+		return *m.Total, true
+	}
+	return 0, false
+}
+
 // listPaged follows meta.counts.remaining and returns the raw items found
-// under key. It fails closed on a server that never drains, so a bad paging
-// assumption cannot loop forever.
+// under key. It fails closed on a server that never drains, on an empty page
+// that still reports items remaining, and on a missing list, so an incomplete
+// answer is never returned as a complete one.
 func (c *client) listPaged(ctx context.Context, path, key string) ([]json.RawMessage, error) {
 	var all []json.RawMessage
 	offset := 0
@@ -135,13 +148,29 @@ func (c *client) listPaged(ctx context.Context, path, key string) ([]json.RawMes
 			return nil, fmt.Errorf("GET %s: response is not a JSON object", path)
 		}
 		var items []json.RawMessage
+		listed := false
 		if v, ok := raw[key]; ok && string(v) != "null" {
+			listed = true
 			if err := json.Unmarshal(v, &items); err != nil {
 				return nil, fmt.Errorf("GET %s: %q is not a list", path, key)
 			}
 		}
+		remaining := env.Meta.remaining()
+		// A response that cannot be told apart from "nothing here" must not
+		// look like an empty page: a partial snapshot would mark valid
+		// devices missing and eventually prune them. Fail the whole refresh so
+		// the last complete snapshot is kept. A missing list is accepted only
+		// as the first page of a collection ND itself reports as empty.
+		if !listed {
+			if total, ok := env.Meta.total(); !(page == 0 && ok && total == 0 && remaining <= 0) {
+				return nil, fmt.Errorf("GET %s: response has no %q list", path, key)
+			}
+		}
+		if len(items) == 0 && remaining > 0 {
+			return nil, fmt.Errorf("GET %s: page at offset %d is empty but ND reports %d items remaining", path, offset, remaining)
+		}
 		all = append(all, items...)
-		if len(items) == 0 || env.Meta.remaining() <= 0 {
+		if len(items) == 0 || remaining <= 0 {
 			return all, nil
 		}
 		offset += len(items)

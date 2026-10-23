@@ -17,9 +17,11 @@ package nexusdashboard
 import (
 	"context"
 	"errors"
+	"fmt"
 	"sync"
 
 	"k8s.io/client-go/util/retry"
+	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	ciskov1 "github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
 )
@@ -113,6 +115,29 @@ func (a *adapter) stillBound(nc *ciskov1.NetworkController) error {
 		nc.Spec.Paused,
 		nc.DeletionTimestamp != nil:
 		return errBindingInactive
+	}
+	return nil
+}
+
+// activeBinding is the guard for device writes. It reads the NetworkController
+// from the API server, not the cache, and fails closed: a worker that was
+// superseded, paused or is being deleted, whose controller changed generation,
+// or that cannot confirm any of this, must not create, update or prune
+// devices. Adoption must also still be enabled in the live spec.
+func (a *adapter) activeBinding(ctx context.Context) error {
+	var r ctrlclient.Reader = a.statusWriter
+	if a.reader != nil {
+		r = a.reader
+	}
+	var nc ciskov1.NetworkController
+	if err := r.Get(ctx, a.key, &nc); err != nil {
+		return fmt.Errorf("%w: re-read NetworkController: %v", errBindingInactive, err)
+	}
+	if err := a.stillBound(&nc); err != nil {
+		return err
+	}
+	if da := nc.Spec.DeviceAdoption; da == nil || !da.Enabled {
+		return fmt.Errorf("%w: device adoption is not enabled", errBindingInactive)
 	}
 	return nil
 }

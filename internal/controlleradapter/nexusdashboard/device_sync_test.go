@@ -355,6 +355,7 @@ func TestDisablingAdoptionLeavesDevicesUntouched(t *testing.T) {
 	a, _, _ := newTestAdapter(t, func(context.Context) error { return nil })
 	a.uid = testUID
 	a.adoption = adoptionSpec()
+	setLive(t, a, func(nc *ciskov1.NetworkController) { nc.Spec.DeviceAdoption = adoptionSpec() })
 	a.setupDevices()
 	a.list = func(context.Context) ([]InventoryItem, error) {
 		return []InventoryItem{item("SER1", "leaf1", "fab-a")}, nil

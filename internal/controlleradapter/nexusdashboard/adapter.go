@@ -52,6 +52,7 @@ type adapter struct {
 	inventoryInterval time.Duration
 	inventory         inventoryStore
 	statusWriter      ctrlclient.Client // set in SetupWithManager
+	reader            ctrlclient.Reader // uncached API reader for the guard; falls back to statusWriter
 	adoption          *ciskov1.NetworkControllerDeviceAdoption
 	uid               string
 	generation        int64 // generation the worker was started for; status is published only while it is current
@@ -116,6 +117,7 @@ func newAdapter(opts controlleradapter.Options) (controlleradapter.Adapter, erro
 // SetupWithManager registers the health loop as a manager-owned Runnable.
 func (a *adapter) SetupWithManager(mgr ctrl.Manager) error {
 	a.statusWriter = mgr.GetClient()
+	a.reader = mgr.GetAPIReader()
 	a.setupDevices()
 	// Until the first refresh completes, say so instead of omitting the entry,
 	// so a restart does not make the inventory capability disappear and return.
@@ -131,7 +133,7 @@ func (a *adapter) SetupWithManager(mgr ctrl.Manager) error {
 // adapter never writes a CiscoDevice.
 func (a *adapter) setupDevices() {
 	if a.adoption != nil && a.adoption.Enabled {
-		a.devices = &deviceSyncer{client: a.statusWriter, namespace: a.key.Namespace, uid: a.uid, adoption: a.adoption, now: a.now}
+		a.devices = &deviceSyncer{client: a.statusWriter, namespace: a.key.Namespace, uid: a.uid, adoption: a.adoption, now: a.now, guard: a.activeBinding}
 	}
 }
 
