@@ -45,6 +45,7 @@ type adapter struct {
 	interval          time.Duration
 	rotation          <-chan struct{}
 	probe             func(context.Context) error
+	version           func(context.Context) (string, error) // optional; nil in tests that do not need it
 	invalidate        func()
 	now               func() time.Time
 	list              func(context.Context) ([]InventoryItem, error)
@@ -101,6 +102,7 @@ func newAdapter(opts controlleradapter.Options) (controlleradapter.Adapter, erro
 		interval:          interval,
 		rotation:          opts.MaterialRotation.Changes,
 		probe:             c.Probe,
+		version:           c.Version,
 		list:              c.ListInventory,
 		inventoryInterval: defaultInventoryInterval,
 		invalidate:        c.Invalidate,
@@ -164,7 +166,20 @@ func (a *adapter) check(ctx context.Context) {
 		return
 	}
 	a.obs.setHealth(result)
+	a.refreshVersion(ctx, result)
 	a.logPublish("publish NetworkController status", a.publishStatus(ctx, true))
+}
+
+// refreshVersion reads the ND version once per health pass, only after a
+// successful probe. It is informational: a failure neither changes health nor
+// clears the last known version.
+func (a *adapter) refreshVersion(ctx context.Context, res healthResult) {
+	if a.version == nil || !res.ready() {
+		return
+	}
+	if v, err := a.version(ctx); err == nil && v != "" {
+		a.obs.setVersion(v)
+	}
 }
 
 // logPublish keeps a worker that was superseded quiet: that is expected during

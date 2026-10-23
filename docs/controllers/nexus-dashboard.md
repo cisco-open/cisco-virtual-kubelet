@@ -14,7 +14,11 @@ Every `spec.connection.healthCheckInterval` (default 1m) the worker:
 
 1. Logs in with `POST /api/v1/infra/login` using the mounted credentials.
 2. Calls `GET /api/v1/manage/fabrics` with the `AuthCookie` token.
-3. Writes `Authenticated`, `APICompatible`, `Ready`, the `health` capability,
+3. After a successful probe, reads `GET /api/v1/infra/about` and publishes the
+   ND product version (for example `4.3.1`) as `status.controllerVersion`. This
+   is informational: a failure neither changes health nor clears the last
+   known version. The pre-login banner in that response is never read.
+4. Writes `Authenticated`, `APICompatible`, `Ready`, the `health` capability,
    `phase`, and the attempt/success timestamps to `status`.
 
 | Outcome | Authenticated | APICompatible | Phase |
@@ -235,6 +239,10 @@ kubectl get networkcontroller nd-lab -o jsonpath='{range .status.conditions[*]}{
 
 - Login body: `{"domain","userName","userPasswd"}`; the response carries `token`
   (also `jwttoken`). Requests send `Cookie: AuthCookie=<token>`.
+- `GET /api/v1/infra/about` returns `productVersion` (`4.3.1`), `buildVersion`
+  (`4.3.1.175`) and `productName`; it was checked on a live ND 4.3.1. The
+  NDFC path `/appcenter/cisco/ndfc/api/v1/fm/about/version` also answers there
+  but is the legacy API and is not used.
 - Documented example tokens expire about 20 minutes after issue; the adapter
   refreshes on its own schedule and on 401.
 - The Manage API is GA from ND 4.2.1; Early Access releases may change schemas.

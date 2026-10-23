@@ -42,12 +42,25 @@ type observed struct {
 	health    *healthResult
 	inventory *capState
 	adoption  *capState
+	version   string // ND product version; last known value is kept
 }
 
 func (o *observed) setHealth(r healthResult) {
 	o.mu.Lock()
 	defer o.mu.Unlock()
 	o.health = &r
+}
+
+func (o *observed) setVersion(v string) {
+	o.mu.Lock()
+	defer o.mu.Unlock()
+	o.version = v
+}
+
+func (o *observed) controllerVersion() string {
+	o.mu.Lock()
+	defer o.mu.Unlock()
+	return o.version
 }
 
 func (o *observed) setCapability(name string, ok bool, msg string) {
@@ -119,6 +132,9 @@ func (a *adapter) publishStatus(ctx context.Context, withHealth bool) error {
 		before := nc.DeepCopy()
 		if res, ok := a.obs.healthResult(); ok && withHealth {
 			applyHealth(&nc, res, a.now())
+			if v := a.obs.controllerVersion(); v != "" {
+				nc.Status.ControllerVersion = v
+			}
 		}
 		nc.Status.Capabilities = a.obs.capabilities()
 		if equalStatus(before, &nc) {

@@ -40,6 +40,7 @@ type fakeND struct {
 	probeCode  atomic.Int32 // fixed status for probe if non-zero
 	lastDomain atomic.Value
 	fabrics    atomic.Value // http.HandlerFunc overriding the fabrics/probe endpoint
+	about      atomic.Value // http.HandlerFunc overriding the about endpoint
 }
 
 func (f *fakeND) setFabrics(h http.HandlerFunc) { f.fabrics.Store(h) }
@@ -59,6 +60,17 @@ func newFakeND(t *testing.T, tls bool) *fakeND {
 			return
 		}
 		_ = json.NewEncoder(w).Encode(map[string]any{"token": f.token.Load(), "jwttoken": f.token.Load(), "statusCode": 200})
+	})
+	mux.HandleFunc(aboutPath, func(w http.ResponseWriter, r *http.Request) {
+		if ck, err := r.Cookie(authCookie); err != nil || ck.Value != f.token.Load().(string) {
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+		if h, ok := f.about.Load().(http.HandlerFunc); ok {
+			h(w, r)
+			return
+		}
+		_, _ = w.Write([]byte(`{"buildVersion":"4.3.1.175","productVersion":"4.3.1","productName":"Nexus Dashboard","preLoginBanner":"UNAUTHORIZED ACCESS"}`))
 	})
 	mux.HandleFunc(probePath, func(w http.ResponseWriter, r *http.Request) {
 		f.probes.Add(1)
