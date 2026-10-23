@@ -1,0 +1,32 @@
+sdwan:
+  policy_objects:
+    class_maps:
+      - name: CVK-CLASSIC-QOS-CLASS
+        queue: 2
+  localized_policies:
+    definitions:
+      qos_maps:
+        - name: CVK-CLASSIC-QOS
+          description: Managed by CVK
+          qos_schedulers:
+            - queue: 2
+              class_map: CVK-CLASSIC-QOS-CLASS
+              bandwidth_percent: 40
+              buffer_percent: 40
+              drop_type: tail-drop
+              scheduling_type: llq
+      rewrite_rules:
+        - name: CVK-CLASSIC-REWRITE
+          description: Managed by CVK
+          rules:
+            - class: CVK-CLASSIC-QOS-CLASS
+              priority: low
+              dscp: 10
+              layer2_cos: 2
+    feature_policies:
+      - name: CVK-CLASSIC-LOCALIZED
+        description: Managed by CVK
+        ipv4_flow_visibility: true
+        definitions:
+          qos_maps: [CVK-CLASSIC-QOS]
+          rewrite_rules: [CVK-CLASSIC-REWRITE]

@@ -193,6 +193,7 @@ rules:
   resourceNames:
   - cisco-virtual-kubelet-controller-worker
   - cisco-virtual-kubelet-nd-worker
+  - cisco-virtual-kubelet-sdwan-worker
   resources:
   - clusterroles
   verbs:

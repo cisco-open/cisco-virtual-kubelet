@@ -1,0 +1,13 @@
+sdwan:
+  localized_policies:
+    definitions:
+      ipv4_access_control_lists:
+        - name: CVK-CLASSIC-ACL
+          description: Managed by CVK
+          default_action: drop
+          sequences:
+            - id: 1
+              name: CVK-ALLOW-PREFIX
+              base_action: accept
+              match_criterias:
+                source_ip_prefix: 10.0.0.0/8

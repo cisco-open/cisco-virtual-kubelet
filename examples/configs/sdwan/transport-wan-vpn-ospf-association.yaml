@@ -1,0 +1,14 @@
+sdwan:
+  feature_profiles:
+    transport_profiles:
+      - name: CVK-TRANSPORT-VPN-OSPF-PROFILE
+        ospf_features:
+          - name: CVK-TRANSPORT-VPN-OSPF
+            router_id: 192.0.2.7
+            areas:
+              - number: 0
+                interfaces:
+                  - name: GigabitEthernet7
+        wan_vpn:
+          name: CVK-TRANSPORT-VPN-OSPF-VPN
+          ospf: CVK-TRANSPORT-VPN-OSPF

@@ -1,0 +1,9 @@
+sdwan:
+  edge_feature_templates:
+    vpn_templates:
+      - name: CVK-CLASSIC-VPN
+        description: CVK isolated VPN template
+        device_types: [C8000V]
+        vpn_id: 10
+        vpn_name: CVK-LAB
+        omp_admin_distance_ipv4: 250

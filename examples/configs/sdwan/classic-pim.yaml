@@ -1,0 +1,16 @@
+sdwan:
+  edge_feature_templates:
+    pim_templates:
+      - name: CVK-CLASSIC-PIM
+        description: CVK unattached PIM template
+        device_types: [C8000V]
+        ssm_default: true
+        auto_rp: false
+        rp_addresses:
+          - ip_address: 192.0.2.1
+            override: false
+        interfaces:
+          - interface_name: GigabitEthernet1
+            query_interval: 30
+            join_prune_interval: 60
+            optional: false

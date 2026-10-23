@@ -1,0 +1,6 @@
+=== RUN   TestEnvtestSDWANReconciliation
+    envtest_test.go:136: reconciliation pass 1: Applying
+    envtest_test.go:151: real Kubernetes status/Lease persistence and idempotent reconciliation passed
+--- PASS: TestEnvtestSDWANReconciliation (12.93s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/sdwan	13.371s

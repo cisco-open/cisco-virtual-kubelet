@@ -1,0 +1,40 @@
+sdwan:
+  feature_profiles:
+    service_profiles:
+      - name: CVK-OSPF-SERVICE
+        description: Unattached OSPF service fixture
+        ospf_features:
+          - name: CVK-OSPF-SERVICE-V2
+            router_id: 192.0.2.1
+            areas:
+              - number: 0
+                interfaces:
+                  - name: GigabitEthernet1
+                    cost: 10
+        ospfv3_ipv4_features:
+          - name: CVK-OSPF-SERVICE-V3-IPV4
+            router_id: 192.0.2.2
+            areas:
+              - number: 0
+                interfaces:
+                  - name: GigabitEthernet2
+                    cost: 20
+        ospfv3_ipv6_features:
+          - name: CVK-OSPF-SERVICE-V3-IPV6
+            router_id: 192.0.2.3
+            areas:
+              - number: 0
+                interfaces:
+                  - name: GigabitEthernet3
+                    cost: 30
+    transport_profiles:
+      - name: CVK-OSPF-TRANSPORT
+        description: Unattached OSPF transport fixture
+        ospf_features:
+          - name: CVK-OSPF-TRANSPORT-V2
+            router_id: 192.0.2.4
+            areas:
+              - number: 0
+                interfaces:
+                  - name: GigabitEthernet4
+                    cost: 40

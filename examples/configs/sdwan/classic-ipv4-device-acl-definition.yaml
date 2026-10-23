@@ -1,0 +1,14 @@
+sdwan:
+  localized_policies:
+    definitions:
+      ipv4_device_access_policies:
+        - name: CVK-CLASSIC-DEVICE-ACL
+          description: Managed by CVK
+          default_action: drop
+          sequences:
+            - id: 1
+              name: CVK-ALLOW-DEVICE-PREFIX
+              base_action: accept
+              match_criterias:
+                source_ip_prefix: 10.0.0.0/8
+                destination_port: 22

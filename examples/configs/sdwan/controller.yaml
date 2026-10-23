@@ -1,0 +1,20 @@
+apiVersion: cisco.vk/v1alpha1
+kind: NetworkController
+metadata:
+  name: sdwan-lab
+  namespace: sdwan-lab
+spec:
+  type: sdwan
+  endpoint: https://198.18.1.10
+  credentialSecretRef:
+    name: sdwan-credentials
+  tls:
+    # Explicit exception for this lab's self-signed certificate without an IP SAN.
+    insecureSkipVerify: true
+  connection:
+    requestTimeout: 30s
+    healthCheckInterval: 1m
+    maxConcurrentRequests: 1
+    rateLimit:
+      requestsPerSecond: 5
+      burst: 1

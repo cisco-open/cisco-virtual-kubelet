@@ -1,0 +1,26 @@
+sdwan:
+  feature_profiles:
+    transport_profiles:
+      - name: CVK-TRANSPORT-WAN-VPN-PROFILE
+        wan_vpn:
+          name: CVK-TRANSPORT-WAN-VPN
+          enhance_ecmp_keying: true
+          ipv4_primary_dns_address: 192.0.2.53
+          host_mappings:
+            - hostname: wan.example.test
+              ips: [192.0.2.20]
+          ipv4_static_routes:
+            - network_address: 198.51.100.0
+              subnet_mask: 255.255.255.0
+              gateway: nexthop
+              next_hops:
+                - address: 198.51.100.1
+          ipv6_static_routes:
+            - prefix: 2001:db8:2::/64
+              gateway: null0
+          nat_64_v4_pools:
+            - name: CVK-NAT64
+              overload: true
+              range_start: 192.0.2.100
+              range_end: 192.0.2.110
+          services: [TE]

@@ -1,0 +1,20 @@
+sdwan:
+  centralized_policies:
+    definitions:
+      data_policy:
+        cflowd:
+          - name: CVK-CENTRAL-CFLOWD
+            description: Managed by CVK
+            active_flow_timeout: 60
+            inactive_flow_timeout: 15
+            sampling_interval: 100
+            flow_refresh: 300
+            protocol: ipv4
+            tos: false
+            remarked_dscp: false
+            collectors:
+              - vpn: 10
+                ip_address: 198.51.100.10
+                port: 2055
+                transport: transport_udp
+                source_interface: GigabitEthernet1

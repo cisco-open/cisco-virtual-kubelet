@@ -1,0 +1,7 @@
+sdwan:
+  edge_feature_templates:
+    banner_templates:
+      - name: CVK-SDWAN-BANNER-FIXTURE
+        description: Base banner template; support carrier returns
+        login: "login banner: new\n"
+        motd: "motd banner:\r\nNo message today\n"

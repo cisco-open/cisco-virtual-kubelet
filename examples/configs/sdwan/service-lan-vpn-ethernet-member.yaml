@@ -1,0 +1,12 @@
+sdwan:
+  feature_profiles:
+    service_profiles:
+      - name: CVK-SERVICE-MEMBER-PROFILE
+        lan_vpns:
+          - name: CVK-SERVICE-MEMBER-VPN
+            vpn_id: 127
+            ethernet_interfaces:
+              - name: CVK-SERVICE-MEMBER
+                interface_name: GigabitEthernet0/0/5
+                shutdown: true
+                port_channel_member_interface: true

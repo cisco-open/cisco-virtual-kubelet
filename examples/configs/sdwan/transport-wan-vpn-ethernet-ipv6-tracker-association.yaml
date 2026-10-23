@@ -1,0 +1,20 @@
+sdwan:
+  feature_profiles:
+    transport_profiles:
+      - name: CVK-WAN-IPV6-TRACKER-PROFILE
+        ipv6_trackers:
+          - name: CVK-WAN-IPV6-TRACKER-A
+            tracker_name: cvkipv6etha
+            endpoint_tracker_type: icmp
+            endpoint_tcp_udp_ip: "2001:db8::101"
+            interval: 60
+        wan_vpn:
+          name: CVK-WAN-IPV6-TRACKER-VPN
+          ethernet_interfaces:
+            - name: CVK-WAN-IPV6-TRACKER-IF
+              interface_name: GigabitEthernet0/0/4
+              shutdown: true
+              tunnel_interface: false
+              ipv6_address_type: static
+              ipv6_address: "2001:db8:136::1/64"
+              ipv6_tracker: CVK-WAN-IPV6-TRACKER-A

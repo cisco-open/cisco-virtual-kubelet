@@ -1,0 +1,14 @@
+# Unattached controller parcel; no agent is installed or started by this fixture.
+sdwan:
+  feature_profiles:
+    other_profiles:
+      - name: CVK-TE-FEATURES
+        thousandeyes:
+          account_group_token_variable: te_account_token
+          hostname: cvk-te-fixture
+          management_ip: 192.0.2.20
+          management_subnet_mask: 255.255.255.0
+          agent_default_gateway: 192.0.2.1
+          name_server_ip: 192.0.2.53
+          vpn_id: 1
+          proxy_type: none

@@ -1,0 +1,12 @@
+# Unqualified on Manager 20.18.2.2: pinned provider omits required sxpNodeId.
+# Kept as a reproducible compatibility fixture; excluded from deployment.
+sdwan:
+  feature_profiles:
+    other_profiles:
+      - name: CVK-TRUSTSEC-COMPAT
+        trustsec:
+          device_id: CVK-TRUSTSEC
+          device_password_variable: trustsec_device_password
+          device_sgt: 10
+          enable_enforcement: false
+          enable_sxp: false

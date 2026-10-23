@@ -1,0 +1,22 @@
+sdwan:
+  edge_feature_templates:
+    cellular_interface_templates:
+      - name: CVK-CLASSIC-CELLULAR-INTERFACE
+        description: Unattached cellular VPN interface fixture
+        interface_name: Cellular0/2/0
+        shutdown: true
+        bandwidth_downstream: 10000
+        ip_mtu: 1400
+        tunnel_interface:
+          color: lte
+          gre_encapsulation: true
+          gre_preference: 100
+          ipsec_encapsulation: true
+          ipsec_weight: 1
+          allow_service_dns: true
+        ipv4_ingress_access_list_variable: cellular_ipv4_acl
+        ipv6_egress_access_list_variable: cellular_ipv6_acl
+        ingress_policer_name: CVK-POLICER
+        static_arps:
+          - ip_address: 192.0.2.9
+            mac_address: 00:11:22:33:44:55

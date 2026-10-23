@@ -1,0 +1,27 @@
+sdwan:
+  feature_profiles:
+    transport_profiles:
+      - name: CVK-WAN-IPV4-TRACKER-GROUP-PROFILE
+        ipv4_trackers:
+          - name: CVK-WAN-IPV4-TRACKER-GROUP-A
+            tracker_name: cvkipv4etha
+            endpoint_tracker_type: icmp
+            endpoint_ip: 192.0.2.101
+            interval: 60
+          - name: CVK-WAN-IPV4-TRACKER-GROUP-B
+            tracker_name: cvkipv4ethb
+            endpoint_tracker_type: icmp
+            endpoint_ip: 192.0.2.101
+            interval: 60
+        ipv4_tracker_groups:
+          - name: CVK-WAN-IPV4-TRACKER-GROUP-GROUP
+            tracker_boolean: and
+            trackers: [CVK-WAN-IPV4-TRACKER-GROUP-A, CVK-WAN-IPV4-TRACKER-GROUP-B]
+        wan_vpn:
+          name: CVK-WAN-IPV4-TRACKER-GROUP-VPN
+          ethernet_interfaces:
+            - name: CVK-WAN-IPV4-TRACKER-GROUP-IF
+              interface_name: GigabitEthernet0/0/4
+              shutdown: true
+              tunnel_interface: false
+              ipv4_tracker_group: CVK-WAN-IPV4-TRACKER-GROUP-GROUP

@@ -17,6 +17,8 @@ package main
 import (
 	// Nexus Dashboard network-controller adapter.
 	_ "github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/nexusdashboard"
+	// SD-WAN network-controller adapter.
+	_ "github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/sdwan"
 )
 
 // Concrete network-controller adapters are enabled with blank imports in this

@@ -208,7 +208,7 @@ func TestManagerBindMarkerCoversEveryAuditedWorkerRole(t *testing.T) {
 			marker = line
 		}
 	}
-	for _, role := range []string{controlleradapter.DefaultWorkerClusterRole, controlleradapter.NDWorkerClusterRole} {
+	for _, role := range []string{controlleradapter.DefaultWorkerClusterRole, controlleradapter.NDWorkerClusterRole, controlleradapter.SDWANWorkerClusterRole} {
 		if !strings.Contains(marker, role) {
 			t.Errorf("manager bind marker does not cover %q: %s", role, marker)
 		}

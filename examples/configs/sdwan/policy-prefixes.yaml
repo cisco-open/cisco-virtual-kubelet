@@ -1,0 +1,39 @@
+# Native CVK fixture; live qualification requires an isolated policy-object profile.
+sdwan:
+  feature_profiles:
+    policy_object_profile:
+      name: CVK-POLICY-PREFIXES
+      ipv4_data_prefix_lists:
+        - name: CVK-PARCEL-DATA4
+          prefixes: [192.0.2.0/24]
+      ipv6_data_prefix_lists:
+        - name: CVK-PARCEL-DATA6
+          prefixes: ["2001:db8::/32"]
+      ipv4_prefix_lists:
+        - name: CVK-PARCEL-PREFIX4
+          entries:
+            - prefix: 198.51.100.0/24
+              ge: 25
+              le: 28
+      ipv6_prefix_lists:
+        - name: CVK-PARCEL-PREFIX6
+          entries:
+            - prefix: "2001:db8:1::/48"
+              ge: 56
+              le: 64
+      expanded_community_lists:
+        - name: CVK-PARCEL-EXPANDED
+          expanded_communities: ["65000:.*"]
+      security_ips_signature_lists:
+        - name: CVK-PARCEL-IPS-SIGNATURE
+          entries:
+            - generator_id: 1
+              signature_id: 1000
+      security_advanced_malware_protection_profiles:
+        - name: CVK-PARCEL-AMP
+          alert_log_level: critical
+          amp_cloud_region: nam
+          file_analysis: true
+          file_analysis_alert_log_level: warning
+          tg_cloud_region: nam
+          file_analysis_file_types: [pdf]

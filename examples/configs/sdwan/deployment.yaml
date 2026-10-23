@@ -1,0 +1,188 @@
+sdwan:
+  edge_feature_templates:
+    banner_templates:
+    - name: CVK-SDWAN-BANNER-FIXTURE
+      description: Base banner template; support carrier returns
+      login: 'login banner: new
+
+        '
+      motd: "motd banner:\r\nNo message today\n"
+  feature_profiles:
+    system_profiles:
+    - name: CVK-SDWAN-SYSTEM-FIXTURE
+      description: CVK NetAsCode system profile parity fixture
+      banner:
+        login: 'CVK fixture login
+
+          '
+        motd_variable: fixture_motd
+    transport_profiles:
+    - name: CVK-PROFILE-transport
+      description: CVK isolated profile fixture
+    service_profiles:
+    - name: CVK-PROFILE-service
+      description: CVK isolated profile fixture
+    cli_profiles:
+    - name: CVK-PROFILE-cli
+      description: CVK isolated profile fixture
+    other_profiles:
+    - name: CVK-PROFILE-other
+      description: CVK isolated profile fixture
+    application_priority_profiles:
+    - name: CVK-PROFILE-application-priority
+      description: CVK isolated profile fixture
+    ngfw_security_profiles:
+    - name: CVK-PROFILE-ngfw-security
+      description: CVK isolated profile fixture
+    sse_profiles:
+    - name: CVK-PROFILE-sse
+      description: CVK isolated profile fixture
+    topology_profiles:
+    - name: CVK-PROFILE-topology
+      description: CVK isolated profile fixture
+  configuration_groups:
+  - name: CVK-SDWAN-GROUP-FIXTURE
+    description: CVK unattached configuration group parity fixture
+    system_profile: CVK-SDWAN-SYSTEM-FIXTURE
+  policy_objects:
+    as_path_lists:
+    - as_paths:
+      - ^65000_
+      name: CVK-POL-03
+    color_lists:
+    - colors:
+      - blue
+      - mpls
+      name: CVK-POL-05
+    standard_community_lists:
+    - standard_communities:
+      - 65000:100
+      name: CVK-POL-21
+    expanded_community_lists:
+    - expanded_communities:
+      - 65000:100
+      name: CVK-POL-06
+    extended_community_lists:
+    - extended_communities:
+      - community rt 65000:100
+      name: CVK-POL-07
+    ipv4_data_prefix_lists:
+    - prefixes:
+      - 192.0.2.0/24
+      name: CVK-POL-09
+    ipv6_data_prefix_lists:
+    - prefixes:
+      - 2001:db8::/64
+      name: CVK-POL-11
+    fqdn_lists:
+    - fqdns:
+      - example.com
+      name: CVK-POL-08
+    port_lists:
+    - ports:
+      - '443'
+      - 8000-8010
+      name: CVK-POL-16
+    site_lists:
+    - site_ids:
+      - 100
+      site_id_ranges:
+      - from: 200
+        to: 210
+      name: CVK-POL-19
+    vpn_lists:
+    - vpn_ids:
+      - 100
+      vpn_id_ranges:
+      - from: 200
+        to: 210
+      name: CVK-POL-23
+    region_lists:
+    - name: CVK-POL-18
+      region_ids:
+      - 1
+    application_lists:
+    - applications:
+      - netflix
+      name: CVK-POL-02
+    local_application_lists:
+    - applications:
+      - cisco-collab-video
+      name: CVK-POL-13
+    zones:
+    - vpn_ids:
+      - 100
+      name: CVK-POL-24
+    ipv4_prefix_lists:
+    - entries:
+      - prefix: 192.0.2.0/24
+        ge: 25
+        le: 32
+      name: CVK-POL-10
+    ipv6_prefix_lists:
+    - entries:
+      - prefix: 2001:db8::/64
+        ge: 65
+        le: 128
+      name: CVK-POL-12
+    tloc_lists:
+    - tlocs:
+      - tloc_ip: 192.0.2.1
+        color: blue
+        encapsulation: ipsec
+        preference: 10
+      name: CVK-POL-22
+    class_maps:
+    - queue: 2
+      name: CVK-POL-04
+    policers:
+    - burst_bytes: 100000
+      rate_bps: 1000000
+      exceed_action: drop
+      name: CVK-POL-15
+    mirror_lists:
+    - remote_destination_ip: 192.0.2.1
+      source_ip: 192.0.2.2
+      name: CVK-POL-14
+    preferred_color_groups:
+    - primary_colors:
+      - blue
+      primary_path: direct-path
+      secondary_colors:
+      - bronze
+      secondary_path: all-paths
+      name: CVK-POL-17
+      tertiary_colors:
+      - gold
+      tertiary_path: all-paths
+    app_probe_classes:
+    - forwarding_class: default
+      mappings:
+      - color: blue
+        dscp: 8
+      name: CVK-POL-01
+    sla_classes:
+    - latency_ms: 100
+      jitter_ms: 50
+      loss_percentage: 1
+      fallback_best_tunnel_criteria: latency
+      fallback_best_tunnel_latency: 50
+      name: CVK-POL-20
+  network_hierarchy:
+    groups:
+    - name: CVK-HIER-G0
+      description: CVK isolated hierarchy fixture
+      regions:
+      - name: CVK-HIER-R1
+      groups:
+      - name: CVK-HIER-G1
+        regions:
+        - name: CVK-HIER-R2
+        groups:
+        - name: CVK-HIER-G2
+          sites:
+          - name: CVK-HIER-SITE
+            site_id: 4294967000
+            location: Undisclosed
+    regions:
+    - name: CVK-HIER-R0

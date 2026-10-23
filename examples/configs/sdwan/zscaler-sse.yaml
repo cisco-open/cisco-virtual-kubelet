@@ -1,0 +1,18 @@
+sdwan:
+  feature_profiles:
+    sse_profiles:
+      - name: CVK-ZSCALER-SSE-PROFILE
+        description: Unattached Zscaler SSE fixture
+        zscaler:
+          name: CVK-ZSCALER-SSE
+          auth_required: false
+          primary_data_center: Auto
+          tracker_source_ip: 192.0.2.10
+          interfaces:
+            - interface_name: ipsec2
+              tunnel_source_interface: GigabitEthernet1
+              shutdown: true
+          trackers:
+            - name: cvk-zscaler-tracker
+              endpoint_api_url: http://example.com/health
+              interval: 60
