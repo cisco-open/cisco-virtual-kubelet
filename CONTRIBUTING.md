@@ -40,6 +40,12 @@ major version release.
 After hosted checks pass, one approval on the current pull request head
 automatically dispatches the Cat8kv and Cat9k integration checks.
 
+For a release-preparation PR, the normal GitHub **Approve** review also serves
+as release authorization under the [release approval policy](RELEASE.md#release-approval-policy).
+Review text is optional; reviewers do not need to post a separate release
+comment or approve again after the draft is created. The release operator
+records the commit and draft details and completes the verification gates.
+
 ### Building the documentation locally
 
 The MkDocs site includes hash-pinned local browser assets from the website npm
