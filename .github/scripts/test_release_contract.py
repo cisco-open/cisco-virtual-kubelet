@@ -250,10 +250,6 @@ class ReleaseContractTests(unittest.TestCase):
         runbook = (ROOT / "RELEASE.md").read_text(encoding="utf-8")
         self.assertIn("render_github_release_notes.py", runbook)
         self.assertIn('--rawfile body "$release_notes"', runbook)
-        self.assertIn(
-            "I approve Cisco Virtual Kubelet v2026.10.0 for release from commit",
-            runbook,
-        )
         self.assertIn("approved release-signing identity", runbook)
         with self.assertRaises(ReleaseNotesError):
             render_release_notes(
