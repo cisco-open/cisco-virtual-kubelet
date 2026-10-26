@@ -14,7 +14,12 @@
 
 package main
 
-import _ "github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/sdwan"
+import (
+	// Nexus Dashboard network-controller adapter.
+	_ "github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/nexusdashboard"
+	// SD-WAN network-controller adapter.
+	_ "github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/sdwan"
+)
 
 // Concrete network-controller adapters are enabled with blank imports in this
 // composition file, mirroring drivers_register.go. The generic manager reads

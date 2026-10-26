@@ -121,6 +121,8 @@ func ValidateNetworkControllerSpec(spec *NetworkControllerSpec) field.ErrorList 
 		}
 	}
 
+	errs = append(errs, validateDeviceAdoption(root.Child("deviceAdoption"), spec.DeviceAdoption)...)
+
 	connectionPath := root.Child("connection")
 	if requestTimeout := spec.Connection.RequestTimeout; requestTimeout != nil {
 		duration := requestTimeout.Duration
@@ -150,5 +152,115 @@ func ValidateNetworkControllerSpec(spec *NetworkControllerSpec) field.ErrorList 
 		errs = append(errs, field.Invalid(root.Child("preferredAPIVersion"), spec.PreferredAPIVersion, "must not be whitespace"))
 	}
 
+	return errs
+}
+
+var deviceScopePattern = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9_.-]*$`)
+
+func validateSecretName(path *field.Path, name string) field.ErrorList {
+	if name == "" {
+		return field.ErrorList{field.Required(path, "Secret name is required")}
+	}
+	if problems := utilvalidation.IsDNS1123Subdomain(name); len(problems) > 0 {
+		return field.ErrorList{field.Invalid(path, name, strings.Join(problems, "; "))}
+	}
+	return nil
+}
+
+// validateDeviceAdoption mirrors the CRD rules and, because overrides replace
+// fields one by one, checks that every scope still resolves to a complete
+// access set.
+func validateDeviceAdoption(path *field.Path, a *NetworkControllerDeviceAdoption) field.ErrorList {
+	if a == nil {
+		return nil
+	}
+	var errs field.ErrorList
+	if a.Enabled && a.Defaults == nil {
+		errs = append(errs, field.Required(path.Child("defaults"), "required when enabled is true"))
+	}
+	if a.Defaults != nil {
+		d := path.Child("defaults")
+		if a.Defaults.Username == "" {
+			errs = append(errs, field.Required(d.Child("username"), "device username is required"))
+		}
+		errs = append(errs, validateSecretName(d.Child("credentialSecretRef").Child("name"), a.Defaults.CredentialSecretRef.Name)...)
+		errs = append(errs, validateDeviceLabels(d.Child("labels"), a.Defaults.Labels)...)
+	}
+	if len(a.ScopeOverrides) > 64 {
+		errs = append(errs, field.TooMany(path.Child("scopeOverrides"), len(a.ScopeOverrides), 64))
+	}
+	seen := make(map[string]struct{}, len(a.ScopeOverrides))
+	for i, o := range a.ScopeOverrides {
+		p := path.Child("scopeOverrides").Index(i)
+		if len(o.Scope) == 0 || len(o.Scope) > 64 || !deviceScopePattern.MatchString(o.Scope) {
+			errs = append(errs, field.Invalid(p.Child("scope"), o.Scope, "must be 1-64 characters of [A-Za-z0-9_.-] starting with an alphanumeric"))
+		}
+		if _, dup := seen[o.Scope]; dup {
+			errs = append(errs, field.Duplicate(p.Child("scope"), o.Scope))
+		}
+		seen[o.Scope] = struct{}{}
+		errs = append(errs, validateDeviceLabels(p.Child("labels"), o.Labels)...)
+		if o.CredentialSecretRef != nil {
+			errs = append(errs, validateSecretName(p.Child("credentialSecretRef").Child("name"), o.CredentialSecretRef.Name)...)
+		}
+	}
+	if r := a.Removal; r != nil {
+		p := path.Child("removal")
+		if g := r.EffectiveGracePeriod(); g < MinDeviceRemovalGracePeriod || g > MaxDeviceRemovalGracePeriod {
+			errs = append(errs, field.Invalid(p.Child("gracePeriod"), g.String(), "must be between 10m and 720h"))
+		}
+		if m := r.EffectiveMaxPrunePercent(); m < 1 || m > 100 {
+			errs = append(errs, field.Invalid(p.Child("maxPrunePercent"), m, "must be between 1 and 100"))
+		}
+		if pol := r.EffectivePolicy(); pol != DeviceRemovalRetain && pol != DeviceRemovalPrune {
+			errs = append(errs, field.NotSupported(p.Child("policy"), pol, []string{string(DeviceRemovalRetain), string(DeviceRemovalPrune)}))
+		}
+	}
+	return errs
+}
+
+// reservedDeviceLabelPrefixes cannot be set through deviceAdoption labels: the
+// adapter owns its own keys, and topology keys need the administrator
+// allowlist (projectedTopologyKeys).
+var reservedDeviceLabelPrefixes = []string{"nd.cisco.vk/", "cisco.vk/", "topology.cisco.vk/"}
+
+// reservedLabelDomain reports whether the key's namespace is kubernetes.io or
+// k8s.io, or a subdomain of either; those are reserved for Kubernetes itself.
+func reservedLabelDomain(key string) bool {
+	domain, _, found := strings.Cut(key, "/")
+	if !found {
+		return false
+	}
+	for _, d := range []string{"kubernetes.io", "k8s.io"} {
+		if domain == d || strings.HasSuffix(domain, "."+d) {
+			return true
+		}
+	}
+	return false
+}
+
+func validateDeviceLabels(path *field.Path, labels map[string]string) field.ErrorList {
+	var errs field.ErrorList
+	if len(labels) > 16 {
+		errs = append(errs, field.TooMany(path, len(labels), 16))
+	}
+	for k, v := range labels {
+		p := path.Key(k)
+		if problems := utilvalidation.IsQualifiedName(k); len(problems) > 0 {
+			errs = append(errs, field.Invalid(p, k, strings.Join(problems, "; ")))
+			continue
+		}
+		if reservedLabelDomain(k) {
+			errs = append(errs, field.Forbidden(p, "the kubernetes.io and k8s.io label namespaces are reserved"))
+		}
+		for _, prefix := range reservedDeviceLabelPrefixes {
+			if strings.HasPrefix(k, prefix) {
+				errs = append(errs, field.Forbidden(p, "label namespace "+prefix+" is reserved"))
+			}
+		}
+		if problems := utilvalidation.IsValidLabelValue(v); len(problems) > 0 {
+			errs = append(errs, field.Invalid(p, v, strings.Join(problems, "; ")))
+		}
+	}
 	return errs
 }

@@ -3,7 +3,7 @@
 // README.md for the rationale.
 module github.com/cisco-open/terraform-provider-iosxeconfig
 
-go 1.26.9
+go 1.26.10
 
 require (
 	github.com/hashicorp/terraform-plugin-framework v1.19.0

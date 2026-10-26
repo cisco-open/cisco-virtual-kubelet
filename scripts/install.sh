@@ -17,7 +17,7 @@
 set -euo pipefail
 
 # Configuration
-PINNED_GO_VERSION="1.26.9"
+PINNED_GO_VERSION="1.26.10"
 if [[ -n "${GO_VERSION+x}" ]]; then
     GO_VERSION_EXPLICIT=true
 else
@@ -106,8 +106,8 @@ go_version_is_supported() {
     actual_major=${BASH_REMATCH[1]}
     actual_minor=${BASH_REMATCH[2]}
     actual_patch=${BASH_REMATCH[3]}
-    (( actual_major == 1 && actual_minor == 26 && actual_patch >= 9 )) ||
-        (( actual_major == 1 && actual_minor == 27 && actual_patch >= 2 ))
+    (( actual_major == 1 && actual_minor == 26 && actual_patch >= 10 )) ||
+        (( actual_major == 1 && actual_minor == 27 && actual_patch >= 3 ))
 }
 
 # An explicit override is an exact toolchain selection, not merely a request
@@ -122,7 +122,7 @@ go_version_satisfies_request() {
 
 if [[ "$GO_VERSION_EXPLICIT" = true ]] &&
    ! go_version_is_supported "go${GO_VERSION}"; then
-    echo "Requested Go ${GO_VERSION} is outside the patched supported lines (go1.26.9+ or go1.27.2+)" >&2
+    echo "Requested Go ${GO_VERSION} is outside the patched supported lines (go1.26.10+ or go1.27.3+)" >&2
     exit 2
 fi
 
@@ -141,10 +141,10 @@ pinned_go_checksum() {
     local version=$1
     local arch=$2
     case "${version}/${arch}" in
-        1.26.9/amd64) echo 42d158b4d8f7b61ac0a830567c940a86098fb7aac52e467a5ebec03ef5cc2f8d ;;
-        1.26.9/arm64) echo 4a97373d49fcacdcf3694fea368a500b00ee3e963974f3e7514132717632f052 ;;
-        1.27.2/amd64) echo ecbadb99091a3f46e31f5f934b068b1864eafa7995211b39eaddf76996045fe5 ;;
-        1.27.2/arm64) echo 94f3e30b8e374bc285e7dadc11e0865726b9bc6e85b841ccceaabc0214c6b7c8 ;;
+        1.26.10/amd64) echo ccfe7ae822d2c2f41f4fe7c956199967a4dac22d0ee0d2b2bfdb440aab3b20c5 ;;
+        1.26.10/arm64) echo 3f4227ce7b206a513e794f1393adb473a07b46e94d18bd15d1c684bbb7319797 ;;
+        1.27.3/amd64) echo 65efbc80fdc1fa2cd2631cad5b481777a68e8725f34e89f50fc6ac714e379b40 ;;
+        1.27.3/arm64) echo a06e99309dbcbdca1a8ccd2282c3ee146e55930886e26b4f1193269587165f49 ;;
         *)
             if [[ "$GO_SHA256" =~ ^[0-9a-f]{64}$ ]]; then
                 echo "$GO_SHA256"
@@ -322,7 +322,7 @@ if command -v go &> /dev/null; then
            [[ "${CURRENT_GO_VERSION#go}" != "$GO_VERSION" ]]; then
             echo -e "${RED}✗${NC} Go $CURRENT_GO_VERSION is installed, but exact Go ${GO_VERSION} was requested"
         else
-            echo -e "${RED}✗${NC} Go $CURRENT_GO_VERSION is outside the patched supported lines (go1.26.9+ or go1.27.2+)"
+            echo -e "${RED}✗${NC} Go $CURRENT_GO_VERSION is outside the patched supported lines (go1.26.10+ or go1.27.3+)"
         fi
         NEED_GO=true
         MISSING_DEPS=true
@@ -355,7 +355,7 @@ if [ "$MISSING_DEPS" = true ]; then
         echo ""
         echo "Options:"
         echo "  1. Run with --install-deps flag to auto-install"
-        echo "  2. Install the dependencies manually, including patched Go 1.26.9+ or 1.27.2+"
+        echo "  2. Install the dependencies manually, including patched Go 1.26.10+ or 1.27.3+"
         echo ""
         echo "For Ubuntu/Debian:"
         echo "  sudo apt install -y build-essential ca-certificates curl git"
@@ -373,7 +373,7 @@ fi
 # Verify the selected Go remains compatible after dependency installation.
 if ! command -v go &> /dev/null || \
    ! go_version_satisfies_request "$(go env GOVERSION)"; then
-    echo -e "${RED}Patched Go 1.26.9+ or 1.27.2+ is required.${NC}"
+    echo -e "${RED}Patched Go 1.26.10+ or 1.27.3+ is required.${NC}"
     if [[ "$GO_VERSION_EXPLICIT" = true ]]; then
         echo -e "${RED}The explicitly requested go${GO_VERSION} toolchain must be first on PATH.${NC}"
     fi

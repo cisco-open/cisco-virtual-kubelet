@@ -32,6 +32,13 @@ const (
 	// in their Descriptor.
 	DefaultWorkerClusterRole = "cisco-virtual-kubelet-controller-worker"
 
+	// NDWorkerClusterRole is the base worker role plus create,
+	// update, patch and delete on CiscoDevice objects in the worker's own
+	// namespace. Delete serves only the opt-in prune policy. It deliberately
+	// has no deletecollection and no access to Secrets. Adapters that turn
+	// controller inventory into CiscoDevices select it.
+	NDWorkerClusterRole = "cisco-virtual-kubelet-nd-worker"
+
 	// SDWANWorkerClusterRole adds section ownership leases for native SD-WAN deployment.
 	SDWANWorkerClusterRole = "cisco-virtual-kubelet-sdwan-worker"
 
