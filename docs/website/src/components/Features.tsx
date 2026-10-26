@@ -66,7 +66,7 @@ const features = [
     icon: Network,
     title: "Controller Extension API",
     description:
-      "Alpha, report-only contracts for future controller adapters. The current scaffold ships with zero product adapters and cannot apply, prune, or remotely delete controller state.",
+      "Alpha contracts for controller adapters, with Catalyst SD-WAN (fixture-qualified, opt-in apply, no remote prune or delete) and Nexus Dashboard (health, inventory and opt-in CiscoDevice adoption) adapters. No other controller is integrated.",
     color: "from-primary to-accent",
     glowColor: "primary",
     beta: true,

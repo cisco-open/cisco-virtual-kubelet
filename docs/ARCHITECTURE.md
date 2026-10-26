@@ -17,8 +17,9 @@ runtime subcommands:
 - **`cisco-vk run`** — the Virtual Kubelet provider. One process per device. Reads its config, registers a virtual node in the cluster, and drives the device via RESTCONF when pods come and go.
 - **`cisco-vk controller-worker`** — the network-controller runtime. One
   process per `NetworkController` whose type has a registered adapter; it
-  starts that adapter and watches only its Kubernetes namespace. The current
-  scaffold registers zero product adapters, so this Alpha path remains inactive.
+  starts that adapter and watches only its Kubernetes namespace. Two adapters
+  are registered today, `sdwan` and `nexus-dashboard`; other types create no
+  worker.
 
 This split keeps device/controller API calls and device-side signing workflows
 inside their workers. The manager writes credential Secret references and
@@ -40,8 +41,13 @@ API. Endpoint processes, credentials, failure domains, and rate limits are
 separate, but the namespace remains the API trust/RBAC/cache boundary. Use a
 dedicated namespace when endpoints or config authors are not mutually trusted.
 Duplicate fencing compares the exact stored endpoint string within that
-namespace only. The current scaffold is report-only and has no apply, prune,
-remote-delete, or mutation-RBAC implementation.
+namespace only. The `sdwan` adapter applies intent to SD-WAN Manager only in
+`apply` mode and implements no remote prune or delete; the `nexus-dashboard`
+adapter does not change ND configuration and, when opted in, writes only `CiscoDevice`
+objects in the cluster. Each adapter's worker RBAC is a static, least-privilege
+ClusterRole bound per namespace.
+See [SD-WAN](controllers/sdwan.md) and
+[Nexus Dashboard](controllers/nexus-dashboard.md).
 See the [Network Controller Extension Guide](controller-extension-guide.md) for
 the registry, worker, model, ownership, and security contracts.
 

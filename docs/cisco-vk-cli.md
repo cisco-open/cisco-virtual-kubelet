@@ -372,10 +372,12 @@ setup or an external controller request. Worker Pod arguments also bind the
 a stale Pod rejects a live generation mismatch before adapter setup.
 
 !!! warning "Alpha controller extension"
-    The September image registers zero product adapters. The generic API and
-    worker boundary are Alpha and report-only: no Catalyst Center, APIC,
-    Meraki, or other controller is contacted, and there is no apply, prune, or
-    remote-delete runtime or mutation RBAC role in this release.
+    The generic API and worker boundary are Alpha. Two adapters are
+    registered: `sdwan` (Catalyst SD-WAN Manager, fixture-qualified, applies
+    only in `apply` mode, no remote prune or delete) and `nexus-dashboard`
+    (health, inventory and opt-in `CiscoDevice` adoption). No Catalyst Center,
+    APIC, Meraki, or other controller is contacted, and a `NetworkController`
+    whose type has no adapter starts no worker.
 
 ### Flags
 

@@ -52,6 +52,10 @@ nav:
 - Topology Roadmap Execution: 'topology-roadmap-execution.md'
 - November Topology Handoff: 'topology-november-handoff.md'
 - Network Controller Extensions: 'controller-extension-guide.md'
+- Controller Adapters:
+  - Catalyst SD-WAN: 'controllers/sdwan.md'
+  - SD-WAN Live Test Backlog: 'controllers/sdwan-live-test-backlog.md'
+  - Nexus Dashboard: 'controllers/nexus-dashboard.md'
 - CLI Reference: 'cisco-vk-cli.md'
 - Configuration:
   - CiscoDevice Reference: 'CONFIGURATION.md'

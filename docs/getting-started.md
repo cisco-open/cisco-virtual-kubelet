@@ -98,8 +98,8 @@ The chart installs:
 
 - All shipped `cisco.vk`, `config.cisco.vk`, and `ops.cisco.vk` CRDs
 - The controller `Deployment` (single replica; uses leader election for HA)
-- RBAC for the manager, per-device VK pods, and the report-only Alpha
-  network-controller worker boundary
+- RBAC for the manager, per-device VK pods, and the Alpha network-controller
+  workers (a base role plus dedicated `sdwan` and `nexus-dashboard` roles)
 
 Both the controller pod and each VK pod it spawns use this image. To use different images for the two, set `controllerImage.*` and `vkImage.*` instead.
 

@@ -35,14 +35,14 @@ iosxesoftwareupgrades        xeupgrade       ops.cisco.vk/v1alpha1      true    
     environments before broader rollout. CRDs marked **Stable** cover the
     core pod-hosting and device-management surface that has been in service
     across multiple releases. CRDs marked **Alpha** define a tested generic
-    extension boundary, but the September image registers zero product
-    adapters and provides no controller mutation runtime.
+    extension boundary with two adapters of limited, documented scope:
+    Catalyst SD-WAN Manager (fixture-qualified) and Nexus Dashboard.
 
 | Kind | Scope | Maturity | Primary use |
 |---|---:|---|---|
 | `CiscoDevice` | Namespaced | **Stable** | Declares one managed device and drives the per-device VK deployment. |
-| `NetworkController` | Namespaced | **Alpha** | Declares one external controller endpoint and its isolated worker contract. No product adapter ships in September. |
-| `NetworkControllerConfig` | Namespaced | **Alpha** | Carries resolved, versioned controller-centric Network as Code intent. The September boundary is report-only and cannot apply, prune, or remotely delete state. |
+| `NetworkController` | Namespaced | **Alpha** | Declares one external controller endpoint and its isolated worker contract. Adapter types: `sdwan` and `nexus-dashboard`; a type with no adapter creates no worker. `nexus-dashboard` can also adopt its switches as `CiscoDevice` objects through the opt-in `spec.deviceAdoption`. |
+| `NetworkControllerConfig` | Namespaced | **Alpha** | Carries resolved, versioned controller-centric Network as Code intent. Consumed by the `sdwan` adapter, which can apply to SD-WAN Manager when `spec.mode: apply` is selected; `Retain` is the only deletion policy, so remote pruning and deletion are not implemented. The `nexus-dashboard` adapter does not consume it. |
 | `IOSXEConfigDefaults` | Cluster | **Beta** | Fleet-wide baseline configuration merged into device intent. |
 | `IOSXEDeviceGroupConfig` | Namespaced | **Beta** | Shared configuration for selected devices. |
 | `IOSXEInterfaceGroupConfig` | Namespaced | **Beta** | Shared configuration for selected interfaces on selected devices. |
@@ -129,11 +129,21 @@ endpoint requires a new `NetworkController` and explicit config retargeting so
 asynchronous task and ownership state cannot be replayed against another
 controller.
 
-These CRDs are a generic extension scaffold, not a claim of built-in support
-for Catalyst Center or any other controller. The September image registers
-zero adapters, so CVK fails closed and creates no controller adapter worker.
-The runtime is report-only: apply, prune, remote deletion, and mutation RBAC
-are not implemented. Duplicate fencing compares the exact stored endpoint
+These CRDs are a generic extension API, not a claim of built-in support for
+Catalyst Center or any other controller. Two adapters are registered:
+
+- `sdwan` ([Catalyst SD-WAN](controllers/sdwan.md)) is a fixture-qualified
+  increment, not full NetAsCode parity. It applies intent to SD-WAN Manager
+  only when `spec.mode: apply` is selected; remote pruning and deletion are
+  not implemented (`Retain`).
+- `nexus-dashboard` ([Nexus Dashboard](controllers/nexus-dashboard.md))
+  reports health, ND version and switch inventory. With the opt-in
+  `spec.deviceAdoption`, it creates standalone `CiscoDevice` objects for
+  reachable NX-OS switches; it never changes ND configuration and has no
+  `NetworkControllerConfig` support yet.
+
+A `spec.type` with no registered adapter fails closed and creates no worker.
+Duplicate fencing compares the exact stored endpoint
 string only within one namespace, which remains the Kubernetes trust and RBAC
 boundary. See the
 [Network Controller Extension Guide](controller-extension-guide.md) for the
