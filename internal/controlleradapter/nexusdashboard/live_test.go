@@ -122,8 +122,9 @@ func TestLiveDumpPaths(t *testing.T) {
 
 // TestLiveInventory runs the real fabric and switch listing. It works against
 // an empty ND (zero switches) and against one with devices; it logs counts
-// only. It also confirms the paging query parameters (max/offset), which are
-// unverified assumptions, are accepted by this ND release.
+// only. It also confirms the paging query parameters (max/offset) are accepted
+// by this ND release. Multi-page behavior needs more switches than pageSize, or
+// a temporary smaller pageSize in a local build.
 func TestLiveInventory(t *testing.T) {
 	c := liveClient(t, os.Getenv("ND_PASSWORD"))
 	items, err := c.ListInventory(context.Background())

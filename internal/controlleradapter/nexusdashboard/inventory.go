@@ -30,8 +30,10 @@ const (
 	// switchesPathFmt takes one validated fabric name.
 	switchesPathFmt = "/api/v1/manage/fabrics/%s/switches"
 
-	// Paging query parameter names are UNVERIFIED against a live ND; the
-	// swagger example only shows the meta.counts response envelope.
+	// Paging query parameters were verified against a live ND 4.3.1 with a
+	// temporary page size of 1: max is honored and offset advances through
+	// meta.counts.remaining. Not yet observed: more than pageSize switches,
+	// multiple fabrics, and how meta.counts.total behaves across them.
 	pageSizeParam   = "max"
 	pageOffsetParam = "offset"
 	pageSize        = 100
