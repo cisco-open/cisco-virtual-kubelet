@@ -15,7 +15,7 @@
   "dependencies": {
     "framer-motion": "^12.34.0",
     "lucide-react": "^0.564.0",
-    "next": "16.3.8",
+    "next": "16.4.3",
     "react": "19.2.3",
     "react-dom": "19.2.3"
   },
@@ -26,7 +26,7 @@
     "@types/react-dom": "^19",
     "babel-plugin-react-compiler": "1.0.0",
     "eslint": "^9",
-    "eslint-config-next": "16.3.8",
+    "eslint-config-next": "16.4.3",
     "fast-glob": "file:./scripts/next-root-glob",
     "mermaid": "11.17.2",
     "postcss": "^8.5.23",

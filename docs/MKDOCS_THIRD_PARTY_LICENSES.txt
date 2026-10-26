@@ -67,10 +67,10 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 ================================================================================
-Package: certifi 2026.7.22
+Package: certifi 2026.10.23
 License: MPL-2.0
 
---- certifi-2026.7.22.dist-info/licenses/LICENSE ---
+--- certifi-2026.10.23.dist-info/licenses/LICENSE ---
 
 This package contains a modified version of ca-bundle.crt:
 

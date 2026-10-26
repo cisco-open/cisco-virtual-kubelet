@@ -108,7 +108,7 @@ core-js@3.38.1
 License: MIT
 Author: Denis Pushkarev
 Project: https://github.com/zloirock/core-js
-Redistribution context: Browser polyfill vendored by next@16.3.8
+Redistribution context: Browser polyfill vendored by next@16.4.3
 
 --- CORE_JS_3.38.1_LICENSE.txt ---
 Copyright (c) 2014-2024 Denis Pushkarev
@@ -130,7 +130,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 
 ================================================================================
-process browser shim@vendored by next@16.3.8; upstream version omitted by Next.js
+process browser shim@vendored by next@16.4.3; upstream version omitted by Next.js
 ================================================================================
 License: MIT
 Author: Roman Shtylman
@@ -162,12 +162,12 @@ TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 ================================================================================
-Next.js vendored React canary family@19.3.0-canary-cbb046ab-20260731; scheduler 0.28.0-canary-cbb046ab-20260731
+Next.js vendored React canary family@19.3.0-canary-278794d7-20261002; scheduler 0.28.0-canary-278794d7-20261002
 ================================================================================
 License: MIT
 Author: Meta Platforms, Inc. and affiliates
 Project: https://react.dev/
-Redistribution context: react, react-dom, react-server-dom-turbopack, and scheduler vendored by next@16.3.8
+Redistribution context: react, react-dom, react-server-dom-turbopack, and scheduler vendored by next@16.4.3
 
 --- LICENSE ---
 MIT License
@@ -224,7 +224,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 ================================================================================
-@next/env@16.3.8
+@next/env@16.4.3
 ================================================================================
 License: MIT
 Author: Next.js Team <support@vercel.com>
@@ -442,7 +442,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 
 ================================================================================
-baseline-browser-mapping@2.11.20
+baseline-browser-mapping@2.11.33
 ================================================================================
 License: Apache-2.0
 Project: git+https://github.com/web-platform-dx/baseline-browser-mapping.git
@@ -651,7 +651,7 @@ Project: git+https://github.com/web-platform-dx/baseline-browser-mapping.git
    limitations under the License.
 
 ================================================================================
-caniuse-lite@1.0.30001810
+caniuse-lite@1.0.30001819
 ================================================================================
 License: CC-BY-4.0
 Author: Ben Briggs
@@ -1224,7 +1224,7 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 ================================================================================
-next@16.3.8
+next@16.4.3
 ================================================================================
 License: MIT
 Project: https://nextjs.org

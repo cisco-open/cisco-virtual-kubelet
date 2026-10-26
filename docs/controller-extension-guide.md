@@ -114,6 +114,16 @@ support in `status.capabilities`, authentication state, product/API versions,
 and compatibility conditions are adapter-owned observations. The manager must
 not infer those values from descriptor metadata.
 
+`status.capabilities` is one complete list with a single writer. An adapter
+rebuilds the whole list on every publish and replaces it; it never edits one
+entry in place. An adapter with several independent loops (health, inventory
+and so on) keeps each loop's last result in memory, and one publisher composes
+the list from them, so a loop that fails or is disabled cannot leave a stale
+entry behind or wipe another loop's entry. Before every write the adapter
+re-reads its NetworkController and publishes nothing if the UID or generation
+changed, or if it is paused or being deleted; the manager rolls the worker for
+the new generation.
+
 ### Bootstrap and descriptor binding
 
 The manager-to-worker bootstrap is an immutable, non-sensitive ConfigMap. Its
@@ -357,6 +367,16 @@ therefore constrained to the worker's namespace and grants only:
 - read-only source ConfigMaps;
 - Events for bounded, sanitized operational feedback.
 
+Adoption must be an explicit operator opt-in (`spec.deviceAdoption.enabled`,
+default off); an adapter must never create `CiscoDevice` objects on its own.
+Adapters that adopt controller inventory as `CiscoDevice` objects use the
+separate `cisco-virtual-kubelet-nd-worker` role: the
+same rules plus get/list/watch/create/update/patch/delete on `ciscodevices`
+(delete serves only the opt-in Prune policy), with no deletecollection and no
+Secrets access. Any new worker role must be added in one
+reviewed change to the chart, the registry allow-list, and the manager `bind`
+marker; `chart_rbac_test.go` checks the three stay aligned.
+
 The unique ServiceAccount isolates identity and auditing, but its RoleBinding
 does not create an endpoint-level Kubernetes authorization boundary. In
 particular, Kubernetes authorizes that worker to update or patch the
@@ -498,3 +518,7 @@ RBAC behavior.
 The acceptance bar is that removing the adapter package and its composition-
 root import leaves the generic APIs, registry, manager, worker, existing device
 drivers, and transports building and behaving identically.
+
+## Reference adapters
+
+- [Nexus Dashboard](controllers/nexus-dashboard.md): `nexus-dashboard`, health only.
