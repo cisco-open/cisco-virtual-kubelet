@@ -1,9 +1,14 @@
 # Release runbook
 
-This is the maintainer checklist for a Cisco Virtual Kubelet release. The next
-planned release is `v2026.10.0` on 2026-10-01; its Helm chart version is
-`2026.10.0`. Tags use strict SemVer-compatible CalVer:
-`vYYYY.M.PATCH` (no leading zero in the month).
+This is the maintainer checklist for a Cisco Virtual Kubelet release. The
+[release approval policy](#release-approval-policy) applies to the planned
+1 November 2026 release and subsequent releases. Version selectors, comparison
+ranges, and upgrade instructions below retain the October preparation as a
+worked example; update them in each release-preparation PR before use. This
+policy change does not prepare or qualify the November candidate.
+
+Tags use strict SemVer-compatible CalVer: `vYYYY.M.PATCH` (no leading zero in
+the month). For example, `v2026.10.0` uses Helm chart version `2026.10.0`.
 
 The release workflow deliberately cannot create or publish a GitHub Release.
 A maintainer creates a curated draft **before** pushing the tag, the workflow
@@ -18,17 +23,47 @@ HIGH/CRITICAL dependency findings, so maintainers made a pre-publication no-go
 decision. Never move or delete either tag and never publish either draft.
 Neither candidate triggered documentation deployment or a Krew update.
 `v2026.9.2` was published on 1 September and is the October comparison baseline.
-The October candidate is still unpublished; follow the
-[October readiness ledger](docs/releases/v2026.10.0-readiness.md) before tagging.
+`v2026.10.0` was published on 1 October. The
+[October readiness ledger](docs/releases/v2026.10.0-readiness.md) is a historical
+preparation snapshot, not the checklist for a new candidate.
 
 Do not rerun the `v2026.9.0` or `v2026.9.1` tag workflows. In particular, the
 older `v2026.9.1` workflow emitted mutable image aliases before its advisory
 scan; a rerun could move those aliases outside the corrected gates below.
 
+## Release approval policy
+
+One normal GitHub **Approve** review on the current release-preparation PR head
+from a repository maintainer other than the release operator is sufficient
+release authorization. The reviewer must have repository write or admin access.
+The review body is optional: no prescribed wording, separate authorization
+comment, or post-merge draft approval is required.
+
+The preparation PR must identify the release version, previous published
+baseline, committed release notes, release scope, and relevant security,
+compatibility, and upgrade limitations. Approval covers creating the signed
+tag and publishing that reviewed release once all required checks and the
+staging and verification steps below pass. It does not waive a failing gate.
+
+Normal branch protection still applies: approval must be current and
+undismissed, outstanding change requests must be resolved, and all required
+checks must pass before merge. Changed candidate source, version, scope, or
+canonical release notes go through review again. The different SHA produced
+by the protected merge does not by itself require another approval.
+
+The release operator records the preparation PR and approval links, approved
+PR head SHA, resulting merge SHA, draft ID, and verification evidence in the
+release issue or PR record. This bookkeeping is not another reviewer task;
+do not commit it back into the frozen source and create a new review cycle.
+Creating the draft from the reviewed notes and recording its ID require no
+additional approval. The operator verifies the draft and artifacts before
+publication, using the approved release-signing identity and the gates below.
+
 ## 1. Freeze the release commit
 
 - [ ] Open a pull request to `main`; do not release directly from a topic
-  branch.
+  branch. Prepare the canonical release notes, version selectors, upgrade
+  instructions, and scope/limitations in this PR before requesting approval.
 - [ ] Review the complete change set from the previous release:
   `git log --oneline v2026.9.2..HEAD` and
   `git diff --stat v2026.9.2..HEAD`.
@@ -57,24 +92,34 @@ scan; a rerun could move those aliases outside the corrected gates below.
   Helm checks; an ambient `helm` is not release evidence. These documentation
   checks must pass in the protected pre-merge `build-and-smoke` job; the
   post-publication deployment is verification, not the first build attempt.
-- [ ] Require review approval and every protected `main` check:
+- [ ] Require the normal approval described above and every protected `main` check:
   `build-and-smoke`, `ygot-validate`, `terraform-provider`, `govulncheck`,
   `helm4-compat`, `lab-ci-next / cat8kv`, and `lab-ci-next / cat9k`.
 - [ ] Re-run both hardware/lab checks on the final commit if the pull request
   changed after they passed. Inspect their logs, not only the aggregate state.
-- [ ] Merge the pull request and record the exact commit:
+- [ ] Record the approval link and approved PR head, then merge the pull request.
+  Set `release_pr` to that preparation PR's number. Select its recorded merge
+  commit on `main` so later unrelated changes are not added to the candidate:
 
   ```sh
+  set -euo pipefail
+  release_pr=REPLACE_WITH_RELEASE_PR_NUMBER
   git fetch origin main --tags
-  git switch main
-  git pull --ff-only origin main
-  release_commit="$(git rev-parse HEAD)"
-  test "$release_commit" = "$(git rev-parse origin/main)"
+  release_commit="$(gh pr view "$release_pr" \
+    --repo cisco-open/cisco-virtual-kubelet \
+    --json state,baseRefName,mergeCommit \
+    --jq 'select(.state == "MERGED" and .baseRefName == "main") | .mergeCommit.oid')"
   test "$release_commit" = "$(git rev-parse "${release_commit}^{commit}")"
+  git merge-base --is-ancestor "$release_commit" origin/main
   test -z "$(git status --porcelain=v1 --untracked-files=all)"
+  git switch --detach "$release_commit"
+  test "$(git rev-parse HEAD)" = "$release_commit"
   git diff --quiet
   git diff --cached --quiet
   ```
+
+  Main may advance without changing this frozen candidate. Including those
+  later changes requires a new release-preparation PR and normal approval.
 
 - [ ] Treat `release_commit` as immutable from this point forward. Every draft,
   tag, workflow run, artifact, and verification record must name that full
@@ -151,17 +196,19 @@ scan; a rerun could move those aliases outside the corrected gates below.
   any changes to upstream terms, provenance source, model scope, or distributed
   artifact types are reflected in the applicable license and notice bundles.
 
-## 2. Prepare curated notes
+## 2. Verify the approved curated notes
 
-- [ ] Review and update the committed
+- [ ] Verify the already reviewed, committed
   `docs/releases/v2026.10.0.md` notes from the final comparison
-  `v2026.9.2...<release_commit>`. Include user-visible features, compatibility
-  and security changes, known limitations, upgrade steps, and links to the
-  documentation. Use that committed file as the canonical source. Render its
+  `v2026.9.2...<release_commit>`. Confirm they cover user-visible features,
+  compatibility and security changes, known limitations, upgrade steps, and
+  links to the documentation. If corrections are needed, return to section 1
+  for review before freezing a new commit. Use the approved committed file as
+  the canonical source. Render its
   site-relative links as tag-pinned GitHub links with the checked-in renderer
   before creating the curated GitHub draft; never edit the canonical MkDocs
   source just for GitHub.
-- [ ] Call out the new `IOSXESoftwareRollout` CRD and the changed
+- [ ] Confirm the notes call out the new `IOSXESoftwareRollout` CRD and the changed
   `CiscoDevice`, `IOSXESoftwareUpgrade` and `IOSXEOperationalAction` schemas;
   use the complete chart CRD upgrade procedure below.
 - [ ] Do not claim the release is available until the draft has been published.
@@ -187,7 +234,7 @@ python3 "${repo_root}/.github/scripts/render_github_release_notes.py" \
 test -s "$release_notes"
 test -z "$(grep -E '\]\((\.\.?/|/)' "$release_notes" || true)"
 test "$(git rev-parse HEAD)" = "$release_commit"
-test "$(git rev-parse origin/main)" = "$release_commit"
+git merge-base --is-ancestor "$release_commit" origin/main
 test -z "$(git status --porcelain=v1 --untracked-files=all)"
 ```
 
@@ -227,28 +274,24 @@ test -z "$(git status --porcelain=v1 --untracked-files=all)"
   rm -f "$payload" "$release_notes"
   ```
 
-- [ ] Have a second repository maintainer who is not the release operator
-  review the rendered draft, exact target commit, version, recovery/security
-  delta, preview rollout/drain limitations, and CRD upgrade warning. Record the approval
-  as a comment on the release PR; a review approval by itself is not the
-  release authorization. The approver must replace both angle-bracket values
-  and post this exact text:
-
-  ```text
-  I am a Cisco Virtual Kubelet repository maintainer other than the release operator. I approve Cisco Virtual Kubelet v2026.10.0 for release from commit <full 40-character release commit> using draft release ID <draft release ID>.
-
-  I verified that the draft is a non-prerelease draft targeting that exact commit, has zero assets before the tag is pushed, and renders the tag-pinned release-note links correctly. I reviewed the complete delta from v2026.9.2, including secure IOS-XE gNOI authentication/provisioning, native topology projection, topology-aware image selection and combined rollouts, opt-in preview PDB drain, dependency updates, and the hard Linux AMD64/ARM64 HIGH/CRITICAL image gates. I verified the October readiness ledger and exact-candidate lab results. I understand that native TAS is an optional experimental lane, independent staging/activation and the November roadmap are excluded, no zero-downtime guarantee is made, and existing Helm installations must apply all reviewed October CRDs before upgrading.
-
-  I authorize the release operator to create and push the immutable signed v2026.10.0 tag with the approved release-signing identity. I do not authorize publishing v2026.9.0 or v2026.9.1, moving or deleting any existing release tag, rerunning either old tag workflow, or publishing v2026.10.0 until all required checks pass, the draft contains exactly 16 verified assets, both mutable image aliases resolve to the signed v2026.10.0 digest, and the final post-stage verification is complete.
-  ```
+- [ ] As the release operator, verify that the rendered draft matches the
+  reviewed canonical notes, including scope, security/compatibility limits,
+  and upgrade warnings. Confirm the tag-pinned links render correctly, the
+  non-prerelease draft targets the recorded merge commit, and it has zero
+  assets before the tag is pushed. Record its ID alongside the existing PR
+  approval and commit evidence. That normal approval is the release
+  authorization; continue without requesting another reviewer comment.
+- [ ] Correct any draft mismatch against the reviewed source before tagging.
+  If the candidate or canonical notes need to change, return to the protected
+  PR process instead of editing new release scope into the draft.
 
 ## 4. Push the tag and let automation stage the draft
 
-Only after the reviewed draft exists:
+Only after the draft matches the approved preparation and the checks above pass:
 
 ```sh
 test "$(git rev-parse HEAD)" = "$release_commit"
-test "$(git rev-parse origin/main)" = "$release_commit"
+git merge-base --is-ancestor "$release_commit" origin/main
 test -z "$(git status --porcelain=v1 --untracked-files=all)"
 git tag -s "$release_version" "$release_commit" \
   -m "Cisco Virtual Kubelet ${release_version}"
@@ -337,8 +380,9 @@ data rollback risks. Never delete CRDs or active operation records as rollback.
 
 ## 6. Publish and verify distribution
 
-- [ ] In the GitHub UI, publish the reviewed draft without changing its tag or
-  assets. Confirm the release becomes immutable.
+- [ ] After all verification passes, the release operator publishes the draft
+  in the GitHub UI under the existing PR approval, without changing its tag or
+  assets. Confirm the release becomes immutable. No further signoff is needed.
 - [ ] The documentation deployment must start from the `release: published`
   event, check out the exact release tag, pass strict MkDocs/website/audit and
   license-artifact gates, and publish that version only after the release is
