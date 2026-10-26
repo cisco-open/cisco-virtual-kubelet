@@ -263,5 +263,13 @@ kubectl get networkcontroller nd-lab -o jsonpath='{range .status.conditions[*]}{
 - The switch schema was checked against a live ND 4.x capture;
   `testdata/switches_page.json` is that response with identifiers replaced.
   The `max` and `offset` paging parameters are accepted and `offset` is
-  honored (an offset past the end returns an empty list). Behavior with more
-  than one page of data has not been observed on a live ND.
+  honored (an offset past the end returns an empty list). Multi-page
+  inventory was qualified on 2026-10-26 against the lab ND 4.3.1 with a
+  temporary local build using a page size of 1 (not shipped): two switches in
+  one fabric returned `offset=0` (1 item, `remaining=1`, `total=2`) then
+  `offset=1` (1 item, `remaining=0`, `total=2`), and the inventory held both
+  switches. Still not observed: more than 100 switches (the shipped page
+  size), multiple fabrics, and ND's `total` semantics across them, which is
+  why the adapter does not cross-check collected items against `total`.
+  `Prune` is opt-in; qualify against a multi-fabric ND before using it in
+  production.
