@@ -203,6 +203,7 @@ summarises the current release state.
 ## Where to next
 
 - [Getting Started](getting-started.md) - first deployment path
+- [Image Distribution](image-distribution.md) - serve registry images to devices with docker-http-passthrough
 - [Architecture](ARCHITECTURE.md) - how the pieces fit together
 - [Managed Topology and Rollouts](topology-awareness.md) - native Pod placement, campaign approval, image sources, budgets, identity migration and preview drain
 - [Network Controller Extensions](controller-extension-guide.md) - add controller-centric Network as Code adapters safely

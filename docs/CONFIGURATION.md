@@ -368,11 +368,15 @@ spec:
     - **A flash path** (`flash:/...`, `bootflash:/...`) — image tar must be pre-loaded on the device.
     - **An HTTP(S) URL** — the VK attempts a device-native pull first; if the platform cannot pull, it downloads the image itself and installs from flash (see [Image delivery](#image-delivery) below).
 
+    A registry reference such as `nginx:latest` is not accepted. To serve registry images to devices, see [Image Distribution](image-distribution.md).
+
     Package policy (signed vs unsigned) can be managed via `spec.allowUnsignedApps: true` in the `CiscoDevice` spec — CVK configures the device and adjusts reconciler behaviour automatically. The equivalent IOS-XE CLI is `no app-hosting signed-verification`.
 
 ## Image delivery
 
 By default the VK passes the container image URL directly to the IOS-XE install RPC and waits for the app to reach `RUNNING`. On platforms that support device-native HTTP pulls, no extra steps are needed.
+
+To deploy images from Docker Hub, GHCR, or a private registry, see [Image Distribution](image-distribution.md).
 
 On platforms that cannot pull from HTTP URLs, the VK automatically falls back to a **copy-then-install** path: it downloads the image to device flash via the `copy` RESTCONF RPC, then reinstalls from the local flash path. This fallback can take several minutes (the copy RPC is synchronous and blocks until the device finishes downloading).
 

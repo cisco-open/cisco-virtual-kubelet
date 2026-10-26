@@ -316,7 +316,7 @@ spec:
         cpu: "1000m"
 ```
 
-The image reference is a path on the device's flash storage, not a container registry — the container tar must already be on the device.
+The image reference is a path on the device's flash storage, not a container registry reference — the container tar must already be on the device, or be served over HTTP(S). To serve images from a registry, see [Image Distribution](image-distribution.md).
 
 ```bash
 kubectl apply -f pod.yaml

@@ -519,6 +519,8 @@ To reliably benefit from local caching, force the copy path by one of the follow
 - Pre-copy the image to flash manually on the device, then use `imagePullPolicy: Never` with a flash path (`flash:/virtual-kubelet/my-app.tar`).
 - Accept that on platforms where the device-native pull succeeds quickly, re-downloading from the registry on each deploy is the expected behaviour.
 
+See also [Image Distribution](image-distribution.md) for serving registry images over HTTP.
+
 ---
 
 ## `imagePullPolicy: Never` with HTTP image URL
