@@ -466,7 +466,7 @@ objects for credential rotation, and the optional in-process aggregator also
 uses the grant. Consequently Secret data can enter the manager process/cache
 even when network-controller workers consume only projected files. The grant
 is generated and installed even when aggregator mode and the optional
-network-controller scaffold are off.
+network-controller workers are off.
 
 ### VK pod service account (`cisco-virtual-kubelet`)
 
@@ -563,14 +563,33 @@ validation is disabled.
 ### Network-controller worker service accounts
 
 Each `NetworkController` gets a unique ServiceAccount and a **namespaced**
-RoleBinding to the reusable
-`cisco-virtual-kubelet-controller-worker` ClusterRole. There is deliberately no
+RoleBinding to a reusable ClusterRole selected by its adapter's registered
+descriptor: the base `cisco-virtual-kubelet-controller-worker` role, or one of
+the adapter roles described below. There is deliberately no
 ClusterRoleBinding. The worker can read controller resources, controller
 intent, and source ConfigMaps across its namespace; update only the two CRDs'
 `/status` subresources; and emit bounded Events. The base role deliberately has
 no coordination Lease permission. It cannot update or patch either main
 resource, including its spec, metadata, and finalizers. It also cannot read
 Secrets, Nodes, Pods, workloads, or another namespace.
+
+Adapter roles extend the base role by the smallest set of extra grants, and the
+manager may bind only roles on an explicit allow-list; registry validation
+rejects every other role name. Neither adapter role can read Secrets.
+
+| Role | Extra grants beyond the base role | Used by |
+|---|---|---|
+| `cisco-virtual-kubelet-controller-worker` | None (status-only, read of controller resources) | Adapters that need nothing more |
+| `cisco-virtual-kubelet-sdwan-worker` | `coordination.k8s.io` Leases: get, create, update (section ownership Leases) | `sdwan` |
+| `cisco-virtual-kubelet-nd-worker` | `ciscodevices`: get, list, watch, create, update, patch, delete in its namespace | `nexus-dashboard` |
+
+The `nd-worker` delete verb exists only to serve the opt-in `Prune` removal
+policy. RBAC cannot depend on that policy, so every `nexus-dashboard` worker
+holds it, while the adapter itself deletes only devices carrying its
+controller-UID ownership label, after a grace period, never on an empty
+inventory and behind a mass-delete guard. There is no `deletecollection`. Treat
+`CiscoDevice` write access in a controller namespace as part of that
+namespace's trust boundary.
 
 A unique worker ServiceAccount provides distinct identity and auditing, not
 endpoint-scoped authorization. Its RoleBinding authorizes update/patch of the
@@ -639,14 +658,15 @@ re-read mounted files, and requeue affected work before its next external
 request. It must independently rebuild clients and sessions by the maximum
 lifetime even if no signal arrives.
 
-Remote mutation remains a future gated profile. Before any adapter may honor
-`apply`, pruning, or remote deletion, CVK must provide a shared
-controller-neutral `SectionLeaser`, pass ownership/renewal/takeover/API-loss
-conformance tests, and install a **separate**, statically reviewed mutation
-RBAC role containing only the required coordination Lease authority. The
-manager may bind that role only through an explicit audited allow-list, and
-registry validation must reject every other role name. Lease verbs must not be
-added back to the base report-only worker role.
+Remote mutation is a gated profile. An adapter may honor `apply` only with the
+shared controller-neutral `SectionLeaser`, ownership/renewal/takeover/API-loss
+conformance tests, and a **separate**, statically reviewed role containing only
+the required coordination Lease authority. The `sdwan` adapter meets this gate
+for its fixture-qualified `apply` mode through
+`cisco-virtual-kubelet-sdwan-worker`. Remote pruning and remote deletion remain
+unimplemented (`Retain`). The manager binds adapter roles only through an
+explicit audited allow-list, and registry validation rejects every other role
+name. Lease verbs must not be added back to the base worker role.
 
 ### Controller intent Secret authorization
 

@@ -27,7 +27,7 @@ This provider allows Kubernetes pods to be deployed as containers directly on Ci
 | **IOS-XE Telemetry**| Beta | Declare MDT-over-gNMI subscriptions and emit OpenTelemetry metrics, logs, and state-transition traces |
 | **Topology Observability** | Beta | Emit CDP/OSPF topology and hosted-app traces to any OTLP-compatible backend |
 | **Managed Topology and Fleet Rollouts** | Opt-in | **This is disabled by default**. Project protected inventory labels for native kube-scheduler affinity/spread and admit bounded IOS-XE campaigns across failure domains |
-| **Network Controller Extension API**| Alpha | Generic `NetworkController` and `NetworkControllerConfig` contracts for future controller adapters; ships with zero product adapters (report-only) |
+| **Network Controller Extension API**| Alpha | Generic `NetworkController` and `NetworkControllerConfig` contracts with two controller adapters: Catalyst SD-WAN Manager (fixture-qualified, not full NetAsCode parity) and Nexus Dashboard (health, inventory and opt-in `CiscoDevice` adoption; no ND configuration management) |
 | **Topology-Aware Image Distribution** | Preview | Freeze each target's image URL, digest and Secret identity from topology-scoped sources in an approved `IOSXESoftwareRollout` plan |
 | **PDB-Aware Workload Drain** | Dev Preview | Kubernetes Eviction for the documented eligible workload subset before a device upgrade; not general-purpose evacuation or a zero-downtime guarantee |
 

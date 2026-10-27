@@ -17,7 +17,9 @@ per-device NX-API slice for `system`, `feature`, `feature_set`, `vlan`, and
 Controller-centric Network as Code intent uses the separate
 `NetworkController` and `NetworkControllerConfig` extension boundary. See the
 [Network Controller Extension Guide](controller-extension-guide.md) for its
-resolved-source, model-version, adapter, ownership, and worker contracts.
+resolved-source, model-version, adapter, ownership, and worker contracts. The
+shipped adapters are documented in [Catalyst SD-WAN](controllers/sdwan.md) and
+[Nexus Dashboard](controllers/nexus-dashboard.md).
 
 ## Concepts
 

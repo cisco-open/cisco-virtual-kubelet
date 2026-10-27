@@ -45,6 +45,7 @@ nav:
   - v2026.9.1 (unpublished): 'releases/v2026.9.1.md'
   - v2026.9.0 (unpublished): 'releases/v2026.9.0.md'
 - Getting Started: 'getting-started.md'
+- Image Distribution: 'image-distribution.md'
 - Architecture: 'ARCHITECTURE.md'
 - Managed Topology and Rollouts: 'topology-awareness.md'
 - Topology PR Merge Scope: 'topology-merge-scope.md'
@@ -52,6 +53,10 @@ nav:
 - Topology Roadmap Execution: 'topology-roadmap-execution.md'
 - November Topology Handoff: 'topology-november-handoff.md'
 - Network Controller Extensions: 'controller-extension-guide.md'
+- Controller Adapters:
+  - Catalyst SD-WAN: 'controllers/sdwan.md'
+  - SD-WAN Live Test Backlog: 'controllers/sdwan-live-test-backlog.md'
+  - Nexus Dashboard: 'controllers/nexus-dashboard.md'
 - CLI Reference: 'cisco-vk-cli.md'
 - Configuration:
   - CiscoDevice Reference: 'CONFIGURATION.md'
