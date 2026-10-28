@@ -47,6 +47,12 @@ cross-cluster transfer remain separate, evidence-gated work. See
 ## Architecture and ownership
 
 ```mermaid
+---
+config:
+  layout: dagre
+  theme: default
+  look: classic
+---
 flowchart LR
     I[Administrator inventory labels] --> D[CiscoDevice]
     P[Administrator policy ConfigMap] --> M[CVK manager]

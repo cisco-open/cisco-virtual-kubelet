@@ -80,7 +80,20 @@ ownership migration, workload eligibility and remaining qualification limits.
 ## Component architecture
 
 ```mermaid
-%%{init: {'theme': 'base', 'themeVariables': {'background': '#ffffff', 'mainBkg': '#f8fafc', 'clusterBkg': '#f1f5f9', 'clusterBorder': '#94a3b8', 'lineColor': '#64748b', 'edgeLabelBackground': '#f8fafc', 'titleColor': '#1e293b'}}}%%
+---
+config:
+  layout: dagre
+  theme: base
+  look: classic
+  themeVariables:
+    background: "#ffffff"
+    mainBkg: "#f8fafc"
+    clusterBkg: "#f1f5f9"
+    clusterBorder: "#94a3b8"
+    lineColor: "#64748b"
+    edgeLabelBackground: "#f8fafc"
+    titleColor: "#1e293b"
+---
 flowchart TB
     subgraph Cluster["Kubernetes cluster"]
         API["API server"]
@@ -293,6 +306,12 @@ configuration writes use NX-API REST/DME.
 ### Controller reconciliation
 
 ```mermaid
+---
+config:
+  layout: dagre
+  theme: default
+  look: classic
+---
 sequenceDiagram
     actor User
     participant API as K8s API
@@ -315,6 +334,12 @@ The controller **never persists credentials**. `password` and `credentialSecretR
 ### Pod creation flow
 
 ```mermaid
+---
+config:
+  layout: dagre
+  theme: default
+  look: classic
+---
 sequenceDiagram
     actor User
     participant API as Kubernetes API
@@ -366,6 +391,12 @@ Reverse of creation: `RUNNING → stop → ACTIVATED → deactivate → DEPLOYED
 The IOS-XE driver's reconciler (`reconciler.go`) drives each app toward its desired state by observing live state and issuing a single RPC per pass.
 
 ```mermaid
+---
+config:
+  layout: dagre
+  theme: default
+  look: classic
+---
 stateDiagram-v2
     [*] --> NoConfig
     NoConfig --> INSTALLING: POST config + install RPC

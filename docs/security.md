@@ -23,6 +23,12 @@ encryption; enable Kubernetes
 and restrict Secret RBAC for production clusters.
 
 ```mermaid
+---
+config:
+  layout: dagre
+  theme: default
+  look: classic
+---
 graph LR
     CR[CiscoDevice CR<br/>credentialSecretRef: creds] --> Ctrl[Controller]
     Ctrl --> CM[ConfigMap<br/>password STRIPPED]

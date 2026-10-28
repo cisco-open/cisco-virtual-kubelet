@@ -66,6 +66,12 @@ The following rules are invariants for every adapter:
 ## Architecture and responsibility boundaries
 
 ```mermaid
+---
+config:
+  layout: dagre
+  theme: default
+  look: classic
+---
 flowchart LR
     User["GitOps / Network as Code pipeline"] --> NC["NetworkController endpoint"]
     User --> Intent["NetworkControllerConfig intent"]
