@@ -110,6 +110,10 @@ jobs:
             -s .github/scripts \
             -p 'test_release_contract.py' \
             -v
+          python3 -m unittest discover \
+            -s .github/scripts \
+            -p 'test_generate_mermaid_runtime_licenses.py' \
+            -v
           go run github.com/rhysd/actionlint/cmd/actionlint@v1.7.12 \
             -config-file .github/actionlint.yaml \
             .github/workflows/*.{yml,yaml}
