@@ -71,8 +71,11 @@ applied, the manager deliberately keeps existing CiscoDevice reconcilers
 running and skips Alpha NetworkController registration for that process. Apply
 the new CRDs, then restart the manager Deployment; dynamic CRD installation
 alone does not add a controller to an already-running controller-runtime
-manager. The September image contains no product adapter and the extension
-boundary remains report-only even after both CRDs are installed.
+manager. Installing the CRDs registers only controller types that have an
+adapter in the running image (`sdwan` and `nexus-dashboard`); any other
+`spec.type` still starts no worker. The `NetworkController` CRD also carries
+the optional `spec.deviceAdoption` field used by `nexus-dashboard`, so apply
+the chart's CRDs again when upgrading to a release that includes it.
 
 ### What to expect after a CRD upgrade
 

@@ -28,9 +28,9 @@ Four ideas you'll see referenced throughout the docs:
   `NXOSConfig`, `IOSXEConfigBundle`, `IOSXETelemetry`, `DeviceOperation`, and
   `IOSXESoftwareUpgrade` and `IOSXESoftwareRollout` that express device configuration, telemetry,
   diagnostics, and operations as Kubernetes API objects. The generic
-  `NetworkController` and `NetworkControllerConfig` scaffold extends the same
-  approach to controller-centric models, but requires a matching registered
-  adapter before it can reconcile an external controller.
+  `NetworkController` and `NetworkControllerConfig` APIs extend the same
+  approach to controller-centric models, but require a matching registered
+  adapter before they can reconcile an external controller.
 - **RESTCONF, NETCONF, gNMI, gNOI, and NX-API** - management protocols used by
   the provider. IOS-XE app-hosting lifecycle uses RESTCONF; NX-OS app-hosting
   uses NX-API CLI and NX-OS configuration uses NX-API REST/DME; declarative
@@ -73,10 +73,13 @@ Kubernetes API
   drift detection and verify-after-apply reconciliation. IOS-XE includes
   defaults, group targeting, templates, bundles, revisions, and apply logs;
   NX-OS starts with per-device `NXOSConfig` over NX-API REST/DME.
-- **Controller extension scaffold (Alpha)** - generic `NetworkController`
+- **Controller extension API (Alpha)** - generic `NetworkController`
   endpoint and `NetworkControllerConfig` intent APIs with an isolated-worker
-  registry. The current scaffold registers zero product adapters and the
-  boundary is report-only; it cannot apply, prune, or remotely delete state.
+  registry. Two adapters are registered: `sdwan` (Catalyst SD-WAN Manager,
+  fixture-qualified, with opt-in apply and `Retain` as the only deletion
+  policy) and `nexus-dashboard` (health, inventory and opt-in `CiscoDevice`
+  adoption; it does not manage ND configuration). Types without an adapter
+  create no worker.
 - **Operations and upgrades** - read-only diagnostics, gNOI probes,
   write-class operational actions, and multi-phase IOS-XE software upgrades
   behind explicit RBAC and runtime gates.
@@ -146,9 +149,11 @@ This project is under active development and is published as open source under
   app-hosting and an NX-API REST/DME `NXOSConfig` runtime slice; `FAKE` is for
   testing; `XR` and `OPENCONFIG` are reserved driver names in the API surface.
 - **Controller adapters** - the generic Alpha controller CRDs and
-  isolated-worker scaffold are installed, but the current scaffold contains no
-  product adapter. It does not integrate Catalyst Center or another external
-  controller.
+  isolated-worker runtime are installed with two adapters:
+  [Catalyst SD-WAN](controllers/sdwan.md) and
+  [Nexus Dashboard](controllers/nexus-dashboard.md). The SD-WAN adapter covers
+  a fixture-qualified subset of the NetAsCode model, not full parity. No
+  adapter exists for Catalyst Center or other controllers.
 - **Images and chart** - signed monthly images are published at
   `ghcr.io/cisco-open/cisco-virtual-kubelet`, with the Helm chart at
   `oci://ghcr.io/cisco-open/charts/cisco-virtual-kubelet`. Build locally only
@@ -171,7 +176,7 @@ summarises the current release state.
 |---|---|---|
 | Pod lifecycle (App-Hosting create / update / delete) | **Stable** | Supported on Catalyst 8000V 17.15+, Catalyst 9000 17.18+, IR1100 Series 17.12+, and IE3500 Series 17.18+. |
 | `CiscoDevice` and VK deployment lifecycle | **Stable** | Controller-managed per-device VK pods. |
-| **Network controller scaffold** (`NetworkController`, `NetworkControllerConfig`) | **Alpha** | Generic endpoint, controller-centric Network as Code intent, registry, and isolated-worker contracts. Zero adapters ship; the boundary is report-only and does not integrate an external controller. |
+| **Network controller extension API** (`NetworkController`, `NetworkControllerConfig`) | **Alpha** | Generic endpoint, controller-centric Network as Code intent, registry, and isolated-worker contracts, with `sdwan` (fixture-qualified; opt-in apply, `Retain` only) and `nexus-dashboard` (health, inventory, opt-in `CiscoDevice` adoption) adapters. No other controller is integrated. |
 | **Network as Code config driver** (`IOSXEConfig`, `NXOSConfig`) | **Beta** | Declarative IOS-XE and NX-OS config CRDs with drift detection and verification. IOS-XE also provides revision/apply-log history and broader family coverage; NX-OS starts with `system`, `feature`, `feature_set`, `vlan`, and `interface_ethernet` over NX-API REST/DME, without revision rollback. Schema is `v1alpha1`; family coverage and wire-format behaviour are still expanding. |
 | **Operations** (`DeviceOperation`, `IOSXEOperationalAction`) | **Beta** | Read-only diagnostics and gNOI probes are stable in intent; write-class actions require an explicit runtime gate and carry additional operational risk. |
 | **Software Lifecycle** (`IOSXESoftwareUpgrade`) | **Beta** | Content-addressed gNOI install/activate/verify with optional IOS-XE RESTCONF device-file registration. Disabled by default; unsupported or ambiguous native lifecycle state fails closed. |
@@ -188,15 +193,17 @@ summarises the current release state.
     gates exist for the highest-risk surfaces (write-class gNOI, software
     upgrades) and must be opted into explicitly.
 
-!!! warning "Alpha scaffold"
-    These APIs are not a usable product integration by themselves. The
-    current scaffold has no adapter and no remote-mutation runtime. Treat the
+!!! warning "Alpha extension API"
+    These APIs are not a usable product integration by themselves; each
+    controller needs a registered adapter, and the shipped adapters have
+    limited, documented scope. Treat the
     exact endpoint string within one namespace as the duplicate-fencing key;
     the namespace remains the Kubernetes trust and RBAC boundary.
 
 ## Where to next
 
 - [Getting Started](getting-started.md) - first deployment path
+- [Image Distribution](image-distribution.md) - serve registry images to devices with docker-http-passthrough
 - [Architecture](ARCHITECTURE.md) - how the pieces fit together
 - [Managed Topology and Rollouts](topology-awareness.md) - native Pod placement, campaign approval, image sources, budgets, identity migration and preview drain
 - [Network Controller Extensions](controller-extension-guide.md) - add controller-centric Network as Code adapters safely

@@ -521,4 +521,7 @@ drivers, and transports building and behaving identically.
 
 ## Reference adapters
 
-- [Nexus Dashboard](controllers/nexus-dashboard.md): `nexus-dashboard`, health only.
+- [Catalyst SD-WAN](controllers/sdwan.md): `sdwan`, fixture-qualified
+  `NetworkControllerConfig` apply against SD-WAN Manager.
+- [Nexus Dashboard](controllers/nexus-dashboard.md): `nexus-dashboard`, health,
+  inventory and opt-in `CiscoDevice` adoption; no ND configuration management.

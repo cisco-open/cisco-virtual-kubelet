@@ -579,6 +579,27 @@ kubectl get configmap cvk-cisco-virtual-kubelet-topology-ledger \
 The two printed UIDs must match. Names change when the Helm release name,
 `fullnameOverride`, or explicit topology names change.
 
+## Network-controller adapter roles
+
+Independently of managed topology, the chart installs three static ClusterRoles
+for the isolated `NetworkController` workers. The manager creates one
+ServiceAccount per `NetworkController` and binds it, with a namespaced
+RoleBinding only, to the role its adapter's registered descriptor selects. None
+of them can read Secrets.
+
+| ClusterRole | Beyond status updates and read of controller resources | Adapter |
+|---|---|---|
+| `cisco-virtual-kubelet-controller-worker` | Nothing | Adapters that need no more |
+| `cisco-virtual-kubelet-sdwan-worker` | `leases`: get, create, update | `sdwan` |
+| `cisco-virtual-kubelet-nd-worker` | `ciscodevices`: get, list, watch, create, update, patch, delete | `nexus-dashboard` |
+
+The `nd-worker` `delete` verb serves only the opt-in
+`spec.deviceAdoption.removal.policy=Prune`; the adapter deletes only devices
+carrying its own controller-UID label, after a grace period and behind a
+mass-delete guard. There is no `deletecollection`. See
+[Security](../../docs/security.md#network-controller-worker-service-accounts)
+for the trust boundary and the worker contract.
+
 ## Ownership and delegated roles
 
 The manager pre-creates and binds managed Nodes, then defines exactly two

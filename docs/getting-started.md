@@ -98,8 +98,8 @@ The chart installs:
 
 - All shipped `cisco.vk`, `config.cisco.vk`, and `ops.cisco.vk` CRDs
 - The controller `Deployment` (single replica; uses leader election for HA)
-- RBAC for the manager, per-device VK pods, and the report-only Alpha
-  network-controller worker boundary
+- RBAC for the manager, per-device VK pods, and the Alpha network-controller
+  workers (a base role plus dedicated `sdwan` and `nexus-dashboard` roles)
 
 Both the controller pod and each VK pod it spawns use this image. To use different images for the two, set `controllerImage.*` and `vkImage.*` instead.
 
@@ -316,7 +316,7 @@ spec:
         cpu: "1000m"
 ```
 
-The image reference is a path on the device's flash storage, not a container registry — the container tar must already be on the device.
+The image reference is a path on the device's flash storage, not a container registry reference — the container tar must already be on the device, or be served over HTTP(S). To serve images from a registry, see [Image Distribution](image-distribution.md).
 
 ```bash
 kubectl apply -f pod.yaml
