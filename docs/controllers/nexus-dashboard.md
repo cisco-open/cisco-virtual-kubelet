@@ -1,5 +1,9 @@
 # Nexus Dashboard controller adapter
 
+**Alpha · introduced in v2026.11.0.** Use matching CRDs, chart and image;
+October `v2026.10.0` does not contain this adapter. Check the
+[release records](../releases/index.md) for publication and artifact availability.
+
 The `nexus-dashboard` adapter connects a `NetworkController` to Cisco Nexus
 Dashboard (ND) 4.x through the `/api/v1` APIs (Infra login, Manage). It does
 not use the NDFC legacy `/appcenter/...` APIs.

@@ -192,6 +192,20 @@ def _inject_local_runtime_scripts(
         html_file.write_text(content, encoding="utf-8", newline="")
 
 
+def on_page_markdown(markdown: str, *, page, **kwargs) -> str:
+    """Keep historical evidence reachable without crowding operator search.
+
+    This changes build metadata only, preserving evidence content and URLs.
+    MkDocs runs page_markdown after reading metadata and before Material's
+    page_context search indexing, so no plugin-order priority is needed.
+    """
+
+    # src_uri is relative to docs_dir; keep this policy limited to evidence/.
+    if page.file.src_uri.startswith("evidence/"):
+        page.meta["search"] = {**(page.meta.get("search") or {}), "exclude": True}
+    return markdown
+
+
 def on_post_build(config: dict) -> None:
     """Remove unused locale search assets from the English-only site.
 

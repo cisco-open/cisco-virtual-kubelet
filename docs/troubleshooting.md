@@ -1,27 +1,62 @@
 # Troubleshooting
 
-Common issues and how to diagnose them.
+Start with the symptom, then collect the device and worker state below.
+
+| Symptom | First check | Details |
+|---|---|---|
+| `CiscoDevice` stays in `Provisioning` | Worker Pod readiness, image pull and TLS errors | [Provisioning](#ciscodevice-stuck-in-provisioning) |
+| Workload Pod stays `Pending` | Whether it has a Node assignment, then worker logs | [Pending](#pod-stuck-in-pending) |
+| `kubectl logs`, `exec`, `attach` or `port-forward` fails for a hosted app | These endpoints are unsupported; inspect the worker instead | [Application diagnostics](#hosted-application-logs-exec-attach-and-port-forward) |
+| App has no IP | Device app oper-data, DHCP pool and interface state | [IP discovery](#pod-never-gets-an-ip-shows-0000) |
+| Install reports `PackagePolicyInvalid` | Package signature and effective device verification policy | [Package policy](#packagepolicyinvalid-false-positives) |
+| `kubectl top` or Prometheus has no data | Raw endpoint, scrape configuration and TLS trust | [Metrics](#kubectl-top-node-returns-an-error) |
+| gNOI operation does not start | Enablement gate, worker plane and device reference | [gNOI gates](#gnoi-actions-or-software-upgrades-do-nothing) |
+| gNOI connection fails | Transport, credentials and dedicated trust | [Secure gNOI](#secure-gnoi-authentication-or-connection-fails) |
+| Secret change does not restart a worker | Referenced Secret namespace and observed revision | [Rotation](#a-secret-update-did-not-roll-the-vk-pod) |
 
 ## First — gather the basics
 
-The Helm release name is `cvk` throughout this page (matching the [Getting Started](getting-started.md) guide). If you installed with a different release name, substitute it wherever `cvk` appears below.
+The Helm release is `cvk` in `cvk-system`, matching [Getting
+Started](getting-started.md). The `CiscoDevice`, its credential Secrets and
+workers live in the **device namespace**, which can be different from
+`cvk-system`. A hosted workload Pod can use another namespace again. Nodes are
+cluster-scoped; in managed topology, read the assigned Node name from
+`CiscoDevice.status.nodeIdentity.nodeName` rather than assuming it equals the
+device name. Adapt the values below to your installation.
 
 ```bash
-# CiscoDevice full state — usually the most useful starting point
-kubectl describe ciscodevice <name>
-kubectl get ciscodevice <name> -o yaml
+DEVICE_NAMESPACE=default
+DEVICE=cat9000-1
+NODE=cat9000-1
+WORKLOAD_NAMESPACE=default
+POD=hello-app
 
-# Controller logs
-kubectl -n cvk-system logs deploy/cvk-controller --tail=200
+# 1. Device conditions, references and assigned identity
+kubectl -n "$DEVICE_NAMESPACE" describe ciscodevice "$DEVICE"
+kubectl -n "$DEVICE_NAMESPACE" get ciscodevice "$DEVICE" -o yaml
 
-# VK pod logs (one per device)
-kubectl -n <device-namespace> logs deploy/<device-name>-vk --tail=200
+# 2. Manager and per-device worker readiness/logs
+kubectl -n cvk-system logs deploy/cvk-cisco-virtual-kubelet-controller --tail=200
+kubectl -n "$DEVICE_NAMESPACE" get deploy,pods \
+  -l "app.kubernetes.io/instance=$DEVICE"
+kubectl -n "$DEVICE_NAMESPACE" logs \
+  -l "app.kubernetes.io/name=cisco-vk,app.kubernetes.io/instance=$DEVICE" \
+  --all-containers=true --tail=200 --prefix
 
-# Virtual node status
-kubectl describe node <device-name>
+# 3. Virtual Node readiness and workload scheduling/events
+kubectl describe node "$NODE"
+kubectl get pods -A --field-selector "spec.nodeName=$NODE"
+kubectl -n "$WORKLOAD_NAMESPACE" describe pod "$POD"
+kubectl -n "$WORKLOAD_NAMESPACE" get events --sort-by=.lastTimestamp
+```
 
-# Pods on the virtual node
-kubectl get pods --field-selector spec.nodeName=<device-name>
+For configuration or gNOI in managed topology, also inspect the separate
+network-management worker (its Deployment name is derived from the device UID):
+
+```bash
+kubectl -n "$DEVICE_NAMESPACE" logs \
+  -l "app.kubernetes.io/name=cisco-vk-network,app.kubernetes.io/instance=$DEVICE" \
+  --all-containers=true --tail=200 --prefix
 ```
 
 On the device:
@@ -31,6 +66,20 @@ show iox-service
 show app-hosting list
 show app-hosting detail appid <app-id>
 ```
+
+## Hosted-application logs, exec, attach and port-forward
+
+The VK kubelet listener returns HTTP `501 Not Implemented` for hosted-app
+logs, exec, attach and port-forward. Changing TLS trust or Kubernetes RBAC
+does not enable these endpoints. `kubectl logs` against the **VK worker Pod**
+works through its host kubelet and shows CVK reconciliation diagnostics; it
+does not return the hosted application's stdout/stderr.
+
+Use worker logs and Pod Events for lifecycle errors, device app-hosting
+commands for runtime state, and the application's own supported logging
+destination for application output. The [IOS-XE plugin](cisco-vk-cli.md) and
+[DeviceOperation](device-diagnostics.md#run-a-read-only-operation) offer bounded device
+diagnostics; neither provides a shell inside the hosted application.
 
 ---
 
@@ -79,13 +128,16 @@ kubectl describe pod -l app.kubernetes.io/name=cisco-vk,app.kubernetes.io/instan
 - **Image pull error** — make sure `image.repository`/`vkImage.repository` points at a registry the cluster can pull from.
 - **Bad credentials** — look for `401 Unauthorized` in VK pod logs. Verify the Secret key is spelled `password` (not `PASSWORD`, not `pass`).
 - **Device unreachable** — look for `dial tcp: i/o timeout` in VK pod logs. Check routing, firewall, and that RESTCONF is enabled (`restconf` in device config).
-- **TLS verification failing** — look for `x509: certificate signed by unknown authority`. In local/custom deployments, supply a mounted `tls.caFile`; for controller-managed gNOI, use `spec.gnoi.tls.secretRef`. Use `tls.insecureSkipVerify: true` only as a temporary, non-gNOI lab diagnostic.
+- **TLS verification failing** — look for `x509` errors and check both the trusted CA and certificate address/SAN. Device HTTPS and dedicated gNOI trust are separate: use [Shared TLS](CONFIGURATION.md#shared-tls) for HTTPS and `spec.gnoi.tls.secretRef` for dedicated gNOI. Managed HTTPS `spec.tls.caSecretRef` is introduced in `v2026.11.0` and requires matching CRDs, admission policies, manager and workers. October `v2026.10.0` installations need a system-trusted device certificate or an explicitly mounted CA in a custom Deployment. Use `tls.insecureSkipVerify: true` only as a temporary, non-gNOI lab diagnostic.
 
 ---
 
 ## Pod stuck in `Pending`
 
-`Pending` means the VK has accepted the pod but the device has not yet reached `RUNNING`.
+First inspect `spec.nodeName` and scheduling Events. An unassigned `Pending`
+Pod has not reached a VK worker: check selectors, taints, affinity and capacity.
+For a Pod assigned to the intended virtual Node, `Pending` can mean that the
+device app has not yet reached `RUNNING`.
 
 **Walk the state machine.** Check VK logs for the reconcile line:
 
@@ -189,14 +241,19 @@ Verify the stats endpoint is reachable:
 kubectl get --raw "/api/v1/nodes/<name>/proxy/stats/summary" | head
 ```
 
-If that works but `kubectl top` fails, the metrics-server does not trust the kubelet certificate. On k3s:
+A successful response proves the summary endpoint is reachable through that
+API proxy. `kubectl top` reads the cluster Metrics API through metrics-server,
+so also inspect metrics-server's logs, selected scrape endpoint and accepted
+metric format. The VK summary contains device/Node statistics only, with no
+Pod/container usage; `/metrics/resource` exposes CVK's custom metrics. These
+endpoints do not by themselves provide HPA/VPA resource metrics or guarantee
+`kubectl top` compatibility.
 
-```
-# /etc/rancher/k3s/config.yaml
-kubelet-certificate-authority: ""
-```
-
-On upstream Kubernetes, either supply a signed kubelet cert via `--tls-cert-file` / `--tls-key-file`, or add `--kubelet-insecure-tls` to the metrics-server deployment.
+If the collector reports an `x509` error, supply a serving certificate trusted
+by that client via `--tls-cert-file` / `--tls-key-file`, with SANs matching its
+connection address. Avoid disabling verification cluster-wide to troubleshoot
+one virtual Node. See [Kubelet-side TLS](security-tls.md#kubelet-side-tls) and
+[Stats / summary](observability.md#stats-summary).
 
 ---
 
@@ -204,7 +261,9 @@ On upstream Kubernetes, either supply a signed kubelet cert via `--tls-cert-file
 
 `cisco_device_*` metrics are served from the VK pod's kubelet endpoint (`/metrics/resource`).
 
-Expected setup: your Prometheus is already scraping kubelets (`kube-prometheus-stack` does this by default).
+Confirm that your Prometheus configuration selects the virtual Node and
+scrapes `/metrics/resource`; a kubelet scrape job using another path will not
+collect these custom metrics automatically.
 
 **Check:**
 
@@ -212,6 +271,16 @@ Expected setup: your Prometheus is already scraping kubelets (`kube-prometheus-s
 # Are the metrics there at all?
 kubectl get --raw "/api/v1/nodes/<name>/proxy/metrics/resource" | grep cisco_device
 ```
+
+**If the raw endpoint returns metrics but Prometheus doesn't see them:**
+
+- The node ServiceMonitor isn't matching (check labels).
+- The scrape job for kubelets doesn't use the `/metrics/resource` path — some configurations only scrape `/metrics/cadvisor`.
+
+**If the raw endpoint returns only `cisco_device_cpu_*`/`memory_*`/`storage_*` but no `interface_*` or `cdp_*`:**
+
+- The driver does not implement `TopologyProvider`. This is always the case for the FAKE driver and will be the case for future drivers that don't implement topology.
+- Or the device has no CDP/OSPF neighbors to report.
 
 ---
 
@@ -224,12 +293,17 @@ Both write-class gNOI surfaces are opt-in on the per-device VK pod:
 - `IOSXESoftwareUpgrade` requires `--enable-iosxesoftwareupgrade` or
   `CISCO_VK_ENABLE_IOSXE_SOFTWARE_UPGRADE=true`.
 
-Check the VK pod args and logs:
+For a legacy combined worker, check its args and logs:
 
 ```bash
 kubectl -n <device-namespace> get deploy <device-name>-vk -o yaml | grep -E "enable-write-class-gnoi|enable-iosxesoftwareupgrade"
 kubectl -n <device-namespace> logs deploy/<device-name>-vk --tail=200 | grep -i gnoi
 ```
+
+In managed topology, inspect the separate network-management worker using the
+label-based commands in [gather the basics](#first-gather-the-basics). It must
+have `readWrite` access for mutations; the app-hosting worker is not the
+software-upgrade executor.
 
 If the CR remains untouched, verify the `spec.deviceRef.name` matches the
 device worker's `CiscoDevice` name and that the VK service account can update
@@ -408,16 +482,6 @@ durable mutation claim, `ActivationControlTimeout` or
 `strategy: ISSU` fails preflight with `ISSUVerificationUnsupported`. CVK does
 not claim a non-disruptive upgrade until the platform backend can verify that
 IOS-XE selected the ISSU path; `NoReboot` is not that verification.
-
-**If the raw endpoint returns metrics but Prometheus doesn't see them:**
-
-- The node ServiceMonitor isn't matching (check labels).
-- The scrape job for kubelets doesn't use the `/metrics/resource` path — some configurations only scrape `/metrics/cadvisor`.
-
-**If the raw endpoint returns only `cisco_device_cpu_*`/`memory_*`/`storage_*` but no `interface_*` or `cdp_*`:**
-
-- The driver does not implement `TopologyProvider`. This is always the case for the FAKE driver and will be the case for future drivers that don't implement topology.
-- Or the device has no CDP/OSPF neighbors to report.
 
 ---
 
@@ -602,8 +666,8 @@ kubectl -n <ns> get secret <secret-name> \
   -o jsonpath='{.metadata.resourceVersion}{"\n"}'
 kubectl -n <ns> get deploy/<device-name>-vk \
   -o jsonpath='{.spec.template.metadata.annotations.cisco\.vk/credential-resource-version}{"\n"}'
-kubectl -n cisco-vk-system get deploy,pods
-kubectl -n cisco-vk-system logs deploy/cisco-vk-cisco-virtual-kubelet --tail=200
+kubectl -n cvk-system get deploy,pods
+kubectl -n cvk-system logs deploy/cvk-cisco-virtual-kubelet-controller --tail=200
 ```
 
 Confirm the `CiscoDevice` references that same-namespace Secret. After fixing

@@ -17,14 +17,14 @@ import Hero from "@/components/Hero";
 import Features from "@/components/Features";
 import Architecture from "@/components/Architecture";
 import GetStarted from "@/components/GetStarted";
-import Community from "@/components/Community";
 import Footer from "@/components/Footer";
 
 export default function Home() {
   return (
     <>
+      <a href="#main-content" className="skip-link">Skip to content</a>
       <Navbar />
-      <main>
+      <main id="main-content">
         <Hero />
         <div className="section-divider" />
         <Features />
@@ -32,8 +32,6 @@ export default function Home() {
         <Architecture />
         <div className="section-divider" />
         <GetStarted />
-        <div className="section-divider" />
-        <Community />
       </main>
       <Footer />
     </>

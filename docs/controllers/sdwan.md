@@ -1,5 +1,9 @@
 # SD-WAN controller deployment
 
+**Alpha · introduced in v2026.11.0.** Use matching CRDs, chart and image;
+October `v2026.10.0` does not contain this adapter. Check the
+[release records](../releases/index.md) for publication and artifact availability.
+
 The independent `sdwan` adapter uses the existing CVK `NetworkController` worker
 and `NetworkControllerConfig` intent APIs. It calls SD-WAN Manager directly;
 the NetAsCode module and provider are source references for porting the data model,

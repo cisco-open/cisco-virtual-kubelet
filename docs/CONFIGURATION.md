@@ -31,37 +31,44 @@ spec:
     name: cat9000-1-creds       # Secret with key: password
   tls:
     enabled: true
-    insecureSkipVerify: true    # lab only; do not use this transport for gNOI
+    insecureSkipVerify: false
   # allowUnsignedApps: true      # enable when running unsigned packages
                                   # (your own builds, or devices without
                                   # signed-verification enforcement)
   xe:
     networking:
       interface:
-        type: VirtualPortGroup
-        virtualPortGroup:
-          dhcp: true
-          interface: "0"
-          guestInterface: 0
+        type: AppGigabitEthernet
+        appGigabitEthernet:
+          mode: trunk
+          vlanIf:
+            dhcp: true
+            vlan: 200
+            guestInterface: 0
 ```
 
-This minimal app-hosting example uses unverified TLS only for a lab and leaves
-gNOI in backward-compatible `auto` mode. Configure explicit verified
+This Catalyst 9000 example assumes the VLAN and DHCP setup in the
+[platform guide](configuration-cat9000.md). It requires a device certificate trusted by the
+worker's system CA store and matching `spec.address`. For a private CA, see
+[Shared TLS](#shared-tls) below. It leaves gNOI in backward-compatible `auto`
+mode. Configure explicit verified
 [`spec.gnoi`](gnoi-software-lifecycle.md#secure-ios-xe-gnxi) before invoking any
 gNOI operation.
 
 ## CLI flags & environment variables
 
-Runtime settings are **not** in the config file — they are passed as flags or env vars. Precedence: **flag → environment variable → default**.
+Runtime settings are generally passed as flags or environment variables.
+Node name and log level also accept device-configuration fallbacks, as noted
+below. See the [CLI reference](cisco-vk-cli.md#cisco-vk-run) for the full list.
 
 | Flag | Env var | Default | Description |
 |---|---|---|---|
-| `--nodename` | `VKUBELET_NODE_NAME` | `cisco-vk-<device-address>` | Kubernetes node name |
+| `--nodename` | `CISCO_VK_NODE_NAME`, then `VKUBELET_NODE_NAME` | `device.nodeName`, then `cisco-vk-<device-address>` | Resolution: flag → listed environment variables → `device.nodeName` → address-derived name; falls back to `cisco-virtual-kubelet` without an address. |
 | `--config` / `-c` | — | `/etc/virtual-kubelet/config.yaml` | Device config path |
 | `--kubeconfig` | `KUBECONFIG` | in-cluster | kubeconfig path |
-| `--log-level` | `LOG_LEVEL` | `info` | `debug`, `info`, `warn`, `error` |
-| `--tls-cert-file` | — | auto-generated | Kubelet HTTPS listener certificate |
-| `--tls-key-file` | — | auto-generated | Kubelet HTTPS listener key |
+| `--log-level` | `LOG_LEVEL` | `device.logLevel`, then `info` | Resolution: flag → environment → device setting → `info`; accepts `debug`, `info`, `warn`/`warning`, or `error`. |
+| `--tls-cert-file` | — | `/etc/virtual-kubelet/tls/tls.crt` | Kubelet HTTPS listener certificate; if both files are absent, generate a self-signed pair under `/var/lib/virtual-kubelet/tls/`. |
+| `--tls-key-file` | — | `/etc/virtual-kubelet/tls/tls.key` | Kubelet HTTPS listener key; exactly one file being present is an error. |
 | — | `VK_DEVICE_PASSWORD` | — | Device password. Overrides `device.password` from the config file. Set by the controller when `credentialSecretRef` is used. |
 
 ## Configuration fields
@@ -75,7 +82,7 @@ Runtime settings are **not** in the config file — they are passed as flags or 
 | `port` | int (1–65535) | no | 443 (TLS) / 80 | Device API port. IOS-XE uses RESTCONF/NETCONF/gNMI depending on transport; NX-OS uses NX-API CLI and NX-API REST/DME over HTTP(S). |
 | `username` | string | yes | — | Device username |
 | `password` | string | no | — | Device password. **Do not set in controller mode** — use `credentialSecretRef` instead. |
-| `credentialSecretRef` | LocalObjectReference | no | — | Reference to a `Secret` in the same namespace containing key `password`. See [Security](security.md#credential-injection). |
+| `credentialSecretRef` | LocalObjectReference | no | — | Reference to a `Secret` in the same namespace containing key `password`. See [Security](security-credentials.md#credential-injection). |
 
 ### Shared TLS
 
@@ -84,6 +91,13 @@ custom Deployment that mounts them. For controller-managed device HTTPS,
 `spec.tls.caSecretRef` projects a public CA bundle into both per-device worker
 planes. Arbitrary local paths are not automatically mounted. Dedicated gNOI
 trust remains separate: use `spec.gnoi.tls.secretRef` or IOS XE provisioning.
+
+!!! info "Managed public-CA Secret introduced in v2026.11.0"
+    `spec.tls.caSecretRef` requires the matching November CRD, admission
+    contract, manager and worker image. Upgrade those components together.
+    For installations staying on October `v2026.10.0`, use a system-trusted
+    device certificate or an explicitly mounted CA file in a custom Deployment. The local `caFile`
+    field alone does not arrange that mount in a controller-managed worker.
 
 ```yaml
 tls:
@@ -207,17 +221,17 @@ trust sources. Provisioning is performed only by the gated
 `ProvisionCertificate` action; read-only `GNOIOSVerify` never installs a
 certificate.
 See the [secure authentication and provisioning workflow](gnoi-software-lifecycle.md#secure-ios-xe-gnxi)
-and its [security guidance](security.md#secure-ios-xe-gnoi). Environment
+and its [security guidance](security-tls.md#secure-ios-xe-gnoi). Environment
 overrides remain documented in the [CLI reference](cisco-vk-cli.md#additional-environment-variables).
 
 ### Node and pod topology
 
 | Field | Type | Default | Notes |
 |---|---|---|---|
-| `podCIDR` | string | — | CIDR range the VK allocates from when DHCP is off. The VK hands out addresses sequentially from this range to each new container. |
+| `podCIDR` | string | — | IOS-XE static-address input when DHCP is off. The current implementation gives only the first container a fixed address and does not allocate unique addresses across Pods; see the limitation below. |
 | `labels` | map[string]string | `{}` | Legacy extra Node labels. In managed topology, non-topology values remain compatible, but topology values must agree with protected `metadata.labels` and the administrator projection allowlist. |
 | `taints` | []v1.Taint | `[]` | Extra Node taints. In managed topology the manager, not the worker, owns the projected/static taint set. |
-| `maxPods` | int32 | `16` | Maximum pods the device can host |
+| `maxPods` | int32 | `16` | Pod capacity advertised to Kubernetes; not discovered device app-hosting capacity. Managed topology requires `1–110`. Choose a value that fits the platform's actual capacity. |
 | `region` | string | — | Legacy region source. In managed topology, authoritative `metadata.labels["topology.kubernetes.io/region"]` must be present and this value may only agree with it. |
 | `zone` | string | — | Legacy zone source. In managed topology, authoritative `metadata.labels["topology.kubernetes.io/zone"]` must be present and this value may only agree with it. |
 
@@ -227,31 +241,44 @@ and the opt-in administrator policy described in
 Only region, zone, and allowlisted `topology.cisco.vk/*` keys reach Nodes;
 `operations.cisco.vk/*` labels remain rollout-only risk data.
 
+!!! warning "Static addressing is not IP address management"
+    With DHCP disabled, IOS-XE derives the first container's IPv4 address from
+    the `podCIDR` network address by adding `10` to its last octet. It does not
+    reserve addresses across Pods, so separate Pods reuse that address;
+    subsequent containers receive no static address from this calculation.
+    Use DHCP for multiple independent workloads.
+
 ### Resource limits
 
-Default and maximum resource bounds reported as node capacity/allocatable and used when a pod omits requests.
+These fields configure device app profiles. Despite their `default` names,
+configured `defaultCPU` and `defaultMemory` override the corresponding
+container requests; IOS-XE also applies `defaultStorage` this way. They do not
+set Node capacity or allocatable resources. Node capacity comes from the
+driver's capacity reporting and `maxPods`.
 
 ```yaml
 resourceLimits:
   defaultCPU: "500m"
   defaultMemory: "512Mi"
-  defaultStorage: "500Mi"
-  maxCPU: "2000m"
-  maxMemory: "4Gi"
-  maxStorage: "2Gi"
-  others:
-    maxApps: "4"
+  defaultStorage: "500Mi"  # IOS-XE only; omit for NX-OS
 ```
 
 | Field | Type | Notes |
 |---|---|---|
-| `resourceLimits.defaultCPU` | string | Default CPU if pod omits requests |
-| `resourceLimits.defaultMemory` | string | Default memory if pod omits requests |
-| `resourceLimits.defaultStorage` | string | Default ephemeral storage |
-| `resourceLimits.maxCPU` | string | Upper limit per container |
-| `resourceLimits.maxMemory` | string | Upper limit per container |
-| `resourceLimits.maxStorage` | string | Upper limit per container |
-| `resourceLimits.others` | map[string]string | Arbitrary custom resources. For NX-OS, `maxApps` overrides the conservative app-hosting slot guard. |
+| `resourceLimits.defaultCPU` | string | Device-wide app-profile CPU override; replaces the container CPU request when set. |
+| `resourceLimits.defaultMemory` | string | Device-wide app-profile memory override; replaces the container memory request when set. |
+| `resourceLimits.defaultStorage` | string | IOS-XE app-profile disk override; replaces the ephemeral-storage request when set. NX-OS rejects this setting and explicit ephemeral-storage requests. |
+| `resourceLimits.maxCPU` | string | Reserved field; currently not enforced by the drivers. |
+| `resourceLimits.maxMemory` | string | Reserved field; currently not enforced by the drivers. |
+| `resourceLimits.maxStorage` | string | Reserved field; currently not enforced by the drivers. |
+| `resourceLimits.others` | map[string]string | Driver-specific settings. For NX-OS, `maxApps` overrides the conservative app-hosting slot guard. These are not automatically advertised as Kubernetes extended resources. |
+
+Without a request or a device override, both app-profile implementations start
+with `1000m` CPU, `512Mi` memory, `1024Mi` disk and one vCPU. IOS-XE rounds CPU
+limits up to a vCPU count; NX-OS rejects CPU limits above `1000m`. Memory limits
+are not directly read by the profile
+conversion. Kubernetes admission may populate requests before the Pod reaches
+CVK. Do not use the reserved `max*` fields as resource-enforcement controls.
 
 NX-OS maps each Kubernetes container to one NX-OS app-hosting app. CVK defaults
 the NX-OS app-slot guard to `4`, matching the observed Nexus 9300v lab ceiling,
@@ -316,6 +343,10 @@ xe:
 | `AppGigabitEthernet` | Catalyst 9000 | [configuration-cat9000.md](configuration-cat9000.md) |
 | `Management` | Either (containers on management network) | [Below](#management-interface-both-platforms) |
 
+For AppGigabitEthernet, top-level `appGigabitEthernet.dhcp` applies only to
+access mode with VLAN `0`. Other access and trunk configurations use
+`appGigabitEthernet.vlanIf.dhcp`.
+
 ## Management interface (both platforms)
 
 The Management interface mode places containers on the device's management network rather than on a dedicated App Hosting interface. It is supported on both Catalyst 8000V and Catalyst 9000.
@@ -332,7 +363,7 @@ xe:
 
 | Field | Type | Default | Notes |
 |---|---|---|---|
-| `dhcp` | bool | `false` | DHCP on the management interface. If `false`, allocate from `podCIDR`. |
+| `dhcp` | bool | `false` | DHCP on the management interface. If `false`, use the limited static `podCIDR` calculation described above. |
 | `guestInterface` | uint8 (0–3) | `0` | Container-side interface index (0 = eth0). |
 
 Note that putting containers on the management network exposes them directly to management traffic and any ACLs in place there. For workload isolation, prefer VirtualPortGroup (on Catalyst 8000V) or AppGigabitEthernet (on Catalyst 9000).
@@ -443,7 +474,7 @@ During image delivery the VK emits pod events visible in `kubectl describe pod`:
 
 - [Catalyst 8000V](configuration-cat8000v.md) — VirtualPortGroup install walkthrough
 - [Catalyst 9000](configuration-cat9000.md) — AppGigabitEthernet install walkthrough
-- [Examples](https://github.com/cisco-open/cisco-virtual-kubelet/tree/main/examples/configs) — full working configs for every interface mode
+- [Examples](https://github.com/cisco-open/cisco-virtual-kubelet/tree/v2026.11.0/examples/configs) — full working configs for every interface mode
 - [Security](security.md) — credential injection via Secrets
 - [Observability](observability.md) — OTEL and metrics configuration in detail
 - [Troubleshooting](troubleshooting.md) — common configuration issues

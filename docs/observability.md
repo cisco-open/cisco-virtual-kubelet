@@ -129,7 +129,7 @@ producers must never place credentials or other secrets in correlation fields.
 Malformed values are ignored without echoing them into logs or telemetry.
 
 In Splunk, start with the exact `cvk.lifecycle.id`, for example
-`cvk-pr181-h<full-head-sha>` or `cvk-release-v2026.9.2`. Open a CVK reconcile
+`cvk-pr181-h<full-head-sha>` or `cvk-release-v2026.11.0`. Open a CVK reconcile
 span to see its bounded Argo parent or link, then follow the lifecycle bridge
 and GitHub cross-run links through the hosted workflows. This bounded
 parent/link model keeps long-running controllers from holding a release trace
@@ -175,11 +175,17 @@ Cisco Virtual Kubelet also exposes four Kubernetes-facing observability
 surfaces:
 
 - **Prometheus metrics** on the standard kubelet `/metrics/resource` endpoint.
-- **Kubernetes stats/summary** on `/stats/summary` — powers `kubectl top node`.
+- **Kubernetes stats/summary** on `/stats/summary` — device/Node statistics, without Pod/container usage records.
 - **OpenTelemetry topology traces** emitted on a configurable interval. OpenTelemetry (OTEL) is a vendor-neutral observability framework; here we use it to emit a device-centric topology trace that backends like Splunk Observability Cloud can render as a service map.
 - **Kubernetes node annotations** populated on every status sync, surfacing basic network context like router ID and neighbor counts.
 
 Three of these surfaces — metrics (topology subset), OTEL traces, and node annotations — depend on the driver implementing the optional `TopologyProvider` interface. The IOS-XE driver does; other drivers may not, in which case their VKs simply omit the topology-derived data without erroring.
+
+For lifecycle diagnostics, read the manager and per-device **worker Pod** logs.
+Hosted applications do not support Kubernetes logs, exec, attach or
+port-forward: those VK endpoints return HTTP 501. Application output needs its
+own logging destination. See the [diagnostic sequence](troubleshooting.md#first-gather-the-basics)
+for worker discovery, namespaces and device-side checks.
 
 **CDP** (Cisco Discovery Protocol) and **OSPF** (Open Shortest Path First) are referenced throughout this page. Both are neighbor-discovery protocols the device participates in — CDP at Layer 2 for directly-connected Cisco gear, OSPF at Layer 3 for routing peers.
 
@@ -187,7 +193,10 @@ Three of these surfaces — metrics (topology subset), OTEL traces, and node ann
 
 ### Catalog
 
-All metrics are type `gauge`. The base set works on any driver; the topology-derived metrics require a driver with `TopologyProvider`.
+Device-resource and topology metrics are gauges. Lifecycle and telemetry
+metrics also include counters, as indicated by their names and descriptions.
+The base set works on any driver; topology-derived metrics require a driver
+with `TopologyProvider`.
 
 #### Device resources (always present)
 
@@ -265,7 +274,11 @@ not automatic certificate renewal or proof of the active listener identity.
 
 ### Scraping
 
-The metrics are served on the node's kubelet HTTPS listener (port 10250) at `/metrics/resource`. Any workload that already scrapes kubelet metrics picks them up automatically — for example, `kube-prometheus-stack`'s `ServiceMonitor` for nodes, or the [Prometheus kubelet scrape config](https://github.com/prometheus/prometheus/blob/main/documentation/examples/prometheus-kubernetes.yml).
+The metrics are served on the node's kubelet HTTPS listener (port 10250) at
+`/metrics/resource`. Configure the collector to discover the virtual Node,
+use that path and trust the serving certificate. An existing kubelet scrape
+job may select another path or omit virtual Nodes; check its targets and
+relabeling rules before expecting CVK metrics.
 
 No extra configuration on the VK side is required — the handler is always wired.
 
@@ -278,7 +291,21 @@ No extra configuration on the VK side is required — the handler is always wire
 - **Filesystem**: `CapacityBytes`, `UsedBytes`, `AvailableBytes` for IOx storage
 - **Network**: Per-interface `RxBytes` / `TxBytes` (when `TopologyProvider` is implemented)
 
-This is what `kubectl top node cat9000-1` reads. It also feeds the Kubernetes Vertical/Horizontal pod autoscalers if you use them against VK nodes.
+The summary's `pods` list is empty: these are device-level snapshots, not
+measurements of individual hosted applications. `kubectl top` queries the
+cluster Metrics API through metrics-server; a working summary endpoint alone
+does not establish compatibility with the collector's scrape format.
+
+Treat CPU/memory compatibility metrics as estimates. The CPU-seconds value is
+derived from current utilization and process uptime, not a measured cumulative
+counter, and can decrease as utilization falls. Memory is derived from quota
+minus availability, not a measured application working set.
+
+CVK does not supply the per-Pod/container CPU and memory usage needed for
+resource-based HPA or VPA. Custom/external-metric HPA requires a separately
+configured adapter and application metrics, plus validation that scaling fits
+the device's app-hosting capacity. Do not interpret device CPU percentage as
+per-application utilization.
 
 ## OpenTelemetry topology export
 
@@ -412,7 +439,8 @@ Annotation size is deliberately kept small (scalar counts, not full neighbor lis
 Splunk Observability Cloud ingests both Prometheus metrics and OTLP traces through a single OpenTelemetry Collector, so a typical deployment is:
 
 1. Install the [Splunk OpenTelemetry Collector for Kubernetes](https://github.com/signalfx/splunk-otel-collector-chart), pointed at your Splunk Observability Cloud realm and access token. It:
-    - scrapes kubelet `/metrics/resource` automatically — the `cisco_device_*` metrics appear without extra config;
+    - is configured to discover virtual Nodes and scrape `/metrics/resource`
+      with the correct TLS trust, collecting the `cisco_device_*` metrics;
     - exposes an OTLP gRPC endpoint (default `:4317`) for traces.
 2. On each `CiscoDevice`, point the VK's OTEL exporter at the collector:
    ```yaml

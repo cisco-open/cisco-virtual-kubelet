@@ -8,7 +8,7 @@ with while troubleshooting. For the Kubernetes custom resources, start with the
 The two runtime surfaces covered here are:
 
 1. **Device-side RESTCONF** — the HTTP/JSON management API exposed by IOS-XE, which Cisco Virtual Kubelet uses to configure and observe App-Hosting. Useful to know about for troubleshooting with `curl`, and for understanding which YANG models are involved.
-2. **VK-side kubelet endpoints** — the HTTPS endpoints each VK pod exposes on `:10250`. These are what `kubectl top node`, metrics-server, and Prometheus talk to.
+2. **VK-side kubelet endpoints** — the HTTPS endpoints each VK pod exposes on `:10250` for device statistics and metrics. Collector integration depends on its scrape path, metric format and TLS trust; these endpoints do not provide per-Pod usage or application streaming.
 
 You don't normally call RESTCONF by hand — the VK does it on your behalf as pods are created and deleted — but the reference below is accurate for manual debugging (see [Testing with curl](#testing-with-curl) at the bottom).
 
@@ -22,9 +22,15 @@ https://<device-ip>/restconf
 
 ### Authentication
 
-HTTP Basic authentication with the device credentials. The VK sources the password from the `VK_DEVICE_PASSWORD` environment variable (injected from a Kubernetes Secret — see [Security → Credential injection](security.md#credential-injection)).
+HTTP Basic authentication with the device credentials. The VK sources the password from the `VK_DEVICE_PASSWORD` environment variable (injected from a Kubernetes Secret — see [Security → Credential injection](security-credentials.md#credential-injection)).
 
-When testing with `curl`, `-k` is commonly needed because lab devices often present self-signed certificates. In production, supply `caFile` in the TLS config instead.
+For manual requests, use `curl --cacert` with an independently trusted CA
+bundle and an address matching the device certificate. `-k` disables server
+verification and is only a temporary lab diagnostic. For CVK, follow
+[Shared TLS](CONFIGURATION.md#shared-tls): local/custom Deployments can mount
+`caFile`, while managed `caSecretRef` is introduced in `v2026.11.0` and requires
+matching CRDs, admission policies, manager and workers. October `v2026.10.0`
+installations need a system-trusted certificate or an explicitly mounted CA.
 
 ### App-hosting configuration
 
@@ -184,7 +190,7 @@ Each VK pod runs an HTTPS listener on `:10250`:
 
 | Path | Handler | Purpose |
 |---|---|---|
-| `/stats/summary` | `GetStatsSummary` | Kubernetes stats — powers `kubectl top node` and HPA/VPA |
+| `/stats/summary` | `GetStatsSummary` | Device/Node statistics in Kubernetes summary format; no Pod/container usage records. |
 | `/metrics/resource` | `GetMetricsResource` | Prometheus metrics — device CPU/memory/storage + interface/topology metrics |
 | `/containerLogs/…` | (unsupported) | Returns HTTP 501 |
 | `/exec/…` | (unsupported) | Returns HTTP 501 |
@@ -193,19 +199,31 @@ Each VK pod runs an HTTPS listener on `:10250`:
 
 See [Observability](observability.md) for the full metrics catalog and stats schema.
 
+`kubectl top` queries the cluster Metrics API, not this endpoint directly.
+Neither the summary nor CVK's custom resource metrics supply the hosted-Pod
+CPU/memory measurements needed for resource-based HPA/VPA. Any custom or
+external-metric autoscaling needs a separately configured and validated metric
+pipeline.
+
+The unsupported paths apply to applications hosted on the Cisco device.
+`kubectl logs` against the **VK worker Pod** still shows provider diagnostics
+through its host kubelet. For hosted-app failures, use those logs, Pod Events,
+device app-hosting diagnostics and the application's own logging destination;
+see [Troubleshooting](troubleshooting.md#hosted-application-logs-exec-attach-and-port-forward).
+
 ## Testing with curl
 
 ```bash
 # Device hostname
-curl -k -u admin:<password> \
+curl --cacert /path/to/trusted-device-ca.crt --user admin \
   https://192.168.1.100/restconf/data/Cisco-IOS-XE-native:native/hostname
 
 # List app-hosting apps
-curl -k -u admin:<password> \
+curl --cacert /path/to/trusted-device-ca.crt --user admin \
   https://192.168.1.100/restconf/data/Cisco-IOS-XE-app-hosting-oper:app-hosting-oper-data
 
 # Install
-curl -k -u admin:<password> \
+curl --cacert /path/to/trusted-device-ca.crt --user admin \
   -X POST \
   -H "Content-Type: application/yang-data+json" \
   -d '{"Cisco-IOS-XE-app-hosting-rpcs:input":{"appid":"test","package":"flash:/test.tar"}}' \

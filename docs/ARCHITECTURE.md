@@ -1,10 +1,17 @@
 # Architecture
 
-This document describes the technical architecture of Cisco Virtual Kubelet.
+This reference is for contributors and operators investigating implementation
+behavior. For a short introduction and the application deployment path, start
+with [How CVK works](concepts.md). Task guides for installation, placement and
+operations are linked from the [documentation home](index.md).
 
 ## Overview
 
-Cisco Virtual Kubelet implements the [Virtual Kubelet](https://github.com/virtual-kubelet/virtual-kubelet) provider interface so Kubernetes can treat Cisco IOS-XE devices as compute nodes. Each device appears as a node in the cluster; pods scheduled to that node are deployed as IOx App-Hosting containers on the device over RESTCONF.
+Cisco Virtual Kubelet implements the [Virtual Kubelet](https://github.com/virtual-kubelet/virtual-kubelet)
+provider interface. In the default per-device worker model, a supported device
+appears as a virtual Node; assigned Pods are translated into device app-hosting
+operations. IOS-XE uses RESTCONF for this path, while the Beta NX-OS provider
+uses NX-API CLI.
 
 ### The runtime split
 
@@ -12,8 +19,10 @@ Everything the project does comes out of a single `cisco-vk` CLI with isolated
 runtime subcommands:
 
 - **`cisco-vk manager`** — the Kubernetes controller. Watches infrastructure
-  CRs and reconciles them into Kubernetes worker resources. It performs no
-  device or external-controller API calls.
+  CRs and reconciles them into Kubernetes worker resources. In the default
+  worker model, it delegates device and external-controller API calls to those
+  workers. The optional configuration-aggregator mode instead runs supported
+  configuration reconciliation inside the manager process.
 - **`cisco-vk run`** — the Virtual Kubelet provider. One process per device. Reads its config, registers a virtual node in the cluster, and drives the device via RESTCONF when pods come and go.
 - **`cisco-vk controller-worker`** — the network-controller runtime. One
   process per `NetworkController` whose type has a registered adapter; it
@@ -21,8 +30,9 @@ runtime subcommands:
   are registered today, `sdwan` and `nexus-dashboard`; other types create no
   worker.
 
-This split keeps device/controller API calls and device-side signing workflows
-inside their workers. The manager writes credential Secret references and
+The default split keeps device/controller API calls and device-side signing
+workflows inside their workers. The opt-in configuration aggregator belongs to
+the manager's trust boundary and is incompatible with managed topology. The manager writes credential Secret references and
 locally validates dedicated gNOI trust and provisioning material, including
 signer keys when present. Its cluster-wide Secret watch also places typed
 Secret objects in its cache and memory. Treat the manager as part of the
@@ -53,8 +63,8 @@ the registry, worker, model, ownership, and security contracts.
 
 ### Opt-in managed topology: placement and software campaigns
 
-October adds a separate managed ownership/rollout path, not a replacement
-Kubernetes scheduler. The manager projects protected declared topology and
+Managed topology adds an opt-in ownership and campaign-admission path while
+retaining the native Kubernetes scheduler. The manager projects protected declared topology and
 owns Node identity; the app-hosting worker reports its permitted status and
 handles eligible Pods. The network-management worker handles configuration,
 diagnostics and explicitly enabled software operations. Two shared functional
@@ -66,7 +76,7 @@ admission remain essential because RBAC alone is not per-device authority.
 | Where a Pod runs | Native Kubernetes scheduler | Affinity/spread over projected Node labels; app worker reconciles the assigned Pod |
 | Which devices may enter a campaign | CVK rollout manager | Immutable approved `IOSXESoftwareRollout` plan, canaries and declared domain budgets |
 | Which source supplies each device | CVK source selection | Topology-scoped endpoint with frozen URL, digest and Secret identity |
-| How software is changed | Network worker / IOS-XE lifecycle driver | Gated secure gNOI install/activate/verify and recovery; no independent durable staging contract |
+| How software is changed | Network worker / IOS-XE lifecycle driver | Gated secure gNOI install/activate/verify and recovery; `PrepareOnly` retains an install receipt and requires separate activation approval |
 | Whether an eligible Pod can be drained | Preview manager/worker drain protocol | Native Eviction/PDB plus exact Pod/device-clean and recovery evidence |
 
 The existing app-hosting diagram below remains the simple path; managed
@@ -329,7 +339,12 @@ sequenceDiagram
     VK->>API: Register virtual node
 ```
 
-The controller **never persists credentials**. `password` and `credentialSecretRef` are both stripped from the `DeviceSpec` before it is marshalled into the ConfigMap. Credentials reach the VK pod via a `valueFrom.secretKeyRef` env var injected into the Deployment spec. See [Security](security.md).
+The recommended `credentialSecretRef` path passes the password through a
+`valueFrom.secretKeyRef` environment variable. Both `password` and
+`credentialSecretRef` are stripped from the rendered device ConfigMap. The
+legacy inline `spec.password` fallback still persists the plaintext value in
+the CiscoDevice and the Deployment environment; use a Secret reference instead.
+See [credential injection and the legacy fallback](security-credentials.md#credential-injection).
 
 ### Pod creation flow
 
@@ -442,7 +457,11 @@ stateDiagram-v2
 
 ### Pod-to-app naming
 
-App IDs follow `cvk{index}_{podUID}` where the UID has hyphens stripped. Up to 10 containers per pod (index `0-9`). Example: `cvk00000_a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4`.
+App IDs use `cvk%04d_<podUID>`: the container index is zero-padded to four
+digits and the Pod UID has hyphens stripped. Example:
+`cvk0000_a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4`. This identity format is not a
+statement of a device's supported container count; platform capabilities and
+application packaging determine that limit.
 
 This lets the driver rebuild pod identity when listing apps from the device — the UID is embedded in the app ID, and pod metadata (name, namespace, container name) is stored as key-value labels in the app's `--run-opts`:
 
@@ -543,8 +562,8 @@ ConfigMap. With global gNOI disablement, the per-device worker remains but the
 trust projection and Secret-driven rollout are omitted. Aggregated config-only
 topology does not create a per-device worker.
 
-The manager also validates provisioning Secret contents locally; it is inside
-the Secret trust boundary but does not perform device RPCs. Known-invalid
+The manager also validates provisioning Secret contents locally, inside
+the Secret trust boundary. This validation does not contact the device. Known-invalid
 optional gNOI material degrades only that worker's gNOI configuration, allowing
 signer removal and unrelated configuration/credential updates to proceed.
 Transient Kubernetes read failures retry without discarding a working

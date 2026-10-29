@@ -531,7 +531,7 @@ replacement-workload evidence. A conclusive cleanup releases that Lease;
 ambiguous teardown, incomplete inventory, lost authorization, or a failed
 release retains it as a fail-closed quarantine. The path does not add a parallel
 Lease or bypass PDBs. See
-[Opt-in PDB-aware drain](topology-awareness.md#opt-in-pdb-aware-drain-development-preview)
+[Opt-in PDB-aware drain](topology-drain.md#opt-in-pdb-aware-drain-development-preview)
 for the exact workload subset, RBAC, recovery, and qualification limits.
 
 Taint removal is observed on a 30-second polling interval; setting it before
@@ -685,7 +685,7 @@ control and audit redirect targets as part of repository policy.
 
 Manager-created leaves from an opt-in `IOSXESoftwareRollout` use the stricter
 managed-source policy documented in
-[Managed topology and topology-aware IOS-XE rollouts](topology-awareness.md#secure-gnoi-and-image-source-prerequisites).
+[Managed topology and topology-aware IOS-XE rollouts](topology-campaigns.md#secure-gnoi-and-image-source-prerequisites).
 That path accepts only anonymous, verified HTTPS or endpoint-bound SFTP;
 rejects query strings, fragments, redirects, environment proxies, and custom
 HTTP transports; resolves DNS once and dials the validated address; rejects
@@ -848,9 +848,9 @@ For the complete upgrade and planned-downgrade manifests, the certificate
 prerequisites, and commands that correlate CR status with worker logs, follow
 the [IOS-XE upgrade and downgrade runbook](gnoi-iosxe-upgrade-runbook.md).
 For a managed topology-aware install-only campaign, start from the
-[`PrepareOnly` rollout example](https://github.com/cisco-open/cisco-virtual-kubelet/blob/main/examples/topology/iosxe-software-prepare.yaml),
+[`PrepareOnly` rollout example](https://github.com/cisco-open/cisco-virtual-kubelet/blob/v2026.11.0/examples/topology/iosxe-software-prepare.yaml),
 then construct the append-only authorization from the live objects using the
-[`activationApproval` patch example](https://github.com/cisco-open/cisco-virtual-kubelet/blob/main/examples/topology/iosxe-software-activate-patch.yaml).
+[`activationApproval` patch example](https://github.com/cisco-open/cisco-virtual-kubelet/blob/v2026.11.0/examples/topology/iosxe-software-activate-patch.yaml).
 
 Each CR is immutable and starts one upgrade after preflight. `notBefore` delays
 initial work; `notAfter` is rechecked before every not-yet-claimed device

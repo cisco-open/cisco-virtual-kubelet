@@ -12,236 +12,162 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-"use client";
+import { ArrowDown, ArrowRight, Boxes, Cloud, Container, Network, Server } from "lucide-react";
 
-import { motion } from "framer-motion";
-import { Server, Cloud, Container, ArrowDown } from "lucide-react";
+const devicePaths = [
+  { name: "Catalyst 8000V", platform: "IOS-XE", transport: "RESTCONF", worker: "01", beta: false },
+  { name: "Catalyst 9000", platform: "IOS-XE", transport: "RESTCONF", worker: "02", beta: false },
+  { name: "Nexus", platform: "NX-OS", transport: "NX-API CLI", worker: "03", beta: true },
+];
 
-// Material Design style router icon: flat box with straight antennas, no RF signals
-function RouterIcon({ className }: { className?: string }) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="currentColor"
-      className={className}
-    >
-      {/* Left antenna - straight vertical line */}
-      <rect x="6.5" y="2" width="1.5" height="7" rx="0.75" />
-      {/* Right antenna - straight vertical line */}
-      <rect x="16" y="2" width="1.5" height="7" rx="0.75" />
-      {/* Antenna bases - small dots */}
-      <circle cx="7.25" cy="9.5" r="1.2" />
-      <circle cx="16.75" cy="9.5" r="1.2" />
-      {/* Router body */}
-      <rect x="1" y="11" width="22" height="10" rx="2" />
-      {/* LED indicators */}
-      <circle cx="6" cy="16" r="1.2" opacity="0.6" fill="currentColor" />
-      <circle cx="10" cy="16" r="1.2" opacity="0.6" fill="currentColor" />
-      <circle cx="14" cy="16" r="1.2" opacity="0.6" fill="currentColor" />
-      <circle cx="18" cy="16" r="1.2" opacity="0.6" fill="currentColor" />
-    </svg>
-  );
-}
+const guideLinkClass =
+  "inline-flex items-center gap-2 rounded text-sm font-medium text-primary hover:text-primary-light focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary";
 
 export default function Architecture() {
   return (
-    <section id="architecture" className="py-24 relative">
-      <div className="absolute inset-0 bg-gradient-to-b from-background via-surface/30 to-background" />
-
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
-        {/* Section header */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: "-100px" }}
-          transition={{ duration: 0.6 }}
-          className="text-center mb-16"
-        >
-          <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-6">
-            How It <span className="gradient-text">Works</span>
+    <section id="architecture" className="relative scroll-mt-20 py-12 md:py-20">
+      <div className="absolute inset-0 bg-gradient-to-b from-background via-surface/40 to-background" aria-hidden="true" />
+      <div className="relative max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="max-w-2xl mx-auto text-center mb-7 md:mb-10">
+          <p className="text-sm font-medium tracking-wide text-primary mb-3">From Kubernetes to a supported device</p>
+          <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight mb-4">
+            How it <span className="text-primary">works</span>
           </h2>
-          <p className="text-lg text-text-muted max-w-2xl mx-auto">
-            Native scheduling places app-hosted Pods. CVK separately coordinates
-            approved IOS-XE software campaigns over gNOI, using declared
-            topology domains and bounded disruption budgets.
+          <p className="text-base sm:text-lg text-text-muted leading-relaxed">
+            Declare your devices and applications in Kubernetes. Cisco Virtual
+            Kubelet connects each virtual node to the device that runs its apps.
           </p>
-        </motion.div>
+        </div>
 
-        <p className="text-sm text-text-muted max-w-4xl mx-auto mb-8 text-center">
-          App-hosting transport is shown below. In opt-in managed mode, the CVK
-          manager owns protected Node identity and labels; separate app-hosting
-          and network-management workers use two shared functional ServiceAccounts.
-          Approved rollouts select image sources and dispatch secure gNOI through
-          the network worker, rather than treating a device upgrade as a scheduled Pod.
-        </p>
+        <figure className="relative rounded-3xl border border-border bg-gradient-to-br from-surface-light/60 via-surface/80 to-background p-4 sm:p-6 lg:p-8">
+          <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-text-muted mb-5 md:mb-7">
+            <Container className="w-4 h-4 text-primary" aria-hidden="true" />
+            App hosting
+          </div>
 
-        {/* App-hosting architecture diagram; the software campaign is a separate path. */}
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: "-50px" }}
-          transition={{ duration: 0.8 }}
-          className="max-w-4xl mx-auto"
-        >
-          {/* Kubernetes Cluster */}
-          <div className="relative">
-            {/* K8s API Server */}
-            <div className="arch-box flex items-center justify-center gap-3 py-5 mb-2 bg-gradient-to-r from-surface to-surface-light border-primary/30">
-              <Cloud className="w-6 h-6 text-primary" />
+          <div aria-hidden="true">
+            <div className="max-w-lg mx-auto flex items-center justify-center gap-3 md:gap-4 rounded-2xl border border-primary/40 bg-primary/5 px-4 py-3 md:px-5 md:py-5 shadow-[0_0_40px_rgba(0,188,235,0.05)]">
+              <div className="shrink-0 rounded-xl border border-primary/25 bg-primary/10 p-2 md:p-3">
+                <Cloud className="w-5 h-5 md:w-7 md:h-7 text-primary" />
+              </div>
               <div>
-                <div className="text-lg font-semibold text-foreground">
-                  Kubernetes API Server
+                <p className="font-semibold text-base sm:text-lg text-foreground">Kubernetes API</p>
+                <p className="text-xs sm:text-sm text-text-muted mt-1">Devices and desired workloads</p>
+              </div>
+            </div>
+
+            <div className="flex flex-col items-center py-1 md:py-2">
+              <div className="w-px h-3 md:h-5 bg-gradient-to-b from-primary/60 to-accent-light/60" />
+              <ArrowDown className="w-4 h-4 text-accent-light -mt-1" />
+            </div>
+
+            <div className="max-w-lg mx-auto flex items-center justify-center gap-3 md:gap-4 rounded-2xl border border-accent-light/40 bg-accent/5 px-4 py-3 md:px-5 md:py-5">
+              <div className="shrink-0 rounded-xl border border-accent-light/25 bg-accent/10 p-2 md:p-3">
+                <Boxes className="w-5 h-5 md:w-7 md:h-7 text-accent-light" />
+              </div>
+              <div>
+                <p className="font-semibold text-base sm:text-lg text-foreground">CVK manager</p>
+                <p className="text-xs sm:text-sm text-text-muted mt-1">Creates a worker for each device</p>
+              </div>
+            </div>
+
+            <div className="hidden md:block h-10">
+              <svg viewBox="0 0 900 40" preserveAspectRatio="none" className="w-full h-full text-accent-light/50" fill="none">
+                <path d="M450 0V16M145 40V16H755V40M450 16V40" stroke="currentColor" strokeWidth="1.5" vectorEffect="non-scaling-stroke" />
+              </svg>
+            </div>
+            <div className="md:hidden max-w-lg mx-auto">
+              <div className="flex flex-col items-center py-1">
+                <div className="w-px h-3 bg-accent-light/40" />
+                <ArrowDown className="w-4 h-4 text-accent-light -mt-1" />
+              </div>
+              <div className="flex items-center justify-center gap-3 rounded-2xl border border-accent-light/30 bg-accent/5 px-4 py-3">
+                <Server className="w-5 h-5 shrink-0 text-accent-light" />
+                <div>
+                  <p className="text-sm font-semibold text-foreground">Per-device CVK worker</p>
+                  <p className="text-xs text-text-muted mt-1">Watches Pods on its virtual node</p>
                 </div>
-                <div className="text-sm text-text-muted">
-                  Standard Kubernetes control plane
+              </div>
+              <div className="flex flex-col items-center py-1">
+                <div className="w-px h-3 bg-success/40" />
+                <ArrowDown className="w-4 h-4 text-success -mt-1" />
+              </div>
+              <div className="rounded-2xl border border-success/30 bg-success/5 px-4 py-4 text-center">
+                <div className="flex items-center justify-center gap-2 mb-2">
+                  <Network className="w-5 h-5 text-success" />
+                  <p className="text-sm font-semibold text-foreground">Cisco device</p>
+                </div>
+                <div className="flex flex-wrap justify-center items-center gap-x-3 gap-y-1 text-xs text-text-muted">
+                  <span>IOS-XE · RESTCONF</span>
+                  <span>NX-OS · NX-API CLI <span className="text-amber-300">(Beta)</span></span>
+                </div>
+                <div className="inline-flex items-center gap-2 rounded-lg border border-success/20 bg-success/10 px-3 py-1.5 mt-3 text-xs text-success">
+                  <Container className="w-3.5 h-3.5" />
+                  Hosted application
                 </div>
               </div>
             </div>
 
-            {/* Connector */}
-            <div className="flex justify-center py-2">
-              <div className="flex flex-col items-center">
-                <div className="w-px h-8 bg-gradient-to-b from-primary to-accent" />
-                <ArrowDown className="w-5 h-5 text-primary -mt-1" />
-              </div>
-            </div>
-
-            {/* VK Providers row */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-2">
-              {[1, 2, "N"].map((num) => (
-                <motion.div
-                  key={num}
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  whileInView={{ opacity: 1, scale: 1 }}
-                  viewport={{ once: true }}
-                  transition={{
-                    duration: 0.5,
-                    delay: typeof num === "number" ? num * 0.1 : 0.3,
-                  }}
-                  className="arch-box flex items-center justify-center gap-3 py-4 border-accent/30"
-                >
-                  <Server className="w-5 h-5 text-accent" />
-                  <div>
-                    <div className="font-semibold text-foreground text-sm">
-                      VK Provider
+            <div className="hidden md:grid md:grid-cols-3 gap-5">
+              {devicePaths.map((device) => (
+                <div key={device.name} className="min-w-0 rounded-2xl border border-border bg-background/35 p-4 lg:p-5">
+                  <div className="flex items-center gap-3 rounded-xl border border-accent-light/30 bg-accent/5 px-4 py-4">
+                    <Server className="w-5 h-5 shrink-0 text-accent-light" />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-semibold text-foreground">CVK worker</p>
+                      <p className="text-xs text-text-muted mt-1">One virtual node</p>
                     </div>
-                    <div className="text-xs text-text-muted">Device {num}</div>
+                    <span className="text-xs font-mono text-accent-light">{device.worker}</span>
                   </div>
-                </motion.div>
-              ))}
-            </div>
 
-            {/* Southbound transport connectors */}
-            <div className="grid grid-cols-3 gap-4 mb-2">
-              {["RESTCONF", "RESTCONF", "NX-API CLI"].map((transport, i) => (
-                <div key={`${transport}-${i}`} className="flex flex-col items-center py-1">
-                  <div className="w-px h-6 bg-gradient-to-b from-accent to-success" />
-                  <div className="px-3 py-1 rounded-full bg-surface border border-border text-xs text-primary font-mono">
-                    {transport}
+                  <div className="flex flex-col items-center py-1">
+                    <div className="w-px h-4 bg-accent-light/40" />
+                    <span className="rounded-full border border-border bg-surface px-3 py-1 text-[11px] font-medium tracking-wide text-text-muted">
+                      {device.transport}
+                    </span>
+                    <div className="w-px h-4 bg-success/40" />
+                    <ArrowDown className="w-4 h-4 text-success -mt-1" />
                   </div>
-                  <div className="w-px h-6 bg-gradient-to-b from-success to-accent" />
-                  <ArrowDown className="w-4 h-4 text-success -mt-1" />
+
+                  <div className="rounded-xl border border-success/30 bg-success/5 px-4 py-5 text-center">
+                    <Network className="w-6 h-6 text-success mx-auto mb-3" />
+                    <p className="text-sm font-semibold text-foreground">{device.name}</p>
+                    <div className="flex flex-wrap justify-center items-center gap-2 mt-1.5 text-xs text-text-muted">
+                      <span>{device.platform}</span>
+                      {device.beta && (
+                        <span className="rounded border border-amber-400/25 bg-amber-400/10 px-1.5 py-0.5 text-[10px] font-semibold text-amber-300">Beta</span>
+                      )}
+                    </div>
+                    <div className="inline-flex items-center gap-2 rounded-lg border border-success/20 bg-success/10 px-3 py-1.5 mt-4 text-xs text-success">
+                      <Container className="w-3.5 h-3.5" />
+                      Hosted application
+                    </div>
+                  </div>
                 </div>
               ))}
             </div>
+          </div>
 
-            {/* Cisco Devices row */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {[
-                { name: "Catalyst 8000V", ip: "192.0.2.24" },
-                { name: "Catalyst 9000", ip: "192.0.2.25" },
-                { name: "Nexus NX-OS · Beta", ip: "192.0.2.x" },
-              ].map((device, i) => (
-                <motion.div
-                  key={device.name}
-                  initial={{ opacity: 0, y: 20 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 0.5, delay: i * 0.15 }}
-                  className="arch-box border-success/30 py-4"
-                >
-                  <div className="flex items-center justify-center gap-2 mb-3">
-                    <RouterIcon className="w-5 h-5 text-success" />
-                    <span className="font-semibold text-foreground text-sm">
-                      {device.name}
-                    </span>
-                  </div>
-                  <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-success/10 border border-success/20">
-                    <Container className="w-4 h-4 text-success" />
-                    <span className="text-xs text-success font-mono">
-                      Container
-                    </span>
-                  </div>
-                  <div className="text-xs text-text-muted mt-2 font-mono">
-                    {device.ip}
-                  </div>
-                </motion.div>
-              ))}
-            </div>
-          </div>
-        </motion.div>
+          <figcaption className="max-w-3xl mx-auto mt-5 md:mt-7 text-center text-sm text-text-muted leading-relaxed">
+            Kubernetes holds the desired state. The manager creates one worker
+            per device; each worker watches assigned Pods and manages app hosting.
+            <span className="sr-only">
+              {" "}IOS-XE devices use RESTCONF. Nexus NX-OS uses NX-API CLI, and
+              its app-hosting support is Beta.
+            </span>
+          </figcaption>
+        </figure>
 
-        {/* How it works steps */}
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: "-50px" }}
-          transition={{ duration: 0.6, delay: 0.2 }}
-          className="mt-20 grid grid-cols-1 md:grid-cols-3 gap-8"
-        >
-          <div className="relative">
-            <div className="text-6xl font-bold text-primary/10 absolute -top-6 -left-2">
-              01
-            </div>
-            <div className="relative pt-12">
-              <h3 className="text-xl font-semibold mb-3 text-foreground">
-                Schedule with kubectl
-              </h3>
-              <p className="text-text-muted leading-relaxed">
-                A CiscoDevice custom resource registers each device as a virtual
-                node. Pods are scheduled there using standard kubectl — no
-                new tools or workflows.
-              </p>
-            </div>
-          </div>
-          <div className="relative">
-            <div className="text-6xl font-bold text-primary/10 absolute -top-6 -left-2">
-              02
-            </div>
-            <div className="relative pt-12">
-              <h3 className="text-xl font-semibold mb-3 text-foreground">
-                Driver Reconciliation
-              </h3>
-              <p className="text-text-muted leading-relaxed">
-                The driver translates pod specs into device app-hosting config
-                and reconciles state — via RESTCONF on IOS-XE, or NX-API CLI on
-                NX-OS. A recovery loop reprocesses stuck pods automatically.
-              </p>
-            </div>
-          </div>
-          <div className="relative">
-            <div className="text-6xl font-bold text-primary/10 absolute -top-6 -left-2">
-              03
-            </div>
-            <div className="relative pt-12">
-              <div className="flex items-center gap-2 mb-3">
-                <h3 className="text-xl font-semibold text-foreground">
-                  Observe at the Edge
-                </h3>
-                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/25 shrink-0">
-                  Beta
-                </span>
-              </div>
-              <p className="text-text-muted leading-relaxed">
-                Prometheus metrics, OpenTelemetry topology traces, and
-                cisco.io/* node annotations surface device health, CDP/OSPF
-                neighbors, and hosted apps.
-                These signals are observability, not automatic forwarding-health
-                admission or a guarantee that a redundant path can carry traffic.
-              </p>
-            </div>
-          </div>
-        </motion.div>
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-8 mt-5 md:mt-7">
+          <a href="/cisco-virtual-kubelet/docs/concepts/" className={guideLinkClass}>
+            Understand the components
+            <ArrowRight className="w-4 h-4" aria-hidden="true" />
+          </a>
+          <a href="/cisco-virtual-kubelet/docs/topology-scheduling/" className={guideLinkClass}>
+            Workload placement
+            <ArrowRight className="w-4 h-4" aria-hidden="true" />
+          </a>
+        </div>
       </div>
     </section>
   );

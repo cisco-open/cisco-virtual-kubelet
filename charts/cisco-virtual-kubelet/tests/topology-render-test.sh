@@ -913,8 +913,8 @@ grep -Fq 'status.nodeIdentity; request and complete its UID-bound legacy handoff
   "$chart_dir/templates/_helpers.tpl"
 grep -Fq 'requires controller.leaderElect=true until every isolated legacy identity' \
   "$chart_dir/templates/_helpers.tpl"
-grep -Fq 'Offline `helm template`' "$repo_root/docs/topology-awareness.md"
-grep -Fq 'GitOps pruning cannot discover' "$repo_root/docs/topology-awareness.md"
+grep -Fq 'Offline `helm template`' "$repo_root/docs/topology-enable.md"
+grep -Fq 'GitOps pruning cannot discover' "$repo_root/docs/topology-enable.md"
 
 # Cross-field and qualification gates must fail before installation.
 if helm template cvk "$chart_dir" --kube-version 1.34.9 \
@@ -1094,7 +1094,7 @@ if helm template cvk "$chart_dir" --kube-version 1.35.0 \
 fi
 grep -Fq 'managed topology Phase 2 supports campaign-owned IOSXESoftwareUpgrade only' \
   "$error_output"
-grep -Fq 'gnoi.enableWriteClass=false' "$repo_root/docs/topology-awareness.md"
+grep -Fq 'gnoi.enableWriteClass=false' "$repo_root/docs/topology-enable.md"
 grep -Fq 'IOSXEOperationalAction' "$repo_root/charts/cisco-virtual-kubelet/README.md"
 grep -Fq 'operations.cisco.vk/qualification-cohort: c9300' \
   "$repo_root/examples/topology/devices-and-workload.yaml"
@@ -1105,16 +1105,22 @@ grep -Fq 'kind: PodDisruptionBudget' \
 grep -Fq 'opt-in managed drain uses only policy/v1 Eviction' \
   "$repo_root/examples/topology/devices-and-workload.yaml"
 grep -Fq 'preferredDuringSchedulingIgnoredDuringExecution' \
-  "$repo_root/docs/topology-awareness.md"
+  "$repo_root/docs/topology-scheduling.md"
 grep -Fq 'cisco.vk/device-maintenance=gnoi:NoSchedule' \
-  "$repo_root/docs/topology-awareness.md"
-grep -Fq 'do not yet prove production packet' \
-  "$repo_root/docs/topology-awareness.md"
+  "$repo_root/docs/topology-scheduling.md"
+# Accepted network observations now exist, but the campaign procedure must
+# retain the limits on independent forwarding and supervisor qualification.
+grep -Fq 'loaded directional-rate accuracy and redundant-supervisor health remain' \
+  "$repo_root/docs/topology-campaigns.md"
+grep -Fq 'unqualified until their declared E02 test fixtures exist' \
+  "$repo_root/docs/topology-campaigns.md"
+grep -Fq 'claim of full forwarding-path or redundant-supervisor qualification' \
+  "$repo_root/docs/topology-reference.md"
 grep -Fq 'name: c9300' "$repo_root/examples/topology/iosxe-software-rollout.yaml"
 grep -Fq 'name: berlin-mirror' "$repo_root/examples/topology/iosxe-software-rollout.yaml"
 grep -Fq 'name: global' "$repo_root/examples/topology/iosxe-software-rollout.yaml"
-grep -Fq 'Exactly one unscoped catch-all' "$repo_root/docs/topology-awareness.md"
-grep -Fq 'every qualification cohort' "$repo_root/docs/topology-awareness.md"
+grep -Fq 'Exactly one unscoped catch-all' "$repo_root/docs/topology-campaigns.md"
+grep -Fq 'every qualification cohort' "$repo_root/docs/topology-campaigns.md"
 
 # Generated schemas are part of the rollout safety contract and Helm never
 # upgrades them implicitly. Keep the install copies byte-identical and assert
@@ -1149,8 +1155,8 @@ fi
 for upgrade_doc in \
   "$repo_root/README.md" \
   "$repo_root/docs/getting-started.md" \
-  "$repo_root/docs/operations.md" \
-  "$repo_root/docs/topology-awareness.md" \
+  "$repo_root/docs/installation-maintenance.md" \
+  "$repo_root/docs/topology-enable.md" \
   "$repo_root/charts/cisco-virtual-kubelet/README.md" \
   "$repo_root/charts/cisco-virtual-kubelet/templates/NOTES.txt"; do
   grep -Fq 'cvk-crds-before-upgrade.yaml' "$upgrade_doc"
@@ -1161,8 +1167,8 @@ done
 if grep -E 'kubectl apply --server-side -f (cisco-virtual-kubelet|charts/cisco-virtual-kubelet)/crds/' \
     "$repo_root/README.md" \
     "$repo_root/docs/getting-started.md" \
-    "$repo_root/docs/operations.md" \
-    "$repo_root/docs/topology-awareness.md" \
+    "$repo_root/docs/installation-maintenance.md" \
+    "$repo_root/docs/topology-enable.md" \
     "$repo_root/charts/cisco-virtual-kubelet/README.md" \
     "$repo_root/charts/cisco-virtual-kubelet/templates/NOTES.txt"; then
   echo "a current upgrade guide still claims plain server-side CRD apply is reliable" >&2

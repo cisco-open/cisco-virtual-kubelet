@@ -7,6 +7,12 @@ A [Virtual Kubelet](https://github.com/virtual-kubelet/virtual-kubelet) provider
 
 ## Overview
 
+**Documentation for v2026.11.0 · November 2026.** Check the
+[Releases page](https://github.com/cisco-open/cisco-virtual-kubelet/releases)
+for publication status and downloadable artifacts. If November is not listed,
+`v2026.10.0` is the previous published baseline; its feature set differs from
+this documentation.
+
 This provider allows Kubernetes pods to be deployed as containers directly on Cisco devices, enabling edge computing scenarios where compute workloads run on network infrastructure. The provider communicates with Cisco devices over their native management APIs — RESTCONF on IOS-XE, and NX-API (CLI and REST/DME) on NX-OS — to manage the full container and device lifecycle.
 
 ### Key Features
@@ -40,16 +46,17 @@ This provider allows Kubernetes pods to be deployed as containers directly on Ci
 See [Production Readiness](docs/production-readiness.md) for the current NX-OS runtime-parity scope and hardening roadmap.
 See [Managed Topology and Rollouts](docs/topology-awareness.md) before enabling
 the Kubernetes 1.35+ manager-owned Node and IOS-XE campaign trust boundary.
-This development branch extends that foundation with staged IOS-XE activation,
-accepted network evidence, diagnostic graphs and bounded drain/recovery
-hardening. See [PR #197 scope and future work](docs/topology-merge-scope.md)
-for the tested cohort, opt-in safeguards and remaining qualification. These
-additions are not part of the historical October feature table below.
-See the [October 2026 release candidate notes](docs/releases/v2026.10.0.md)
-for the release scope, gates, compatibility boundary, and deferred roadmap.
+The November `v2026.11.0` target extends that foundation with staged IOS-XE
+activation, accepted network evidence, diagnostic graphs, bounded drain/recovery
+hardening, managed public-CA trust and the Alpha SD-WAN/Nexus Dashboard adapters.
+See [PR #197 scope and future work](docs/topology-merge-scope.md) for the tested
+topology cohort, opt-in safeguards and remaining qualification. These additions
+are not part of the historical October feature table below.
+See the [November release notes](docs/releases/v2026.11.0.md) for scope and
+upgrade considerations; the public Releases page determines availability.
 
 <details>
-<summary><strong>What's new in October 2026 Release?</strong></summary>
+<summary><strong>October 2026 release overview (historical)</strong></summary>
 
 Compared with the published September release, October adds secure gNOI
 OS-service provisioning and topology-aware software campaigns alongside
@@ -77,7 +84,8 @@ native workload placement:
 Read the [topology guide](docs/topology-awareness.md) and
 [gNOI upgrade/downgrade runbook](docs/gnoi-iosxe-upgrade-runbook.md) before opting
 in. The [October readiness ledger](docs/releases/v2026.10.0-readiness.md)
-separates implemented features from the remaining publication gates.
+preserves the checks and publication gates recorded during that release's
+preparation; it does not describe November readiness.
 
 </details>
 
@@ -127,24 +135,26 @@ The controller is deployed on a Kubernetes cluster and watches `CiscoDevice` Cus
 
 #### Step 1: Install the published chart (Recommended)
 
-The examples target October `v2026.10.0`. Until it appears on the public
-[Releases page](https://github.com/cisco-open/cisco-virtual-kubelet/releases),
-use the published `v2026.9.2` chart instead; October artifacts are not yet available.
+The examples target November `v2026.11.0`. Run them only after that version and
+its artifacts appear on the public
+[Releases page](https://github.com/cisco-open/cisco-virtual-kubelet/releases).
+Otherwise use the published October `2026.10.0` chart and its matching
+documentation; November features require the November chart, CRDs and image.
 
 The chart and its container image are published to GitHub Container Registry with every release — no clone or custom build required:
 
 ```bash
 helm install cvk oci://ghcr.io/cisco-open/charts/cisco-virtual-kubelet \
-  --version 2026.10.0 \
+  --version 2026.11.0 \
   --namespace cvk-system --create-namespace
 ```
 
-**NOTE:** This deploys the signed `ghcr.io/cisco-open/cisco-virtual-kubelet` image by default — no `--set image.*` needed. The chart `--version` matches the release's SemVer-compatible CalVer without the leading `v` (for example, `v2026.10.0` → `2026.10.0`); see [Releases](https://github.com/cisco-open/cisco-virtual-kubelet/releases) for the current version.
+**NOTE:** This deploys the signed `ghcr.io/cisco-open/cisco-virtual-kubelet` image by default — no `--set image.*` needed. The chart `--version` matches the release's SemVer-compatible CalVer without the leading `v` (for example, `v2026.11.0` → `2026.11.0`); see [Releases](https://github.com/cisco-open/cisco-virtual-kubelet/releases) for the current version.
 
 **Optionally:** Verify the chart signature before installing.
 
 ```bash
-cosign verify ghcr.io/cisco-open/charts/cisco-virtual-kubelet:2026.10.0 \
+cosign verify ghcr.io/cisco-open/charts/cisco-virtual-kubelet:2026.11.0 \
   --certificate-identity-regexp "https://github.com/cisco-open/cisco-virtual-kubelet/.github/workflows/release.yml@refs/tags/v.*" \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com
 ```
@@ -153,12 +163,15 @@ cosign verify ghcr.io/cisco-open/charts/cisco-virtual-kubelet:2026.10.0 \
 <summary><strong>Upgrade From Earlier Releases</strong></summary>
 
 Helm does not upgrade files under `crds/`. Pull the new chart and apply its
-CRDs **before** `helm upgrade`. Back up the live definitions and review the
-server-side diff before the explicit ownership handoff from Helm:
+CRDs **before** `helm upgrade`. November refreshes 18 existing CRD manifests,
+with substantive schema changes in four; it adds no new CRD kinds. Back up the
+live definitions and custom resources,
+preserve reviewed Helm values, and review the server-side diff before the
+explicit ownership handoff from Helm:
 
 ```bash
 helm pull oci://ghcr.io/cisco-open/charts/cisco-virtual-kubelet \
-  --version 2026.10.0 --untar
+  --version 2026.11.0 --untar
 kubectl get customresourcedefinitions.apiextensions.k8s.io -o yaml \
   > cvk-crds-before-upgrade.yaml
 kubectl diff --server-side --force-conflicts \
@@ -166,22 +179,19 @@ kubectl diff --server-side --force-conflicts \
 kubectl apply --server-side --force-conflicts \
   --field-manager=cvk-crd-upgrade -f cisco-virtual-kubelet/crds/
 kubectl wait --for=condition=Established --timeout=60s \
-  crd/ciscodevices.cisco.vk \
-  crd/iosxesoftwareupgrades.ops.cisco.vk \
-  crd/iosxeoperationalactions.ops.cisco.vk \
-  crd/iosxesoftwarerollouts.ops.cisco.vk
+  -f cisco-virtual-kubelet/crds/
 helm upgrade cvk oci://ghcr.io/cisco-open/charts/cisco-virtual-kubelet \
-  --version 2026.10.0 --namespace cvk-system
+  --version 2026.11.0 --namespace cvk-system
 ```
 
 `kubectl diff` returns status 1 when differences exist. The force flag applies
 only to the exact reviewed CVK CRD files; see the operations runbook before
 using it in production.
 
-See the [operations runbook](docs/operations.md#upgrading-crds). If the two new
-controller CRDs are absent, CVK preserves existing device reconcilers but
-leaves the Alpha controller scaffold disabled until the CRDs are applied and
-the manager Deployment is restarted.
+See [installation maintenance](docs/installation-maintenance.md#upgrade-the-crds-and-chart).
+When migrating an older installation whose controller CRDs are absent, CVK
+preserves existing device reconcilers but leaves the Alpha controller scaffold
+disabled until the CRDs are applied and the manager Deployment is restarted.
 
 </details>
 

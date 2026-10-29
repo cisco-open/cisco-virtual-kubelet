@@ -12,176 +12,46 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-"use client";
+const links = [
+  { label: "Documentation", href: "/cisco-virtual-kubelet/docs/" },
+  { label: "Releases", href: "https://github.com/cisco-open/cisco-virtual-kubelet/releases" },
+  { label: "Contribute", href: "https://github.com/cisco-open/cisco-virtual-kubelet/blob/main/CONTRIBUTING.md" },
+  { label: "Report an issue", href: "https://github.com/cisco-open/cisco-virtual-kubelet/issues" },
+];
 
-import { Github, ExternalLink } from "lucide-react";
-
-const footerLinks = {
-  Project: [
-    {
-      name: "GitHub",
-      href: "https://github.com/cisco-open/cisco-virtual-kubelet",
-    },
-    {
-      name: "Documentation",
-      href: "https://cisco-open.github.io/cisco-virtual-kubelet/docs/",
-    },
-    {
-      name: "Releases",
-      href: "https://github.com/cisco-open/cisco-virtual-kubelet/releases",
-    },
-    {
-      name: "License",
-      href: "/cisco-virtual-kubelet/LICENSE",
-    },
-    {
-      name: "Notices",
-      href: "/cisco-virtual-kubelet/NOTICE",
-    },
-    {
-      name: "Third-party licenses",
-      href: "/cisco-virtual-kubelet/THIRD_PARTY_LICENSES.txt",
-    },
-  ],
-  "Virtual Kubelet": [
-    {
-      name: "VK Project",
-      href: "https://github.com/virtual-kubelet/virtual-kubelet",
-    },
-    { name: "VK Website", href: "https://virtual-kubelet.io/" },
-    {
-      name: "Providers",
-      href: "https://github.com/virtual-kubelet/virtual-kubelet#providers",
-    },
-    { name: "CNCF", href: "https://www.cncf.io/" },
-  ],
-  Community: [
-    {
-      name: "Kubernetes Slack",
-      href: "https://kubernetes.slack.com/messages/virtual-kubelet",
-    },
-    { name: "Cisco DevNet", href: "https://developer.cisco.com" },
-    {
-      name: "Contributing",
-      href: "https://github.com/cisco-open/cisco-virtual-kubelet/blob/main/CONTRIBUTING.md",
-    },
-    {
-      name: "Issues",
-      href: "https://github.com/cisco-open/cisco-virtual-kubelet/issues",
-    },
-  ],
-};
+const linkClass =
+  "rounded text-text-muted hover:text-primary transition-colors focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary";
 
 export default function Footer() {
   return (
-    <footer className="relative border-t border-border bg-surface/30">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-12">
-          {/* Brand */}
-          <div className="md:col-span-1">
-            <a href="#" className="flex items-center gap-3 mb-4">
-              <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-primary to-accent flex items-center justify-center">
-                <svg
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  className="w-5 h-5 text-white"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                >
-                  <path d="M12 2L2 7l10 5 10-5-10-5z" />
-                  <path d="M2 17l10 5 10-5" />
-                  <path d="M2 12l10 5 10-5" />
-                </svg>
-              </div>
-              <span className="text-lg font-bold text-foreground">
-                Cisco VK
-              </span>
-            </a>
-            <p className="text-sm text-text-muted leading-relaxed mb-6">
-              Manage app-hosted workloads, configuration and opt-in topology-aware
-              IOS-XE software campaigns through Kubernetes. Cisco Nexus (NX-OS)
-              app-hosting and configuration remain Beta.
-            </p>
-            <a
-              href="https://github.com/cisco-open/cisco-virtual-kubelet"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 text-sm text-text-muted hover:text-foreground transition-colors"
-            >
-              <Github className="w-4 h-4" />
-              cisco-open/cisco-virtual-kubelet
-            </a>
-          </div>
-
-          {/* Link columns */}
-          {Object.entries(footerLinks).map(([title, links]) => (
-            <div key={title}>
-              <h4 className="text-sm font-semibold text-foreground mb-4 uppercase tracking-wider">
-                {title}
-              </h4>
-              <ul className="space-y-3">
-                {links.map((link) => (
-                  <li key={link.name}>
-                    <a
-                      href={link.href}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="group flex items-center gap-1.5 text-sm text-text-muted hover:text-primary transition-colors"
-                    >
-                      {link.name}
-                      <ExternalLink className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
+    <footer className="border-t border-border bg-surface/30">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
+          <a href="#" className="rounded text-lg font-bold focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary">
+            Cisco <span className="gradient-text">Virtual Kubelet</span>
+          </a>
+          <nav aria-label="Project links" className="flex flex-wrap gap-x-6 gap-y-3 text-sm">
+            {links.map((link) => (
+              <a key={link.label} href={link.href} className={linkClass}>
+                {link.label}
+              </a>
+            ))}
+          </nav>
         </div>
 
-        {/* Bottom bar */}
-        <div className="mt-12 pt-8 border-t border-border flex flex-col sm:flex-row items-center justify-between gap-4">
-          <p className="text-sm text-text-muted">
-            © {new Date().getFullYear()} Cisco Systems Inc. Project code under{" "}
-            <a
-              href="/cisco-virtual-kubelet/LICENSE"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-primary hover:underline"
-            >
-              Apache 2.0
-            </a>{" "}
-            ·{" "}
-            <a
-              href="/cisco-virtual-kubelet/THIRD_PARTY_LICENSES.txt"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-primary hover:underline"
-            >
-              third-party terms apply
-            </a>
+        <div className="mt-8 pt-6 border-t border-border flex flex-col gap-4 text-xs text-text-muted">
+          <p className="max-w-3xl text-sm leading-relaxed">
+            Built on <a href="https://virtual-kubelet.io/" className={`${linkClass} underline underline-offset-4`}>Virtual Kubelet</a>, a{" "}
+            <a href="https://www.cncf.io/projects/virtual-kubelet/" className={`${linkClass} underline underline-offset-4`}>Cloud Native Computing Foundation (CNCF) Sandbox project</a>.
+            {" "}CNCF is part of the <a href="https://www.linuxfoundation.org/" className={`${linkClass} underline underline-offset-4`}>Linux Foundation</a>.
           </p>
-          <div className="flex items-center gap-4 text-sm text-text-muted">
-            <span>
-              Part of the{" "}
-              <a
-                href="https://virtual-kubelet.io/"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-primary hover:underline"
-              >
-                Virtual Kubelet
-              </a>{" "}
-              ecosystem
-            </span>
-            <span className="text-border">•</span>
-            <a
-              href="https://www.cncf.io/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hover:text-foreground transition-colors"
-            >
-              CNCF Sandbox Project
-            </a>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <p>© {new Date().getFullYear()} Cisco Systems Inc.</p>
+            <div className="flex flex-wrap gap-x-5 gap-y-3">
+              <a href="/cisco-virtual-kubelet/LICENSE" className={linkClass}>Apache 2.0</a>
+              <a href="/cisco-virtual-kubelet/NOTICE" className={linkClass}>Notices</a>
+              <a href="/cisco-virtual-kubelet/THIRD_PARTY_LICENSES.txt" className={linkClass}>Third-party licenses</a>
+            </div>
           </div>
         </div>
       </div>

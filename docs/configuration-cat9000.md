@@ -36,10 +36,14 @@ iox
 
 ! Enable the RESTCONF HTTPS listener
 restconf
+```
 
-! Only required if NOT using spec.allowUnsignedApps: true in the CiscoDevice spec.
-! When allowUnsignedApps: true, CVK requests both persistent and runtime changes
-! via RESTCONF. Confirm the effective state with `show app-hosting infra`.
+Keep package signing enabled for signed packages. Only when deliberately using
+unsigned lab/custom packages, either set `spec.allowUnsignedApps: true` or
+configure both device controls below. Confirm the effective runtime state with
+`show app-hosting infra`; see [package policy](troubleshooting.md#packagepolicyinvalid-false-positives).
+
+```
 app-hosting verification disable
 no app-hosting signed-verification
 ```
@@ -94,7 +98,7 @@ spec:
     name: cat9000-1-creds        # Secret with key: password
   tls:
     enabled: true
-    insecureSkipVerify: true     # lab only; do not use this transport for gNOI
+    insecureSkipVerify: false
   # allowUnsignedApps: true      # uncomment when running unsigned packages
                                   # — e.g. your own custom application builds.
                                   # See Troubleshooting → PackagePolicyInvalid.
@@ -110,8 +114,12 @@ spec:
             guestInterface: 0       # container-side eth index (0 = eth0)
 ```
 
-The TLS setting above is for an app-hosting lab and leaves gNOI in legacy
-`auto` mode. Before invoking gNOI, configure
+The device HTTPS certificate must match its address and be trusted by the
+worker. For a private CA, use [Shared TLS](CONFIGURATION.md#shared-tls): managed
+`caSecretRef` is introduced in `v2026.11.0` and requires matching CRDs, admission
+policies, manager and workers. October `v2026.10.0` installations need system
+trust or an explicit custom CA mount.
+This app-hosting configuration leaves gNOI in legacy `auto` mode. Before invoking gNOI, configure
 [explicit verified gNOI TLS](gnoi-software-lifecycle.md#secure-ios-xe-gnxi).
 
 ### Mode 2 — Access
@@ -135,10 +143,10 @@ spec:
 | Field | Type | Default | Notes |
 |---|---|---|---|
 | `mode` | enum | — | `access` or `trunk`. |
-| `dhcp` | bool | `false` | Access-mode DHCP. |
+| `dhcp` | bool | `false` | Applies to access mode only when `vlanIf.vlan` is `0`; otherwise use `vlanIf.dhcp`. |
 | `guestInterface` | uint8 (0–3) | `0` | Container-side interface index (0 = eth0). |
-| `vlanIf.vlan` | uint16 (0–4094) | — | Tagged VLAN ID (trunk mode only). |
-| `vlanIf.dhcp` | bool | `false` | DHCP on the tagged VLAN. |
+| `vlanIf.vlan` | uint16 (0–4094) | — | App-hosting VLAN ID; a nonzero value uses the VLAN-specific settings in access or trunk mode. |
+| `vlanIf.dhcp` | bool | `false` | DHCP for trunk mode and access mode with a nonzero VLAN ID. |
 | `vlanIf.guestInterface` | uint8 (0–3) | `0` | Container-side interface index on the VLAN. |
 | `vlanIf.macForwardingEnabled` | bool | `false` | Pass VLAN MACs into the container (use with care). |
 | `vlanIf.multicastEnabled` | bool | `false` | Allow multicast on the VLAN. |
@@ -146,11 +154,18 @@ spec:
 
 ### Static IPs (no DHCP)
 
-If you'd rather allocate IPs yourself, set `dhcp: false` on the chosen mode and specify `podCIDR` at the spec level. The VK allocates addresses sequentially from that range.
+For the nonzero-VLAN configuration below, setting `vlanIf.dhcp: false`
+requires `podCIDR`, but this is not an address pool allocator. The current
+implementation assigns only the first container a fixed address derived by
+adding `10` to the network address's last octet. Separate Pods reuse that
+address; later containers receive no static address from this calculation.
+Access mode with VLAN `0` does not receive a static address from this path.
+Use DHCP for multiple independent workloads. See the
+[canonical static-address limitation](CONFIGURATION.md#node-and-pod-topology).
 
 ```yaml
 spec:
-  podCIDR: "192.168.200.0/24"
+  podCIDR: "192.168.200.0/24"   # first container: 192.168.200.10; reused across Pods
   xe:
     networking:
       interface:
@@ -197,7 +212,7 @@ The container's `application-state` should transition through `DEPLOYED → ACTI
 ### RESTCONF reachability (from any host)
 
 ```bash
-curl -k -u admin:<password> \
+curl --cacert /path/to/trusted-device-ca.crt --user admin \
   https://192.168.1.100/restconf/data/Cisco-IOS-XE-native:native/hostname
 ```
 
