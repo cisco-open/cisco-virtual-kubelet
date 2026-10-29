@@ -128,7 +128,7 @@ kubectl describe pod -l app.kubernetes.io/name=cisco-vk,app.kubernetes.io/instan
 - **Image pull error** — make sure `image.repository`/`vkImage.repository` points at a registry the cluster can pull from.
 - **Bad credentials** — look for `401 Unauthorized` in VK pod logs. Verify the Secret key is spelled `password` (not `PASSWORD`, not `pass`).
 - **Device unreachable** — look for `dial tcp: i/o timeout` in VK pod logs. Check routing, firewall, and that RESTCONF is enabled (`restconf` in device config).
-- **TLS verification failing** — look for `x509` errors and check both the trusted CA and certificate address/SAN. Device HTTPS and dedicated gNOI trust are separate: use [Shared TLS](CONFIGURATION.md#shared-tls) for HTTPS and `spec.gnoi.tls.secretRef` for dedicated gNOI. Managed HTTPS `spec.tls.caSecretRef` is introduced in `v2026.11.0` and requires matching CRDs, admission policies, manager and workers. October `v2026.10.0` installations need a system-trusted device certificate or an explicitly mounted CA in a custom Deployment. Use `tls.insecureSkipVerify: true` only as a temporary, non-gNOI lab diagnostic.
+- **TLS verification failing** — look for `x509` errors and check both the trusted CA and certificate address/SAN. Device HTTPS and dedicated gNOI trust are separate: use [Shared TLS](CONFIGURATION.md#shared-tls) for HTTPS and `spec.gnoi.tls.secretRef` for dedicated gNOI. Managed HTTPS `spec.tls.caSecretRef` is introduced in `v2026.11.1` and requires matching CRDs, admission policies, manager and workers. October `v2026.10.0` installations need a system-trusted device certificate or an explicitly mounted CA in a custom Deployment. Use `tls.insecureSkipVerify: true` only as a temporary, non-gNOI lab diagnostic.
 
 ---
 

@@ -75,6 +75,15 @@ RUN mkdir -p /out/licenses/go && \
     cp "$(go env GOROOT)/LICENSE" /out/licenses/go/LICENSE && \
     cp "$(go env GOROOT)/PATENTS" /out/licenses/go/PATENTS
 
+# Module-level license detection does not cover separately licensed embedded data.
+# Inventory follows the image target; the stdlib-only helper runs on the builder.
+RUN GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} go list -mod=readonly -deps -json ./cmd/cisco-vk \
+      > /out/embedded-packages.json && \
+    GOOS="$(go env GOHOSTOS)" GOARCH="$(go env GOHOSTARCH)" GOENV=off GOTOOLCHAIN=local \
+      go run .github/scripts/package_embedded_licenses.go \
+      --repo-root /app --packages /out/embedded-packages.json \
+      --output /out/licenses/embedded-source
+
 FROM gcr.io/distroless/static-debian12@sha256:d75cdd72874d4790092fcb1b058493ecf6bb5bf2b2b897045b00ff01d91843f2
 COPY --from=builder /app/cisco-vk /usr/local/bin/cisco-vk
 COPY --from=builder /out/licenses /licenses

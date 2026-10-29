@@ -105,8 +105,11 @@ nav:
   - Topology execution plan: 'topology-roadmap-execution.md'
 - Releases and archive:
   - Releases overview: 'releases/index.md'
-  - November release notes: 'releases/v2026.11.0.md'
-  - November preparation record: 'releases/v2026.11.0-readiness.md'
+  - Corrected November candidate notes: 'releases/v2026.11.1.md'
+  - Corrected November preparation record: 'releases/v2026.11.1-readiness.md'
+  - Rejected November candidate:
+    - v2026.11.0 notes: 'releases/v2026.11.0.md'
+    - v2026.11.0 preparation record: 'releases/v2026.11.0-readiness.md'
   - Published releases: 'https://github.com/cisco-open/cisco-virtual-kubelet/releases'
   - October preparation notes (historical): 'releases/v2026.10.0.md'
   - October readiness ledger (historical): 'releases/v2026.10.0-readiness.md'

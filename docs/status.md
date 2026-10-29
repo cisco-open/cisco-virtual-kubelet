@@ -1,10 +1,12 @@
 # Status and feature maturity
 
-This is the capability summary for **v2026.11.0 · November 2026**. The
+This is the capability summary for **v2026.11.1 · November 2026**. The
 [Releases page](https://github.com/cisco-open/cisco-virtual-kubelet/releases)
 determines publication status and identifies installable versions and artifacts.
 Preparation notes alone do not establish publication. Earlier records remain
-available in the [release archive](releases/index.md).
+available in the [release archive](releases/index.md). The previous November
+candidate `v2026.11.0` was rejected before publication for an incomplete
+embedded-source bundle; its staged artifacts are not an approved release.
 
 The project is open source under `cisco-open`. Device and operational CRDs use
 `v1alpha1` APIs; schema changes are still possible. Signed images are published at
@@ -44,7 +46,7 @@ The previous baseline is October
 [v2026.10.0](https://github.com/cisco-open/cisco-virtual-kubelet/releases/tag/v2026.10.0).
 The controller adapters, managed public-CA projection and staged topology
 activation/evidence/recovery extensions described here are introduced in
-`v2026.11.0`. When upgrading from October, update the matching CRDs, admission
+`v2026.11.1`. When upgrading from October, update the matching CRDs, admission
 policies, chart, manager and workers together; an older image does not gain
 these capabilities by applying a newer example.
 

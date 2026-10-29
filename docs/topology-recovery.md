@@ -87,7 +87,7 @@ mutation outcomes.
 
 ## Abandoning an unused preparation
 
-This recovery contract, introduced in `v2026.11.0`, has a
+This recovery contract, introduced in `v2026.11.1`, has a
 [physical single-supervisor C9300 retirement result](evidence/topology-2026-10-05/live-migration-and-recovery.md#successful-native-recovery-after-replacement),
 including runtime replacement and immutable receipt preservation. It is **not
 full production qualification**: fresh re-preparation and no-replay recovery

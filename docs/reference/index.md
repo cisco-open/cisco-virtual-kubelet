@@ -45,7 +45,7 @@ workflow, start with [Guides](../guides.md) or [Operations](../operator-guide.md
 
 - [Glossary](../glossary.md): terminology used in the documentation.
 - [Status and feature maturity](../status.md): implementation scope and
-  qualification limits for `v2026.11.0`.
+  qualification limits for `v2026.11.1`.
 - [Security overview](../security.md): choose credentials, transport trust or access guidance.
 - [RBAC and authorization](../security-authorization.md): roles, worker boundaries and delegation.
 - [Topology design](../topology-reference.md): ownership, policy and campaign contracts.

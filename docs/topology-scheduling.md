@@ -15,7 +15,7 @@ mode, replace direct `nodeName` placement with the scheduler rules below.
 
 Use the default scheduler. Do not set `schedulerName`, and avoid direct
 `spec.nodeName` assignments. The
-[`devices-and-workload.yaml`](https://github.com/cisco-open/cisco-virtual-kubelet/blob/v2026.11.0/examples/topology/devices-and-workload.yaml)
+[`devices-and-workload.yaml`](https://github.com/cisco-open/cisco-virtual-kubelet/blob/v2026.11.1/examples/topology/devices-and-workload.yaml)
 example shows one fleet member plus drain-qualified soft site preference and
 spread. It also includes a matching `policy/v1`
 `PodDisruptionBudget` and the opt-in `operations.cisco.vk/drain-safe=true`
@@ -79,7 +79,7 @@ applications. It affects CVK only when both administrator policy and an exact
 campaign opt into the [drain procedure](topology-drain.md).
 
 Hard node affinity, selectors and spread remain valid with `BlockIfRunning`.
-The `v2026.11.0` preview `Drain` contract can also preserve these constraints in
+The `v2026.11.1` preview `Drain` contract can also preserve these constraints in
 an immutable placement digest, but must observe a currently feasible replacement
 Node before protection or Eviction. Required Pod affinity and anti-affinity remain
 unsupported. This feasibility check does not reserve capacity: the scheduler is

@@ -8,7 +8,7 @@ It is separate from scheduling application Pods and is currently IOS-XE-specific
 
 - Complete [managed enrollment](topology-enable.md), with current device/Node
   identity, topology and worker-revision observations.
-- Use the matching reviewed `v2026.11.0` CRDs, admission policies, chart, manager
+- Use the matching reviewed `v2026.11.1` CRDs, admission policies, chart, manager
   and workers. The staged activation, network-evidence and recovery extensions
   are introduced in November; update October installations before using them.
   Check [release records](releases/index.md) for artifact availability.
@@ -111,7 +111,7 @@ webhook between those shapes. A cluster that ran that older preview must first
 settle and export its rollout evidence, remove the obsolete preview objects,
 and upgrade the CRD and controller together. Do not deploy an older controller
 over stored objects whose source schema it cannot interpret. The staged,
-network-evidence and recovery contracts introduced in `v2026.11.0` also require
+network-evidence and recovery contracts introduced in `v2026.11.1` also require
 matching CRDs, admission policies, manager and workers.
 
 Managed source resolution rejects redirects, environment proxies, URL
@@ -261,7 +261,7 @@ shortcut.
 ## 4. Submit, review, and approve { #submit-review-and-approve }
 
 Start from
-[`examples/topology/iosxe-software-rollout.yaml`](https://github.com/cisco-open/cisco-virtual-kubelet/blob/v2026.11.0/examples/topology/iosxe-software-rollout.yaml).
+[`examples/topology/iosxe-software-rollout.yaml`](https://github.com/cisco-open/cisco-virtual-kubelet/blob/v2026.11.1/examples/topology/iosxe-software-rollout.yaml).
 Create a new object for every upgrade or downgrade; executable intent is
 immutable. A downgrade is the same workflow with a qualified lower
 `targetVersion` and its exact compatible image/digest.
@@ -329,14 +329,14 @@ for the exact rules. Never edit a frozen plan or immutable child to repair drift
 ## Separate preparation from activation
 
 For a qualified staged workflow, start from the
-[`PrepareOnly` campaign example](https://github.com/cisco-open/cisco-virtual-kubelet/blob/v2026.11.0/examples/topology/iosxe-software-prepare.yaml).
+[`PrepareOnly` campaign example](https://github.com/cisco-open/cisco-virtual-kubelet/blob/v2026.11.1/examples/topology/iosxe-software-prepare.yaml).
 Replace every placeholder and use the normal planning and approval process above.
 `PrepareOnly` does not authorize activation: it retains immutable preparation
 receipts and device ownership.
 
 Only after every frozen target has completed preparation, an operator with the
 separate `activate` permission may construct the
-[activation approval patch](https://github.com/cisco-open/cisco-virtual-kubelet/blob/v2026.11.0/examples/topology/iosxe-software-activate-patch.yaml)
+[activation approval patch](https://github.com/cisco-open/cisco-virtual-kubelet/blob/v2026.11.1/examples/topology/iosxe-software-activate-patch.yaml)
 from the exact live plan, device/leaf UIDs and receipt hashes. Use its server-side
 dry run before applying the append-only approval, within a qualified maintenance
 window. Do not invent or copy receipt identities. See the

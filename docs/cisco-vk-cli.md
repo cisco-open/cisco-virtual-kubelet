@@ -10,7 +10,7 @@ Cisco Virtual Kubelet exposes two command-line surfaces:
   internal `controller-worker` subcommand starts one registered network-
   controller adapter. Helm and the manager normally own these invocations.
 
-This reference targets `v2026.11.0`. The signed-archive example below pins that
+This reference targets `v2026.11.1`. The signed-archive example below pins that
 version; use it only after its assets appear on the
 [Releases page](https://github.com/cisco-open/cisco-virtual-kubelet/releases).
 Otherwise select the published October `v2026.10.0` baseline and its matching
@@ -58,7 +58,7 @@ set -euo pipefail
 
 # Set this to an asset-bearing release shown on the Releases page.
 # November target: use only after its signed assets are published.
-VERSION=v2026.11.0
+VERSION=v2026.11.1
 OS="$(uname -s | tr '[:upper:]' '[:lower:]')"
 case "$OS" in
   darwin|linux) ;;
@@ -305,7 +305,7 @@ cisco-vk --version
 Both print the same release provenance:
 
 ```text
-cisco-vk v2026.11.0 (commit=<full-git-commit>, built=<RFC3339-time>)
+cisco-vk v2026.11.1 (commit=<full-git-commit>, built=<RFC3339-time>)
 ```
 
 A direct development build reports `devel` and may report `unknown` metadata.

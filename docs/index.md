@@ -14,7 +14,7 @@ using familiar Kubernetes workflows. Start with device setup and app hosting.
 [Get started](getting-started.md){ .md-button .md-button--primary }
 [Understand the basics](concepts.md){ .md-button }
 
-**Documentation for v2026.11.0 · November 2026.** The
+**Documentation for v2026.11.1 · November 2026.** The
 [Releases page](https://github.com/cisco-open/cisco-virtual-kubelet/releases)
 determines publication status and artifact availability. Match your installed
 version to the [feature availability](status.md) and upgrade guidance.
@@ -95,7 +95,7 @@ controllers use separate adapter workers.
 
 ## Status
 
-This documentation describes the `v2026.11.0` target. The [status page](status.md)
+This documentation describes the `v2026.11.1` target. The [status page](status.md)
 separates implemented capabilities, feature maturity and qualification limits.
 Check [release records](releases/index.md) for publication and installed-version
 context.

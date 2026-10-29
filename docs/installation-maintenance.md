@@ -9,14 +9,14 @@ device, use the [IOS-XE upgrade and downgrade runbook](gnoi-iosxe-upgrade-runboo
 ## Before you start
 
 - Confirm the Kubernetes context, Helm release and release namespace. Examples
-  use release `cvk`, namespace `cvk-system`, and target chart `2026.11.0`.
+  use release `cvk`, namespace `cvk-system`, and target chart `2026.11.1`.
   Check the [Releases page](https://github.com/cisco-open/cisco-virtual-kubelet/releases)
   for publication and artifacts before running them. If November is not listed,
   `2026.10.0` remains the previous published baseline. Substitute your
   installation's names.
 - Read the target release's migration notes and verify the chart's provenance
   through your normal release-verification process. Keep its chart and image
-  versions aligned. Features introduced in `v2026.11.0` require the November
+  versions aligned. Features introduced in `v2026.11.1` require the November
   CRDs, admission policies, chart, manager and workers together.
 - Back up both CRD definitions and the custom resources in the `cisco.vk`,
   `config.cisco.vk` and `ops.cisco.vk` API groups, across all relevant namespaces.
@@ -37,7 +37,7 @@ mistaken for the selected release.
 
 ```bash
 helm pull oci://ghcr.io/cisco-open/charts/cisco-virtual-kubelet \
-  --version 2026.11.0 --untar
+  --version 2026.11.1 --untar
 
 helm get values cvk --namespace cvk-system -o yaml \
   > cvk-values-before-upgrade.yaml
@@ -88,7 +88,7 @@ controller upgrade; retaining the October definitions is insufficient.
 
 ```bash
 helm upgrade cvk oci://ghcr.io/cisco-open/charts/cisco-virtual-kubelet \
-  --version 2026.11.0 \
+  --version 2026.11.1 \
   --namespace cvk-system \
   -f cvk-values-upgrade.yaml
 kubectl rollout status deployment/cvk-cisco-virtual-kubelet-controller \
@@ -122,7 +122,7 @@ missing CRDs can block startup.
 
 A CRD does not supply an adapter missing from the running image. The `sdwan` and
 `nexus-dashboard` adapters and `NetworkController.spec.deviceAdoption` are
-introduced in `v2026.11.0`; use the matching November chart and image. Keep the
+introduced in `v2026.11.1`; use the matching November chart and image. Keep the
 adapters' Alpha qualification and supported-operation limits in view.
 
 ## Roll back a release

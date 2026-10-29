@@ -848,9 +848,9 @@ For the complete upgrade and planned-downgrade manifests, the certificate
 prerequisites, and commands that correlate CR status with worker logs, follow
 the [IOS-XE upgrade and downgrade runbook](gnoi-iosxe-upgrade-runbook.md).
 For a managed topology-aware install-only campaign, start from the
-[`PrepareOnly` rollout example](https://github.com/cisco-open/cisco-virtual-kubelet/blob/v2026.11.0/examples/topology/iosxe-software-prepare.yaml),
+[`PrepareOnly` rollout example](https://github.com/cisco-open/cisco-virtual-kubelet/blob/v2026.11.1/examples/topology/iosxe-software-prepare.yaml),
 then construct the append-only authorization from the live objects using the
-[`activationApproval` patch example](https://github.com/cisco-open/cisco-virtual-kubelet/blob/v2026.11.0/examples/topology/iosxe-software-activate-patch.yaml).
+[`activationApproval` patch example](https://github.com/cisco-open/cisco-virtual-kubelet/blob/v2026.11.1/examples/topology/iosxe-software-activate-patch.yaml).
 
 Each CR is immutable and starts one upgrade after preflight. `notBefore` delays
 initial work; `notAfter` is rechecked before every not-yet-claimed device

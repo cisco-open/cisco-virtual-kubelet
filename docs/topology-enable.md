@@ -82,7 +82,7 @@ cluster administrator or compromised Helm actor untrusted.
 ## Configure and enable
 
 Start from
-[`examples/topology/managed-topology-values.yaml`](https://github.com/cisco-open/cisco-virtual-kubelet/blob/v2026.11.0/examples/topology/managed-topology-values.yaml).
+[`examples/topology/managed-topology-values.yaml`](https://github.com/cisco-open/cisco-virtual-kubelet/blob/v2026.11.1/examples/topology/managed-topology-values.yaml).
 The conservative defaults enroll only devices explicitly labeled
 `topology.cisco.vk/managed=true`, require region and zone, and admit one
 transfer and one unavailable member.

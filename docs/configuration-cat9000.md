@@ -116,7 +116,7 @@ spec:
 
 The device HTTPS certificate must match its address and be trusted by the
 worker. For a private CA, use [Shared TLS](CONFIGURATION.md#shared-tls): managed
-`caSecretRef` is introduced in `v2026.11.0` and requires matching CRDs, admission
+`caSecretRef` is introduced in `v2026.11.1` and requires matching CRDs, admission
 policies, manager and workers. October `v2026.10.0` installations need system
 trust or an explicit custom CA mount.
 This app-hosting configuration leaves gNOI in legacy `auto` mode. Before invoking gNOI, configure

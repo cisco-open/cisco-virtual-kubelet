@@ -1,17 +1,24 @@
 # Releases and archive
 
 Match images, chart versions and signed artifacts to the version you install.
-This documentation targets **v2026.11.0**, planned for **1 November 2026**.
-The GitHub release page determines whether that version is available.
+This documentation targets proposed **v2026.11.1**, the corrected November
+candidate. Preparation does not establish publication. The GitHub release page
+determines artifact availability; the previous published baseline remains
+**v2026.10.0**.
 
 ## November 2026
 
-[November release notes](v2026.11.0.md) describe the changes from published
+[November release notes](v2026.11.1.md) describe the changes from published
 October `v2026.10.0`, the migration path and known limitations. The
-[November preparation record](v2026.11.0-readiness.md) explains the remaining
-candidate and artifact checks.
+[November preparation record](v2026.11.1-readiness.md) explains the remaining
+candidate and artifact checks, including the embedded-source packaging fix.
 
-[Check November publication and artifacts](https://github.com/cisco-open/cisco-virtual-kubelet/releases/tag/v2026.11.0){ .md-button .md-button--primary }
+**Rejected and unpublished:** `v2026.11.0` failed exact staged-image licensing
+inspection. Its tag and artifacts are immutable recovery markers; do not publish
+or install that candidate. Read its [historical notes](v2026.11.0.md) and
+[rejection record](v2026.11.0-readiness.md).
+
+[Check November publication and artifacts](https://github.com/cisco-open/cisco-virtual-kubelet/releases/tag/v2026.11.1){ .md-button .md-button--primary }
 [Feature availability](../status.md){ .md-button }
 
 ## Published releases
@@ -28,6 +35,8 @@ the record at that time; it does not override the published release.
 
 | Record | Context |
 | --- | --- |
+| [v2026.11.0 notes](v2026.11.0.md) | Rejected, unpublished November candidate; embedded-source bundle failed the licensing gate. |
+| [v2026.11.0 preparation record](v2026.11.0-readiness.md) | Original preparation history and rejection marker. |
 | [October preparation notes](v2026.10.0.md) | Planned scope and upgrade considerations for v2026.10.0. |
 | [October readiness ledger](v2026.10.0-readiness.md) | Checks and evidence recorded during release preparation. |
 | [v2026.9.2 notes](v2026.9.2.md) | September release notes. |

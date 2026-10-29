@@ -14,7 +14,7 @@ contracts needed for review.
 | Reviewing or delegating access | [Authorization and worker identities](security-authorization.md) | Bindings and admission rules match the approved runtime and namespace boundaries |
 
 For the first installation, follow [Getting Started](getting-started.md).
-Keep the chart, CRDs and runtime image matched. These pages target `v2026.11.0`,
+Keep the chart, CRDs and runtime image matched. These pages target `v2026.11.1`,
 which introduces managed public-CA Secret projection and the Alpha controller
 adapters. When upgrading from October `v2026.10.0`, follow their prerequisites;
 a newer documentation example does not upgrade an installed release.

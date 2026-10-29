@@ -63,7 +63,7 @@ Check the [feature status](status.md) and the platform guide for support limits.
 Use the [security overview](security.md) to choose the credential, TLS and
 authorization guidance for your role. Keep device administration separate from
 application-author permissions, and match your deployment to a
-[published release](releases/index.md). This documentation targets `v2026.11.0`;
+[published release](releases/index.md). This documentation targets `v2026.11.1`;
 check publication status and upgrade older installations before using features
 introduced in November.
 

@@ -92,7 +92,7 @@ custom Deployment that mounts them. For controller-managed device HTTPS,
 planes. Arbitrary local paths are not automatically mounted. Dedicated gNOI
 trust remains separate: use `spec.gnoi.tls.secretRef` or IOS XE provisioning.
 
-!!! info "Managed public-CA Secret introduced in v2026.11.0"
+!!! info "Managed public-CA Secret introduced in v2026.11.1"
     `spec.tls.caSecretRef` requires the matching November CRD, admission
     contract, manager and worker image. Upgrade those components together.
     For installations staying on October `v2026.10.0`, use a system-trusted
@@ -474,7 +474,7 @@ During image delivery the VK emits pod events visible in `kubectl describe pod`:
 
 - [Catalyst 8000V](configuration-cat8000v.md) — VirtualPortGroup install walkthrough
 - [Catalyst 9000](configuration-cat9000.md) — AppGigabitEthernet install walkthrough
-- [Examples](https://github.com/cisco-open/cisco-virtual-kubelet/tree/v2026.11.0/examples/configs) — full working configs for every interface mode
+- [Examples](https://github.com/cisco-open/cisco-virtual-kubelet/tree/v2026.11.1/examples/configs) — full working configs for every interface mode
 - [Security](security.md) — credential injection via Secrets
 - [Observability](observability.md) — OTEL and metrics configuration in detail
 - [Troubleshooting](troubleshooting.md) — common configuration issues
