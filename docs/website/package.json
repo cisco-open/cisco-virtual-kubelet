@@ -28,7 +28,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.4.3",
     "fast-glob": "file:./scripts/next-root-glob",
-    "mermaid": "11.17.2",
+    "mermaid": "12.2.0",
     "postcss": "^8.5.23",
     "resize-observer-polyfill": "1.5.1",
     "tailwindcss": "^4",

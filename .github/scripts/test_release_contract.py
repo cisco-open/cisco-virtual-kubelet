@@ -730,7 +730,7 @@ go_version_is_supported go1.27.9
         self.assertEqual(core_js_entry.count('license: "MIT"'), 1)
 
         for package, version in (
-            ("mermaid", "11.17.2"),
+            ("mermaid", "12.2.0"),
             ("resize-observer-polyfill", "1.5.1"),
         ):
             self.assertEqual(website_manifest["devDependencies"][package], version)
@@ -754,10 +754,13 @@ go_version_is_supported go1.27.9
         exact_runtime = {
             (package["name"], package["version"]) for package in inventory["packages"]
         }
-        self.assertEqual(len(exact_runtime), 79)
+        self.assertEqual(len(exact_runtime), 80)
         for required_runtime in (
-            ("mermaid", "11.17.2"),
-            ("@mermaid-js/parser", "1.2.1"),
+            ("mermaid", "12.2.0"),
+            ("@mermaid-js/parser", "2.0.1"),
+            ("katex", "0.18.11"),
+            ("elkjs", "0.9.3"),
+            ("@chevrotain/cst-dts-gen", "13.2.0"),
             ("js-yaml", "4.3.0"),
             ("vscode-uri", "3.1.0"),
             ("hachure-fill", "0.5.2"),
