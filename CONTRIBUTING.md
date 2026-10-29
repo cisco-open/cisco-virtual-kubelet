@@ -62,6 +62,19 @@ make mkdocs-build
 The target runs `npm ci` from `docs/website`, builds MkDocs in strict mode, and
 verifies the deployed runtime hashes, source maps, and third-party licenses.
 
+Mermaid 12 diagrams require an ES2024-capable browser (Safari 17.4 or newer).
+The diagram fences explicitly select `layout: dagre`, `theme: default`, and
+`look: classic` to preserve their existing presentation; diagrams with a custom
+theme keep that theme. See the [Mermaid 12 migration notes](https://github.com/mermaid-js/mermaid/releases/tag/mermaid%4012.0.0).
+
+When upgrading the diagram runtime, regenerate the source-map-derived inventory
+with `.venv/bin/python .github/scripts/generate_mermaid_runtime_licenses.py --refresh`,
+review the new package identities and bundled notices, and update the exact pins
+in `third_party/mkdocs-material/9.7.7/RUNTIME_ASSETS.json` and the release-contract
+tests. Then regenerate the aggregate notices with
+`.venv/bin/python .github/scripts/generate_mkdocs_licenses.py` and rerun
+the combined gate. An npm lockfile update alone is not a complete runtime update.
+
 ## Other Ways to Contribute
 
 We welcome anyone who wants to contribute to the Cisco Virtual Kubelet Provider

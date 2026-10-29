@@ -28,6 +28,12 @@ beyond [Image delivery](CONFIGURATION.md#image-delivery).
 ## How it fits
 
 ```mermaid
+---
+config:
+  layout: dagre
+  theme: default
+  look: classic
+---
 flowchart LR
     Pod["Pod<br/>image: http://passthrough:8080/docker/nginx_latest.tar"] --> VK["CVK virtual kubelet"]
     VK -->|"install RPC or copy RPC"| Dev["Cisco device"]
