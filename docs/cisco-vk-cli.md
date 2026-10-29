@@ -10,6 +10,14 @@ Cisco Virtual Kubelet exposes two command-line surfaces:
   internal `controller-worker` subcommand starts one registered network-
   controller adapter. Helm and the manager normally own these invocations.
 
+This reference targets `v2026.11.0`. The signed-archive example below pins that
+version; use it only after its assets appear on the
+[Releases page](https://github.com/cisco-open/cisco-virtual-kubelet/releases).
+Otherwise select the published October `v2026.10.0` baseline and its matching
+reference. November controller adapters and public-CA projection need the
+matching binary, CRDs and chart. Check `cisco-vk <command> --help` for the
+installed version.
+
 ---
 
 ## kubectl-ciscovk plugin
@@ -49,8 +57,8 @@ signed checksum authority, and installs the plugin:
 set -euo pipefail
 
 # Set this to an asset-bearing release shown on the Releases page.
-# October must be published first; otherwise select the published v2026.9.2.
-VERSION=v2026.10.0
+# November target: use only after its signed assets are published.
+VERSION=v2026.11.0
 OS="$(uname -s | tr '[:upper:]' '[:lower:]')"
 case "$OS" in
   darwin|linux) ;;
@@ -84,7 +92,10 @@ if command -v sha256sum >/dev/null 2>&1; then
 else
   actual="$(shasum -a 256 "$ASSET" | awk '{print $1}')"
 fi
-test -n "$expected" && test "$actual" = "$expected"
+if [ -z "$expected" ] || [ "$actual" != "$expected" ]; then
+  echo "missing or mismatched release checksum" >&2
+  exit 1
+fi
 
 tar -xzf "$ASSET"
 mkdir -p "$HOME/.local/bin"
@@ -276,7 +287,7 @@ kubectl get deviceoperation show-version-cat9300-1 \
 
 `ConfigDiff`, packet-capture reads, and read-only gNOI operation kinds use the
 same CRD with operation-specific inputs. See the
-[Operations Runbook](operations.md#deviceoperation) for their current schema,
+[Operations Runbook](device-diagnostics.md#run-a-read-only-operation) for their current schema,
 status, RBAC, and maturity.
 
 ---
@@ -294,7 +305,7 @@ cisco-vk --version
 Both print the same release provenance:
 
 ```text
-cisco-vk v2026.10.0 (commit=<full-git-commit>, built=<RFC3339-time>)
+cisco-vk v2026.11.0 (commit=<full-git-commit>, built=<RFC3339-time>)
 ```
 
 A direct development build reports `devel` and may report `unknown` metadata.
@@ -313,13 +324,20 @@ explicitly as `--nodename`.
 | Flag | Env | Default | Description |
 |---|---|---|---|
 | `-c, --config` | — | `/etc/virtual-kubelet/config.yaml` | Path to device configuration YAML. |
-| `--nodename` | `VKUBELET_NODE_NAME` | `cisco-vk-<device-address>` | Kubernetes virtual node name; falls back to `cisco-virtual-kubelet` when no address is available. |
+| `--nodename` | `CISCO_VK_NODE_NAME`, then `VKUBELET_NODE_NAME` | `device.nodeName`, then `cisco-vk-<device-address>` | Kubernetes virtual node name. Resolution is flag, these environment variables in order, `device.nodeName`, then the address-derived name; falls back to `cisco-virtual-kubelet` without an address. |
 | `--kubeconfig` | `KUBECONFIG` | in-cluster | Path to kubeconfig. Omit inside the cluster. |
 | `--log-level` | `LOG_LEVEL` | `info` | Resolution is flag, environment, `device.logLevel`, then `info`; accepts `debug`, `info`, `warn`/`warning`, or `error`. |
 | `--tls-cert-file` | — | `/etc/virtual-kubelet/tls/tls.crt` | Kubelet HTTPS certificate; when both configured files are absent, a self-signed pair is generated under `/var/lib/virtual-kubelet/tls/`. |
 | `--tls-key-file` | — | `/etc/virtual-kubelet/tls/tls.key` | Kubelet HTTPS private key; exactly one certificate/key file being present is an error. |
 | `--enable-write-class-gnoi` | `CISCO_VK_ENABLE_WRITE_CLASS_GNOI` | `false` | IOS-XE only: enable `IOSXEOperationalAction` reconciliation, including explicit certificate provisioning. |
 | `--enable-iosxesoftwareupgrade` | `CISCO_VK_ENABLE_IOSXE_SOFTWARE_UPGRADE` | `false` | IOS-XE only: enable `IOSXESoftwareUpgrade` reconciliation. |
+| `--worker-mode` | `CISCO_VK_WORKER_MODE` | `combined` | Runtime plane: `combined`, `app-hosting`, or `network-management`. The manager sets this for managed workers. |
+| `--worker-access` | `CISCO_VK_WORKER_ACCESS` | `readWrite` | Worker access: `readOnly` or `readWrite`. The manager sets this from its access policy. |
+
+Managed workers also receive `--device-tls-ca-projection` from the controller.
+It binds the public-CA projection contract and is not an operator configuration
+option. Use [`spec.tls.caSecretRef`](CONFIGURATION.md#shared-tls) with a matching
+chart, manager and worker version instead.
 
 ### Additional environment variables
 
@@ -392,6 +410,13 @@ a stale Pod rejects a live generation mismatch before adapter setup.
 | `--controller-worker-image-pull-policy` | — | `IfNotPresent` | Worker image pull policy: `Always`, `IfNotPresent`, or `Never`. |
 | `--vk-service-account` | — | `cisco-virtual-kubelet` | Service account injected into VK Deployments. |
 | `--enable-config-aggregator` | — | `false` | Run `IOSXEConfig` reconciliation in-process rather than in each VK pod (experimental). |
+| `--enable-managed-topology` | — | `false` | Enable manager-owned Node identity/topology. Requires native admission policies, `--leader-elect`, and the administrator policy reference below. |
+| `--topology-policy-namespace` | — | empty | Namespace of the administrator topology policy ConfigMap; required with managed topology. |
+| `--topology-policy-name` | — | empty | Name of the administrator topology policy ConfigMap; required with managed topology. |
+| `--app-hosting-service-account` | — | `cisco-vk-app-hosting` | Namespace-shared ServiceAccount for managed app-hosting workers. |
+| `--app-hosting-access-mode` | — | `readWrite` | Managed app-hosting access: `disabled`, `readOnly`, or `readWrite`. |
+| `--network-management-service-account` | — | `cisco-vk-network-management` | Namespace-shared ServiceAccount for managed network-management workers. |
+| `--network-management-access-mode` | — | `readOnly` | Managed network-management access: `disabled`, `readOnly`, or `readWrite`. |
 | `--log-level` | `LOG_LEVEL` | `info` | `debug`, `info`, `warn`, or `error`. |
 | `--controller-info-log-rate-limit` | — | `100` | Max info log lines/sec from the reconciler. |
 

@@ -37,65 +37,113 @@ markdown_extensions:
     emoji_index: !!python/name:material.extensions.emoji.twemoji ""
     emoji_generator: !!python/name:material.extensions.emoji.to_svg ""
 nav:
-- Welcome: 'index.md'
-- Release Notes:
-  - v2026.10.0 (release candidate): 'releases/v2026.10.0.md'
-  - October release readiness: 'releases/v2026.10.0-readiness.md'
-  - v2026.9.2: 'releases/v2026.9.2.md'
-  - v2026.9.1 (unpublished): 'releases/v2026.9.1.md'
-  - v2026.9.0 (unpublished): 'releases/v2026.9.0.md'
-- Getting Started: 'getting-started.md'
-- Image Distribution: 'image-distribution.md'
-- Architecture: 'ARCHITECTURE.md'
-- Managed Topology and Rollouts: 'topology-awareness.md'
-- Topology PR Merge Scope: 'topology-merge-scope.md'
-- Topology Roadmap: 'topology-roadmap.md'
-- Topology Roadmap Execution: 'topology-roadmap-execution.md'
-- November Topology Handoff: 'topology-november-handoff.md'
-- Network Controller Extensions: 'controller-extension-guide.md'
-- Controller Adapters:
-  - Catalyst SD-WAN: 'controllers/sdwan.md'
-  - SD-WAN Live Test Backlog: 'controllers/sdwan-live-test-backlog.md'
-  - Nexus Dashboard: 'controllers/nexus-dashboard.md'
-- CLI Reference: 'cisco-vk-cli.md'
-- Configuration:
-  - CiscoDevice Reference: 'CONFIGURATION.md'
+- Start here:
+  - Documentation home: 'index.md'
+  - How CVK works: 'concepts.md'
+  - Getting started: 'getting-started.md'
+  - Feature availability: 'status.md'
+  - Glossary: 'glossary.md'
+- Guides:
+  - Guides overview: 'guides.md'
+  - App image distribution: 'image-distribution.md'
+  - Device setup:
+    - Catalyst 8000V: 'configuration-cat8000v.md'
+    - Catalyst 9000: 'configuration-cat9000.md'
+    - IR1100 Series: 'configuration-ir1101.md'
+    - IE3500 Series: 'configuration-ie3500.md'
   - Network as Code: 'netascode-config.md'
-  - NetAsCode Migration: 'netascode-migration.md'
-  - CRD Reference: 'crds.md'
-  - Family Reference: 'reference/families/README.md'
-  - Family Parity Matrix: 'family-parity.md'
-  - NX-OS Family Reference: 'reference/families-nxos.md'
-  - NX-OS Configuration Recovery: 'nxos-recovery.md'
-  - Catalyst 8000V: 'configuration-cat8000v.md'
-  - Catalyst 9000: 'configuration-cat9000.md'
-  - IR1100 Series: 'configuration-ir1101.md'
-  - IE3500 Series: 'configuration-ie3500.md'
-  - YANG Version Support: 'yang-version-support.md'
-  - Environment Variables: 'environment-variables.md'
-- 'Software Lifecycle':
-  - IOS-XE Upgrade and Downgrade Runbook: 'gnoi-iosxe-upgrade-runbook.md'
-  - Design and Reference: 'gnoi-software-lifecycle.md'
-  - Device Operations Runbook: 'operations.md'
-- Telemetry:
-  - MDT Subscriptions: 'telemetry.md'
-  - Cardinality Management: 'telemetry-cardinality.md'
-  - Lifecycle Correlation: 'lifecycle.md'
-- Observability:
-  - Overview: 'observability.md'
+  - Network as Code migration: 'netascode-migration.md'
+  - Managed topology:
+    - Overview: 'topology-awareness.md'
+    - Enable and enroll devices: 'topology-enable.md'
+    - Schedule application workloads: 'topology-scheduling.md'
+  - Controller adapters:
+    - Catalyst SD-WAN: 'controllers/sdwan.md'
+    - Nexus Dashboard: 'controllers/nexus-dashboard.md'
+  - Security:
+    - Security overview: 'security.md'
+    - Credentials and rotation: 'security-credentials.md'
+    - TLS and transport trust: 'security-tls.md'
+- Operations:
+  - Operations overview: 'operator-guide.md'
+  - Maintain the CVK installation: 'installation-maintenance.md'
+  - Device diagnostics: 'device-diagnostics.md'
+  - Opt-in device actions: 'device-actions.md'
+  - IOS-XE software maintenance:
+    - Single-device upgrade and downgrade: 'gnoi-iosxe-upgrade-runbook.md'
+    - Run topology-aware campaigns: 'topology-campaigns.md'
+    - Optional workload drain: 'topology-drain.md'
+    - Observe and troubleshoot campaigns: 'topology-troubleshooting.md'
+    - Recovery and retirement: 'topology-recovery.md'
+  - NX-OS configuration recovery: 'nxos-recovery.md'
+  - Observability: 'observability.md'
   - Troubleshooting: 'troubleshooting.md'
-- Security: 'security.md'
-- Production Readiness: 'production-readiness.md'
-- API Reference: 'API.md'
+  - Telemetry:
+    - MDT subscriptions: 'telemetry.md'
+    - Cardinality management: 'telemetry-cardinality.md'
+    - Lifecycle correlation: 'lifecycle.md'
+- Reference:
+  - Reference overview: 'reference/index.md'
+  - CiscoDevice configuration: 'CONFIGURATION.md'
+  - CRD reference: 'crds.md'
+  - CLI and operator plugin: 'cisco-vk-cli.md'
+  - Environment variables: 'environment-variables.md'
+  - IOS-XE configuration families: 'reference/families/README.md'
+  - NX-OS configuration families: 'reference/families-nxos.md'
+  - YANG version support: 'yang-version-support.md'
+  - Device and kubelet API: 'API.md'
+  - Software lifecycle design: 'gnoi-software-lifecycle.md'
+  - Architecture and internals: 'ARCHITECTURE.md'
+  - Topology design and authorization: 'topology-reference.md'
+  - RBAC and authorization: 'security-authorization.md'
+- Development:
+  - Controller extension contract: 'controller-extension-guide.md'
+  - Family parity matrix: 'family-parity.md'
+  - NX-OS qualification plan: 'production-readiness.md'
+  - SD-WAN live qualification backlog: 'controllers/sdwan-live-test-backlog.md'
+  - Topology roadmap: 'topology-roadmap.md'
+  - Topology execution plan: 'topology-roadmap-execution.md'
+- Releases and archive:
+  - Releases overview: 'releases/index.md'
+  - November release notes: 'releases/v2026.11.0.md'
+  - November preparation record: 'releases/v2026.11.0-readiness.md'
+  - Published releases: 'https://github.com/cisco-open/cisco-virtual-kubelet/releases'
+  - October preparation notes (historical): 'releases/v2026.10.0.md'
+  - October readiness ledger (historical): 'releases/v2026.10.0-readiness.md'
+  - v2026.9.2 notes: 'releases/v2026.9.2.md'
+  - Unpublished September drafts:
+    - v2026.9.1: 'releases/v2026.9.1.md'
+    - v2026.9.0: 'releases/v2026.9.0.md'
+  - Topology merge scope: 'topology-merge-scope.md'
+  - November topology handoff (October checkpoint): 'topology-november-handoff.md'
 theme:
   name: material
   font: false
+  palette:
+  - media: '(prefers-color-scheme: light)'
+    scheme: default
+    primary: custom
+    accent: custom
+    toggle:
+      icon: material/weather-night
+      name: Switch to dark mode
+  - media: '(prefers-color-scheme: dark)'
+    scheme: slate
+    primary: custom
+    accent: custom
+    toggle:
+      icon: material/weather-sunny
+      name: Switch to light mode
   features:
   - content.code.copy
   - search.share
   - navigation.footer
   - navigation.instant.progress
+  - navigation.tabs
+  - navigation.sections
   - content.code.annotate
+extra_css:
+- stylesheets/extra.css
 extra:
   homepage: /cisco-virtual-kubelet/
 plugins:
@@ -107,4 +155,5 @@ exclude_docs: |
 # Individual generated family pages are linked from the generated README index.
 not_in_nav: |
   reference/families/*.md
+  operations.md
 use_directory_urls: true

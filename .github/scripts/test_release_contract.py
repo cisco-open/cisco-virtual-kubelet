@@ -259,38 +259,134 @@ class ReleaseContractTests(unittest.TestCase):
                 repository="cisco-open/cisco-virtual-kubelet",
             )
 
-    def test_october_release_metadata_and_upgrade_scope(self) -> None:
+    def test_november_release_preparation_metadata_and_upgrade_scope(self) -> None:
         chart = (ROOT / "charts/cisco-virtual-kubelet/Chart.yaml").read_text()
         runbook = (ROOT / "RELEASE.md").read_text()
-        self.assertIn('appVersion: "v2026.10.0"', chart)
-        self.assertIn("version: 0.1.0", chart)  # release packaging stamps CalVer
-        self.assertIn("release_version=v2026.10.0", runbook)
-        self.assertIn("v2026.9.2..HEAD", runbook)
-        self.assertIn("docs/releases/v2026.10.0.md", runbook)
-        self.assertIn("2026.10.1", runbook)  # immutable-tag recovery version
-        for name in ("ciscodevices.cisco.vk", "iosxesoftwareupgrades.ops.cisco.vk",
-                     "iosxeoperationalactions.ops.cisco.vk", "iosxesoftwarerollouts.ops.cisco.vk"):
-            self.assertIn("crd/" + name, runbook)
+        self.assertRegex(chart, r'(?m)^appVersion: "v2026\.11\.0"$')
+        self.assertRegex(chart, r"(?m)^version: 0\.1\.0$")  # packaging stamps CalVer
+        self.assertIn("release_version=v2026.11.0", runbook)
+        self.assertIn("v2026.10.0..HEAD", runbook)
+        self.assertIn("docs/releases/v2026.11.0.md", runbook)
+        self.assertIn("docs/releases/v2026.11.0-readiness.md", runbook)
+        self.assertIn("2026.11.1", runbook)  # immutable-tag recovery version
+        # Helm does not update CRDs. The November delta changes existing schemas,
+        # so apply and wait on the entire reviewed directory before the upgrade.
+        self.assertRegex(
+            runbook,
+            r"kubectl apply[^\n]*\\\n\s+-f cisco-virtual-kubelet/crds/",
+        )
+        self.assertRegex(
+            runbook,
+            r"kubectl wait --for=condition=Established[^\n]*\\\n"
+            r"\s+-f cisco-virtual-kubelet/crds/",
+        )
+        relative = pathlib.PurePosixPath("docs/releases/v2026.11.0.md")
+        source = (ROOT / relative).read_text()
+        readiness = (ROOT / "docs/releases/v2026.11.0-readiness.md").read_text()
+        for text in (source, readiness):
+            self.assertIn("v2026.11.0", text)
+            self.assertIn("v2026.10.0", text)
+        self.assertIn("](v2026.11.0-readiness.md)", source)
+        self.assertIn("](v2026.11.0.md)", readiness)
+        rendered = render_release_notes(
+            source,
+            source_relative=relative,
+            tag="v2026.11.0",
+            repository="cisco-open/cisco-virtual-kubelet",
+        )
+        self.assertNotIn("](../", rendered)
+        self.assertIn("blob/v2026.11.0/docs/topology-awareness.md", rendered)
+        self.assertIn("blob/v2026.11.0/docs/installation-maintenance.md", rendered)
+        self.assertIn("](../topology-awareness.md)", source)
+
+    def test_historical_october_release_notes_remain_tag_pinned(self) -> None:
         relative = pathlib.PurePosixPath("docs/releases/v2026.10.0.md")
         source = (ROOT / relative).read_text()
-        rendered = render_release_notes(source, source_relative=relative,
-                                        tag="v2026.10.0", repository="cisco-open/cisco-virtual-kubelet")
+        rendered = render_release_notes(
+            source,
+            source_relative=relative,
+            tag="v2026.10.0",
+            repository="cisco-open/cisco-virtual-kubelet",
+        )
         self.assertNotIn("](../", rendered)
         self.assertIn("blob/v2026.10.0/docs/topology-awareness.md", rendered)
         self.assertIn("unpublished release candidate", rendered)
 
-    def test_october_features_are_visible_on_all_overview_surfaces(self) -> None:
-        # Keep the end-user overviews aligned with the shipped October scope,
-        # including maturity/continuity limits rather than roadmap promises.
-        paths = ("README.md", "docs/index.md", "docs/website/src/components/Features.tsx")
-        for path in paths:
+    def test_landing_foundations_link_to_task_guides_and_feature_status(self) -> None:
+        # Landing pages introduce the foundations; detailed prerequisites and
+        # qualification limits belong in reachable task and reference pages.
+        features = (ROOT / "docs/website/src/components/Features.tsx").read_text()
+        destinations = set(re.findall(
+            r'(?:href:\s*|href=)["\'](/cisco-virtual-kubelet/docs/[^"\']+)["\']',
+            features,
+        ))
+        for route in ("getting-started", "netascode-config", "operator-guide", "status"):
+            with self.subTest(route=route):
+                self.assertIn(f"/cisco-virtual-kubelet/docs/{route}/", destinations)
+                self.assertTrue((ROOT / "docs" / f"{route}.md").is_file())
+
+        home = (ROOT / "docs/index.md").read_text()
+        home_links = {link.split("#", 1)[0] for link in re.findall(r"\]\(([^)\s]+)\)", home)}
+        for path in (
+            "getting-started.md", "concepts.md", "guides.md", "operator-guide.md",
+            "security.md", "status.md", "reference/index.md",
+        ):
             with self.subTest(path=path):
-                text = (ROOT / path).read_text()
-                for concept in ("IOSXESoftwareRollout", "gNOI", "PDB", "Secret", "1.35"):
-                    self.assertIn(concept, text)
-                self.assertIn("disabled by default", text.lower())
-                self.assertIn("zero-downtime", text)
-                self.assertIn("ServiceAccount", text)
+                self.assertIn(path, home_links)
+                self.assertTrue((ROOT / "docs" / path).is_file())
+
+    def test_navigation_exposes_task_guides_and_release_records(self) -> None:
+        navigation = (ROOT / "mkdocs.yml").read_text().split("nav:\n", 1)[1].split("\ntheme:", 1)[0]
+        routes = set(re.findall(
+            r":\s*['\"]?([\w/.-]+\.md)['\"]?\s*$", navigation, re.MULTILINE,
+        ))
+        required = {
+            "index.md", "guides.md", "operator-guide.md", "reference/index.md",
+            "status.md", "releases/index.md", "releases/v2026.11.0.md",
+            "releases/v2026.11.0-readiness.md", "releases/v2026.10.0.md",
+            "installation-maintenance.md", "device-diagnostics.md", "device-actions.md",
+            "nxos-recovery.md", "security.md", "security-credentials.md",
+            "security-tls.md", "security-authorization.md", "topology-awareness.md",
+            "topology-enable.md", "topology-scheduling.md", "topology-campaigns.md",
+            "topology-drain.md", "topology-troubleshooting.md", "topology-recovery.md",
+            "topology-reference.md",
+        }
+        self.assertFalse(required - routes, f"Missing navigation routes: {required - routes}")
+        for path in routes:
+            with self.subTest(path=path):
+                self.assertTrue((ROOT / "docs" / path).is_file())
+
+    def test_detailed_guides_retain_maturity_and_authorization_boundaries(self) -> None:
+        status = (ROOT / "docs/status.md").read_text()
+        for maturity in ("Stable", "Beta", "Alpha", "Development preview", "Experimental"):
+            self.assertIn(maturity, status)
+        self.assertRegex(status, r"Managed topology[^\n]*Kubernetes 1\.35\+")
+        self.assertRegex(
+            status,
+            r"PDB-aware drain[^\n]*Disabled by default[^\n]*No zero-downtime or continuity guarantee",
+        )
+
+        topology = (ROOT / "docs/topology-awareness.md").read_text()
+        for guide in ("enable", "scheduling", "campaigns", "drain", "recovery", "reference"):
+            self.assertIn(f"](topology-{guide}.md)", topology)
+        enable = " ".join((ROOT / "docs/topology-enable.md").read_text().split())
+        self.assertIn("Kubernetes 1.35 or newer", enable)
+        self.assertIn("NodeRestriction", enable)
+        self.assertIn("failurePolicy: Fail", enable)
+        self.assertIn("validationActions: [Deny]", enable)
+
+        drain = " ".join((ROOT / "docs/topology-drain.md").read_text().split())
+        self.assertIn("disabled at both administrator and campaign layers", drain)
+        self.assertIn("BlockIfRunning", drain)
+        self.assertIn("not general-purpose", drain)
+        self.assertIn("continuity guarantee", drain)
+        self.assertIn("](topology-campaigns.md)", drain)
+
+        authorization = (ROOT / "docs/security-authorization.md").read_text()
+        for boundary in ("RBAC", "ServiceAccount", "cluster-wide Secret reads"):
+            self.assertIn(boundary, authorization)
+        security = (ROOT / "docs/security.md").read_text()
+        self.assertIn("](security-authorization.md)", security)
 
     def test_workflow_runtimes_are_current_and_do_not_use_mutable_binfmt(
         self,

@@ -26,6 +26,7 @@ iosxetelemetries             iosxetel        config.cisco.vk/v1alpha1   true    
 deviceoperations             devop           ops.cisco.vk/v1alpha1      true         DeviceOperation
 iosxeoperationalactions      xeop            ops.cisco.vk/v1alpha1      true         IOSXEOperationalAction
 iosxesoftwareupgrades        xeupgrade       ops.cisco.vk/v1alpha1      true         IOSXESoftwareUpgrade
+iosxesoftwarerollouts        xerollout       ops.cisco.vk/v1alpha1      true         IOSXESoftwareRollout
 ```
 
 !!! warning "CRD maturity"
@@ -37,6 +38,8 @@ iosxesoftwareupgrades        xeupgrade       ops.cisco.vk/v1alpha1      true    
     across multiple releases. CRDs marked **Alpha** define a tested generic
     extension boundary with two adapters of limited, documented scope:
     Catalyst SD-WAN Manager (fixture-qualified) and Nexus Dashboard.
+    **Experimental** marks opt-in, controlled-evaluation workflows whose
+    qualification limits must be reviewed before use.
 
 | Kind | Scope | Maturity | Primary use |
 |---|---:|---|---|
@@ -57,6 +60,7 @@ iosxesoftwareupgrades        xeupgrade       ops.cisco.vk/v1alpha1      true    
 | `DeviceOperation` | Namespaced | **Beta** | Auditable read-only operational requests, including gNOI probes. |
 | `IOSXEOperationalAction` | Namespaced | **Beta** | One-shot write-class gNOI actions with confirmation and events. Requires `--enable-write-class-gnoi`. |
 | `IOSXESoftwareUpgrade` | Namespaced | **Beta** | Multi-phase gNOI software install, activate, verify, and rollback. Requires `--enable-iosxesoftwareupgrade`. |
+| `IOSXESoftwareRollout` | Namespaced | **Experimental** | Manager-owned, topology-aware software campaigns that create per-device `IOSXESoftwareUpgrade` objects. Disabled by default; requires managed topology and the software-upgrade gate. |
 
 ## CiscoDevice
 
@@ -625,6 +629,28 @@ window is independent of other drivers' Lease settings.
 For the full operational model, see
 [gNOI and Software Lifecycle](gnoi-software-lifecycle.md) and the
 [Operations Runbook](operations.md).
+
+### IOSXESoftwareRollout
+
+`IOSXESoftwareRollout` coordinates a campaign across selected IOS-XE devices.
+The manager freezes the plan, checks approval and policy, reserves device and
+topology-domain capacity, and creates immutable per-device
+`IOSXESoftwareUpgrade` leaves. Workers execute those leaves; the manager does
+not open device sessions.
+
+The controller is enabled only when managed topology and the software-upgrade
+mutation gate are enabled and gNOI is not globally disabled. Managed topology
+also requires leader election, the administrator policy ConfigMap and the
+native admission/RBAC contract. This is a controlled-evaluation workflow:
+drain, staged activation, recovery and rollback have additional qualification
+limits. Installing the CRD alone does not authorize software mutation.
+
+Use the [managed-topology setup](topology-enable.md#configure-and-enable)
+and [software campaign workflow](topology-campaigns.md#topology-aware-ios-xe-software-campaigns)
+for prerequisites, a complete manifest, plan approval and the documented
+scope. Staged activation, network-evidence and recovery extensions are
+introduced in `v2026.11.0`; upgrade October `v2026.10.0` installations with the
+matching CRDs, admission policies, chart, manager and workers before using them.
 
 ## Safety and RBAC Notes
 

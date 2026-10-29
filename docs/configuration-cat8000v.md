@@ -22,10 +22,14 @@ iox
 
 ! Enable the RESTCONF HTTPS listener
 restconf
+```
 
-! Only required if NOT using spec.allowUnsignedApps: true in the CiscoDevice spec.
-! When allowUnsignedApps: true, CVK requests both persistent and runtime changes
-! via RESTCONF. Confirm the effective state with `show app-hosting infra`.
+Keep package signing enabled for signed packages. Only when deliberately using
+unsigned lab/custom packages, either set `spec.allowUnsignedApps: true` or
+configure both device controls below. Confirm the effective runtime state with
+`show app-hosting infra`; see [package policy](troubleshooting.md#packagepolicyinvalid-false-positives).
+
+```
 app-hosting verification disable
 no app-hosting signed-verification
 ```
@@ -66,7 +70,7 @@ spec:
     name: cat8kv-1-creds         # Secret with key: password
   tls:
     enabled: true
-    insecureSkipVerify: true     # lab only; do not use this transport for gNOI
+    insecureSkipVerify: false
   # allowUnsignedApps: true      # uncomment when running unsigned packages
                                   # — e.g. your own custom application builds.
                                   # See Troubleshooting → PackagePolicyInvalid.
@@ -80,25 +84,35 @@ spec:
           guestInterface: 0         # container-side eth index (0 = eth0)
 ```
 
-See [Security → Credential injection](security.md#credential-injection) for
-creating the Secret. Before invoking gNOI, configure
+See [Security → Credential injection](security-credentials.md#credential-injection) for
+creating the Secret. The device HTTPS certificate must match its address and
+be trusted by the worker. For a private CA, use [Shared TLS](CONFIGURATION.md#shared-tls):
+managed `caSecretRef` is introduced in `v2026.11.0` and requires matching CRDs, admission
+policies, manager and workers. October `v2026.10.0` installations need system
+trust or an explicit custom CA mount.
+Before invoking gNOI, configure
 [explicit verified gNOI TLS](gnoi-software-lifecycle.md#secure-ios-xe-gnxi).
 
 ### VirtualPortGroup field reference
 
 | Field | Type | Default | Notes |
 |---|---|---|---|
-| `dhcp` | bool | `false` | When `true`, each container gets an IP from the pool on this VirtualPortGroup. When `false`, the VK allocates sequentially from `podCIDR` at the top level of the spec. |
+| `dhcp` | bool | `false` | When `true`, the device uses DHCP on this VirtualPortGroup. When `false`, CVK uses the limited static `podCIDR` calculation described below. |
 | `interface` | string | — | VirtualPortGroup number (`"0"` for `VirtualPortGroup0`). |
 | `guestInterface` | uint8 (0–3) | `0` | Container-side interface index (0 = eth0 inside the container). |
 
 ### Static IPs (no DHCP)
 
-If you'd rather allocate IPs yourself, set `dhcp: false` and specify `podCIDR` at the spec level. The VK allocates addresses sequentially from that range.
+Setting `dhcp: false` requires `podCIDR`, but this is not an address pool
+allocator. The current implementation assigns only the first container a
+fixed address derived by adding `10` to the network address's last octet.
+Separate Pods reuse that address; later containers receive no static address
+from this calculation. Use DHCP for multiple independent workloads. See the
+[canonical static-address limitation](CONFIGURATION.md#node-and-pod-topology).
 
 ```yaml
 spec:
-  podCIDR: "10.0.0.0/24"   # VK hands out 10.0.0.1, 10.0.0.2, ...
+  podCIDR: "10.0.0.0/24"   # first container: 10.0.0.10; not unique across Pods
   xe:
     networking:
       interface:
@@ -139,7 +153,7 @@ The container's `application-state` should transition through `DEPLOYED → ACTI
 ### RESTCONF reachability (from any host)
 
 ```bash
-curl -k -u admin:<password> \
+curl --cacert /path/to/trusted-device-ca.crt --user admin \
   https://192.168.1.100/restconf/data/Cisco-IOS-XE-native:native/hostname
 ```
 
