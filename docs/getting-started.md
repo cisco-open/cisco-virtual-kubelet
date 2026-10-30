@@ -40,19 +40,20 @@ See the platform-specific install guide for the exact IOS-XE CLI snippets: [Cata
 The controller watches `CiscoDevice` custom resources and creates a Virtual Kubelet deployment for each one.
 
 The release chart needs no source checkout, image build, or private registry.
-These commands target November `v2026.11.0`; run them only after that version
+These commands target November `v2026.11.1`; run them only after that version
 and its artifacts appear on the
 [Releases page](https://github.com/cisco-open/cisco-virtual-kubelet/releases).
 If it is not listed, use the published October `2026.10.0` chart with its
-matching documentation. The chart selects its matching signed image automatically.
+matching documentation. Do not use the rejected, unpublished `v2026.11.0`
+artifacts. The chart selects its matching signed image automatically.
 
 ```bash
 helm install cvk oci://ghcr.io/cisco-open/charts/cisco-virtual-kubelet \
-  --version 2026.11.0 \
+  --version 2026.11.1 \
   --namespace cvk-system --create-namespace
 ```
 
-This pulls the signed `ghcr.io/cisco-open/cisco-virtual-kubelet` image by default. The chart `--version` matches the release's SemVer-compatible CalVer without the leading `v` (for example, `v2026.11.0` → `2026.11.0`); see [Releases](https://github.com/cisco-open/cisco-virtual-kubelet/releases) for the current one.
+This pulls the signed `ghcr.io/cisco-open/cisco-virtual-kubelet` image by default. The chart `--version` matches the release's SemVer-compatible CalVer without the leading `v` (for example, `v2026.11.1` → `2026.11.1`); see [Releases](https://github.com/cisco-open/cisco-virtual-kubelet/releases) for the current one.
 
 The chart installs:
 
@@ -64,7 +65,7 @@ The chart installs:
 Both the controller pod and each VK pod it spawns use this image. To use different images for the two, set `controllerImage.*` and `vkImage.*` instead.
 
 The `sdwan` and `nexus-dashboard` adapters and managed public-CA Secret
-projection are introduced in `v2026.11.0`. October installations need the
+projection are introduced in `v2026.11.1`. October installations need the
 [full upgrade procedure](installation-maintenance.md) before using them;
 applying a November example alone does not update the CRDs or running image.
 For local changes, see [custom builds](#optional-build-a-custom-image).
@@ -154,7 +155,7 @@ This quick-start configuration leaves gNOI in backward-compatible `auto` mode.
 Before invoking a gNOI operation, configure
 [explicit verified gNOI TLS](gnoi-software-lifecycle.md#secure-ios-xe-gnxi).
 
-??? info "Private CA support introduced in v2026.11.0"
+??? info "Private CA support introduced in v2026.11.1"
     `spec.tls.caSecretRef` requires the November CRD, admission policies, manager
     and workers. Upgrade those components together when moving from
     `v2026.10.0`; see the [projection and rollback
@@ -302,7 +303,7 @@ cvk00000_a1b2c3d4...                      RUNNING
 ## Upgrading an existing release
 
 Helm installs CRDs during the first install but does not upgrade them. Before
-upgrading to `2026.11.0`, confirm publication as described above, pull that
+upgrading to `2026.11.1`, confirm publication as described above, pull that
 chart, and back up the live definitions and custom resources. November refreshes
 18 existing CRD manifests, with substantive schema changes in four and no new
 kinds. Preserve reviewed Helm values, inspect the server-side diff, and apply the reviewed schemas with an
@@ -310,7 +311,7 @@ explicit Helm field-ownership handoff:
 
 ```bash
 helm pull oci://ghcr.io/cisco-open/charts/cisco-virtual-kubelet \
-  --version 2026.11.0 --untar
+  --version 2026.11.1 --untar
 kubectl get customresourcedefinitions.apiextensions.k8s.io -o yaml \
   > cvk-crds-before-upgrade.yaml
 kubectl diff --server-side --force-conflicts \
@@ -321,7 +322,7 @@ kubectl wait --for=condition=Established --timeout=60s \
   -f cisco-virtual-kubelet/crds/
 
 helm upgrade cvk oci://ghcr.io/cisco-open/charts/cisco-virtual-kubelet \
-  --version 2026.11.0 \
+  --version 2026.11.1 \
   --namespace cvk-system
 kubectl rollout status deployment/cvk-cisco-virtual-kubelet-controller \
   --namespace cvk-system
@@ -373,7 +374,7 @@ candidates can also have tags.
 ```bash
 git clone https://github.com/cisco-open/cisco-virtual-kubelet.git
 cd cisco-virtual-kubelet
-VERSION=v2026.11.0  # use only after publication; otherwise select a published baseline
+VERSION=v2026.11.1  # use only after publication; otherwise select a published baseline
 git checkout "$VERSION"
 IMAGE_REPOSITORY=ghcr.io/your-org/cisco-vk  # replace with your registry path
 

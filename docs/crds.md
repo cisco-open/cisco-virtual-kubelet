@@ -649,7 +649,7 @@ Use the [managed-topology setup](topology-enable.md#configure-and-enable)
 and [software campaign workflow](topology-campaigns.md#topology-aware-ios-xe-software-campaigns)
 for prerequisites, a complete manifest, plan approval and the documented
 scope. Staged activation, network-evidence and recovery extensions are
-introduced in `v2026.11.0`; upgrade October `v2026.10.0` installations with the
+introduced in `v2026.11.1`; upgrade October `v2026.10.0` installations with the
 matching CRDs, admission policies, chart, manager and workers before using them.
 
 ## Safety and RBAC Notes

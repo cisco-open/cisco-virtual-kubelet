@@ -555,7 +555,7 @@ PodGroup explicitly. `CompositePodGroup` is also intentionally disabled; it is
 a separate alpha surface and is not required for single-level CVK topology.
 
 The separately gated
-[`experimental-native-tas-v1.37.yaml`](https://github.com/cisco-open/cisco-virtual-kubelet/blob/v2026.11.0/examples/topology/experimental-native-tas-v1.37.yaml)
+[`experimental-native-tas-v1.37.yaml`](https://github.com/cisco-open/cisco-virtual-kubelet/blob/v2026.11.1/examples/topology/experimental-native-tas-v1.37.yaml)
 shows a Workload template, standalone PodGroup, and Pods using only the default
 scheduler and CVK-projected Node labels. It is deliberately excluded from the
 Kubernetes 1.35 qualification test and must not be applied until discovery and
@@ -578,7 +578,7 @@ CVK ships no TAS controller, CRD, scheduler profile, or third-party component.
 
 ## Development scope and evidence
 
-The following scope describes the bounded `v2026.11.0` topology increment and
+The following scope describes the bounded `v2026.11.1` topology increment and
 its qualification limits. Use [release records](releases/index.md) to determine
 publication status and what is in an installed tagged image.
 
@@ -590,7 +590,7 @@ ValidatingAdmissionPolicy, ConfigMaps, Leases, the Eviction/PDB APIs, status
 conditions, Events, and the default kube-scheduler. It installs no alternate
 scheduler, scheduling plugin, webhook, or third-party topology controller.
 
-The `v2026.11.0` target extends the October managed-topology foundation with
+The `v2026.11.1` target extends the October managed-topology foundation with
 the [bounded PR #197 scope](topology-merge-scope.md). It includes:
 
 - correct Node identity, ownership, topology projection, capacity, and

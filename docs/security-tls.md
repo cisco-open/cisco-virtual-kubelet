@@ -4,7 +4,7 @@ For installers connecting devices and network operators changing certificates
 or image sources. Choose trust independently for each connection; a working
 RESTCONF connection does not establish gNOI or kubelet trust. Keep the chart,
 CRDs and worker image matched. The public-CA Secret projection below is
-introduced in `v2026.11.0`; October `v2026.10.0` installations need the matching
+introduced in `v2026.11.1`; October `v2026.10.0` installations need the matching
 CRD, admission-policy, manager and worker upgrade before using it.
 
 | Connection | Configure and verify |
@@ -25,7 +25,7 @@ Device-side TLS is configured under `spec.tls`. With verified TLS and no custom
 CA, the device certificate must chain to the worker's system trust store and
 match `spec.address`.
 
-For controller-managed workers using a private CA, `v2026.11.0` supports a
+For controller-managed workers using a private CA, `v2026.11.1` supports a
 same-namespace public-CA Secret:
 
 ```bash
@@ -42,7 +42,7 @@ spec:
       name: switch-https-public-ca
 ```
 
-!!! info "Introduced in v2026.11.0; upgrade October installations together"
+!!! info "Introduced in v2026.11.1; upgrade October installations together"
     Upgrade the CRD, native admission contract, manager and workers together
     before using `caSecretRef`. The controller validates and projects only
     public CA certificates; it does not install a certificate on the switch
@@ -69,7 +69,7 @@ spec:
 |---|---|
 | `enabled` | Turn on HTTPS. Required in production. |
 | `insecureSkipVerify` | `true` disables certificate verification. Acceptable for lab devices with self-signed certs; **do not** use in production. |
-| `caSecretRef.name` | Projects the same-namespace Secret's validated public `ca.crt`; introduced in `v2026.11.0`, mutually exclusive with `caFile`, and requires verified TLS. |
+| `caSecretRef.name` | Projects the same-namespace Secret's validated public `ca.crt`; introduced in `v2026.11.1`, mutually exclusive with `caFile`, and requires verified TLS. |
 | `caFile` | Trust anchor for verifying the device certificate. |
 | `certFile`, `keyFile` | Optional client certificate — required only if the device enforces mutual TLS. |
 

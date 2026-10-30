@@ -262,13 +262,13 @@ class ReleaseContractTests(unittest.TestCase):
     def test_november_release_preparation_metadata_and_upgrade_scope(self) -> None:
         chart = (ROOT / "charts/cisco-virtual-kubelet/Chart.yaml").read_text()
         runbook = (ROOT / "RELEASE.md").read_text()
-        self.assertRegex(chart, r'(?m)^appVersion: "v2026\.11\.0"$')
+        self.assertRegex(chart, r'(?m)^appVersion: "v2026\.11\.1"$')
         self.assertRegex(chart, r"(?m)^version: 0\.1\.0$")  # packaging stamps CalVer
-        self.assertIn("release_version=v2026.11.0", runbook)
+        self.assertIn("release_version=v2026.11.1", runbook)
         self.assertIn("v2026.10.0..HEAD", runbook)
-        self.assertIn("docs/releases/v2026.11.0.md", runbook)
-        self.assertIn("docs/releases/v2026.11.0-readiness.md", runbook)
-        self.assertIn("2026.11.1", runbook)  # immutable-tag recovery version
+        self.assertIn("docs/releases/v2026.11.1.md", runbook)
+        self.assertIn("docs/releases/v2026.11.1-readiness.md", runbook)
+        self.assertIn("2026.11.2", runbook)  # immutable-tag recovery version
         # Helm does not update CRDs. The November delta changes existing schemas,
         # so apply and wait on the entire reviewed directory before the upgrade.
         self.assertRegex(
@@ -280,24 +280,44 @@ class ReleaseContractTests(unittest.TestCase):
             r"kubectl wait --for=condition=Established[^\n]*\\\n"
             r"\s+-f cisco-virtual-kubelet/crds/",
         )
-        relative = pathlib.PurePosixPath("docs/releases/v2026.11.0.md")
+        relative = pathlib.PurePosixPath("docs/releases/v2026.11.1.md")
         source = (ROOT / relative).read_text()
-        readiness = (ROOT / "docs/releases/v2026.11.0-readiness.md").read_text()
+        readiness = (ROOT / "docs/releases/v2026.11.1-readiness.md").read_text()
         for text in (source, readiness):
-            self.assertIn("v2026.11.0", text)
+            self.assertIn("v2026.11.1", text)
             self.assertIn("v2026.10.0", text)
-        self.assertIn("](v2026.11.0-readiness.md)", source)
-        self.assertIn("](v2026.11.0.md)", readiness)
+        self.assertIn("](v2026.11.1-readiness.md)", source)
+        self.assertIn("](v2026.11.1.md)", readiness)
         rendered = render_release_notes(
             source,
             source_relative=relative,
-            tag="v2026.11.0",
+            tag="v2026.11.1",
             repository="cisco-open/cisco-virtual-kubelet",
         )
         self.assertNotIn("](../", rendered)
-        self.assertIn("blob/v2026.11.0/docs/topology-awareness.md", rendered)
-        self.assertIn("blob/v2026.11.0/docs/installation-maintenance.md", rendered)
+        self.assertIn("blob/v2026.11.1/docs/topology-awareness.md", rendered)
+        self.assertIn("blob/v2026.11.1/docs/installation-maintenance.md", rendered)
         self.assertIn("](../topology-awareness.md)", source)
+
+    def test_rejected_november_candidate_is_preserved_not_reused(self) -> None:
+        notes = (ROOT / "docs/releases/v2026.11.0.md").read_text()
+        readiness = (ROOT / "docs/releases/v2026.11.0-readiness.md").read_text()
+        current = (ROOT / "docs/releases/v2026.11.1.md").read_text()
+        runbook = (ROOT / "RELEASE.md").read_text()
+        for history in (notes, readiness):
+            self.assertIn("Rejected and unpublished", history)
+            self.assertIn("immutable", history)
+            self.assertIn("MPL-labelled embedded SD-WAN JSON", history)
+            self.assertIn("v2026.10.0", history)
+            self.assertIn("](v2026.11.1.md)", history)
+        self.assertIn("Prepared **29 October 2026** for **v2026.11.0**", readiness)
+        self.assertIn("Target release date: 1 November 2026", notes)
+        self.assertIn("Proposed corrected November candidate", current)
+        self.assertIn("Until it is public", current)
+        self.assertIn("/licenses/embedded-source/", current)
+        self.assertIn("byte-for-byte", runbook)
+        self.assertIn("Never publish its draft", runbook)
+        self.assertIn("089c5c4a2f13e09c2b1ef462da230841184a30f5", runbook)
 
     def test_historical_october_release_notes_remain_tag_pinned(self) -> None:
         relative = pathlib.PurePosixPath("docs/releases/v2026.10.0.md")
@@ -342,7 +362,8 @@ class ReleaseContractTests(unittest.TestCase):
         ))
         required = {
             "index.md", "guides.md", "operator-guide.md", "reference/index.md",
-            "status.md", "releases/index.md", "releases/v2026.11.0.md",
+            "status.md", "releases/index.md", "releases/v2026.11.1.md",
+            "releases/v2026.11.1-readiness.md", "releases/v2026.11.0.md",
             "releases/v2026.11.0-readiness.md", "releases/v2026.10.0.md",
             "installation-maintenance.md", "device-diagnostics.md", "device-actions.md",
             "nxos-recovery.md", "security.md", "security-credentials.md",

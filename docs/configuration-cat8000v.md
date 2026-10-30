@@ -87,7 +87,7 @@ spec:
 See [Security → Credential injection](security-credentials.md#credential-injection) for
 creating the Secret. The device HTTPS certificate must match its address and
 be trusted by the worker. For a private CA, use [Shared TLS](CONFIGURATION.md#shared-tls):
-managed `caSecretRef` is introduced in `v2026.11.0` and requires matching CRDs, admission
+managed `caSecretRef` is introduced in `v2026.11.1` and requires matching CRDs, admission
 policies, manager and workers. October `v2026.10.0` installations need system
 trust or an explicit custom CA mount.
 Before invoking gNOI, configure

@@ -53,7 +53,7 @@ upgrade leaves, for enrolled devices.
 
 ## Scope and qualification
 
-These pages target `v2026.11.0`. October `v2026.10.0` contains the foundation;
+These pages target `v2026.11.1`. October `v2026.10.0` contains the foundation;
 November introduces the staged activation, recovery and network-evidence
 extensions described here. Upgrade the matching CRDs, admission policies,
 chart, manager and workers together. Check [release records](releases/index.md)

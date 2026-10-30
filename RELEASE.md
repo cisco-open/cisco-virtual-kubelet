@@ -1,14 +1,16 @@
 # Release runbook
 
-This is the maintainer checklist for **v2026.11.0**, planned for **1 November
-2026**, compared with published **v2026.10.0**. The
-[canonical November notes](docs/releases/v2026.11.0.md) define the release scope;
-the [preparation record](docs/releases/v2026.11.0-readiness.md) separates local
+This is the maintainer checklist for the proposed corrected November candidate
+**v2026.11.1**, compared with published **v2026.10.0**. The original November
+release target date was **1 November 2026**; preparation does not establish
+publication. The
+[canonical November notes](docs/releases/v2026.11.1.md) define the release scope;
+the [preparation record](docs/releases/v2026.11.1-readiness.md) separates local
 preflight from the checks required on the final candidate. Preparing or merging
 this PR does not publish the release.
 
 Tags use strict SemVer-compatible CalVer: `vYYYY.M.PATCH` (no leading zero in
-the month). For example, `v2026.11.0` uses Helm chart version `2026.11.0`.
+the month). For example, `v2026.11.1` uses Helm chart version `2026.11.1`.
 
 The release workflow deliberately cannot create or publish a GitHub Release.
 A maintainer creates a curated draft **before** pushing the tag, the workflow
@@ -27,7 +29,18 @@ Neither candidate triggered documentation deployment or a Krew update.
 [October readiness ledger](docs/releases/v2026.10.0-readiness.md) is a historical
 preparation snapshot, not the checklist for a new candidate.
 
-Do not rerun the `v2026.9.0` or `v2026.9.1` tag workflows. In particular, the
+`v2026.11.0` is a **rejected, unpublished, immutable recovery marker** from
+preparation PR #210, merge `089c5c4a2f13e09c2b1ef462da230841184a30f5`.
+Exact staged-image inspection found MPL-labelled embedded SD-WAN JSON without
+its copied source/attribution bundle, failing the licensing hard gate below.
+Never publish its draft, move or delete its tag, or replace its staged artifacts.
+Signed tags or a successful staging run do not establish publication readiness.
+The [rejected-candidate record](docs/releases/v2026.11.0-readiness.md) preserves
+that decision. `v2026.11.1` retains the November scope and adds the packaging
+correction; it requires a new reviewed candidate and fresh artifact verification.
+
+Do not rerun the rejected `v2026.11.0` tag workflow. Do not rerun the
+`v2026.9.0` or `v2026.9.1` tag workflows. In particular, the
 older `v2026.9.1` workflow emitted mutable image aliases before its advisory
 scan; a rerun could move those aliases outside the corrected gates below.
 
@@ -68,8 +81,8 @@ publication, using the approved release-signing identity and the gates below.
   `git log --oneline v2026.10.0..HEAD` and
   `git diff --stat v2026.10.0..HEAD`.
 - [ ] Confirm the release-facing version and source chart `appVersion` are
-  `v2026.11.0`. The release workflow must stamp the packaged chart version as
-  `2026.11.0`; source `Chart.yaml` intentionally retains its local-development
+  `v2026.11.1`. The release workflow must stamp the packaged chart version as
+  `2026.11.1`; source `Chart.yaml` intentionally retains its local-development
   chart version. Historical examples must retain their original version.
 - [ ] Regenerate committed material and require a clean diff:
 
@@ -178,6 +191,13 @@ publication, using the approved release-signing identity and the gates below.
   and inspect the per-binary third-party license bundles. They must contain the
   Go toolchain license and patents, all applicable dependency license text and
   upstream NOTICE files, and the source copied for MPL-2.0-covered files.
+- [ ] Inspect `/licenses/embedded-source/` in the exact staged controller and
+  config-lint images. Compare `MANIFEST.json` entries and the copied
+  `source/<repository-relative path>` files byte-for-byte against the frozen
+  source: SD-WAN embedded definitions, their LICENSE/README, upstream lock and
+  generators; linked IOS-XE model/schema sources, provenance and applicable
+  Cisco attribution. Confirm each target's linked embedded inputs are covered.
+  The build-time helper and its tests supplement, not replace, this inspection.
 - [ ] Confirm the website and MkDocs static outputs contain their committed,
   generated third-party bundles. `docs/MKDOCS_THIRD_PARTY_LICENSES.txt` must
   exactly cover the hashed `requirements.txt` closure, including Material for
@@ -199,7 +219,7 @@ publication, using the approved release-signing identity and the gates below.
 ## 2. Verify the approved curated notes
 
 - [ ] Verify the already reviewed, committed
-  `docs/releases/v2026.11.0.md` notes from the final comparison
+  `docs/releases/v2026.11.1.md` notes from the final comparison
   `v2026.10.0...<release_commit>`. Confirm they cover user-visible features,
   compatibility and security changes, known limitations, upgrade steps, and
   links to the documentation. If corrections are needed, return to section 1
@@ -221,11 +241,11 @@ publication, using the approved release-signing identity and the gates below.
 Set these in a clean maintainer shell:
 
 ```sh
-release_version=v2026.11.0
+release_version=v2026.11.1
 release_name="Cisco Virtual Kubelet ${release_version}"
 repo=cisco-open/cisco-virtual-kubelet
 repo_root="$(git rev-parse --show-toplevel)"
-release_notes_source="${repo_root}/docs/releases/v2026.11.0.md"
+release_notes_source="${repo_root}/docs/releases/v2026.11.1.md"
 release_notes="$(mktemp)"
 test -s "$release_notes_source"
 python3 "${repo_root}/.github/scripts/render_github_release_notes.py" \
@@ -321,7 +341,7 @@ git push origin "refs/tags/${release_version}"
   subject. Pin the expected GitHub Actions OIDC issuer and this repository's
   release-workflow certificate identity; do not use unconstrained keyless
   verification.
-- [ ] Pull Helm OCI chart `2026.11.0` by digest, verify its cosign signature,
+- [ ] Pull Helm OCI chart `2026.11.1` by digest, verify its cosign signature,
   inspect `Chart.yaml`, and confirm its package contains `LICENSE` identical to
   the repository root.
 - [ ] Require both the pre-merge and exact tagged-image Trivy scans to report
@@ -352,14 +372,14 @@ Before the maintenance window, back up schemas, custom resources and Helm
 values. Review stored-object compatibility and unresolved campaigns, prepared
 receipts and mutation ownership. Do not overlap an installation migration with
 disruptive device work. Keep chart, CRDs, admission policies, manager and workers
-matched. The [November migration notes](docs/releases/v2026.11.0.md#upgrade-from-october)
+matched. The [November migration notes](docs/releases/v2026.11.1.md#upgrade-from-october)
 and [installation guide](docs/installation-maintenance.md) define the operator path.
 
 After publication, use the complete pinned chart CRD directory:
 
 ```sh
 helm pull oci://ghcr.io/cisco-open/charts/cisco-virtual-kubelet \
-  --version 2026.11.0 --untar
+  --version 2026.11.1 --untar
 kubectl get customresourcedefinitions.apiextensions.k8s.io -o yaml \
   > cvk-crds-before-upgrade.yaml
 # Save custom-resource instances and Helm values separately; schemas are not data.
@@ -373,7 +393,7 @@ kubectl wait --for=condition=Established --timeout=60s \
 
 helm upgrade <release> \
   oci://ghcr.io/cisco-open/charts/cisco-virtual-kubelet \
-  --version 2026.11.0 --namespace <namespace> \
+  --version 2026.11.1 --namespace <namespace> \
   -f <reviewed-values-file> --wait --timeout 5m
 kubectl rollout status deployment/<controller-deployment> \
   -n <namespace> --timeout=5m
@@ -406,7 +426,7 @@ records, claims or Leases as a rollback shortcut; follow
   checksums from an unauthenticated session.
 - [ ] The public Krew index already contains `cisco-vk`; do not open an initial
   submission. The `krew-index` workflow should open the normal update-bot pull
-  request for `v2026.11.0`. Wait for it to merge, verify the official index has
+  request for `v2026.11.1`. Wait for it to merge, verify the official index has
   the four expected URLs and SHA-256 values, then run `kubectl krew update`,
   install/update `cisco-vk`, and execute `kubectl cisco-vk version`.
 - [ ] Exercise a fresh Helm install and the upgrade procedure above in a clean
@@ -420,11 +440,11 @@ records, claims or Leases as a rollback shortcut; follow
   has no assets and is still a draft. Then restart at section 1.
 - **After the tag is pushed:** do not delete, force-push, or move the tag. Image
   and chart tags may already be public and signed. Leave the draft unpublished,
-  diagnose the failed workflow, and use a new patch version (`v2026.11.1`) for
+  diagnose the failed workflow, and use a new patch version (`v2026.11.2`) for
   any source or artifact change.
 - **After publication:** the release and its assets are immutable. Never replace
   an asset or retag a commit; publish corrective notes if documentation alone
-  is wrong, or cut `v2026.11.1` for code/artifact changes.
+  is wrong, or cut `v2026.11.2` for code/artifact changes.
 - **Krew update failure:** an infrastructure-only failure may be rerun. A wrong
   URL, digest, platform, archive layout, or binary requires a new patch release.
 - **Helm rollback:** rolling the Deployment/chart back does not remove CRDs or

@@ -129,7 +129,7 @@ producers must never place credentials or other secrets in correlation fields.
 Malformed values are ignored without echoing them into logs or telemetry.
 
 In Splunk, start with the exact `cvk.lifecycle.id`, for example
-`cvk-pr181-h<full-head-sha>` or `cvk-release-v2026.11.0`. Open a CVK reconcile
+`cvk-pr181-h<full-head-sha>` or `cvk-release-v2026.11.1`. Open a CVK reconcile
 span to see its bounded Argo parent or link, then follow the lifecycle bridge
 and GitHub cross-run links through the hosted workflows. This bounded
 parent/link model keeps long-running controllers from holding a release trace

@@ -28,7 +28,7 @@ For manual requests, use `curl --cacert` with an independently trusted CA
 bundle and an address matching the device certificate. `-k` disables server
 verification and is only a temporary lab diagnostic. For CVK, follow
 [Shared TLS](CONFIGURATION.md#shared-tls): local/custom Deployments can mount
-`caFile`, while managed `caSecretRef` is introduced in `v2026.11.0` and requires
+`caFile`, while managed `caSecretRef` is introduced in `v2026.11.1` and requires
 matching CRDs, admission policies, manager and workers. October `v2026.10.0`
 installations need a system-trusted certificate or an explicitly mounted CA.
 

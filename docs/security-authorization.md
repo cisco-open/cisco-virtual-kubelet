@@ -23,7 +23,7 @@ not enable managed topology or provide per-device isolation. Review the
 
 ## RBAC model
 
-Managed topology remains subject to the [qualification and migration limits](topology-enable.md#prerequisites). The `sdwan` and `nexus-dashboard` adapter roles below are introduced in `v2026.11.0`; upgrade October `v2026.10.0` installations with the matching CRDs, chart and image before using them. Both adapters remain Alpha.
+Managed topology remains subject to the [qualification and migration limits](topology-enable.md#prerequisites). The `sdwan` and `nexus-dashboard` adapter roles below are introduced in `v2026.11.1`; upgrade October `v2026.10.0` installations with the matching CRDs, chart and image before using them. Both adapters remain Alpha.
 
 The Helm chart installs the manager and VK service accounts plus the reusable
 ClusterRoles needed by isolated runtimes. The manager creates a unique service

@@ -72,7 +72,7 @@ be 300–7200 and at least 120 seconds greater than
 `maxTerminationGraceSeconds`; `maxPods` is 1–32; and termination grace is
 30–600 seconds. Each value must also be no greater than its administrator cap.
 Start from
-[`examples/topology/iosxe-software-rollout-drain.yaml`](https://github.com/cisco-open/cisco-virtual-kubelet/blob/v2026.11.0/examples/topology/iosxe-software-rollout-drain.yaml)
+[`examples/topology/iosxe-software-rollout-drain.yaml`](https://github.com/cisco-open/cisco-virtual-kubelet/blob/v2026.11.1/examples/topology/iosxe-software-rollout-drain.yaml)
 rather than converting an already planned campaign. Executable intent is
 immutable, so changing workload policy requires a new frozen plan and
 approval.
@@ -141,7 +141,7 @@ when the manager freezes drain evidence and again before eviction:
 The `drain-safe` label is an explicit portability assertion, not a safety
 override. It must appear on the ReplicaSet template and, for a
 Deployment-owned ReplicaSet, on the Deployment template as well. The current
-[`devices-and-workload.yaml`](https://github.com/cisco-open/cisco-virtual-kubelet/blob/v2026.11.0/examples/topology/devices-and-workload.yaml)
+[`devices-and-workload.yaml`](https://github.com/cisco-open/cisco-virtual-kubelet/blob/v2026.11.1/examples/topology/devices-and-workload.yaml)
 shows the label, soft default-scheduler affinity/spread, and a matching PDB. CVK
 still submits every termination through `policy/v1` Eviction. The API server's
 live PDB decision is authoritative even when the frozen status showed

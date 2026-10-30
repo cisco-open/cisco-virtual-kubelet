@@ -1,6 +1,6 @@
 # SD-WAN controller deployment
 
-**Alpha · introduced in v2026.11.0.** Use matching CRDs, chart and image;
+**Alpha · introduced in v2026.11.1.** Use matching CRDs, chart and image;
 October `v2026.10.0` does not contain this adapter. Check the
 [release records](../releases/index.md) for publication and artifact availability.
 
