@@ -22,7 +22,7 @@ import pathlib
 import re
 import sys
 import unittest
-from contextlib import redirect_stdout
+from contextlib import redirect_stderr, redirect_stdout
 from unittest import mock
 
 
@@ -79,6 +79,21 @@ def successful_checks() -> list[dict[str, object]]:
         }
         for index, name in enumerate(dispatcher.REQUIRED_HOSTED_CHECKS, start=20)
     ]
+
+
+def trusted_dispatch_jobs() -> dict[str, object]:
+    return {
+        "jobs": [
+            {
+                "id": 987654321,
+                "name": dispatcher.TRUSTED_DISPATCH_JOB_NAME,
+                "steps": [
+                    {"name": "Checkout trusted dispatcher from main"},
+                    {"name": dispatcher.TRUSTED_DISPATCH_STEP_NAME},
+                ],
+            }
+        ]
+    }
 
 
 class VerificationApi:
@@ -436,6 +451,218 @@ class DispatcherTests(unittest.TestCase):
             ),
             "00-e91f2b9d927f576c050158b6ebffadd1-a2dd3afe718a91f1-01",
         )
+
+    def test_dispatch_metadata_waits_for_current_job_and_step(self) -> None:
+        missing_step = trusted_dispatch_jobs()
+        missing_step["jobs"][0]["steps"].pop()
+        responses = [{"jobs": []}, missing_step, trusted_dispatch_jobs()]
+        api_call = mock.Mock(side_effect=responses)
+        sleep = mock.Mock()
+        output = io.StringIO()
+        with redirect_stderr(output):
+            actual = dispatcher.trusted_dispatch_traceparent(
+                REPOSITORY,
+                run_id=123456789,
+                run_attempt=2,
+                job_name="reconcile",
+                api_call=api_call,
+                sleep=sleep,
+            )
+        self.assertEqual(
+            actual, "00-e91f2b9d927f576c050158b6ebffadd1-a2dd3afe718a91f1-01"
+        )
+        self.assertEqual(api_call.call_count, 3)
+        self.assertEqual(sleep.call_args_list, [mock.call(1.0), mock.call(2.0)])
+        for call in api_call.call_args_list:
+            self.assertEqual(
+                call.args,
+                (f"/repos/{REPOSITORY}/actions/runs/123456789/attempts/2/jobs"
+                 "?per_page=100&page=1",),
+            )
+        self.assertIn("matching_jobs=0", output.getvalue())
+        self.assertIn("matching_steps=0", output.getvalue())
+
+    def test_dispatch_metadata_exhausts_bounded_missing_entry_retries(self) -> None:
+        missing_step = trusted_dispatch_jobs()
+        missing_step["jobs"][0]["steps"] = [{"name": "do-not-log-api-payload"}]
+        for response in ({"jobs": []}, missing_step):
+            with self.subTest(response=response):
+                api_call = mock.Mock(return_value=response)
+                sleep = mock.Mock()
+                output = io.StringIO()
+                with redirect_stderr(output), self.assertRaisesRegex(
+                    dispatcher.GateError, "metadata unavailable after 5 lookups"
+                ) as error:
+                    dispatcher.trusted_dispatch_traceparent(
+                        REPOSITORY,
+                        run_id=123456789,
+                        run_attempt=2,
+                        job_name="reconcile",
+                        api_call=api_call,
+                        sleep=sleep,
+                    )
+                self.assertEqual(api_call.call_count, 5)
+                self.assertEqual(
+                    sleep.call_args_list,
+                    [mock.call(1.0), mock.call(2.0), mock.call(4.0), mock.call(8.0)],
+                )
+                self.assertEqual(len(output.getvalue().splitlines()), 4)
+                self.assertIn("run=123456789, attempt=2", str(error.exception))
+                self.assertNotIn("do-not-log-api-payload", output.getvalue())
+                self.assertNotIn("do-not-log-api-payload", str(error.exception))
+
+    def test_dispatch_metadata_rejects_ambiguity_without_retry(self) -> None:
+        duplicate_job = trusted_dispatch_jobs()
+        duplicate_job["jobs"].append(copy.deepcopy(duplicate_job["jobs"][0]))
+        duplicate_step = trusted_dispatch_jobs()
+        duplicate_step["jobs"][0]["steps"].append(
+            {"name": dispatcher.TRUSTED_DISPATCH_STEP_NAME}
+        )
+        for response in (duplicate_job, duplicate_step):
+            with self.subTest(response=response):
+                api_call = mock.Mock(return_value=response)
+                sleep = mock.Mock()
+                with self.assertRaisesRegex(dispatcher.GateError, "ambiguous"):
+                    dispatcher.trusted_dispatch_traceparent(
+                        REPOSITORY,
+                        run_id=123456789,
+                        run_attempt=2,
+                        job_name="reconcile",
+                        api_call=api_call,
+                        sleep=sleep,
+                    )
+                api_call.assert_called_once()
+                sleep.assert_not_called()
+
+    def test_dispatch_metadata_rejects_malformed_responses_without_retry(self) -> None:
+        valid_job = trusted_dispatch_jobs()["jobs"][0]
+        malformed_jobs = [None, "do-not-log-api-payload", {}, {"name": None}]
+        malformed_jobs.extend(
+            {**valid_job, "steps": steps}
+            for steps in (None, "do-not-log-api-payload", [None], [{}], [{"name": 42}])
+        )
+        malformed_jobs.append({**valid_job, "id": "do-not-log-api-payload"})
+        responses = [None, ["do-not-log-api-payload"], {}, {"jobs": None}]
+        responses.extend({"jobs": [job]} for job in malformed_jobs)
+        for response in responses:
+            with self.subTest(response=response):
+                api_call = mock.Mock(return_value=response)
+                sleep = mock.Mock()
+                with self.assertRaises(dispatcher.GateError) as error:
+                    dispatcher.trusted_dispatch_traceparent(
+                        REPOSITORY,
+                        run_id=123456789,
+                        run_attempt=2,
+                        job_name="reconcile",
+                        api_call=api_call,
+                        sleep=sleep,
+                    )
+                api_call.assert_called_once()
+                sleep.assert_not_called()
+                self.assertNotIn("do-not-log-api-payload", str(error.exception))
+
+    def test_dispatch_metadata_rejects_changed_check_run_identity(self) -> None:
+        missing_step = trusted_dispatch_jobs()
+        missing_step["jobs"][0]["steps"].pop()
+        changed_job = trusted_dispatch_jobs()
+        changed_job["jobs"][0]["id"] += 1
+        api_call = mock.Mock(side_effect=[missing_step, changed_job])
+        sleep = mock.Mock()
+        with redirect_stderr(io.StringIO()), self.assertRaisesRegex(
+            dispatcher.GateError, "check run identity changed"
+        ):
+            dispatcher.trusted_dispatch_traceparent(
+                REPOSITORY,
+                run_id=123456789,
+                run_attempt=2,
+                job_name="reconcile",
+                api_call=api_call,
+                sleep=sleep,
+            )
+        self.assertEqual(api_call.call_count, 2)
+        sleep.assert_called_once_with(1.0)
+
+    def test_dispatch_metadata_does_not_retry_api_errors(self) -> None:
+        for status in (401, 403, 404, 500):
+            with self.subTest(status=status):
+                api_call = mock.Mock(
+                    side_effect=dispatcher.GateError(f"GitHub API failed with HTTP {status}")
+                )
+                sleep = mock.Mock()
+                with self.assertRaisesRegex(dispatcher.GateError, f"HTTP {status}"):
+                    dispatcher.trusted_dispatch_traceparent(
+                        REPOSITORY,
+                        run_id=123456789,
+                        run_attempt=2,
+                        job_name="reconcile",
+                        api_call=api_call,
+                        sleep=sleep,
+                    )
+                api_call.assert_called_once()
+                sleep.assert_not_called()
+
+    def test_main_never_reconciles_until_metadata_is_valid(self) -> None:
+        real_traceparent = dispatcher.trusted_dispatch_traceparent
+        verified = dispatcher.VerifiedPullRequest(7, HEAD, BASE, MERGE)
+        for metadata_arrives in (False, True):
+            with self.subTest(metadata_arrives=metadata_arrives):
+                seen: list[str] = []
+                responses = [{"jobs": []}, trusted_dispatch_jobs()]
+
+                def metadata_api(path: str, **_kwargs: object) -> object:
+                    self.assertIn("/actions/runs/123456789/attempts/2/jobs?", path)
+                    list_prs.assert_not_called()
+                    dispatch.assert_not_called()
+                    seen.append("metadata")
+                    return responses[min(len(seen) - 1, 1)] if metadata_arrives else responses[0]
+
+                def correlate(repository: str, **kwargs: object) -> str:
+                    return real_traceparent(
+                        repository,
+                        **kwargs,
+                        api_call=metadata_api,
+                        sleep=lambda _delay: None,
+                    )
+
+                with (
+                    mock.patch.object(
+                        sys, "argv", ["dispatcher", "reconcile", "--repository", REPOSITORY]
+                    ),
+                    mock.patch.dict(
+                        dispatcher.os.environ,
+                        {"GITHUB_RUN_ID": "123456789", "GITHUB_RUN_ATTEMPT": "2",
+                         "GITHUB_JOB": "reconcile"},
+                    ),
+                    mock.patch.object(
+                        dispatcher, "trusted_dispatch_traceparent", side_effect=correlate
+                    ),
+                    mock.patch.object(
+                        dispatcher, "list_open_pr_numbers", return_value=[7]
+                    ) as list_prs,
+                    mock.patch.object(dispatcher, "verify_pull_request", return_value=verified),
+                    mock.patch.object(
+                        dispatcher, "native_status_history",
+                        return_value={target["context"]: [] for target in dispatcher.TARGETS},
+                    ),
+                    mock.patch.object(dispatcher, "dispatch_target") as dispatch,
+                    redirect_stdout(io.StringIO()),
+                    redirect_stderr(io.StringIO()),
+                ):
+                    result = dispatcher.main()
+                if metadata_arrives:
+                    self.assertEqual(result, 0)
+                    self.assertEqual(seen, ["metadata", "metadata"])
+                    list_prs.assert_called_once()
+                    self.assertEqual(dispatch.call_count, 2)
+                    self.assertTrue(all(
+                        call.args[4] == "00-e91f2b9d927f576c050158b6ebffadd1-a2dd3afe718a91f1-01"
+                        for call in dispatch.call_args_list
+                    ))
+                else:
+                    self.assertEqual(result, 1)
+                    self.assertEqual(len(seen), 5)
+                    list_prs.assert_not_called()
+                    dispatch.assert_not_called()
 
     def test_correlation_contract_fails_closed(self) -> None:
         verified = dispatcher.VerifiedPullRequest(7, HEAD, BASE, MERGE)

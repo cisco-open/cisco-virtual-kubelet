@@ -140,6 +140,32 @@ publication, using the approved release-signing identity and the gates below.
   change requires a new protected pull request and a complete restart of this
   section.
 
+### Wait for CI on the frozen merge
+
+- [ ] Before creating the draft or tag, wait for the `smoke` workflow triggered
+  by the push to `main` on the **exact frozen merge commit**. Passing PR checks
+  do not replace this post-merge run. The helper polls automatically for up to
+  60 minutes and stops on failed CI, ambiguous successful runs, invalid metadata
+  or timeout. It only reads GitHub metadata; it does not create or rerun jobs,
+  request another approval, or create a draft or tag.
+
+  ```sh
+  python3 .github/scripts/wait_for_release_ci.py \
+    --repository cisco-open/cisco-virtual-kubelet \
+    --commit "$release_commit"
+  ```
+
+  Record the accepted run URL, ID and attempt with the release evidence. If
+  CI fails, resolve that failure through the normal process before proceeding;
+  if the candidate changes, return to the protected PR and freeze steps above.
+  Keep the frozen commit even if `main` advances while waiting.
+
+  The release workflow also checks that this CI run completed before the tag
+  workflow started. Waiting inside a tagged release run is too late to establish
+  the telemetry predecessor. Historical November observer failures are explained
+  by this ordering; rerunning an observer does not change those timestamps and
+  does not justify moving tags or rebuilding published artifacts.
+
 ### Approve the release workstation and pinned tools
 
 - [ ] Before creating the draft, use a release workstation approved by the
@@ -316,6 +342,9 @@ Only after the draft matches the approved preparation and the checks above pass:
 test "$(git rev-parse HEAD)" = "$release_commit"
 git merge-base --is-ancestor "$release_commit" origin/main
 test -z "$(git status --porcelain=v1 --untracked-files=all)"
+# Recheck after draft/signing preparation; refuse a new pending or failed attempt.
+python3 .github/scripts/wait_for_release_ci.py \
+  --repository "$repo" --commit "$release_commit" --check
 git tag -s "$release_version" "$release_commit" \
   -m "Cisco Virtual Kubelet ${release_version}"
 test "$(git rev-list -n 1 "$release_version")" = "$release_commit"

@@ -74,6 +74,7 @@ jobs:
       # reads: the draft-before-tag gate cannot otherwise observe the curated
       # draft it is responsible for validating.
       contents: write
+      actions: read
     steps:
       - name: Require exact curated draft
         env:
@@ -102,6 +103,83 @@ jobs:
               and $matching[0].target_commitish == $commit
           ' "$releases" > /dev/null || {
             echo "::error::Exactly one non-prerelease draft for ${RELEASE_VERSION} must exist before the tag is pushed"
+            exit 1
+          }
+
+      # Waiting belongs BEFORE creating the tag. This read-only backstop
+      # rejects premature tags before images, charts or draft assets are built.
+      - name: Require main CI completed before tagging
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_COMMIT: ${{ github.sha }}
+          RELEASE_VERSION: ${{ github.ref_name }}
+          RELEASE_RUN_ID: ${{ github.run_id }}
+          RELEASE_RUN_ATTEMPT: ${{ github.run_attempt }}
+        run: |
+          set -euo pipefail
+          release_run="$RUNNER_TEMP/release-ci-origin.json"
+          summaries="$RUNNER_TEMP/release-ci-summaries.json"
+          candidates="$RUNNER_TEMP/release-ci-candidates.jsonl"
+          gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${RELEASE_RUN_ID}/attempts/${RELEASE_RUN_ATTEMPT}" > "$release_run"
+          jq -e --arg repo "$GITHUB_REPOSITORY" --arg sha "$RELEASE_COMMIT" \
+            --arg tag "$RELEASE_VERSION" --argjson id "$RELEASE_RUN_ID" \
+            --argjson attempt "$RELEASE_RUN_ATTEMPT" '
+            def utc_timestamp:
+              . as $value | type == "string"
+              and test("^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$")
+              and ((fromdateiso8601 | todateiso8601) == $value);
+            .id == $id and .run_attempt == $attempt
+            and .repository.full_name == $repo and .head_sha == $sha
+            and .head_branch == $tag and .event == "push"
+            and (.path | split("@")[0]) == ".github/workflows/release.yml"
+            and (.created_at | utc_timestamp)
+          ' "$release_run" > /dev/null
+          gh api --paginate --slurp \
+            "repos/${GITHUB_REPOSITORY}/actions/workflows/smoke.yml/runs?branch=main&event=push&head_sha=${RELEASE_COMMIT}&per_page=100" > "$summaries"
+          jq -e '
+            .[0].total_count as $total
+            | type == "array" and length > 0 and length <= 5
+            and all(.[]; type == "object" and (.workflow_runs | type) == "array"
+              and (.workflow_runs | length) <= 100
+              and (.total_count | type) == "number" and .total_count >= 0
+              and .total_count <= 500 and .total_count == (.total_count | floor)
+              and .total_count == $total)
+            and all(.[:-1][]; (.workflow_runs | length) == 100)
+            and ([.[].workflow_runs[]] | length) == $total
+            and all(.[].workflow_runs[]; type == "object"
+              and (.id | type) == "number" and .id > 0 and .id == (.id | floor)
+              and (.run_attempt | type) == "number" and .run_attempt > 0
+              and .run_attempt == (.run_attempt | floor))
+            and ([.[].workflow_runs[].id] | length)
+              == ([.[].workflow_runs[].id] | unique | length)
+          ' "$summaries" > /dev/null
+          : > "$candidates"
+          while IFS=$'\t' read -r run_id attempt; do
+            gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${run_id}/attempts/${attempt}" \
+              | jq -ce --argjson id "$run_id" --argjson attempt "$attempt" '
+                  if .id == $id and .run_attempt == $attempt then .
+                  else error("main CI run/attempt changed during lookup") end
+                ' >> "$candidates"
+          done < <(jq -r '.[].workflow_runs[] | [.id, .run_attempt] | @tsv' "$summaries")
+          jq -se --arg repo "$GITHUB_REPOSITORY" --arg sha "$RELEASE_COMMIT" \
+            --slurpfile origin "$release_run" '
+            def utc_timestamp:
+              . as $value | type == "string"
+              and test("^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$")
+              and ((fromdateiso8601 | todateiso8601) == $value);
+            ($origin[0].created_at | fromdateiso8601) as $cutoff
+            | all(.[];
+                .repository.full_name == $repo and .head_sha == $sha
+                and .head_branch == "main" and .event == "push"
+                and (.path | split("@")[0]) == ".github/workflows/smoke.yml"
+                and .status == "completed"
+                and (.conclusion | IN("success", "failure", "cancelled", "timed_out",
+                  "action_required", "neutral", "skipped", "stale", "startup_failure"))
+                and (.updated_at | utc_timestamp)
+                and (.updated_at | fromdateiso8601) <= $cutoff)
+              and ([.[] | select(.conclusion == "success")] | length) == 1
+          ' "$candidates" > /dev/null || {
+            echo "::error::Exactly one successful smoke push on main for the frozen commit must finish before tagging; run wait_for_release_ci.py before creating a new tag."
             exit 1
           }
 

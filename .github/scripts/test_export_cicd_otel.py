@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+import datetime
 import importlib.util
 import io
 import json
@@ -473,6 +474,59 @@ class ExporterTests(unittest.TestCase):
         self.assertEqual(
             correlation.references[0].link_type, "github.tag.after-main-ci"
         )
+
+    def test_late_main_ci_cannot_become_a_tag_predecessor_on_observer_retry(self) -> None:
+        # v2026.11.1 started staging before its exact main CI finished. A later
+        # observer sees that successful CI, but it cannot truthfully link it as
+        # a predecessor of the already-created tag workflow.
+        release_run = completed_run(
+            id=41041135523,
+            run_attempt=1,
+            name="release",
+            path=".github/workflows/release.yml",
+            event="push",
+            head_branch="v2026.11.1",
+            head_sha=MERGE_SHA,
+            pull_requests=[],
+            created_at="2026-10-30T10:29:34Z",
+            run_started_at="2026-10-30T10:29:34Z",
+            updated_at="2026-10-30T10:42:11Z",
+        )
+        main_run_id = 41041005882
+        main_run = completed_run(
+            id=main_run_id,
+            run_attempt=1,
+            event="push",
+            head_branch="main",
+            head_sha=MERGE_SHA,
+            pull_requests=[],
+            created_at="2026-10-30T10:28:27Z",
+            run_started_at="2026-10-30T10:28:27Z",
+            updated_at="2026-10-30T11:09:13Z",
+        )
+        for observed_at in ("2026-10-30T11:10:00+00:00", "2026-10-31T12:00:00+00:00"):
+            with self.subTest(observed_at=observed_at):
+                api, _ = mapped_api(
+                    {
+                        workflow_search_path(
+                            "smoke.yml",
+                            f"branch=main&event=push&status=success&head_sha={MERGE_SHA}",
+                        ): {"workflow_runs": [{"id": main_run_id, "run_attempt": 1}]},
+                        f"/repos/{REPOSITORY}/actions/runs/{main_run_id}/attempts/1": main_run,
+                    }
+                )
+                with mock.patch.object(
+                    exporter.time,
+                    "time",
+                    return_value=datetime.datetime.fromisoformat(observed_at).timestamp(),
+                ):
+                    correlation = exporter.resolve_run_correlation(
+                        REPOSITORY, release_run, token="not-logged", api_call=api
+                    )
+                self.assertEqual(correlation.state, "release_main_smoke_missing")
+                self.assertEqual(correlation.references, ())
+                self.assertTrue(correlation.required_transition_failed)
+                self.assertTrue(correlation.warnings)
 
     def test_release_tag_with_duplicate_main_runs_does_not_guess(self) -> None:
         release_run = completed_run(

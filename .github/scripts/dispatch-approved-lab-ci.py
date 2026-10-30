@@ -71,6 +71,9 @@ STALE_PENDING_SECONDS = 12 * 60 * 60
 STATUS_DESCRIPTION_LIMIT = 140
 TRUSTED_DISPATCH_JOB_NAME = "reconcile"
 TRUSTED_DISPATCH_STEP_NAME = "Dispatch missing native tests for eligible PRs"
+# The current job/step can lag behind its running process in the Jobs API.
+# These metadata reads do not retry native lab dispatches or relax their gates.
+TRUSTED_DISPATCH_METADATA_RETRY_DELAYS = (1.0, 2.0, 4.0, 8.0)
 
 TARGETS: tuple[dict[str, str], ...] = (
     {
@@ -194,7 +197,10 @@ def _paginated_items(
     separator = "&" if "?" in path else "?"
     for page in range(1, MAX_API_PAGES + 1):
         response = api_call(f"{path}{separator}per_page=100&page={page}")
-        batch = response if response_key is None else (response or {}).get(response_key)
+        if response_key is None:
+            batch = response
+        else:
+            batch = response.get(response_key) if isinstance(response, dict) else None
         if not isinstance(batch, list):
             raise GateError(f"GitHub API {path} returned an invalid paginated response")
         items.extend(batch)
@@ -480,41 +486,86 @@ def trusted_dispatch_traceparent(
     run_attempt: str | int,
     job_name: str,
     api_call: ApiCall = api,
+    sleep: Callable[[float], None] = time.sleep,
 ) -> str:
-    """Derive the githubreceiver step context from trusted run metadata."""
+    """Derive the trusted step context, allowing bounded API visibility lag."""
     repository = validate_repository(repository)
     run = positive_integer("GitHub run ID", run_id)
     attempt = positive_integer("GitHub run attempt", run_attempt)
     if job_name != TRUSTED_DISPATCH_JOB_NAME:
         raise GateError(f"unexpected trusted dispatcher job: {job_name!r}")
-    jobs = _paginated_items(
-        f"/repos/{repository}/actions/runs/{run}/attempts/{attempt}/jobs",
-        api_call=api_call,
-        response_key="jobs",
-    )
-    matches = [job for job in jobs if job.get("name") == job_name]
-    if len(matches) != 1:
-        raise GateError(
-            f"trusted dispatcher job {job_name!r} matched {len(matches)} check runs"
+    lookups = len(TRUSTED_DISPATCH_METADATA_RETRY_DELAYS) + 1
+    observed_check_run_id: int | None = None
+    for lookup in range(lookups):
+        jobs = _paginated_items(
+            f"/repos/{repository}/actions/runs/{run}/attempts/{attempt}/jobs",
+            api_call=api_call,
+            response_key="jobs",
         )
-    job = matches[0]
-    check_run_id = positive_integer("GitHub check run ID", job.get("id", ""))
-    steps = job.get("steps")
-    if not isinstance(steps, list):
-        raise GateError("trusted dispatcher check run has no step metadata")
-    dispatch_steps = [
-        step for step in steps if step.get("name") == TRUSTED_DISPATCH_STEP_NAME
-    ]
-    if len(dispatch_steps) != 1:
-        raise GateError(
-            "trusted dispatcher correlation step must occur exactly once in the job"
+        if any(
+            not isinstance(job, dict)
+            or not isinstance(job.get("name"), str)
+            or not job["name"]
+            for job in jobs
+        ):
+            raise GateError("trusted dispatcher returned malformed job metadata")
+        matches = [job for job in jobs if job["name"] == job_name]
+        summary = f"jobs={len(jobs)}, matching_jobs={len(matches)}"
+        if len(matches) > 1:
+            raise GateError(f"trusted dispatcher job is ambiguous ({summary})")
+        if matches:
+            job = matches[0]
+            try:
+                check_run_id = positive_integer(
+                    "GitHub check run ID", job.get("id", "")
+                )
+            except CorrelationError:
+                raise GateError(
+                    "trusted dispatcher returned an invalid check run ID"
+                ) from None
+            if observed_check_run_id not in (None, check_run_id):
+                raise GateError("trusted dispatcher check run identity changed")
+            observed_check_run_id = check_run_id
+            steps = job.get("steps")
+            if not isinstance(steps, list) or any(
+                not isinstance(step, dict)
+                or not isinstance(step.get("name"), str)
+                or not step["name"]
+                for step in steps
+            ):
+                raise GateError("trusted dispatcher returned malformed step metadata")
+            dispatch_steps = [
+                step for step in steps if step["name"] == TRUSTED_DISPATCH_STEP_NAME
+            ]
+            summary += f", steps={len(steps)}, matching_steps={len(dispatch_steps)}"
+            if len(dispatch_steps) > 1:
+                raise GateError(
+                    f"trusted dispatcher correlation step is ambiguous ({summary})"
+                )
+            if dispatch_steps:
+                return github_step_traceparent(
+                    run,
+                    attempt,
+                    check_run_id,
+                    TRUSTED_DISPATCH_STEP_NAME,
+                )
+        # Only absent job/step entries are retried. Ambiguous/malformed metadata
+        # and API errors fail immediately; no PR eligibility or dispatch happens
+        # until an exact correlation context has been established.
+        if lookup == lookups - 1:
+            raise GateError(
+                f"trusted dispatcher metadata unavailable after {lookups} lookups "
+                f"(run={run}, attempt={attempt}, {summary})"
+            )
+        delay = TRUSTED_DISPATCH_METADATA_RETRY_DELAYS[lookup]
+        print(
+            f"waiting for trusted dispatcher metadata "
+            f"(run={run}, attempt={attempt}, lookup={lookup + 1}/{lookups}, "
+            f"{summary}); retrying in {delay:g}s",
+            file=sys.stderr,
         )
-    return github_step_traceparent(
-        run,
-        attempt,
-        check_run_id,
-        TRUSTED_DISPATCH_STEP_NAME,
-    )
+        sleep(delay)
+    raise AssertionError("unreachable dispatcher metadata lookup")
 
 
 def _status_attempt(status: dict[str, Any]) -> int | None:

@@ -118,6 +118,10 @@ jobs:
             -s .github/scripts \
             -p 'test_package_embedded_licenses.py' \
             -v
+          python3 -m unittest discover \
+            -s .github/scripts \
+            -p 'test_wait_for_release_ci.py' \
+            -v
           go run github.com/rhysd/actionlint/cmd/actionlint@v1.7.12 \
             -config-file .github/actionlint.yaml \
             .github/workflows/*.{yml,yaml}
