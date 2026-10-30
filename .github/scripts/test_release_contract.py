@@ -19,6 +19,8 @@ import json
 import os
 import pathlib
 import re
+import shutil
+import sys
 import subprocess
 import tempfile
 import unittest
@@ -28,6 +30,11 @@ from generate_mkdocs_licenses import (
     verify_mermaid_runtime_notice,
 )
 from render_github_release_notes import ReleaseNotesError, render_release_notes
+import wait_for_release_ci as release_ci
+from test_wait_for_release_ci import (
+    COMMIT as CI_COMMIT, CUTOFF as CI_CUTOFF, REPOSITORY as CI_REPOSITORY,
+    make_run as make_ci_run,
+)
 
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
@@ -74,6 +81,12 @@ class ReleaseContractTests(unittest.TestCase):
         self.assertIn("github.com/google/go-licenses/v2@v2.0.1", dockerfile)
         self.assertIn("github.com/moby/spdystream/spdy/PATENTS", dockerfile)
         self.assertIn("go-version: '1.26.10'", release)
+        lab_static = (ROOT / ".github/workflows/lab-ci-static.yaml").read_text()
+        self.assertIn("go-version: '1.26.10'", lab_static)
+        self.assertLess(
+            lab_static.index("go-version: '1.26.10'"),
+            lab_static.index("name: Test Lab CI scripts"),
+        )
         self.assertIn("version: v3.21.4", release)
         self.assertEqual(release.count("version: v0.36.1"), 2)
         self.assertEqual(
@@ -124,6 +137,19 @@ class ReleaseContractTests(unittest.TestCase):
         self.assertNotIn("ubuntu-latest", release)
         self.assertNotIn("1.25", dockerfile + lint_dockerfile + release)
         self.assertEqual((ROOT / "go.mod").read_text().splitlines()[2], "go 1.26.10")
+
+    def test_main_ci_is_required_before_release_tagging(self) -> None:
+        release = (ROOT / ".github/workflows/release.yml").read_text()
+        preflight = release[release.index("  release-preflight:") : release.index("\n  build-and-sign:")]
+        self.assertIn("actions: read", preflight)
+        self.assertIn("name: Require main CI completed before tagging", preflight)
+        runbook = (ROOT / "RELEASE.md").read_text()
+        tag = runbook.index('git tag -s "$release_version"')
+        wait = runbook.rfind("python3 .github/scripts/wait_for_release_ci.py", 0, tag)
+        self.assertGreater(wait, 0)
+        self.assertIn('--commit "$release_commit" --check', runbook[wait:tag])
+        smoke = (ROOT / ".github/workflows/smoke.yml").read_text()
+        self.assertIn("-p 'test_wait_for_release_ci.py'", smoke)
 
     def test_high_critical_image_scans_are_hard_gates(self) -> None:
         action = (
@@ -971,6 +997,229 @@ go_version_is_supported go1.27.9
                 if mutable.search(line):
                     offenders.append(f"{workflow.name}:{number}: {line.strip()}")
         self.assertEqual(offenders, [])
+
+
+class ReleasePreflightShellTests(unittest.TestCase):
+    """Execute the actual preflight shell offline, with only fake gh and real jq."""
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        workflow = (ROOT / ".github/workflows/release.yml").read_text()
+        lines = workflow.splitlines()
+        start = lines.index("      - name: Require main CI completed before tagging")
+        body = lines.index("        run: |", start) + 1
+        script = []
+        for line in lines[body:]:
+            if line and not line.startswith("          "):
+                break
+            script.append(line[10:] if line else "")
+        cls.script = "\n".join(script) + "\n"
+        cls.jq = shutil.which("jq")
+        if not cls.jq:
+            raise RuntimeError("jq is required to execute the release preflight contract")
+
+    def run_guard(
+        self, runs, *, origin_overrides=None, pages=None, refetch=None, fail_stage=None
+    ):
+        origin = {
+            "id": 900,
+            "run_attempt": 1,
+            "repository": {"full_name": CI_REPOSITORY},
+            "head_sha": CI_COMMIT,
+            "head_branch": "v2026.11.2",
+            "event": "push",
+            "path": ".github/workflows/release.yml",
+            "created_at": CI_CUTOFF.strftime("%Y-%m-%dT%H:%M:%SZ"),
+        }
+        origin.update(origin_overrides or {})
+        summaries = [
+            {"id": run.get("id"), "run_attempt": run.get("run_attempt")}
+            if isinstance(run, dict) else run
+            for run in runs
+        ]
+        if pages is None:
+            pages = [{"total_count": len(summaries), "workflow_runs": summaries}]
+        attempts = {
+            f'{run.get("id")}:{run.get("run_attempt")}': run
+            for run in runs if isinstance(run, dict)
+        }
+        if refetch is not None:
+            attempts.update(refetch)
+        fixture = {
+            "origin": origin, "pages": pages, "attempts": attempts,
+            "repository": CI_REPOSITORY, "commit": CI_COMMIT,
+            "fail_stage": fail_stage,
+        }
+        with tempfile.TemporaryDirectory(prefix="cvk-release-preflight-") as directory:
+            temporary = pathlib.Path(directory)
+            bin_dir = temporary / "bin"
+            bin_dir.mkdir()
+            (bin_dir / "jq").symlink_to(self.jq)
+            fake_gh = bin_dir / "gh"
+            fake_gh.write_text(f"#!{sys.executable}\n" + FAKE_RELEASE_GH)
+            fake_gh.chmod(0o755)
+            fixture_path = temporary / "fixture.json"
+            fixture_path.write_text(json.dumps(fixture))
+            calls_path = temporary / "calls.jsonl"
+            runner_temp = temporary / "runner"
+            runner_temp.mkdir()
+            # No real gh, curl, git or inherited credentials are available.
+            environment = {
+                "PATH": str(bin_dir), "RUNNER_TEMP": str(runner_temp),
+                "GITHUB_REPOSITORY": CI_REPOSITORY, "RELEASE_COMMIT": CI_COMMIT,
+                "RELEASE_VERSION": "v2026.11.2", "RELEASE_RUN_ID": "900",
+                "RELEASE_RUN_ATTEMPT": "1", "GH_TOKEN": "offline-test-token",
+                "FAKE_GH_FIXTURE": str(fixture_path), "FAKE_GH_CALLS": str(calls_path),
+            }
+            result = subprocess.run(
+                ["/bin/bash", "-c", self.script], cwd=temporary, env=environment,
+                text=True, capture_output=True, timeout=10,
+            )
+            calls = [json.loads(line) for line in calls_path.read_text().splitlines()]
+        return result, calls
+
+    def test_shell_matches_readiness_helper_on_candidate_outcomes(self) -> None:
+        cases = [
+            ("unique success", [make_ci_run()], True),
+            ("completion at cutoff", [make_ci_run(updated_at="2026-10-30T12:00:00Z")], True),
+            ("old failure plus success", [make_ci_run(id=1, conclusion="failure"), make_ci_run()], True),
+            ("dynamic name and path suffix", [make_ci_run(
+                name="renamed display title", path=".github/workflows/smoke.yml@refs/heads/main"
+            )], True),
+            ("missing", [], False),
+            ("failed", [make_ci_run(conclusion="failure")], False),
+            ("duplicate successes", [make_ci_run(), make_ci_run(id=2)], False),
+            ("duplicate IDs", [make_ci_run(), make_ci_run()], False),
+            ("malformed entry", [None], False),
+            ("late failure beside success", [make_ci_run(), make_ci_run(
+                id=2, conclusion="failure", updated_at="2026-10-30T12:00:01Z"
+            )], False),
+        ]
+        for status in release_ci.ACTIVE:
+            cases.append((status, [make_ci_run(), make_ci_run(
+                id=2, status=status, conclusion=None
+            )], False))
+        for field, value in [
+            ("head_sha", "a" * 40), ("head_branch", "topic"),
+            ("event", "pull_request"), ("repository", {"full_name": "other/repo"}),
+            ("repository", []), ("path", ".github/workflows/release.yml"),
+            ("path", None), ("id", True), ("id", 0), ("run_attempt", 1.5),
+            ("status", "unknown"), ("conclusion", "unknown"),
+            ("conclusion", None), ("conclusion", []),
+        ]:
+            cases.append((f"invalid {field}={value!r}", [make_ci_run(**{field: value})], False))
+        for value in [
+            "2026-10-30T12:00:01Z", "2026-02-30T11:00:00Z",
+            "2026-10-30T25:00:00Z", "2026-10-30T11:00:00",
+            "2026-10-30T11:00:00+01:00", None, "bad",
+        ]:
+            cases.append((f"invalid timestamp {value!r}", [make_ci_run(updated_at=value)], False))
+        for name, runs, accepted in cases:
+            with self.subTest(case=name):
+                try:
+                    ready = release_ci.evaluate_runs(
+                        CI_REPOSITORY, CI_COMMIT, runs, completed_before=CI_CUTOFF
+                    ).state == "ready"
+                except release_ci.ReleaseCIError:
+                    ready = False
+                self.assertEqual(ready, accepted)
+                result, calls = self.run_guard(runs)
+                self.assertEqual(result.returncode == 0, ready, result.stderr)
+                if accepted:
+                    self.assertEqual(
+                        sum(call["stage"] == "refetch" for call in calls), len(runs)
+                    )
+
+    def test_shell_rejects_invalid_release_origin(self) -> None:
+        for field, value in [
+            ("id", 901), ("id", True), ("run_attempt", 2),
+            ("repository", {"full_name": "other/repo"}), ("head_sha", "a" * 40),
+            ("head_branch", "main"), ("event", "workflow_dispatch"),
+            ("path", ".github/workflows/smoke.yml"),
+            ("created_at", "2026-02-30T11:00:00Z"), ("created_at", None),
+        ]:
+            with self.subTest(field=field, value=value):
+                result, calls = self.run_guard([make_ci_run()], origin_overrides={field: value})
+                self.assertNotEqual(result.returncode, 0)
+                self.assertEqual([call["stage"] for call in calls], ["origin"])
+
+    def test_shell_rejects_truncated_drifting_or_malformed_search(self) -> None:
+        summary = {"id": 123, "run_attempt": 1}
+        first_page = [{"id": n, "run_attempt": 1} for n in range(1, 101)]
+        cases = [
+            [],
+            [{"total_count": 2, "workflow_runs": [summary]}],
+            [{"total_count": 0, "workflow_runs": [summary]}],
+            [{"total_count": True, "workflow_runs": [summary]}],
+            [{"total_count": 1.5, "workflow_runs": [summary]}],
+            [{"total_count": 501, "workflow_runs": []}],
+            [{"total_count": 1, "workflow_runs": None}],
+            [{"total_count": 0, "workflow_runs": []}] * 6,
+            [{"total_count": 101, "workflow_runs": first_page},
+             {"total_count": 102, "workflow_runs": [summary]}],
+            [{"total_count": 101, "workflow_runs": first_page + [summary]}],
+            [{"total_count": 2, "workflow_runs": [summary]},
+             {"total_count": 2, "workflow_runs": [{"id": 124, "run_attempt": 1}]}],
+        ]
+        for pages in cases:
+            with self.subTest(pages=pages):
+                result, calls = self.run_guard([make_ci_run()], pages=pages)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertNotIn("refetch", [call["stage"] for call in calls])
+
+    def test_shell_rejects_refetch_mismatch_or_api_failure(self) -> None:
+        for replacement in [make_ci_run(id=999), make_ci_run(run_attempt=2), None]:
+            with self.subTest(replacement=replacement):
+                result, _ = self.run_guard([make_ci_run()], refetch={"123:1": replacement})
+                self.assertNotEqual(result.returncode, 0)
+        for stage in ("origin", "search", "refetch"):
+            with self.subTest(failed_api=stage):
+                result, _ = self.run_guard([make_ci_run()], fail_stage=stage)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn("simulated metadata API failure", result.stderr)
+
+
+FAKE_RELEASE_GH = r'''
+import json
+import os
+import pathlib
+import sys
+import urllib.parse
+
+args = sys.argv[1:]
+assert args and args[0] == "api", "only metadata API reads are allowed"
+assert not any(arg in args for arg in ["--method", "-X", "--input", "-f", "-F"])
+paths = [arg for arg in args[1:] if arg.startswith("repos/")]
+assert len(paths) == 1, "unexpected metadata API arguments"
+path = paths[0]
+fixture = json.loads(pathlib.Path(os.environ["FAKE_GH_FIXTURE"]).read_text())
+repo = fixture["repository"]
+if path == f"repos/{repo}/actions/runs/900/attempts/1":
+    stage = "origin"
+    response = lambda: fixture["origin"]
+elif path.startswith(f"repos/{repo}/actions/workflows/smoke.yml/runs?"):
+    stage = "search"
+    assert "--paginate" in args and "--slurp" in args
+    query = urllib.parse.parse_qs(path.split("?", 1)[1])
+    assert query == {
+        "branch": ["main"], "event": ["push"],
+        "head_sha": [fixture["commit"]], "per_page": ["100"],
+    }, "search must pin source and include pending/failed runs"
+    response = lambda: fixture["pages"]
+else:
+    stage = "refetch"
+    prefix = f"repos/{repo}/actions/runs/"
+    assert path.startswith(prefix), "unexpected metadata API endpoint"
+    run_id, separator, attempt = path.removeprefix(prefix).split("/")
+    assert separator == "attempts"
+    response = lambda: fixture["attempts"][f"{run_id}:{attempt}"]
+with pathlib.Path(os.environ["FAKE_GH_CALLS"]).open("a") as output:
+    output.write(json.dumps({"stage": stage, "path": path}) + "\n")
+if fixture["fail_stage"] == stage:
+    print("simulated metadata API failure", file=sys.stderr)
+    sys.exit(1)
+print(json.dumps(response()))
+'''
 
 
 if __name__ == "__main__":
