@@ -1,0 +1,322 @@
+{
+  "apiVersion": "ops.cisco.vk/v1alpha1",
+  "kind": "IOSXESoftwareUpgrade",
+  "metadata": {
+    "annotations": {
+      "topology.cisco.vk/app-worker-config-revision": "sha256:da1d805f3139ac76ba01ed622c14738d20bdf51f99bc60bc9f7ae53afd2ddf4d",
+      "topology.cisco.vk/app-worker-pod-name": "cat9k-lab-101-vk-c7f9fc8fd-wzfjk",
+      "topology.cisco.vk/app-worker-pod-uid": "149dd4fb-3f77-44fc-b1ad-a2f9c55d684a",
+      "topology.cisco.vk/app-worker-username": "system:serviceaccount:cvk-live:cisco-vk-cisco-virtual-kubelet-app-hosting",
+      "topology.cisco.vk/campaign-name": "cycle-20260930231306-1b8162-cat9k-lab-101-upgrade-rollout",
+      "topology.cisco.vk/campaign-namespace": "cvk-live",
+      "topology.cisco.vk/campaign-uid": "db0e9007-8260-4306-a9d9-9999425b04e8",
+      "topology.cisco.vk/device-generation": "6",
+      "topology.cisco.vk/device-name": "cat9k-lab-101",
+      "topology.cisco.vk/device-namespace": "cvk-live",
+      "topology.cisco.vk/device-uid": "20f3e68e-b127-4f2e-9a36-b66945135051",
+      "topology.cisco.vk/ledger-uid": "8587a09e-451e-43a1-b638-0b2c11af78b6",
+      "topology.cisco.vk/managed": "true",
+      "topology.cisco.vk/network-worker-pod-name": "u20f3e68e-b127-4f2e-9a36-b66945135051-network-779dd78868-rpsxd",
+      "topology.cisco.vk/network-worker-pod-uid": "3405a78b-52eb-44aa-84a6-eb23f89695e7",
+      "topology.cisco.vk/network-worker-username": "system:serviceaccount:cvk-live:cisco-vk-cisco-virtual-kubelet-network-management",
+      "topology.cisco.vk/node-name": "cat9k-lab-101",
+      "topology.cisco.vk/node-uid": "1d153018-19a3-42dc-a7b9-da36c5bf0a95",
+      "topology.cisco.vk/plan-hash": "sha256:45df897401ba15b45ff65294621cda603df2a9ac6ddd6f7c0062961800978e6a",
+      "topology.cisco.vk/reservation-id": "3ccb2a173ecdebfc0d2ae4a498d656df",
+      "topology.cisco.vk/source-secret-uid": "05d5617d-d807-4388-902f-9148c667fcc3",
+      "topology.cisco.vk/worker-protocol": "rollout-v1",
+      "topology.cisco.vk/worker-username": "system:serviceaccount:cvk-live:cisco-vk-cisco-virtual-kubelet-network-management"
+    },
+    "creationTimestamp": "2026-09-30T23:44:02Z",
+    "finalizers": [
+      "ops.cisco.vk/iosxesoftwareupgrade-cleanup"
+    ],
+    "generation": 1,
+    "labels": {
+      "topology.cisco.vk/campaign-uid": "db0e9007-8260-4306-a9d9-9999425b04e8"
+    },
+    "name": "cycle-20260930231306-1b8162-cat9k-lab-101-upgrade-rollout-cat9k-lab-101-3ccb2a17",
+    "namespace": "cvk-live",
+    "resourceVersion": "9426954",
+    "uid": "486e5eea-ff4f-44de-8827-da66e978179b"
+  },
+  "spec": {
+    "deviceRef": {
+      "name": "cat9k-lab-101"
+    },
+    "imageSource": {
+      "sha256": "df6055e4e1e88135b311998d721ff6d20a94a475113c1ff678fb65d14dc11049",
+      "url": "sftp://10.0.2.2/home/cisco/cvk-gnoi-images/cat9k_iosxe.17.18.03.SPA.bin",
+      "urlSecretRef": {
+        "name": "pr194-iosxe-image-source"
+      }
+    },
+    "installTimeoutSeconds": 14400,
+    "maxRetries": 3,
+    "rebootTimeoutSeconds": 3600,
+    "resumePolicy": "Retry",
+    "rollbackOnFailure": true,
+    "strategy": "Reload",
+    "targetVersion": "17.18.03"
+  },
+  "status": {
+    "activationStartTime": "2026-09-30T23:49:36Z",
+    "completionTime": "2026-09-30T23:58:20Z",
+    "conditions": [
+      {
+        "lastTransitionTime": "2026-09-30T23:58:20Z",
+        "message": "upgrade complete",
+        "observedGeneration": 1,
+        "reason": "Succeeded",
+        "status": "True",
+        "type": "Ready"
+      },
+      {
+        "lastTransitionTime": "2026-09-30T23:49:36Z",
+        "message": "image transfer or supervisor synchronization completed and the install stream closed cleanly",
+        "observedGeneration": 1,
+        "reason": "Transferred",
+        "status": "True",
+        "type": "Transferred"
+      },
+      {
+        "lastTransitionTime": "2026-09-30T23:47:13Z",
+        "message": "resolved and pinned sha256:df6055e4e1e88135b311998d721ff6d20a94a475113c1ff678fb65d14dc11049 (1249368115 bytes); ready for gNOI OS.Install",
+        "observedGeneration": 1,
+        "reason": "ImagePinned",
+        "status": "True",
+        "type": "ImageResolved"
+      },
+      {
+        "lastTransitionTime": "2026-09-30T23:58:21Z",
+        "message": "upgrade complete",
+        "observedGeneration": 1,
+        "reason": "OutcomeVerified",
+        "status": "True",
+        "type": "DeviceMutationSettled"
+      },
+      {
+        "lastTransitionTime": "2026-09-30T23:49:36Z",
+        "message": "device validated image version 17.18.03.0.5496.1776157760",
+        "observedGeneration": 1,
+        "reason": "Validated",
+        "status": "True",
+        "type": "Validated"
+      },
+      {
+        "lastTransitionTime": "2026-09-30T23:51:07Z",
+        "message": "gNOI OS.Activate did not return cleanly after requesting version 17.18.03.0.5496.1776157760 on the active supervisor: gnoi OS.Activate: rpc error: code = DeadlineExceeded desc = context deadline exceeded; waiting up to 3600s for the device to report the target version",
+        "observedGeneration": 1,
+        "reason": "ActivationResponseLost",
+        "status": "True",
+        "type": "Activated"
+      },
+      {
+        "lastTransitionTime": "2026-09-30T23:58:19Z",
+        "message": "device is reachable on target version 17.18.03.0.5496.1776157760",
+        "observedGeneration": 1,
+        "reason": "DeviceReachable",
+        "status": "True",
+        "type": "DeviceReachable"
+      },
+      {
+        "lastTransitionTime": "2026-09-30T23:58:20Z",
+        "message": "gNOI OS.Verify reports target version 17.18.03.0.5496.1776157760",
+        "observedGeneration": 1,
+        "reason": "Verified",
+        "status": "True",
+        "type": "Verified"
+      }
+    ],
+    "executionModel": "AtMostOnceV1",
+    "installStartTime": "2026-09-30T23:47:13Z",
+    "managedMutationClaims": [
+      {
+        "claimedAt": "2026-09-30T23:49:36Z",
+        "controlRevision": 0,
+        "policyEpoch": 1,
+        "reservationID": "3ccb2a173ecdebfc0d2ae4a498d656df",
+        "stage": "PrimaryActivation"
+      },
+      {
+        "claimedAt": "2026-09-30T23:47:13Z",
+        "controlRevision": 0,
+        "policyEpoch": 1,
+        "reservationID": "3ccb2a173ecdebfc0d2ae4a498d656df",
+        "stage": "PrimaryInstall"
+      }
+    ],
+    "managerAdmission": {
+      "campaignUID": "db0e9007-8260-4306-a9d9-9999425b04e8",
+      "controlRevision": 0,
+      "deviceGeneration": 6,
+      "deviceUID": "20f3e68e-b127-4f2e-9a36-b66945135051",
+      "leafUID": "486e5eea-ff4f-44de-8827-da66e978179b",
+      "ledgerUID": "8587a09e-451e-43a1-b638-0b2c11af78b6",
+      "nodeUID": "1d153018-19a3-42dc-a7b9-da36c5bf0a95",
+      "physicalIdentity": "foc2520l6h1",
+      "planHash": "sha256:45df897401ba15b45ff65294621cda603df2a9ac6ddd6f7c0062961800978e6a",
+      "policyEpoch": 1,
+      "policyResourceVersion": "9307543",
+      "policyUID": "525ff87f-b74a-44c4-b54e-408e63a3a2e7",
+      "protocolVersion": "rollout-v1",
+      "reservationID": "3ccb2a173ecdebfc0d2ae4a498d656df",
+      "state": "Settled",
+      "topologyLockID": "1092d1924a7519d707fe6731656db6c9",
+      "updatedAt": "2026-10-01T00:09:25Z"
+    },
+    "managerControl": {
+      "reason": "CampaignControl",
+      "revision": 0,
+      "updatedAt": "2026-09-30T23:44:01Z"
+    },
+    "managerDrain": {
+      "controlRevision": 0,
+      "drainDeadline": "2026-09-30T23:54:15Z",
+      "maintenanceTaintPresentBefore": false,
+      "nodeUID": "1d153018-19a3-42dc-a7b9-da36c5bf0a95",
+      "nodeUnschedulableBefore": false,
+      "pods": [
+        {
+          "controller": {
+            "apiVersion": "apps/v1",
+            "generation": 3,
+            "kind": "ReplicaSet",
+            "name": "cvk-topology-drain-a-0926-649c457fff",
+            "namespace": "cvk-pr194-workloads",
+            "uid": "1802f6d2-ecbc-43a8-968e-3219c75e5b86"
+          },
+          "deletionObservedAt": "2026-09-30T23:44:23Z",
+          "deviceCleanAt": "2026-09-30T23:44:43Z",
+          "deviceCleanInventoryRevision": 1,
+          "eligibilityHash": "sha256:8aaab40ecd40e23e99091cbf1a7fa9b34e1f25471c7f82a0d4a1cc0f3c6e8084",
+          "evictionRequestedAt": "2026-09-30T23:44:21Z",
+          "name": "cvk-topology-drain-a-0926-649c457fff-l9fxs",
+          "namespace": "cvk-pr194-workloads",
+          "pdbs": [
+            {
+              "apiVersion": "policy/v1",
+              "currentHealthy": 2,
+              "desiredHealthy": 1,
+              "disruptionsAllowed": 1,
+              "expectedPods": 2,
+              "generation": 2,
+              "kind": "PodDisruptionBudget",
+              "name": "cvk-topology-drain-0926",
+              "namespace": "cvk-pr194-workloads",
+              "observedGeneration": 2,
+              "uid": "3b314af5-06eb-4fb4-8ae5-252834cbdfde"
+            }
+          ],
+          "phase": "Complete",
+          "protectedAt": "2026-09-30T23:44:17Z",
+          "releasedAt": "2026-09-30T23:44:43Z",
+          "terminationGracePeriodSeconds": 30,
+          "uid": "87287bd6-89e7-4f2c-81b7-be03d6d821d0",
+          "workloadController": {
+            "apiVersion": "apps/v1",
+            "generation": 3,
+            "kind": "Deployment",
+            "name": "cvk-topology-drain-a-0926",
+            "namespace": "cvk-pr194-workloads",
+            "uid": "3efd5abb-bd5d-401e-9afc-4a5f5c23aa0b"
+          }
+        },
+        {
+          "controller": {
+            "apiVersion": "apps/v1",
+            "generation": 3,
+            "kind": "ReplicaSet",
+            "name": "cvk-topology-drain-b-0926-67ff7d64b",
+            "namespace": "cvk-pr194-workloads",
+            "uid": "89bd2924-d924-4d46-b0fb-d245c4d1a545"
+          },
+          "deletionObservedAt": "2026-09-30T23:45:16Z",
+          "deletionObservedInventoryRevision": 1,
+          "deviceCleanAt": "2026-09-30T23:45:34Z",
+          "deviceCleanInventoryRevision": 2,
+          "eligibilityHash": "sha256:13553f0c7d2652ad338298fc0eae33a8bd203f1e660696794a44fe56215ca66b",
+          "evictionRequestedAt": "2026-09-30T23:45:14Z",
+          "name": "cvk-topology-drain-b-0926-67ff7d64b-rgzhg",
+          "namespace": "cvk-pr194-workloads",
+          "pdbs": [
+            {
+              "apiVersion": "policy/v1",
+              "currentHealthy": 2,
+              "desiredHealthy": 1,
+              "disruptionsAllowed": 1,
+              "expectedPods": 2,
+              "generation": 2,
+              "kind": "PodDisruptionBudget",
+              "name": "cvk-topology-drain-0926",
+              "namespace": "cvk-pr194-workloads",
+              "observedGeneration": 2,
+              "uid": "3b314af5-06eb-4fb4-8ae5-252834cbdfde"
+            }
+          ],
+          "phase": "Complete",
+          "protectedAt": "2026-09-30T23:44:19Z",
+          "releasedAt": "2026-09-30T23:45:36Z",
+          "terminationGracePeriodSeconds": 30,
+          "uid": "bdd08bc5-3347-410f-bd2f-3415394dd23c",
+          "workloadController": {
+            "apiVersion": "apps/v1",
+            "generation": 3,
+            "kind": "Deployment",
+            "name": "cvk-topology-drain-b-0926",
+            "namespace": "cvk-pr194-workloads",
+            "uid": "d2ab152c-51d3-47c5-903d-6a41d9301962"
+          }
+        }
+      ],
+      "policyEpoch": 1,
+      "protocolVersion": "pdb-drain-v1",
+      "recoveryDeadline": "2026-10-01T00:10:22Z",
+      "reservationID": "3ccb2a173ecdebfc0d2ae4a498d656df",
+      "sessionToken": "[REDACTED sha256:e7cc40ae578334312ef74efc0de2e8c8337c4fb8070b7f0ba4544881eef25361]",
+      "startedAt": "2026-09-30T23:44:15Z",
+      "state": "Settled",
+      "updatedAt": "2026-10-01T00:09:25Z"
+    },
+    "message": "upgrade complete",
+    "observedGeneration": 1,
+    "phase": "Succeeded",
+    "previousVersion": "17.18.02.0.4112.1766116039",
+    "primarySupervisorActivationRequested": true,
+    "primarySupervisorInstallRequested": true,
+    "primarySupervisorInstalled": true,
+    "runningVersion": "17.18.03.0.5496.1776157760",
+    "sourceDigest": "sha256:df6055e4e1e88135b311998d721ff6d20a94a475113c1ff678fb65d14dc11049",
+    "sourceSize": 1249368115,
+    "startTime": "2026-09-30T23:46:32Z",
+    "transferProgress": {
+      "bytesTransferred": 1249368115,
+      "percent": 100,
+      "totalBytes": 1249368115
+    },
+    "validatedVersion": "17.18.03.0.5496.1776157760",
+    "workerControl": {
+      "effectiveState": "Settled",
+      "message": "managed upgrade has a terminal and conclusively settled worker outcome",
+      "observedAdmissionState": "Settled",
+      "observedControlRevision": 0,
+      "observedPolicyEpoch": 1,
+      "observedWorkerConfigRevision": "sha256:adfc85f6213dcf043075006b0e70c7f2fb391583b905955bc9484a10b444eb46",
+      "updatedAt": "2026-10-01T00:09:26Z"
+    },
+    "workerDrain": {
+      "inventoryComplete": true,
+      "inventoryObservedAt": "2026-09-30T23:45:34Z",
+      "inventoryRevision": 2,
+      "message": "Complete device inventory proves the selected Pod UID is absent.",
+      "observedControlRevision": 0,
+      "observedPolicyEpoch": 1,
+      "observedSessionToken": "[REDACTED sha256:e7cc40ae578334312ef74efc0de2e8c8337c4fb8070b7f0ba4544881eef25361]",
+      "observedWorkerConfigRevision": "sha256:da1d805f3139ac76ba01ed622c14738d20bdf51f99bc60bc9f7ae53afd2ddf4d",
+      "observedWorkerPodUID": "149dd4fb-3f77-44fc-b1ad-a2f9c55d684a",
+      "protocolVersion": "pdb-drain-v1",
+      "reason": "InventoryComplete",
+      "updatedAt": "2026-09-30T23:45:34Z"
+    }
+  }
+}

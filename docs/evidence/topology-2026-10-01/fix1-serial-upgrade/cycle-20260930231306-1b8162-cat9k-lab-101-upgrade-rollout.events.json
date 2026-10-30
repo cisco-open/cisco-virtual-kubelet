@@ -1,0 +1,195 @@
+{
+  "apiVersion": "v1",
+  "items": [
+    {
+      "apiVersion": "v1",
+      "count": 1,
+      "eventTime": null,
+      "firstTimestamp": "2026-09-30T23:43:55Z",
+      "involvedObject": {
+        "apiVersion": "ops.cisco.vk/v1alpha1",
+        "kind": "IOSXESoftwareRollout",
+        "name": "cycle-20260930231306-1b8162-cat9k-lab-101-upgrade-rollout",
+        "namespace": "cvk-live",
+        "resourceVersion": "9422732",
+        "uid": "db0e9007-8260-4306-a9d9-9999425b04e8"
+      },
+      "kind": "Event",
+      "lastTimestamp": "2026-09-30T23:43:55Z",
+      "message": "frozen plan created; approval of the exact plan hash is required",
+      "metadata": {
+        "creationTimestamp": "2026-09-30T23:43:55Z",
+        "name": "cycle-20260930231306-1b8162-cat9k-lab-101-upgrade-rollout.18da3de06a5d08aa",
+        "namespace": "cvk-live",
+        "resourceVersion": "9422733",
+        "uid": "81d240e6-3f1f-49f0-b6d5-096faed459f1"
+      },
+      "reason": "PlanFrozen",
+      "reportingComponent": "iosxe-software-rollout-controller",
+      "reportingInstance": "",
+      "source": {
+        "component": "iosxe-software-rollout-controller"
+      },
+      "type": "Normal"
+    },
+    {
+      "apiVersion": "v1",
+      "count": 1,
+      "eventTime": null,
+      "firstTimestamp": "2026-09-30T23:44:01Z",
+      "involvedObject": {
+        "apiVersion": "ops.cisco.vk/v1alpha1",
+        "kind": "IOSXESoftwareRollout",
+        "name": "cycle-20260930231306-1b8162-cat9k-lab-101-upgrade-rollout",
+        "namespace": "cvk-live",
+        "resourceVersion": "9422750",
+        "uid": "db0e9007-8260-4306-a9d9-9999425b04e8"
+      },
+      "kind": "Event",
+      "lastTimestamp": "2026-09-30T23:44:01Z",
+      "message": "exact frozen plan hash was approved",
+      "metadata": {
+        "creationTimestamp": "2026-09-30T23:44:01Z",
+        "name": "cycle-20260930231306-1b8162-cat9k-lab-101-upgrade-rollout.18da3de1ad1aaa2b",
+        "namespace": "cvk-live",
+        "resourceVersion": "9422751",
+        "uid": "8bd43724-9f82-45a7-bb72-3fed8b30d1bf"
+      },
+      "reason": "RolloutApproved",
+      "reportingComponent": "iosxe-software-rollout-controller",
+      "reportingInstance": "",
+      "source": {
+        "component": "iosxe-software-rollout-controller"
+      },
+      "type": "Normal"
+    },
+    {
+      "apiVersion": "v1",
+      "count": 1,
+      "eventTime": null,
+      "firstTimestamp": "2026-09-30T23:44:03Z",
+      "involvedObject": {
+        "apiVersion": "ops.cisco.vk/v1alpha1",
+        "kind": "IOSXESoftwareRollout",
+        "name": "cycle-20260930231306-1b8162-cat9k-lab-101-upgrade-rollout",
+        "namespace": "cvk-live",
+        "resourceVersion": "9422760",
+        "uid": "db0e9007-8260-4306-a9d9-9999425b04e8"
+      },
+      "kind": "Event",
+      "lastTimestamp": "2026-09-30T23:44:03Z",
+      "message": "campaign is executing within frozen topology budgets",
+      "metadata": {
+        "creationTimestamp": "2026-09-30T23:44:03Z",
+        "name": "cycle-20260930231306-1b8162-cat9k-lab-101-upgrade-rollout.18da3de21488cdf0",
+        "namespace": "cvk-live",
+        "resourceVersion": "9422761",
+        "uid": "e2bf9c8d-d0e1-48bc-bb21-aaee9ee7400e"
+      },
+      "reason": "RolloutExecuting",
+      "reportingComponent": "iosxe-software-rollout-controller",
+      "reportingInstance": "",
+      "source": {
+        "component": "iosxe-software-rollout-controller"
+      },
+      "type": "Normal"
+    },
+    {
+      "apiVersion": "v1",
+      "count": 1,
+      "eventTime": null,
+      "firstTimestamp": "2026-09-30T23:59:17Z",
+      "involvedObject": {
+        "apiVersion": "ops.cisco.vk/v1alpha1",
+        "kind": "IOSXESoftwareRollout",
+        "name": "cycle-20260930231306-1b8162-cat9k-lab-101-upgrade-rollout",
+        "namespace": "cvk-live",
+        "resourceVersion": "9425416",
+        "uid": "db0e9007-8260-4306-a9d9-9999425b04e8"
+      },
+      "kind": "Event",
+      "lastTimestamp": "2026-09-30T23:59:17Z",
+      "message": "campaign is holding reservations during the continuous post-mutation health soak",
+      "metadata": {
+        "creationTimestamp": "2026-09-30T23:59:17Z",
+        "name": "cycle-20260930231306-1b8162-cat9k-lab-101-upgrade-rollout.18da3eb70e97e528",
+        "namespace": "cvk-live",
+        "resourceVersion": "9425417",
+        "uid": "f3196302-149f-4e32-9eea-d4739cf0603e"
+      },
+      "reason": "RolloutSoaking",
+      "reportingComponent": "iosxe-software-rollout-controller",
+      "reportingInstance": "",
+      "source": {
+        "component": "iosxe-software-rollout-controller"
+      },
+      "type": "Normal"
+    },
+    {
+      "apiVersion": "v1",
+      "count": 1,
+      "eventTime": null,
+      "firstTimestamp": "2026-10-01T00:09:26Z",
+      "involvedObject": {
+        "apiVersion": "ops.cisco.vk/v1alpha1",
+        "kind": "IOSXESoftwareRollout",
+        "name": "cycle-20260930231306-1b8162-cat9k-lab-101-upgrade-rollout",
+        "namespace": "cvk-live",
+        "resourceVersion": "9426952",
+        "uid": "db0e9007-8260-4306-a9d9-9999425b04e8"
+      },
+      "kind": "Event",
+      "lastTimestamp": "2026-10-01T00:09:26Z",
+      "message": "campaign is waiting for a reservation, worker acknowledgement, or health gate",
+      "metadata": {
+        "creationTimestamp": "2026-10-01T00:09:26Z",
+        "name": "cycle-20260930231306-1b8162-cat9k-lab-101-upgrade-rollout.18da3f44dddcbc36",
+        "namespace": "cvk-live",
+        "resourceVersion": "9426953",
+        "uid": "86cea66c-af99-4fb9-8f62-84e216447da3"
+      },
+      "reason": "RolloutExecuting",
+      "reportingComponent": "iosxe-software-rollout-controller",
+      "reportingInstance": "",
+      "source": {
+        "component": "iosxe-software-rollout-controller"
+      },
+      "type": "Normal"
+    },
+    {
+      "apiVersion": "v1",
+      "count": 1,
+      "eventTime": null,
+      "firstTimestamp": "2026-10-01T00:09:30Z",
+      "involvedObject": {
+        "apiVersion": "ops.cisco.vk/v1alpha1",
+        "kind": "IOSXESoftwareRollout",
+        "name": "cycle-20260930231306-1b8162-cat9k-lab-101-upgrade-rollout",
+        "namespace": "cvk-live",
+        "resourceVersion": "9426967",
+        "uid": "db0e9007-8260-4306-a9d9-9999425b04e8"
+      },
+      "kind": "Event",
+      "lastTimestamp": "2026-10-01T00:09:30Z",
+      "message": "all targets completed and passed their post-mutation health gates",
+      "metadata": {
+        "creationTimestamp": "2026-10-01T00:09:30Z",
+        "name": "cycle-20260930231306-1b8162-cat9k-lab-101-upgrade-rollout.18da3f45c3e36eff",
+        "namespace": "cvk-live",
+        "resourceVersion": "9426968",
+        "uid": "15e0762f-87a2-48b7-a0da-227df56da491"
+      },
+      "reason": "RolloutSucceeded",
+      "reportingComponent": "iosxe-software-rollout-controller",
+      "reportingInstance": "",
+      "source": {
+        "component": "iosxe-software-rollout-controller"
+      },
+      "type": "Normal"
+    }
+  ],
+  "kind": "List",
+  "metadata": {
+    "resourceVersion": ""
+  }
+}

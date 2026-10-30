@@ -1,0 +1,28 @@
+apiVersion: v1
+data:
+  policy.json: '{"appHostingServiceAccountName":"cisco-vk-cisco-virtual-kubelet-app-hosting","configLeaseNamespace":"","domainMaxConcurrentTransfers":{"distribution.cisco.vk/cache-domain":1,"topology.kubernetes.io/region":1},"domainMaxUnavailable":{"operations.cisco.vk/redundancy-domain":1,"topology.kubernetes.io/zone":1},"fleetSelector":{"matchExpressions":[],"matchLabels":{"topology.cisco.vk/lab-set":"pr194-physical-c9k","topology.cisco.vk/managed":"true"}},"globalMaxConcurrentTransfers":1,"globalMaxUnavailable":1,"healthFreshnessSeconds":300,"ledgerName":"cisco-vk-cisco-virtual-kubelet-topology-ledger","maxActiveReservations":3,"maxCampaignTargets":3,"maxLedgerBytes":262144,"networkManagementServiceAccountName":"cisco-vk-cisco-virtual-kubelet-network-management","projectedTopologyKeys":["topology.kubernetes.io/region","topology.kubernetes.io/zone","topology.cisco.vk/site","topology.cisco.vk/lab-node"],"requiredTopologyKeys":["topology.kubernetes.io/region","topology.kubernetes.io/zone","topology.cisco.vk/site","topology.cisco.vk/lab-node","topology.cisco.vk/lab-set","distribution.cisco.vk/cache-domain","operations.cisco.vk/redundancy-domain"],"riskGroups":[{"maxAggregateTransferBytesPerSecond":25000000,"maxConcurrentTransfers":1,"maxUnavailable":1,"name":"cat9k-103-path","selector":{"matchExpressions":[],"matchLabels":{"topology.cisco.vk/lab-node":"cat9k-lab-103"}}}],"version":"v1","workloadDrain":{"allowedNamespaces":["cvk-pr194-workloads"],"enabled":true,"maxPods":2,"maxTerminationGraceSeconds":60,"maxTimeoutSeconds":3600}}'
+kind: ConfigMap
+metadata:
+  annotations:
+    helm.sh/resource-policy: keep
+    meta.helm.sh/release-name: cisco-vk
+    meta.helm.sh/release-namespace: cisco-vk-system
+    topology.cisco.vk/admission-contract-version: v2
+    topology.cisco.vk/admission-policy-prefix: cisco-vk-cisco-virtual-kubelet
+    topology.cisco.vk/app-hosting-service-account: cisco-vk-cisco-virtual-kubelet-app-hosting
+    topology.cisco.vk/config-lease-namespace: ""
+    topology.cisco.vk/ledger-uid: 8587a09e-451e-43a1-b638-0b2c11af78b6
+    topology.cisco.vk/managed-policy: "true"
+    topology.cisco.vk/network-management-service-account: cisco-vk-cisco-virtual-kubelet-network-management
+  creationTimestamp: "2026-09-19T13:34:26Z"
+  labels:
+    app.kubernetes.io/component: topology-policy
+    app.kubernetes.io/instance: cisco-vk
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: cisco-virtual-kubelet
+    app.kubernetes.io/version: v2026.9.2
+    helm.sh/chart: cisco-virtual-kubelet-0.1.0
+  name: cisco-vk-cisco-virtual-kubelet-topology-policy
+  namespace: cisco-vk-system
+  resourceVersion: "9694052"
+  uid: 525ff87f-b74a-44c4-b54e-408e63a3a2e7

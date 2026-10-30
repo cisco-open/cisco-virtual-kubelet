@@ -1,0 +1,54 @@
+{
+  "namespace": "cvk-pr194-workloads",
+  "ownerGroups": {
+    "ReplicaSet/cvk-topology-drain-a-0926-649c457fff": 1,
+    "ReplicaSet/cvk-topology-drain-b-0926-67ff7d64b": 1
+  },
+  "pdbs": [
+    {
+      "currentHealthy": 2,
+      "desiredHealthy": 1,
+      "disruptionsAllowed": 1,
+      "metadata": {
+        "creationTimestamp": "2026-09-26T07:53:57Z",
+        "generation": 2,
+        "name": "cvk-topology-drain-0926",
+        "namespace": "cvk-pr194-workloads",
+        "resourceVersion": "9423201",
+        "uid": "3b314af5-06eb-4fb4-8ae5-252834cbdfde"
+      }
+    }
+  ],
+  "pods": [
+    {
+      "deleting": false,
+      "metadata": {
+        "creationTimestamp": "2026-09-30T23:44:22Z",
+        "generation": 1,
+        "name": "cvk-topology-drain-a-0926-649c457fff-6pzrc",
+        "namespace": "cvk-pr194-workloads",
+        "resourceVersion": "9423076",
+        "uid": "05aab144-b920-49ec-88a5-31ae2e8f5348"
+      },
+      "nodeName": "cat9k-live",
+      "owner": "ReplicaSet/cvk-topology-drain-a-0926-649c457fff",
+      "phase": "Running",
+      "ready": true
+    },
+    {
+      "deleting": false,
+      "metadata": {
+        "creationTimestamp": "2026-09-30T23:45:16Z",
+        "generation": 1,
+        "name": "cvk-topology-drain-b-0926-67ff7d64b-7rhn6",
+        "namespace": "cvk-pr194-workloads",
+        "resourceVersion": "9423313",
+        "uid": "a0878a6f-f504-48db-9cea-58dde2d28038"
+      },
+      "nodeName": "cat9k-live",
+      "owner": "ReplicaSet/cvk-topology-drain-b-0926-67ff7d64b",
+      "phase": "Running",
+      "ready": true
+    }
+  ]
+}

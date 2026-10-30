@@ -1,0 +1,19 @@
+# Executed lab fixture, not a production installation manifest.
+apiVersion: v1
+kind: Service
+metadata:
+  name: cvk-topology-drain-web
+  namespace: cvk-pr194-workloads
+  labels:
+    app.kubernetes.io/part-of: cvk-pr-fixes-0926
+    operations.cisco.vk/purpose: roadmap-service-probe
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/part-of: cvk-pr-fixes-0926
+    operations.cisco.vk/drain-safe: "true"
+  ports:
+    - name: http
+      port: 80
+      targetPort: 80
+      protocol: TCP

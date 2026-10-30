@@ -1,0 +1,141 @@
+LAST SEEN   TYPE      REASON                      OBJECT                                                                              MESSAGE
+30m         Normal    Scheduled                   pod/u6afd6bd0-284d-4ee2-a6e4-638ca07976b4-network-6f77ff856d-gd2mh                  Successfully assigned cvk-live/u6afd6bd0-284d-4ee2-a6e4-638ca07976b4-network-6f77ff856d-gd2mh to ubuntu16
+29m         Normal    Scheduled                   pod/u782dc4b2-7e43-4188-8436-87633f0bf4fb-network-54fbcb798-b889f                   Successfully assigned cvk-live/u782dc4b2-7e43-4188-8436-87633f0bf4fb-network-54fbcb798-b889f to ubuntu16
+38m         Normal    Scheduled                   pod/cat9k-lab-103-vk-8586d4b5fd-vwhd9                                               Successfully assigned cvk-live/cat9k-lab-103-vk-8586d4b5fd-vwhd9 to ubuntu16
+30m         Normal    Scheduled                   pod/cat9k-live-vk-68b76574d9-mv2jk                                                  Successfully assigned cvk-live/cat9k-live-vk-68b76574d9-mv2jk to ubuntu16
+39m         Normal    Scheduled                   pod/cat9k-live-vk-7499f7977-t28ms                                                   Successfully assigned cvk-live/cat9k-live-vk-7499f7977-t28ms to ubuntu16
+31m         Normal    Scheduled                   pod/cat9k-lab-101-vk-5f689b6b88-v2rgr                                               Successfully assigned cvk-live/cat9k-lab-101-vk-5f689b6b88-v2rgr to ubuntu16
+38m         Normal    Scheduled                   pod/u6afd6bd0-284d-4ee2-a6e4-638ca07976b4-network-7b7c756dcb-g5g4w                  Successfully assigned cvk-live/u6afd6bd0-284d-4ee2-a6e4-638ca07976b4-network-7b7c756dcb-g5g4w to ubuntu16
+39m         Normal    Scheduled                   pod/cat9k-lab-101-vk-d64fbc44-x5hxk                                                 Successfully assigned cvk-live/cat9k-lab-101-vk-d64fbc44-x5hxk to ubuntu16
+38m         Normal    Scheduled                   pod/u782dc4b2-7e43-4188-8436-87633f0bf4fb-network-56466b97fd-kkh58                  Successfully assigned cvk-live/u782dc4b2-7e43-4188-8436-87633f0bf4fb-network-56466b97fd-kkh58 to ubuntu16
+30m         Normal    Scheduled                   pod/cat9k-lab-103-vk-5b98c5c898-kn864                                               Successfully assigned cvk-live/cat9k-lab-103-vk-5b98c5c898-kn864 to ubuntu16
+30m         Normal    Scheduled                   pod/u20f3e68e-b127-4f2e-9a36-b66945135051-network-69cdf4ffd4-2882n                  Successfully assigned cvk-live/u20f3e68e-b127-4f2e-9a36-b66945135051-network-69cdf4ffd4-2882n to ubuntu16
+39m         Normal    Scheduled                   pod/u20f3e68e-b127-4f2e-9a36-b66945135051-network-848485cf88-lmzfl                  Successfully assigned cvk-live/u20f3e68e-b127-4f2e-9a36-b66945135051-network-848485cf88-lmzfl to ubuntu16
+12d         Normal    Succeeded                   deviceoperation/pr194-preflight-dir-100-20260919                                    3 command(s) completed
+12d         Normal    Succeeded                   deviceoperation/pr194-preflight-dir-103-20260919                                    3 command(s) completed
+12d         Normal    Succeeded                   deviceoperation/pr194-preflight-dir-101-20260919                                    3 command(s) completed
+39m         Normal    SuccessfulDelete            replicaset/cat9k-lab-101-vk-856fb9dbf4                                              Deleted pod: cat9k-lab-101-vk-856fb9dbf4-njsb8
+39m         Normal    ScalingReplicaSet           deployment/cat9k-lab-101-vk                                                         Scaled down replica set cat9k-lab-101-vk-856fb9dbf4 from 1 to 0
+39m         Normal    Killing                     pod/cat9k-lab-101-vk-856fb9dbf4-njsb8                                               Stopping container cisco-vk
+39m         Normal    ScalingReplicaSet           deployment/cat9k-lab-101-vk                                                         Scaled up replica set cat9k-lab-101-vk-d64fbc44 from 0 to 1
+39m         Normal    SuccessfulCreate            replicaset/cat9k-lab-101-vk-d64fbc44                                                Created pod: cat9k-lab-101-vk-d64fbc44-x5hxk
+39m         Normal    SuccessfulDelete            replicaset/cat9k-live-vk-5c7ddc698c                                                 Deleted pod: cat9k-live-vk-5c7ddc698c-4c7pf
+39m         Normal    Killing                     pod/cat9k-live-vk-5c7ddc698c-4c7pf                                                  Stopping container cisco-vk
+39m         Normal    ScalingReplicaSet           deployment/cat9k-live-vk                                                            Scaled down replica set cat9k-live-vk-5c7ddc698c from 1 to 0
+39m         Normal    ScalingReplicaSet           deployment/cat9k-live-vk                                                            Scaled up replica set cat9k-live-vk-7499f7977 from 0 to 1
+39m         Normal    SuccessfulCreate            replicaset/cat9k-live-vk-7499f7977                                                  Created pod: cat9k-live-vk-7499f7977-t28ms
+39m         Normal    Pulled                      pod/cat9k-lab-101-vk-d64fbc44-x5hxk                                                 Container image "cvk-tas-extentions:0f4a013a" already present on machine and can be accessed by the pod
+39m         Normal    Created                     pod/cat9k-lab-101-vk-d64fbc44-x5hxk                                                 Container created
+39m         Normal    Started                     pod/cat9k-lab-101-vk-d64fbc44-x5hxk                                                 Container started
+39m         Normal    SuccessfulDelete            replicaset/u20f3e68e-b127-4f2e-9a36-b66945135051-network-776c9d9bb                  Deleted pod: u20f3e68e-b127-4f2e-9a36-b66945135051-network-776c9d9bb-bbrxf
+39m         Normal    ScalingReplicaSet           deployment/u20f3e68e-b127-4f2e-9a36-b66945135051-network                            Scaled down replica set u20f3e68e-b127-4f2e-9a36-b66945135051-network-776c9d9bb from 1 to 0
+39m         Normal    Killing                     pod/u20f3e68e-b127-4f2e-9a36-b66945135051-network-776c9d9bb-bbrxf                   Stopping container cisco-vk
+39m         Normal    SuccessfulCreate            replicaset/u20f3e68e-b127-4f2e-9a36-b66945135051-network-848485cf88                 Created pod: u20f3e68e-b127-4f2e-9a36-b66945135051-network-848485cf88-lmzfl
+39m         Normal    ScalingReplicaSet           deployment/u20f3e68e-b127-4f2e-9a36-b66945135051-network                            Scaled up replica set u20f3e68e-b127-4f2e-9a36-b66945135051-network-848485cf88 from 0 to 1
+39m         Normal    Started                     pod/u20f3e68e-b127-4f2e-9a36-b66945135051-network-848485cf88-lmzfl                  Container started
+39m         Normal    Created                     pod/u20f3e68e-b127-4f2e-9a36-b66945135051-network-848485cf88-lmzfl                  Container created
+39m         Normal    Pulled                      pod/u20f3e68e-b127-4f2e-9a36-b66945135051-network-848485cf88-lmzfl                  Container image "cvk-tas-extentions:0f4a013a" already present on machine and can be accessed by the pod
+38m         Normal    SuccessfulCreate            replicaset/cat9k-lab-103-vk-8586d4b5fd                                              Created pod: cat9k-lab-103-vk-8586d4b5fd-vwhd9
+38m         Normal    ScalingReplicaSet           deployment/cat9k-lab-103-vk                                                         Scaled down replica set cat9k-lab-103-vk-5f56549b56 from 1 to 0
+38m         Normal    ScalingReplicaSet           deployment/cat9k-lab-103-vk                                                         Scaled up replica set cat9k-lab-103-vk-8586d4b5fd from 0 to 1
+38m         Normal    SuccessfulDelete            replicaset/cat9k-lab-103-vk-5f56549b56                                              Deleted pod: cat9k-lab-103-vk-5f56549b56-qvs6d
+38m         Normal    Killing                     pod/cat9k-lab-103-vk-5f56549b56-qvs6d                                               Stopping container cisco-vk
+38m         Normal    Pulled                      pod/cat9k-live-vk-7499f7977-t28ms                                                   Container image "cvk-tas-extentions:0f4a013a" already present on machine and can be accessed by the pod
+38m         Normal    Created                     pod/cat9k-live-vk-7499f7977-t28ms                                                   Container created
+38m         Normal    Started                     pod/cat9k-live-vk-7499f7977-t28ms                                                   Container started
+38m         Normal    Killing                     pod/u6afd6bd0-284d-4ee2-a6e4-638ca07976b4-network-6f95b7fc6b-dchcp                  Stopping container cisco-vk
+38m         Normal    SuccessfulDelete            replicaset/u6afd6bd0-284d-4ee2-a6e4-638ca07976b4-network-6f95b7fc6b                 Deleted pod: u6afd6bd0-284d-4ee2-a6e4-638ca07976b4-network-6f95b7fc6b-dchcp
+38m         Normal    ScalingReplicaSet           deployment/u6afd6bd0-284d-4ee2-a6e4-638ca07976b4-network                            Scaled down replica set u6afd6bd0-284d-4ee2-a6e4-638ca07976b4-network-6f95b7fc6b from 1 to 0
+38m         Normal    Pulled                      pod/u6afd6bd0-284d-4ee2-a6e4-638ca07976b4-network-7b7c756dcb-g5g4w                  Container image "cvk-tas-extentions:0f4a013a" already present on machine and can be accessed by the pod
+38m         Normal    ScalingReplicaSet           deployment/u6afd6bd0-284d-4ee2-a6e4-638ca07976b4-network                            Scaled up replica set u6afd6bd0-284d-4ee2-a6e4-638ca07976b4-network-7b7c756dcb from 0 to 1
+38m         Normal    SuccessfulCreate            replicaset/u6afd6bd0-284d-4ee2-a6e4-638ca07976b4-network-7b7c756dcb                 Created pod: u6afd6bd0-284d-4ee2-a6e4-638ca07976b4-network-7b7c756dcb-g5g4w
+38m         Normal    Started                     pod/u6afd6bd0-284d-4ee2-a6e4-638ca07976b4-network-7b7c756dcb-g5g4w                  Container started
+38m         Normal    Created                     pod/u6afd6bd0-284d-4ee2-a6e4-638ca07976b4-network-7b7c756dcb-g5g4w                  Container created
+38m         Normal    Pulled                      pod/cat9k-lab-103-vk-8586d4b5fd-vwhd9                                               Container image "cvk-tas-extentions:0f4a013a" already present on machine and can be accessed by the pod
+38m         Normal    Created                     pod/cat9k-lab-103-vk-8586d4b5fd-vwhd9                                               Container created
+38m         Normal    Started                     pod/cat9k-lab-103-vk-8586d4b5fd-vwhd9                                               Container started
+38m         Normal    ScalingReplicaSet           deployment/u782dc4b2-7e43-4188-8436-87633f0bf4fb-network                            Scaled down replica set u782dc4b2-7e43-4188-8436-87633f0bf4fb-network-65f554f95b from 1 to 0
+38m         Normal    Killing                     pod/u782dc4b2-7e43-4188-8436-87633f0bf4fb-network-65f554f95b-gxjpr                  Stopping container cisco-vk
+38m         Normal    SuccessfulDelete            replicaset/u782dc4b2-7e43-4188-8436-87633f0bf4fb-network-65f554f95b                 Deleted pod: u782dc4b2-7e43-4188-8436-87633f0bf4fb-network-65f554f95b-gxjpr
+38m         Normal    ScalingReplicaSet           deployment/u782dc4b2-7e43-4188-8436-87633f0bf4fb-network                            Scaled up replica set u782dc4b2-7e43-4188-8436-87633f0bf4fb-network-56466b97fd from 0 to 1
+38m         Normal    SuccessfulCreate            replicaset/u782dc4b2-7e43-4188-8436-87633f0bf4fb-network-56466b97fd                 Created pod: u782dc4b2-7e43-4188-8436-87633f0bf4fb-network-56466b97fd-kkh58
+38m         Normal    Created                     pod/u782dc4b2-7e43-4188-8436-87633f0bf4fb-network-56466b97fd-kkh58                  Container created
+38m         Normal    Pulled                      pod/u782dc4b2-7e43-4188-8436-87633f0bf4fb-network-56466b97fd-kkh58                  Container image "cvk-tas-extentions:0f4a013a" already present on machine and can be accessed by the pod
+38m         Normal    Started                     pod/u782dc4b2-7e43-4188-8436-87633f0bf4fb-network-56466b97fd-kkh58                  Container started
+31m         Normal    Killing                     pod/cat9k-lab-101-vk-d64fbc44-x5hxk                                                 Stopping container cisco-vk
+31m         Normal    SuccessfulDelete            replicaset/cat9k-lab-101-vk-d64fbc44                                                Deleted pod: cat9k-lab-101-vk-d64fbc44-x5hxk
+31m         Normal    ScalingReplicaSet           deployment/cat9k-lab-101-vk                                                         Scaled down replica set cat9k-lab-101-vk-d64fbc44 from 1 to 0
+31m         Normal    SuccessfulCreate            replicaset/cat9k-lab-101-vk-5f689b6b88                                              Created pod: cat9k-lab-101-vk-5f689b6b88-v2rgr
+31m         Normal    ScalingReplicaSet           deployment/cat9k-lab-101-vk                                                         Scaled up replica set cat9k-lab-101-vk-5f689b6b88 from 0 to 1
+31m         Normal    Pulled                      pod/cat9k-lab-101-vk-5f689b6b88-v2rgr                                               Container image "cvk-tas-extentions:2f27f302" already present on machine and can be accessed by the pod
+31m         Normal    Created                     pod/cat9k-lab-101-vk-5f689b6b88-v2rgr                                               Container created
+31m         Normal    Started                     pod/cat9k-lab-101-vk-5f689b6b88-v2rgr                                               Container started
+30m         Normal    SuccessfulDelete            replicaset/cat9k-live-vk-7499f7977                                                  Deleted pod: cat9k-live-vk-7499f7977-t28ms
+30m         Normal    Killing                     pod/cat9k-live-vk-7499f7977-t28ms                                                   Stopping container cisco-vk
+30m         Normal    ScalingReplicaSet           deployment/cat9k-live-vk                                                            Scaled down replica set cat9k-live-vk-7499f7977 from 1 to 0
+30m         Normal    SuccessfulCreate            replicaset/cat9k-live-vk-68b76574d9                                                 Created pod: cat9k-live-vk-68b76574d9-mv2jk
+30m         Normal    ScalingReplicaSet           deployment/cat9k-live-vk                                                            Scaled up replica set cat9k-live-vk-68b76574d9 from 0 to 1
+30m         Normal    Killing                     pod/u20f3e68e-b127-4f2e-9a36-b66945135051-network-848485cf88-lmzfl                  Stopping container cisco-vk
+30m         Normal    SuccessfulDelete            replicaset/u20f3e68e-b127-4f2e-9a36-b66945135051-network-848485cf88                 Deleted pod: u20f3e68e-b127-4f2e-9a36-b66945135051-network-848485cf88-lmzfl
+30m         Normal    ScalingReplicaSet           deployment/u20f3e68e-b127-4f2e-9a36-b66945135051-network                            Scaled down replica set u20f3e68e-b127-4f2e-9a36-b66945135051-network-848485cf88 from 1 to 0
+30m         Normal    SuccessfulCreate            replicaset/u20f3e68e-b127-4f2e-9a36-b66945135051-network-69cdf4ffd4                 Created pod: u20f3e68e-b127-4f2e-9a36-b66945135051-network-69cdf4ffd4-2882n
+30m         Normal    ScalingReplicaSet           deployment/u20f3e68e-b127-4f2e-9a36-b66945135051-network                            Scaled up replica set u20f3e68e-b127-4f2e-9a36-b66945135051-network-69cdf4ffd4 from 0 to 1
+30m         Normal    Pulled                      pod/u20f3e68e-b127-4f2e-9a36-b66945135051-network-69cdf4ffd4-2882n                  Container image "cvk-tas-extentions:2f27f302" already present on machine and can be accessed by the pod
+30m         Normal    Created                     pod/u20f3e68e-b127-4f2e-9a36-b66945135051-network-69cdf4ffd4-2882n                  Container created
+30m         Normal    Started                     pod/u20f3e68e-b127-4f2e-9a36-b66945135051-network-69cdf4ffd4-2882n                  Container started
+30m         Normal    Killing                     pod/cat9k-lab-103-vk-8586d4b5fd-vwhd9                                               Stopping container cisco-vk
+30m         Normal    SuccessfulDelete            replicaset/cat9k-lab-103-vk-8586d4b5fd                                              Deleted pod: cat9k-lab-103-vk-8586d4b5fd-vwhd9
+30m         Normal    ScalingReplicaSet           deployment/cat9k-lab-103-vk                                                         Scaled down replica set cat9k-lab-103-vk-8586d4b5fd from 1 to 0
+30m         Normal    SuccessfulCreate            replicaset/cat9k-lab-103-vk-5b98c5c898                                              Created pod: cat9k-lab-103-vk-5b98c5c898-kn864
+30m         Normal    ScalingReplicaSet           deployment/cat9k-lab-103-vk                                                         Scaled up replica set cat9k-lab-103-vk-5b98c5c898 from 0 to 1
+30m         Normal    Pulled                      pod/cat9k-live-vk-68b76574d9-mv2jk                                                  Container image "cvk-tas-extentions:2f27f302" already present on machine and can be accessed by the pod
+30m         Normal    Created                     pod/cat9k-live-vk-68b76574d9-mv2jk                                                  Container created
+30m         Normal    Started                     pod/cat9k-live-vk-68b76574d9-mv2jk                                                  Container started
+30m         Normal    SuccessfulCreate            replicaset/u6afd6bd0-284d-4ee2-a6e4-638ca07976b4-network-6f77ff856d                 Created pod: u6afd6bd0-284d-4ee2-a6e4-638ca07976b4-network-6f77ff856d-gd2mh
+30m         Normal    Killing                     pod/u6afd6bd0-284d-4ee2-a6e4-638ca07976b4-network-7b7c756dcb-g5g4w                  Stopping container cisco-vk
+30m         Normal    SuccessfulDelete            replicaset/u6afd6bd0-284d-4ee2-a6e4-638ca07976b4-network-7b7c756dcb                 Deleted pod: u6afd6bd0-284d-4ee2-a6e4-638ca07976b4-network-7b7c756dcb-g5g4w
+30m         Normal    ScalingReplicaSet           deployment/u6afd6bd0-284d-4ee2-a6e4-638ca07976b4-network                            Scaled down replica set u6afd6bd0-284d-4ee2-a6e4-638ca07976b4-network-7b7c756dcb from 1 to 0
+30m         Normal    ScalingReplicaSet           deployment/u6afd6bd0-284d-4ee2-a6e4-638ca07976b4-network                            Scaled up replica set u6afd6bd0-284d-4ee2-a6e4-638ca07976b4-network-6f77ff856d from 0 to 1
+30m         Normal    Pulled                      pod/u6afd6bd0-284d-4ee2-a6e4-638ca07976b4-network-6f77ff856d-gd2mh                  Container image "cvk-tas-extentions:2f27f302" already present on machine and can be accessed by the pod
+30m         Normal    Created                     pod/u6afd6bd0-284d-4ee2-a6e4-638ca07976b4-network-6f77ff856d-gd2mh                  Container created
+30m         Normal    Started                     pod/u6afd6bd0-284d-4ee2-a6e4-638ca07976b4-network-6f77ff856d-gd2mh                  Container started
+29m         Normal    Pulled                      pod/cat9k-lab-103-vk-5b98c5c898-kn864                                               Container image "cvk-tas-extentions:2f27f302" already present on machine and can be accessed by the pod
+29m         Normal    Created                     pod/cat9k-lab-103-vk-5b98c5c898-kn864                                               Container created
+29m         Normal    Started                     pod/cat9k-lab-103-vk-5b98c5c898-kn864                                               Container started
+29m         Normal    ScalingReplicaSet           deployment/u782dc4b2-7e43-4188-8436-87633f0bf4fb-network                            Scaled down replica set u782dc4b2-7e43-4188-8436-87633f0bf4fb-network-56466b97fd from 1 to 0
+29m         Normal    Killing                     pod/u782dc4b2-7e43-4188-8436-87633f0bf4fb-network-56466b97fd-kkh58                  Stopping container cisco-vk
+29m         Normal    SuccessfulDelete            replicaset/u782dc4b2-7e43-4188-8436-87633f0bf4fb-network-56466b97fd                 Deleted pod: u782dc4b2-7e43-4188-8436-87633f0bf4fb-network-56466b97fd-kkh58
+29m         Normal    SuccessfulCreate            replicaset/u782dc4b2-7e43-4188-8436-87633f0bf4fb-network-54fbcb798                  Created pod: u782dc4b2-7e43-4188-8436-87633f0bf4fb-network-54fbcb798-b889f
+29m         Normal    ScalingReplicaSet           deployment/u782dc4b2-7e43-4188-8436-87633f0bf4fb-network                            Scaled up replica set u782dc4b2-7e43-4188-8436-87633f0bf4fb-network-54fbcb798 from 0 to 1
+29m         Normal    Started                     pod/u782dc4b2-7e43-4188-8436-87633f0bf4fb-network-54fbcb798-b889f                   Container started
+29m         Normal    Created                     pod/u782dc4b2-7e43-4188-8436-87633f0bf4fb-network-54fbcb798-b889f                   Container created
+29m         Normal    Pulled                      pod/u782dc4b2-7e43-4188-8436-87633f0bf4fb-network-54fbcb798-b889f                   Container image "cvk-tas-extentions:2f27f302" already present on machine and can be accessed by the pod
+28m         Normal    NativeInstallCorroborated   iosxesoftwareupgrade/roadmap-pacing-downgrade-20261002-103-cat9k-lab-103-0f3c4e98   IOS XE native inventory and completed install-add operation prove 17.18.02.0.4112.1766116039 was installed after the gNOI stream response was lost; activating
+28m         Normal    ActivationRequested         iosxesoftwareupgrade/roadmap-pacing-downgrade-20261002-103-cat9k-lab-103-0f3c4e98   submitting gNOI OS.Activate for exact version 17.18.02.0.4112.1766116039 on the active supervisor; reload expected
+26m         Normal    ActivationResponseLost      iosxesoftwareupgrade/roadmap-pacing-downgrade-20261002-103-cat9k-lab-103-0f3c4e98   gNOI OS.Activate did not return cleanly after requesting version 17.18.02.0.4112.1766116039 on the active supervisor: gnoi OS.Activate: rpc error: code = DeadlineExceeded desc = context deadline exceeded; waiting up to 3600s for the device to report the target version
+26m         Normal    Rebooting                   iosxesoftwareupgrade/roadmap-pacing-downgrade-20261002-103-cat9k-lab-103-0f3c4e98   recovering a recorded activation request without replaying it; waiting up to 3600s for the device to report the target version
+26m         Normal    ActivationRecorded          iosxesoftwareupgrade/roadmap-pacing-downgrade-20261002-103-cat9k-lab-103-0f3c4e98   recovering a recorded activation request without replaying it; waiting up to 3600s for the device to report the target version
+20m         Normal    Succeeded                   iosxesoftwareupgrade/roadmap-pacing-downgrade-20261002-103-cat9k-lab-103-0f3c4e98   upgrade complete
+20m         Normal    DeviceReachable             iosxesoftwareupgrade/roadmap-pacing-downgrade-20261002-103-cat9k-lab-103-0f3c4e98   device gNOI endpoint is reachable; system service unsupported on target version 17.18.02.0.4112.1766116039; running final verification
+19m         Normal    RolloutSoaking              iosxesoftwarerollout/roadmap-pacing-downgrade-20261002-103                          campaign is holding reservations during the continuous post-mutation health soak
+18m         Normal    RolloutSucceeded            iosxesoftwarerollout/roadmap-pacing-downgrade-20261002-103                          all targets completed and passed their post-mutation health gates
+17m         Normal    Succeeded                   deviceoperation/roadmap-pacing-103-post-downgrade-health                            5 command(s) completed
+16m         Normal    Succeeded                   deviceoperation/roadmap-pacing-103-post-downgrade-verify                            running version: 17.18.02.0.4112.1766116039
+16m         Normal    PlanFrozen                  iosxesoftwarerollout/roadmap-pacing-upgrade-20261002-103                            frozen plan created; approval of the exact plan hash is required
+15m         Normal    RolloutApproved             iosxesoftwarerollout/roadmap-pacing-upgrade-20261002-103                            exact frozen plan hash was approved
+15m         Normal    RolloutExecuting            iosxesoftwarerollout/roadmap-pacing-upgrade-20261002-103                            campaign is executing within frozen topology budgets
+15m         Normal    Pending                     iosxesoftwareupgrade/roadmap-pacing-upgrade-20261002-103-cat9k-lab-103-55f6d2ef
+15m         Normal    Resolving                   iosxesoftwareupgrade/roadmap-pacing-upgrade-20261002-103-cat9k-lab-103-55f6d2ef     preflight passed, resolving image
+15m         Normal    TransferPending             iosxesoftwareupgrade/roadmap-pacing-upgrade-20261002-103-cat9k-lab-103-55f6d2ef     preflight passed; resolving a content-addressed image for gNOI OS.Install
+10m         Normal    NativeInstallCorroborated   iosxesoftwareupgrade/roadmap-pacing-upgrade-20261002-103-cat9k-lab-103-55f6d2ef     IOS XE native inventory and completed install-add operation prove 17.18.03.0.5496.1776157760 was installed after the gNOI stream response was lost; activating
+10m         Normal    ActivationRequested         iosxesoftwareupgrade/roadmap-pacing-upgrade-20261002-103-cat9k-lab-103-55f6d2ef     submitting gNOI OS.Activate for exact version 17.18.03.0.5496.1776157760 on the active supervisor; reload expected
+9m21s       Normal    ActivationResponseLost      iosxesoftwareupgrade/roadmap-pacing-upgrade-20261002-103-cat9k-lab-103-55f6d2ef     gNOI OS.Activate did not return cleanly after requesting version 17.18.03.0.5496.1776157760 on the active supervisor: gnoi OS.Activate: rpc error: code = DeadlineExceeded desc = Deadline Exceeded; waiting up to 3600s for the device to report the target version
+9m17s       Normal    ActivationRecorded          iosxesoftwareupgrade/roadmap-pacing-upgrade-20261002-103-cat9k-lab-103-55f6d2ef     recovering a recorded activation request without replaying it; waiting up to 3600s for the device to report the target version
+9m17s       Normal    Rebooting                   iosxesoftwareupgrade/roadmap-pacing-upgrade-20261002-103-cat9k-lab-103-55f6d2ef     recovering a recorded activation request without replaying it; waiting up to 3600s for the device to report the target version
+3m16s       Normal    DeviceReachable             iosxesoftwareupgrade/roadmap-pacing-upgrade-20261002-103-cat9k-lab-103-55f6d2ef     device gNOI endpoint is reachable; system service unsupported on target version 17.18.03.0.5496.1776157760; running final verification
+3m16s       Normal    Succeeded                   iosxesoftwareupgrade/roadmap-pacing-upgrade-20261002-103-cat9k-lab-103-55f6d2ef     upgrade complete
+2m21s       Normal    RolloutSoaking              iosxesoftwarerollout/roadmap-pacing-upgrade-20261002-103                            campaign is holding reservations during the continuous post-mutation health soak
+2m8s        Warning   ReconcileFailed             nxosconfig/nexus9300v-live-system                                                   resolve: NXOSConfig cvk-live/nexus9300v-live-system: invalid spec.modelSource: modelVersion is required
+110s        Normal    RolloutSucceeded            iosxesoftwarerollout/roadmap-pacing-upgrade-20261002-103                            all targets completed and passed their post-mutation health gates
+41s         Normal    Succeeded                   deviceoperation/roadmap-pacing-103-post-upgrade-health                              5 command(s) completed
+41s         Normal    Succeeded                   deviceoperation/roadmap-pacing-103-post-upgrade-verify                              running version: 17.18.03.0.5496.1776157760

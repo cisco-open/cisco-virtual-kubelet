@@ -1,0 +1,4240 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="A Virtual Kubelet provider for App-Hosting workloads on Cisco IOS-XE devices, with Beta support for Cisco Nexus NX-OS switches.">
+      
+      
+      
+        <link rel="canonical" href="https://cisco-open.github.io/cisco-virtual-kubelet/docs/controllers/sdwan/">
+      
+      
+        <link rel="prev" href="../../topology-scheduling/">
+      
+      
+        <link rel="next" href="../nexus-dashboard/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>Catalyst SD-WAN - Cisco Virtual Kubelet</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+    
+    
+      <link rel="stylesheet" href="../../stylesheets/extra.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="custom" data-md-color-accent="custom">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#sd-wan-controller-deployment" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="/cisco-virtual-kubelet/" title="Cisco Virtual Kubelet" class="md-header__button md-logo" aria-label="Cisco Virtual Kubelet" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Cisco Virtual Kubelet
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Catalyst SD-WAN
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="custom" data-md-color-accent="custom"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m17.75 4.09-2.53 1.94.91 3.06-2.63-1.81-2.63 1.81.91-3.06-2.53-1.94L12.44 4l1.06-3 1.06 3zm3.5 6.91-1.64 1.25.59 1.98-1.7-1.17-1.7 1.17.59-1.98L15.75 11l2.06-.05L18.5 9l.69 1.95zm-2.28 4.95c.83-.08 1.72 1.1 1.19 1.85-.32.45-.66.87-1.08 1.27C15.17 23 8.84 23 4.94 19.07c-3.91-3.9-3.91-10.24 0-14.14.4-.4.82-.76 1.27-1.08.75-.53 1.93.36 1.85 1.19-.27 2.86.69 5.83 2.89 8.02a9.96 9.96 0 0 0 8.02 2.89m-1.64 2.02a12.08 12.08 0 0 1-7.8-3.47c-2.17-2.19-3.33-5-3.49-7.82-2.81 3.14-2.7 7.96.31 10.98 3.02 3.01 7.84 3.12 10.98.31"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="custom" data-md-color-accent="custom"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0-7 2.39 3.42C13.65 5.15 12.84 5 12 5s-1.65.15-2.39.42zM3.34 7l4.16-.35A7.2 7.2 0 0 0 5.94 8.5c-.44.74-.69 1.5-.83 2.29zm.02 10 1.76-3.77a7.131 7.131 0 0 0 2.38 4.14zM20.65 7l-1.77 3.79a7.02 7.02 0 0 0-2.38-4.15zm-.01 10-4.14.36c.59-.51 1.12-1.14 1.54-1.86.42-.73.69-1.5.83-2.29zM12 22l-2.41-3.44c.74.27 1.55.44 2.41.44.82 0 1.63-.17 2.37-.44z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+          <a href="javascript:void(0)" class="md-search__icon md-icon" title="Share" aria-label="Share" data-clipboard data-clipboard-text="" data-md-component="search-share" tabindex="-1">
+            
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9a3 3 0 0 0-3 3 3 3 0 0 0 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.15c-.05.21-.08.43-.08.66 0 1.61 1.31 2.91 2.92 2.91s2.92-1.3 2.92-2.91A2.92 2.92 0 0 0 18 16.08"/></svg>
+          </a>
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/cisco-open/cisco-virtual-kubelet" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    cisco-open/cisco-virtual-kubelet
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../.." class="md-tabs__link">
+          
+  
+  
+  Start here
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../../guides/" class="md-tabs__link">
+          
+  
+  
+  Guides
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../operator-guide/" class="md-tabs__link">
+          
+  
+  
+  Operations
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../reference/" class="md-tabs__link">
+          
+  
+  
+  Reference
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../controller-extension-guide/" class="md-tabs__link">
+          
+  
+  
+  Development
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../releases/" class="md-tabs__link">
+          
+  
+  
+  Releases and archive
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="/cisco-virtual-kubelet/" title="Cisco Virtual Kubelet" class="md-nav__button md-logo" aria-label="Cisco Virtual Kubelet" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Cisco Virtual Kubelet
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/cisco-open/cisco-virtual-kubelet" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    cisco-open/cisco-virtual-kubelet
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_1" >
+        
+          
+          <label class="md-nav__link" for="__nav_1" id="__nav_1_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Start here
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_1_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_1">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Start here
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Documentation home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How CVK works
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting started
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../status/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Feature availability
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../glossary/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Glossary
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Guides
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Guides
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Guides overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../image-distribution/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    App image distribution
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+          
+          
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_2_3" id="__nav_2_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Device setup
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Device setup
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../configuration-cat8000v/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Catalyst 8000V
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../configuration-cat9000/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Catalyst 9000
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../configuration-ir1101/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    IR1100 Series
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../configuration-ie3500/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    IE3500 Series
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../netascode-config/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Network as Code
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../netascode-migration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Network as Code migration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+          
+          
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_2_6" id="__nav_2_6_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Managed topology
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Managed topology
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../topology-awareness/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../topology-enable/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Enable and enroll devices
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../topology-scheduling/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Schedule application workloads
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+          
+          
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_7" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_2_7" id="__nav_2_7_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Controller adapters
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_7_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_2_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Controller adapters
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Catalyst SD-WAN
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Catalyst SD-WAN
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#model-contract" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Model contract
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#deploy-the-qualified-fixtures" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Deploy the qualified fixtures
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ownership-and-recovery" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Ownership and recovery
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#native-cvk-tests" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Native CVK tests
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#remaining-deployment-parity" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Remaining deployment parity
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Remaining deployment parity">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#manager-2018-trustsec-incompatibility" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Manager 20.18 TrustSec incompatibility
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#policy-object-profile-qualification" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Policy-object profile qualification
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#classic-pim-provider-limitation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Classic PIM provider limitation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#tracker-references-and-classic-logging-compatibility" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tracker references and classic logging compatibility
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../nexus-dashboard/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Nexus Dashboard
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+          
+          
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_8" >
+        
+          
+          <label class="md-nav__link" for="__nav_2_8" id="__nav_2_8_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Security
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2_8">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Security
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../security/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Security overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../security-credentials/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Credentials and rotation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../security-tls/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    TLS and transport trust
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Operations
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Operations
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../operator-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Operations overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../installation-maintenance/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Maintain the CVK installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../device-diagnostics/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Device diagnostics
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../device-actions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Opt-in device actions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_5" id="__nav_3_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    IOS-XE software maintenance
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    IOS-XE software maintenance
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../gnoi-iosxe-upgrade-runbook/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Single-device upgrade and downgrade
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../topology-campaigns/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Run topology-aware campaigns
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../topology-drain/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Optional workload drain
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../topology-troubleshooting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Observe and troubleshoot campaigns
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../topology-recovery/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Recovery and retirement
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../nxos-recovery/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    NX-OS configuration recovery
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../observability/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Observability
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../troubleshooting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Troubleshooting
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_9" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_9" id="__nav_3_9_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Telemetry
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_9_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_9">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Telemetry
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../telemetry/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MDT subscriptions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../telemetry-cardinality/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Cardinality management
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../lifecycle/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Lifecycle correlation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../CONFIGURATION/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CiscoDevice configuration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../crds/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CRD reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cisco-vk-cli/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI and operator plugin
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../environment-variables/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Environment variables
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/families/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    IOS-XE configuration families
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/families-nxos/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    NX-OS configuration families
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../yang-version-support/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    YANG version support
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../API/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Device and kubelet API
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../gnoi-software-lifecycle/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Software lifecycle design
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../ARCHITECTURE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture and internals
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../topology-reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Topology design and authorization
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../security-authorization/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    RBAC and authorization
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Development
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Development
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../controller-extension-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Controller extension contract
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../family-parity/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Family parity matrix
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../production-readiness/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    NX-OS qualification plan
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../sdwan-live-test-backlog/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SD-WAN live qualification backlog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../topology-roadmap/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Topology roadmap
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../topology-roadmap-execution/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Topology execution plan
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Releases and archive
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Releases and archive
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../releases/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Releases overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../releases/v2026.11.1/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Corrected November candidate notes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../releases/v2026.11.1-readiness/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Corrected November preparation record
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_6_4" id="__nav_6_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Rejected November candidate
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_6_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Rejected November candidate
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../releases/v2026.11.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v2026.11.0 notes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../releases/v2026.11.0-readiness/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v2026.11.0 preparation record
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="https://github.com/cisco-open/cisco-virtual-kubelet/releases" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Published releases
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../releases/v2026.10.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    October preparation notes (historical)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../releases/v2026.10.0-readiness/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    October readiness ledger (historical)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../releases/v2026.9.2/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v2026.9.2 notes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6_9" >
+        
+          
+          <label class="md-nav__link" for="__nav_6_9" id="__nav_6_9_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Unpublished September drafts
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_6_9_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6_9">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Unpublished September drafts
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../releases/v2026.9.1/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v2026.9.1
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../releases/v2026.9.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v2026.9.0
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../topology-merge-scope/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Topology merge scope
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../topology-november-handoff/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    November topology handoff (October checkpoint)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#model-contract" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Model contract
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#deploy-the-qualified-fixtures" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Deploy the qualified fixtures
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ownership-and-recovery" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Ownership and recovery
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#native-cvk-tests" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Native CVK tests
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#remaining-deployment-parity" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Remaining deployment parity
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Remaining deployment parity">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#manager-2018-trustsec-incompatibility" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Manager 20.18 TrustSec incompatibility
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#policy-object-profile-qualification" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Policy-object profile qualification
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#classic-pim-provider-limitation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Classic PIM provider limitation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#tracker-references-and-classic-logging-compatibility" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tracker references and classic logging compatibility
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+
+<h1 id="sd-wan-controller-deployment">SD-WAN controller deployment</h1>
+<p><strong>Alpha · introduced in v2026.11.1.</strong> Use matching CRDs, chart and image;
+October <code>v2026.10.0</code> does not contain this adapter. Check the
+<a href="../../releases/">release records</a> for publication and artifact availability.</p>
+<p>The independent <code>sdwan</code> adapter uses the existing CVK <code>NetworkController</code> worker
+and <code>NetworkControllerConfig</code> intent APIs. It calls SD-WAN Manager directly;
+the NetAsCode module and provider are source references for porting the data model,
+schemas, defaults and API behavior. Terraform is not a build, test or deployment
+dependency of the SD-WAN integration.</p>
+<p>This implementation is a <strong>fixture-qualified increment, not full NetAsCode
+parity</strong>. The pinned upstream module has 226 resource declarations. 181 resource declarations have fixture-level native live coverage on Manager 20.18.2.2:</p>
+<table>
+<thead>
+<tr>
+<th>Fixture</th>
+<th>Qualified resources</th>
+<th>Qualification</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>examples/configs/sdwan/banner.yaml</code></td>
+<td>Classic Cisco banner feature template</td>
+<td>Create, read, update, cleanup, Kubernetes reconciliation</td>
+</tr>
+<tr>
+<td><code>examples/configs/sdwan/system-profile.yaml</code></td>
+<td>System feature profile, system banner parcel, unattached configuration group</td>
+<td>Dependency order, create, read, cleanup, Kubernetes reconciliation</td>
+</tr>
+<tr>
+<td><code>examples/configs/sdwan/policy-objects.yaml</code></td>
+<td>All 24 classic policy-object collections</td>
+<td>Create, read, update, cleanup</td>
+</tr>
+<tr>
+<td><code>examples/configs/sdwan/network-hierarchy.yaml</code></td>
+<td>Groups and regions at levels 0–2, and an unassigned site</td>
+<td>Dependency order, create, read, cleanup</td>
+</tr>
+<tr>
+<td><code>examples/configs/sdwan/classic-device-template-nested.yaml</code></td>
+<td>Unattached classic device template with nested service VPN, BGP and Ethernet references</td>
+<td>Native lifecycle, Kubernetes reconciliation</td>
+</tr>
+<tr>
+<td><code>examples/configs/sdwan/classic-device-template-policies.yaml</code></td>
+<td>Unattached classic device template with localized/security policy and container-profile bindings</td>
+<td>Native lifecycle, Kubernetes reconciliation</td>
+</tr>
+<tr>
+<td><code>examples/configs/sdwan/classic-device-template-vpns.yaml</code></td>
+<td>Unattached classic device template with transport, management and service VPNs, plus logging, NTP and DHCP references</td>
+<td>Native lifecycle, Kubernetes reconciliation</td>
+</tr>
+<tr>
+<td><code>examples/configs/sdwan/classic-device-template-peripherals.yaml</code></td>
+<td>Unattached classic device template with switchport and cellular controller/profile references</td>
+<td>Native lifecycle, Kubernetes reconciliation</td>
+</tr>
+<tr>
+<td><code>examples/configs/sdwan/group-device-deployment.yaml</code></td>
+<td>Site router associations to configuration and policy groups with variables and deploy flags</td>
+<td>Local model/API lifecycle; live router deployment needs selected chassis and restoration state</td>
+</tr>
+<tr>
+<td><code>examples/configs/sdwan/classic-device-attachment.yaml</code></td>
+<td>Site router to classic device template with device variables, including Adaptive QoS name resolution</td>
+<td>Local model and API lifecycle; live router attachment pending scoped lab target</td>
+</tr>
+<tr>
+<td><code>examples/configs/sdwan/topology-group-activation.yaml</code></td>
+<td>Topology group activation</td>
+<td>Local model and API task lifecycle; live attempt blocked by missing vSmart control-component template/setting</td>
+</tr>
+<tr>
+<td><code>examples/configs/sdwan/classic-centralized-activation.yaml</code></td>
+<td>Centralized feature policy activation</td>
+<td>Local model and API task lifecycle; live attempt rejected because vSmart is not in vManage mode</td>
+</tr>
+<tr>
+<td><code>examples/configs/sdwan/classic-bgp.yaml</code></td>
+<td>Cisco BGP feature template with AS number and IPv4 network</td>
+<td>Native lifecycle, Kubernetes reconciliation</td>
+</tr>
+<tr>
+<td><code>examples/configs/sdwan/classic-sig.yaml</code></td>
+<td>Secure internet gateway feature template with an <code>other</code> GRE tunnel</td>
+<td>Native lifecycle, Kubernetes reconciliation</td>
+</tr>
+<tr>
+<td><code>examples/configs/sdwan/classic-aaa.yaml</code></td>
+<td>cEdge AAA feature template with local authentication order</td>
+<td>Native lifecycle, Kubernetes reconciliation</td>
+</tr>
+<tr>
+<td><code>examples/configs/sdwan/classic-ethernet-interface.yaml</code></td>
+<td>Cisco Ethernet interface feature template with interface name, IPv4 address and shutdown</td>
+<td>Native lifecycle, Kubernetes reconciliation</td>
+</tr>
+<tr>
+<td><code>examples/configs/sdwan/classic-vpn.yaml</code></td>
+<td>Cisco VPN feature template with VPN ID, name and OMP distance</td>
+<td>Native lifecycle, Kubernetes reconciliation</td>
+</tr>
+<tr>
+<td><code>examples/configs/sdwan/classic-vpn-dns.yaml</code></td>
+<td>Cisco VPN feature template with IPv4/IPv6 DNS servers and flattened host entries</td>
+<td>Native lifecycle, Kubernetes reconciliation</td>
+</tr>
+<tr>
+<td><code>examples/configs/sdwan/classic-vpn-routes.yaml</code></td>
+<td>Cisco VPN OMP and route-leak rows with derived external subtypes</td>
+<td>Native lifecycle, Kubernetes reconciliation</td>
+</tr>
+<tr>
+<td><code>examples/configs/sdwan/classic-device-template.yaml</code></td>
+<td>Unattached classic device template with resolved system and banner feature templates</td>
+<td>Native lifecycle, Kubernetes reconciliation</td>
+</tr>
+<tr>
+<td><code>examples/configs/sdwan/classic-system.yaml</code></td>
+<td>Cisco system template with variable hostname, system IP and site ID</td>
+<td>Native lifecycle, Kubernetes reconciliation</td>
+</tr>
+<tr>
+<td><code>examples/configs/sdwan/network-hierarchy-collectors.yaml</code></td>
+<td>Global cflowd and security-logging collector settings</td>
+<td>Native create, read, update, cleanup, Kubernetes reconciliation</td>
+</tr>
+<tr>
+<td><code>examples/configs/sdwan/feature-profiles.yaml</code></td>
+<td>Eight other profile containers and implicit application-priority policy settings</td>
+<td>Create, read, changed-value update, cleanup</td>
+</tr>
+<tr>
+<td><code>examples/configs/sdwan/system-features.yaml</code></td>
+<td>CLI config; system basic, BFD, global, OMP, NTP, logging, MRF, flexible port speed, performance monitoring, security</td>
+<td>Create, read, update, cleanup</td>
+</tr>
+<tr>
+<td><code>examples/configs/sdwan/peripheral-features.yaml</code></td>
+<td>Transport GPS and other-profile UCSE</td>
+<td>Native lifecycle, Kubernetes reconciliation</td>
+</tr>
+<tr>
+<td><code>examples/configs/sdwan/thousandeyes-feature.yaml</code></td>
+<td>Unattached ThousandEyes parcel using a token variable</td>
+<td>Native lifecycle, Kubernetes reconciliation</td>
+</tr>
+<tr>
+<td><code>examples/configs/sdwan/snmp-feature.yaml</code></td>
+<td>SNMP nested views, communities, groups, users and targets</td>
+<td>Native lifecycle, Kubernetes reconciliation</td>
+</tr>
+<tr>
+<td><code>examples/configs/sdwan/aaa-feature.yaml</code></td>
+<td>AAA users, RADIUS/TACACS and accounting/authorization rules</td>
+<td>Native lifecycle, Kubernetes reconciliation</td>
+</tr>
+<tr>
+<td><code>examples/configs/sdwan/classic-templates.yaml</code></td>
+<td>Classic CLI, global settings and multicast templates</td>
+<td>Native lifecycle, Kubernetes reconciliation</td>
+</tr>
+<tr>
+<td><code>examples/configs/sdwan/classic-cellular.yaml</code></td>
+<td>Classic cellular controller and cellular profile templates</td>
+<td>Native lifecycle, Kubernetes reconciliation</td>
+</tr>
+<tr>
+<td><code>examples/configs/sdwan/classic-bfd.yaml</code></td>
+<td>BFD color rows and variable intervals</td>
+<td>Native lifecycle, Kubernetes reconciliation</td>
+</tr>
+<tr>
+<td><code>examples/configs/sdwan/classic-igmp.yaml</code></td>
+<td>IGMP interfaces and nested join groups</td>
+<td>Native lifecycle, Kubernetes reconciliation</td>
+</tr>
+<tr>
+<td><code>examples/configs/sdwan/classic-ntp.yaml</code></td>
+<td>NTP authentication-key variables, trusted keys and servers</td>
+<td>Native lifecycle, Kubernetes reconciliation</td>
+</tr>
+<tr>
+<td><code>examples/configs/sdwan/classic-omp.yaml</code></td>
+<td>OMP protocol lists and conditional external OSPF routes</td>
+<td>Native lifecycle, Kubernetes reconciliation</td>
+</tr>
+<tr>
+<td><code>examples/configs/sdwan/classic-pim.yaml</code></td>
+<td>PIM interfaces and rendezvous-point addresses</td>
+<td>Native lifecycle, Kubernetes reconciliation</td>
+</tr>
+<tr>
+<td><code>examples/configs/sdwan/classic-applications.yaml</code></td>
+<td>Classic ThousandEyes and security application hosting</td>
+<td>Native lifecycle, Kubernetes reconciliation</td>
+</tr>
+<tr>
+<td><code>examples/configs/sdwan/classic-dhcp.yaml</code></td>
+<td>DHCP address ranges, static leases and option rows</td>
+<td>Native lifecycle, Kubernetes reconciliation</td>
+</tr>
+<tr>
+<td><code>examples/configs/sdwan/service-features.yaml</code></td>
+<td>Service DHCP, endpoint/object trackers and both tracker-group types</td>
+<td>Native lifecycle, Kubernetes reconciliation</td>
+</tr>
+<tr>
+<td><code>examples/configs/sdwan/transport-cellular.yaml</code></td>
+<td>Transport cellular controller and profiles with/without authentication</td>
+<td>Native lifecycle, Kubernetes reconciliation</td>
+</tr>
+<tr>
+<td><code>examples/configs/sdwan/classic-ipsec.yaml</code></td>
+<td>Classic IPsec nested IKE/IPsec settings and key variable</td>
+<td>Native lifecycle, Kubernetes reconciliation</td>
+</tr>
+<tr>
+<td><code>examples/configs/sdwan/classic-snmp.yaml</code></td>
+<td>Classic SNMP nested OIDs, communities and users</td>
+<td>Native lifecycle, Kubernetes reconciliation</td>
+</tr>
+<tr>
+<td><code>examples/configs/sdwan/classic-logging.yaml</code></td>
+<td>Classic logging TLS profile and IPv4/IPv6 servers</td>
+<td>Native lifecycle, Kubernetes reconciliation</td>
+</tr>
+<tr>
+<td><code>examples/configs/sdwan/classic-gre.yaml</code></td>
+<td>Classic GRE with conditional ingress/egress ACL variables</td>
+<td>Native lifecycle, Kubernetes reconciliation</td>
+</tr>
+<tr>
+<td><code>examples/configs/sdwan/classic-security.yaml</code></td>
+<td>Classic security with key chains and authentication translation</td>
+<td>Native lifecycle, Kubernetes reconciliation</td>
+</tr>
+<tr>
+<td><code>examples/configs/sdwan/classic-ospf.yaml</code></td>
+<td>Classic OSPF areas, interfaces, ranges and policy variable</td>
+<td>Native lifecycle, Kubernetes reconciliation</td>
+</tr>
+<tr>
+<td><code>examples/configs/sdwan/routing-ospf.yaml</code></td>
+<td>Service OSPF, service OSPFv3 IPv4/IPv6, transport OSPF</td>
+<td>Native lifecycle, Kubernetes reconciliation</td>
+</tr>
+<tr>
+<td><code>examples/configs/sdwan/transport-trackers.yaml</code></td>
+<td>Transport IPv4/IPv6 trackers and tracker groups</td>
+<td>Native lifecycle, Kubernetes reconciliation</td>
+</tr>
+<tr>
+<td><code>examples/configs/sdwan/classic-sig-credentials.yaml</code></td>
+<td>Global Umbrella credentials using variables</td>
+<td>Native lifecycle, Kubernetes reconciliation</td>
+</tr>
+<tr>
+<td><code>examples/configs/sdwan/cisco-sse.yaml</code></td>
+<td>Cisco SSE parcel</td>
+<td>Native lifecycle, Kubernetes reconciliation</td>
+</tr>
+<tr>
+<td><code>examples/configs/sdwan/classic-svi.yaml</code></td>
+<td>Classic SVI interface template</td>
+<td>Native lifecycle, Kubernetes reconciliation</td>
+</tr>
+<tr>
+<td><code>examples/configs/sdwan/classic-cellular-interface.yaml</code></td>
+<td>Classic cellular VPN interface template</td>
+<td>Native lifecycle, Kubernetes reconciliation</td>
+</tr>
+<tr>
+<td><code>examples/configs/sdwan/classic-switchport.yaml</code></td>
+<td>Classic switchport template</td>
+<td>Native lifecycle, Kubernetes reconciliation</td>
+</tr>
+<tr>
+<td><code>examples/configs/sdwan/routing-eigrp.yaml</code></td>
+<td>Service EIGRP parcel</td>
+<td>Native lifecycle, Kubernetes reconciliation</td>
+</tr>
+<tr>
+<td><code>examples/configs/sdwan/service-switchport.yaml</code></td>
+<td>Service switchport parcel</td>
+<td>Native lifecycle, Kubernetes reconciliation</td>
+</tr>
+<tr>
+<td><code>examples/configs/sdwan/service-multicast.yaml</code></td>
+<td>Service multicast parcel</td>
+<td>Native lifecycle, Kubernetes reconciliation</td>
+</tr>
+<tr>
+<td><code>examples/configs/sdwan/system-device-access.yaml</code></td>
+<td>System IPv4 and IPv6 device-access parcels</td>
+<td>Native lifecycle, Kubernetes reconciliation; prefix references local only</td>
+</tr>
+<tr>
+<td><code>examples/configs/sdwan/topology-mesh.yaml</code></td>
+<td>Topology mesh with hierarchy site-group expansion and UUID targeting</td>
+<td>Native lifecycle, Kubernetes reconciliation</td>
+</tr>
+<tr>
+<td><code>examples/configs/sdwan/topology-hubspoke.yaml</code></td>
+<td>Topology hub-and-spoke with nested hub preferences and site-group expansion</td>
+<td>Native lifecycle, Kubernetes reconciliation</td>
+</tr>
+<tr>
+<td><code>examples/configs/sdwan/topology-custom-control.yaml</code></td>
+<td>Custom control policy with a route rule and hierarchy site UUID targeting</td>
+<td>Native lifecycle, Kubernetes reconciliation</td>
+</tr>
+<tr>
+<td><code>examples/configs/sdwan/topology-group.yaml</code></td>
+<td>Topology group bound to a declared topology feature profile</td>
+<td>Native lifecycle, Kubernetes reconciliation</td>
+</tr>
+<tr>
+<td><code>examples/configs/sdwan/policy-group.yaml</code></td>
+<td>Policy group bound to application-priority and SSE profiles</td>
+<td>Native lifecycle, Kubernetes reconciliation</td>
+</tr>
+<tr>
+<td><code>examples/configs/sdwan/application-priority-qos.yaml</code></td>
+<td>Application-priority QoS policy with interface targeting and an empty scheduler map</td>
+<td>Native lifecycle, Kubernetes reconciliation</td>
+</tr>
+<tr>
+<td><code>examples/configs/sdwan/application-priority-traffic.yaml</code></td>
+<td>Application-priority traffic policy with VPN target and basic route-free sequence</td>
+<td>Native lifecycle, Kubernetes reconciliation</td>
+</tr>
+<tr>
+<td><code>examples/configs/sdwan/embedded-security-ngfw.yaml</code></td>
+<td>NGFW policy with a source-prefix pass rule</td>
+<td>Native lifecycle, Kubernetes reconciliation</td>
+</tr>
+<tr>
+<td><code>examples/configs/sdwan/embedded-security-policy.yaml</code></td>
+<td>Embedded-security assembly referencing NGFW policy with a self-to-untrusted zone pair</td>
+<td>Native lifecycle, Kubernetes reconciliation</td>
+</tr>
+<tr>
+<td><code>examples/configs/sdwan/classic-ipv4-acl-definition.yaml</code> and <code>classic-ipv6-acl-definition.yaml</code></td>
+<td>Localized classic IPv4/IPv6 ACL definitions with direct prefix rules</td>
+<td>Native lifecycle, Kubernetes reconciliation</td>
+</tr>
+<tr>
+<td><code>examples/configs/sdwan/classic-ipv4-device-acl-definition.yaml</code> and <code>classic-ipv6-device-acl-definition.yaml</code></td>
+<td>Localized device ACL definitions with source prefix and supported destination port</td>
+<td>Native lifecycle, Kubernetes reconciliation</td>
+</tr>
+<tr>
+<td><code>examples/configs/sdwan/classic-centralized-custom-control.yaml</code></td>
+<td>Centralized custom-control definition with OMP-tag route match</td>
+<td>Native lifecycle, Kubernetes reconciliation</td>
+</tr>
+<tr>
+<td><code>examples/configs/sdwan/classic-centralized-app-route.yaml</code></td>
+<td>Centralized application-aware routing definition with source-prefix match and logging action</td>
+<td>Native lifecycle, Kubernetes reconciliation</td>
+</tr>
+<tr>
+<td><code>examples/configs/sdwan/classic-centralized-traffic-data.yaml</code></td>
+<td>Centralized traffic-data definition with IPv4 source-prefix match</td>
+<td>Native lifecycle, Kubernetes reconciliation</td>
+</tr>
+<tr>
+<td><code>examples/configs/sdwan/classic-security-ips.yaml</code></td>
+<td>Classic zone firewall and intrusion-prevention definitions with resolved zone reference and unattached security-policy assembly</td>
+<td>Native lifecycle, Kubernetes reconciliation</td>
+</tr>
+<tr>
+<td><code>examples/configs/sdwan/classic-centralized-cflowd.yaml</code></td>
+<td>Centralized cflowd definition with collector and flow settings</td>
+<td>Native lifecycle, Kubernetes reconciliation</td>
+</tr>
+<tr>
+<td><code>examples/configs/sdwan/classic-centralized-membership-mesh.yaml</code></td>
+<td>Centralized VPN membership, mesh and hub-and-spoke definitions plus unattached policy assembly, with resolved site and VPN policy lists</td>
+<td>Native lifecycle, Kubernetes reconciliation</td>
+</tr>
+<tr>
+<td><code>examples/configs/sdwan/classic-qos-rewrite-definitions.yaml</code></td>
+<td>Localized QoS map and rewrite-rule definitions plus feature-policy assembly, with resolved class-map and definition references</td>
+<td>Native lifecycle, Kubernetes reconciliation</td>
+</tr>
+<tr>
+<td><code>examples/configs/sdwan/classic-route-policy-definition.yaml</code></td>
+<td>Localized route policy definition with OMP-tag match and metric action</td>
+<td>Native lifecycle, Kubernetes reconciliation</td>
+</tr>
+<tr>
+<td><code>examples/configs/sdwan/ipv4-acls.yaml</code></td>
+<td>Service and transport IPv4 ACL parcels</td>
+<td>Native lifecycle, Kubernetes reconciliation; policy-object references local only</td>
+</tr>
+<tr>
+<td><code>examples/configs/sdwan/ipv6-acls.yaml</code></td>
+<td>Service and transport IPv6 ACL parcels</td>
+<td>Native lifecycle, Kubernetes reconciliation; policy-object references local only</td>
+</tr>
+<tr>
+<td><code>examples/configs/sdwan/route-policies.yaml</code></td>
+<td>Service and transport route-policy parcels</td>
+<td>Native lifecycle, Kubernetes reconciliation; policy-object references local only</td>
+</tr>
+<tr>
+<td><code>examples/configs/sdwan/transport-management-vpn.yaml</code></td>
+<td>Transport management VPN with DNS, host mapping, and static routes</td>
+<td>Native lifecycle, Kubernetes reconciliation</td>
+</tr>
+<tr>
+<td><code>examples/configs/sdwan/transport-management-interface.yaml</code></td>
+<td>Transport management VPN Ethernet interface with static IPv4/IPv6, secondary address, ARP, and MTU</td>
+<td>Native lifecycle, Kubernetes reconciliation</td>
+</tr>
+<tr>
+<td><code>examples/configs/sdwan/service-lan-vpn.yaml</code></td>
+<td>Service LAN VPN core ID, description, OMP distance, DNS, host mapping and static routes</td>
+<td>Native lifecycle, Kubernetes reconciliation; NAT, advertisements and route leaking pending</td>
+</tr>
+<tr>
+<td><code>examples/configs/sdwan/service-dual-router-ha.yaml</code></td>
+<td>Dual-router HA with resolved service LAN VPN reference</td>
+<td>Native lifecycle, Kubernetes reconciliation</td>
+</tr>
+<tr>
+<td><code>examples/configs/sdwan/service-lan-vpn-ospf-association.yaml</code></td>
+<td>Service LAN VPN to OSPF association</td>
+<td>Native lifecycle, Kubernetes reconciliation</td>
+</tr>
+<tr>
+<td><code>examples/configs/sdwan/transport-wan-vpn-ospf-association.yaml</code></td>
+<td>Transport WAN VPN to OSPF association</td>
+<td>Native lifecycle, Kubernetes reconciliation</td>
+</tr>
+<tr>
+<td><code>examples/configs/sdwan/service-lan-vpn-eigrp-association.yaml</code></td>
+<td>Service LAN VPN to EIGRP association</td>
+<td>Native lifecycle, Kubernetes reconciliation</td>
+</tr>
+<tr>
+<td><code>examples/configs/sdwan/service-lan-vpn-multicast-association.yaml</code></td>
+<td>Service LAN VPN to multicast association</td>
+<td>Native lifecycle, Kubernetes reconciliation</td>
+</tr>
+<tr>
+<td><code>examples/configs/sdwan/service-lan-vpn-ospfv3-associations.yaml</code></td>
+<td>Service LAN VPN to OSPFv3 IPv4 and IPv6 associations</td>
+<td>Native lifecycle, Kubernetes reconciliation</td>
+</tr>
+<tr>
+<td><code>examples/configs/sdwan/service-lan-vpn-ethernet.yaml</code> and <code>service-lan-vpn-ethernet-dhcp-association.yaml</code></td>
+<td>Service LAN VPN Ethernet interface and DHCP association</td>
+<td>Native lifecycle, Kubernetes reconciliation; advanced attributes and device activation pending</td>
+</tr>
+<tr>
+<td><code>examples/configs/sdwan/service-lan-vpn-ethernet-tracker-association.yaml</code> and <code>service-lan-vpn-ethernet-tracker-group-association.yaml</code></td>
+<td>Ethernet-to-tracker and tracker-group associations</td>
+<td>Native lifecycle, Kubernetes reconciliation; device activation pending</td>
+</tr>
+<tr>
+<td><code>examples/configs/sdwan/service-lan-vpn-gre.yaml</code>, <code>transport-wan-vpn-gre.yaml</code>, and <code>transport-wan-vpn-gre-tracker-association.yaml</code></td>
+<td>Service and transport GRE interfaces plus transport tracker association</td>
+<td>Native lifecycle, Kubernetes reconciliation; advanced GRE branches and device activation pending</td>
+</tr>
+<tr>
+<td><code>examples/configs/sdwan/service-lan-vpn-ipsec.yaml</code>, <code>transport-wan-vpn-ipsec.yaml</code>, and <code>transport-wan-vpn-ipsec-tracker-association.yaml</code></td>
+<td>Service and transport IPv4 IPsec interfaces plus transport tracker association</td>
+<td>Native lifecycle, Kubernetes reconciliation; advanced IPsec branches and device activation pending</td>
+</tr>
+<tr>
+<td><code>examples/configs/sdwan/transport-wan-vpn-ethernet.yaml</code> and four <code>transport-wan-vpn-ethernet-*-association.yaml</code> fixtures</td>
+<td>WAN Ethernet interface and IPv4/IPv6 tracker associations</td>
+<td>Native lifecycle, Kubernetes reconciliation; tunnel attributes and device activation pending</td>
+</tr>
+<tr>
+<td><code>examples/configs/sdwan/transport-wan-vpn-cellular.yaml</code> and its tracker association fixtures</td>
+<td>WAN cellular interface and IPv4 tracker/group associations</td>
+<td>Native lifecycle, Kubernetes reconciliation; tunnel attributes and device activation pending</td>
+</tr>
+<tr>
+<td><code>examples/configs/sdwan/service-lan-vpn-bgp-association.yaml</code> and <code>transport-wan-vpn-bgp-association.yaml</code></td>
+<td>Service and transport BGP parcels with VPN associations</td>
+<td>Native lifecycle, Kubernetes reconciliation; IPv4/IPv6 neighbor and advertised-network fixtures passed; redistribution and device activation pending</td>
+</tr>
+<tr>
+<td><code>examples/configs/sdwan/service-lan-vpn-ethernet-member.yaml</code> and <code>transport-wan-vpn-ethernet-member.yaml</code></td>
+<td>Service and transport Ethernet port-channel member links</td>
+<td>Native lifecycle, Kubernetes reconciliation; port-channel parent and device behavior pending</td>
+</tr>
+<tr>
+<td><code>examples/configs/sdwan/service-lan-vpn-svi.yaml</code></td>
+<td>Service LAN VPN SVI with IPv4/IPv6, ARP and MTU</td>
+<td>Native lifecycle, Kubernetes reconciliation; VRRP and ACL pending</td>
+</tr>
+<tr>
+<td><code>examples/configs/sdwan/service-lan-vpn-svi-dhcp-association.yaml</code></td>
+<td>SVI-to-DHCP server association through nested LAN VPN path</td>
+<td>Native lifecycle, Kubernetes reconciliation</td>
+</tr>
+<tr>
+<td><code>examples/configs/sdwan/transport-wan-vpn.yaml</code></td>
+<td>Transport WAN VPN with ECMP, NAT64, TE service, and static routes</td>
+<td>Native lifecycle, Kubernetes reconciliation</td>
+</tr>
+<tr>
+<td><code>examples/configs/sdwan/zscaler-sse.yaml</code></td>
+<td>Zscaler SSE parcel</td>
+<td>Native lifecycle, Kubernetes reconciliation</td>
+</tr>
+</tbody>
+</table>
+<p>The baseline is NetAsCode module v1.5.0 at
+<code>5fbf037ea57368c7e6e77694c81330b6f7b16666</code> and provider v0.11.5 at
+<code>d3194b612c3f24421ec1727b6fa6e9c0bc98b07f</code>. The provider is
+<code>CiscoDevNet/sdwan</code>; <code>netascode/terraform-sdwan-nac-sdwan</code> is the module.
+<code>internal/controlleradapter/sdwan/testdata/upstream-lock.json</code> records every
+resource declaration and distinguishes fixture-qualified coverage from pending
+coverage. Qualification applies to the fixture's attributes, not every attribute
+of that resource type.</p>
+<p>An additional 7 declarations have native implementations but remain unqualified:
+the policy-object singleton profile, system
+CA certificates, custom applications (the lab lacks SD-AVC), cloud-provider settings (the lab already has the singleton), device-template attachment, centralized policy activation and topology-group activation. SIG credential creation now passes after fixing the global flag and variable-secret payloads.
+Site/router tag association passed live on BR-2-WAN with removal and cleanup. Configuration and policy group association also passed live on that router, but device deployment has not been pushed. All 32 policy-object child declarations passed native lifecycle on Manager 20.18 under its existing singleton profile, with the original child-ID set restored after each fixture. The profile itself remains unqualified because the lab already has one. No resource declarations remain pending; TrustSec remains compatibility-blocked. This inventory does not imply full field-level parity or router deployment qualification.
+See the <a href="../sdwan-live-test-backlog/">implementation and live-test backlog</a> for the
+complete list, fixture paths and prerequisites.</p>
+<h2 id="model-contract">Model contract</h2>
+<p>The public model remains the upstream <code>sdwan</code> document. The format is
+<code>netascode-sdwan</code>, model version <code>1.5.0</code>. The compiler currently supports:</p>
+<ul>
+<li><code>edge_feature_templates.banner_templates</code>: name, description, device types,
+  login/MOTD literals and variables, including upstream device-type defaults.</li>
+<li><code>edge_feature_templates.cli_templates</code>, <code>global_settings_templates</code>,
+  <code>multicast_templates</code>, <code>cellular_controller_templates</code> and
+  <code>cellular_profile_templates</code>, <code>bfd_templates</code>, <code>igmp_templates</code>, <code>ntp_templates</code>,
+  <code>omp_templates</code>, <code>pim_templates</code>, <code>thousandeyes_templates</code>,
+  <code>secure_app_hosting_templates</code>, <code>dhcp_server_templates</code>, <code>ipsec_interface_templates</code>,
+  <code>snmp_templates</code>, <code>logging_templates</code> and <code>gre_interface_templates</code>, including per-family device defaults and overrides.
+  Generate their metadata with <code>scripts/sdwan/generate-classic-definitions.py
+  MODULE_CHECKOUT PROVIDER_CHECKOUT</code>.</li>
+<li><code>feature_profiles.system_profiles</code>: profile name/description, banner, basic,
+  BFD, global, OMP, NTP, logging, MRF, flexible port speed, performance monitoring, security, SNMP and AAA.
+  <code>feature_profiles.cli_profiles.config</code> supports native CLI parcels.
+  Scalar and nested-list definitions for basic/global/OMP/NTP/logging/security are generated
+  from pinned module mappings and provider defaults/value schemas. Regenerate with
+  <code>scripts/sdwan/generate-parcel-definitions.py MODULE_CHECKOUT PROVIDER_CHECKOUT</code>.
+  Generated metadata retains the upstream MPL-2.0 license in <code>definitions/LICENSE</code>.</li>
+<li><code>feature_profiles.transport_profiles.gps_features</code> and <code>other_profiles.ucse</code> /
+  <code>other_profiles.thousandeyes</code>, including the NaC GPS enable default and the
+  ThousandEyes virtual-application wrapper. These fixtures are unattached.</li>
+<li><code>feature_profiles.service_profiles.dhcp_servers</code>, <code>ipv4_trackers</code> and
+  <code>object_trackers</code>, <code>ipv4_tracker_groups</code> and <code>object_tracker_groups</code>, with native
+  name-based parcel management and full generated
+  API-data schema checks for these resources.</li>
+<li><code>feature_profiles.transport_profiles.cellular_controllers</code> and
+  <code>cellular_profiles</code>, including authentication switches, credential variables and
+  network slicing on the qualified 20.18 Manager. Inactive authentication fields
+  and invalid slicing combinations are rejected before mutation.</li>
+<li><code>configuration_groups</code>: name/description and references to declared system,
+  transport, service, CLI or other profiles. Device associations are not enabled.</li>
+<li>Name/description mappings for the other eight profile collections, plus the
+  automatically created application-priority settings parcel and visibility flags.</li>
+<li>All 24 classic <code>policy_objects</code> collections, including named SLA probe references.
+  Policy names are limited to 32 characters because this Manager rewrites longer names.</li>
+<li><code>application_catalog.custom_applications</code>: custom names, server names, L3/L4 rows
+  and business relevance; the lab cannot qualify create until SD-AVC is enabled.</li>
+<li><code>network_hierarchy</code> groups/regions through levels 0–2 and unassigned sites with
+  the 20.18 location/GPS model. Global collectors remain unsupported.</li>
+</ul>
+<p><code>deployment.yaml</code> combines the baseline fixtures under one config and five
+managed sections. Use <code>deployment-config.yaml</code> with its resolved output instead
+of installing individual configs that would compete for the same section Lease.
+The combined fixture includes hierarchy prerequisites for region lists. For
+<code>policy-objects-config.yaml</code>, resolve <code>policy-deployment.yaml</code> so that the region
+prerequisite is included. <code>system-features-config.yaml</code> uses <code>system-features.yaml</code>
+as an alternative feature-profile section owner. The
+compiler allows up to 512 resources, bounded to 128 per section by journal capacity.</p>
+<p>Unknown fields and unsupported sections fail before mutation. Credentials and
+intent Secret injection are separate concerns: endpoint credentials work through
+projected files; intent <code>secretRefs</code> are currently rejected rather than ignored.
+No controller-specific API payloads appear in the public CRD.</p>
+<p>Resolve the qualified defaults outside the worker before declaring the source
+resolved. This retains upstream field names:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>go<span class="w"> </span>run<span class="w"> </span>./cmd/cvk-sdwan-resolve<span class="w"> </span>examples/configs/sdwan/banner.yaml<span class="w"> </span>&gt;<span class="w"> </span>/tmp/sdwan-banner.json
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>go<span class="w"> </span>run<span class="w"> </span>./cmd/cvk-sdwan-resolve<span class="w"> </span>examples/configs/sdwan/system-profile.yaml<span class="w"> </span>&gt;<span class="w"> </span>/tmp/sdwan-system-profile.json
+</span></code></pre></div>
+<h2 id="deploy-the-qualified-fixtures">Deploy the qualified fixtures</h2>
+<p>Install a matching CVK image and Helm chart. The chart adds the dedicated
+<code>cisco-virtual-kubelet-sdwan-worker</code> ClusterRole. Its namespace-scoped binding
+grants status updates and section Lease get/create/update; it grants no Secret
+API access, device mutation permission, or remote-deletion permission.</p>
+<p>Create the <code>sdwan-lab</code> namespace and a same-namespace <code>sdwan-credentials</code> Secret
+with <code>username</code> and <code>password</code> keys using your existing secret-management process.
+Do not put credentials into the model or commit them to the repository.</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>kubectl<span class="w"> </span>create<span class="w"> </span>namespace<span class="w"> </span>sdwan-lab
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>kubectl<span class="w"> </span>apply<span class="w"> </span>-f<span class="w"> </span>examples/configs/sdwan/controller.yaml
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>kubectl<span class="w"> </span>-n<span class="w"> </span>sdwan-lab<span class="w"> </span>create<span class="w"> </span>configmap<span class="w"> </span>sdwan-banner-fixture<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">  </span>--from-file<span class="o">=</span>model.yaml<span class="o">=</span>/tmp/sdwan-banner.json
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>kubectl<span class="w"> </span>-n<span class="w"> </span>sdwan-lab<span class="w"> </span>create<span class="w"> </span>configmap<span class="w"> </span>sdwan-system-profile-fixture<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="w">  </span>--from-file<span class="o">=</span>model.yaml<span class="o">=</span>/tmp/sdwan-system-profile.json
+</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>kubectl<span class="w"> </span>apply<span class="w"> </span>-f<span class="w"> </span>examples/configs/sdwan/banner-config.yaml
+</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>kubectl<span class="w"> </span>apply<span class="w"> </span>-f<span class="w"> </span>examples/configs/sdwan/system-profile-config.yaml
+</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>kubectl<span class="w"> </span>-n<span class="w"> </span>sdwan-lab<span class="w"> </span>get<span class="w"> </span>networkcontrollers,networkcontrollerconfigs
+</span></code></pre></div>
+<p>The examples initially report drift. Select <code>spec.mode: apply</code> to deploy the
+fixtures. Expect incremental <code>Applying</code> status followed by <code>InSync</code> after
+read-back verification. Reconciliation preserves existing matching resources
+without resubmitting their creation. An external object with the same name is a
+collision, not implicit authorization to adopt it.</p>
+<p>The lab manifest explicitly opts into insecure TLS because this endpoint's
+self-signed certificate has no IP SAN. Other deployments should supply a valid
+certificate and trust bundle. Sessions remain in process memory, rotate with
+projected material, and have bounded lifetimes. Redirects are rejected; only GET
+may refresh and retry after 401. Error bodies, cookies and tokens are not logged.</p>
+<h2 id="ownership-and-recovery">Ownership and recovery</h2>
+<p>Ownership is per controller UID, global scope and managed section. One config
+incarnation owns each section; separate configs cannot split the same section.
+Each worker session holds a 90-second Lease. Before a remote mutation, the worker
+persists a <code>Dispatched</code> receipt and rechecks the live endpoint/config/source and
+Lease bindings. A successful response persists the remote ID before verification.</p>
+<p>A settled Lease can transfer to a replacement worker for the same config after
+expiry. An unresolved dispatch blocks takeover and automatic replay. Such a
+failure requires investigation; an automatic uncertain-outcome recovery workflow
+is not implemented. Status reports <code>OutcomeUnknown</code> or <code>SectionOwned</code> without
+raw controller payloads. Never clear the journal merely to retry a timed-out POST.</p>
+<p><code>Retain</code> is the supported prune/deletion policy. Deleting intent retains remote
+objects and its ownership journal; deletion does not transfer ownership to a new
+config UID. Remote pruning, explicit adoption/import, ownership release and
+live qualification of device attachment/activation is still pending; activation attempts reached Manager but failed on lab prerequisites. The fixture test harness cleans
+up only its own created IDs in reverse dependency order.</p>
+<h2 id="native-cvk-tests">Native CVK tests</h2>
+<p>Normal tests do not contact the lab. Live tests require explicit environment
+flags and credentials supplied outside Git. The test harness creates temporary
+credential projections and removes them at completion.</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>go<span class="w"> </span><span class="nb">test</span><span class="w"> </span>./internal/controlleradapter/...
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>go<span class="w"> </span><span class="nb">test</span><span class="w"> </span>-race<span class="w"> </span>./internal/controlleradapter/...<span class="w"> </span>./cmd/cisco-vk
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="c1"># KUBEBUILDER_ASSETS must point to Kubernetes 1.35.0 test binaries.</span>
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>go<span class="w"> </span><span class="nb">test</span><span class="w"> </span>-tags<span class="w"> </span>envtest<span class="w"> </span>./internal/controlleradapter/sdwan<span class="w"> </span>-run<span class="w"> </span>TestEnvtest<span class="w"> </span>-v
+</span></code></pre></div>
+<p>Live native lifecycle tests use <code>CVK_SDWAN_LIVE=1</code> and
+<code>CVK_SDWAN_MUTATE=1</code>, with <code>SDWAN_URL</code>, <code>SDWAN_USERNAME</code>, <code>SDWAN_PASSWORD</code>
+and the appropriate TLS setting supplied outside Git. Select the intended
+<code>TestLive*Lifecycle</code> test explicitly. Live Kubernetes tests additionally use
+<code>CVK_SDWAN_ENVTEST_LIVE=1</code> and select a fixture through <code>CVK_SDWAN_ENVTEST_FIXTURE</code>.
+These tests exercise CVK's native compiler, API client and reconciliation.</p>
+<h2 id="remaining-deployment-parity">Remaining deployment parity</h2>
+<p>Although all pinned resource declarations have CVK implementations, full upstream field/default coverage, advanced classic device-template children, routing and transport/service branches, live qualification of modern policy-object parcels, device attachment/deployment, asynchronous activation recovery, pruning and import are not complete. Reproducible device-level qualification also needs explicit WAN-edge
+targets and a restoration policy. The BR-2-WAN tag and group association tests
+used the selected lab router and restored its prior state.</p>
+<p>See <a href="../../evidence/sdwan-2026-10-14/">the qualification record</a> for measured
+results and limits.</p>
+<h3 id="manager-2018-trustsec-incompatibility">Manager 20.18 TrustSec incompatibility</h3>
+<p>The pinned provider's TrustSec payload is rejected because <code>data.sxpNodeId</code> is
+required by this Manager but absent from the provider model. Its default empty
+<code>devicePassword</code> is also rejected. The reproducible fixture is under
+<code>examples/configs/sdwan/unqualified/trustsec.yaml</code>; the compiler rejects TrustSec
+before mutation. Generated TrustSec metadata is retained for further compatibility
+work and does not count toward qualified coverage.</p>
+<h3 id="policy-object-profile-qualification">Policy-object profile qualification</h3>
+<p><code>policy-profile.yaml</code> defines the singular policy-object profile and fifteen
+policy parcels. <code>policy-prefixes.yaml</code>, <code>policy-dependencies.yaml</code> and
+<code>policy-security.yaml</code> exercise the remaining modern policy-object declarations.
+All 32 child declarations passed native lifecycle under the lab's existing
+singleton profile; every fixture restored the original child-ID set. CVK did
+not update or adopt the parent. Creating the singleton profile itself remains
+unqualified because the lab already has one; that test needs an empty Manager.</p>
+<p>The pinned module uses <code>forwarding_classes</code> where the current documentation calls
+this collection <code>class_maps</code>. This branch follows the pinned module's name.
+NaC integer queue and TLOC preference values are encoded as strings for the
+provider API, with their public numeric constraints retained.</p>
+<p>The pinned module's SNMP <code>groups[].view_variable</code> expression incorrectly traverses
+<code>group.view.view_variable</code>. That unavailable input is explicitly rejected.
+AAA <code>accounting_rules[].start_stop_variable</code> is passed verbatim by the module and
+therefore requires the upstream <code>{{variable}}</code> expression. Other generated parcel
+variable fields wrap the public variable name as required by their module mapping.</p>
+<h3 id="classic-pim-provider-limitation">Classic PIM provider limitation</h3>
+<p>The pinned provider does not serialize <code>pim_templates[].rp_addresses[].optional</code>.
+CVK rejects this field before mutation; the qualified fixture omits it. Other PIM
+row types preserve their optional flag and provider-defined priority order.</p>
+<h3 id="tracker-references-and-classic-logging-compatibility">Tracker references and classic logging compatibility</h3>
+<p>Tracker groups require two distinct tracker names declared in the same service
+profile. CVK creates trackers before groups, resolves controller IDs before every
+write and comparison, and rejects missing dependencies without sending a mutation.</p>
+<p>The pinned module reads <code>version_ciphersuites_variablevariable</code> for classic logging
+TLS ciphersuite variables. CVK rejects that typo and <code>ciphersuites_variable</code>; literal
+<code>ciphersuites</code> is fixture-qualified. Classic IPsec supports nested <code>ike</code>/<code>ipsec</code>
+fields and the numeric DH-group form shown in the NaC example.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+    
+      
+      <nav class="md-footer__inner md-grid" aria-label="Footer" >
+        
+          
+          <a href="../../topology-scheduling/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Schedule application workloads">
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+            </div>
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Previous
+              </span>
+              <div class="md-ellipsis">
+                Schedule application workloads
+              </div>
+            </div>
+          </a>
+        
+        
+          
+          <a href="../nexus-dashboard/" class="md-footer__link md-footer__link--next" aria-label="Next: Nexus Dashboard">
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Next
+              </span>
+              <div class="md-ellipsis">
+                Nexus Dashboard
+              </div>
+            </div>
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11z"/></svg>
+            </div>
+          </a>
+        
+      </nav>
+    
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      Copyright © 2025-2026 Cisco Systems, Inc. All Rights Reserved. · <a href="/cisco-virtual-kubelet/LICENSE">Project license</a> · <a href="/cisco-virtual-kubelet/docs/MKDOCS_THIRD_PARTY_LICENSES.txt">MkDocs third-party licenses</a>
+    </div>
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+      <div class="md-progress" data-md-component="progress" role="progressbar"></div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["content.code.copy", "search.share", "navigation.footer", "navigation.instant.progress", "navigation.tabs", "navigation.sections", "content.code.annotate"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script>if(!window.ResizeObserver){document.write('<script src="../../r.js?v=2290b5c60e0cdc62851fb687800237273ac53797595b1b133860c4f1386de378"><\/script>')}</script>
+      <script src="../../assets/javascripts/bundle.67a2c6e1e02831e6.min.js"></script>
+      
+    
+  </body>
+</html>

@@ -1,0 +1,16 @@
+{
+  "apiVersion": "ops.cisco.vk/v1alpha1",
+  "kind": "DeviceOperation",
+  "metadata": {
+    "name": "cycle-20261001003405-6721c9-cat9k-lab-101-downgrade-verify",
+    "namespace": "cvk-live"
+  },
+  "spec": {
+    "deviceRef": {
+      "name": "cat9k-lab-101"
+    },
+    "operation": {
+      "kind": "GNOIOSVerify"
+    }
+  }
+}

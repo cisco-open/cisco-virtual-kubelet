@@ -1,0 +1,8 @@
+# Filtered evidence excerpt; each line starts with original source line number. Not a complete log.
+1: 2026-10-01T06:37:14.123548311Z time=2026-10-01T06:37:14.122Z level=WARN msg="controller logs going to stderr only — OTLP endpoint unset"
+6: 2026-10-01T06:37:14.919170884Z I1001 06:37:14.918546       1 leaderelection.go:258] "Attempting to acquire leader lease..." lock="cisco-vk-system/ciscodevice.cisco.vk"
+7: 2026-10-01T06:37:39.403013796Z I1001 06:37:39.402763       1 leaderelection.go:272] "Successfully acquired lease" lock="cisco-vk-system/ciscodevice.cisco.vk"
+10: 2026-10-01T06:37:39.409167699Z time=2026-10-01T06:37:39.403Z level=INFO msg="Starting EventSource" controller=ciscodevice controllerGroup=cisco.vk controllerKind=CiscoDevice source="kind source: *v1.ClusterRoleBinding"
+21: 2026-10-01T06:37:39.409232005Z time=2026-10-01T06:37:39.404Z level=INFO msg="Starting EventSource" controller=ciscodevice controllerGroup=cisco.vk controllerKind=CiscoDevice source="kind source: *v1.Lease"
+37: 2026-10-01T06:37:39.409342672Z time=2026-10-01T06:37:39.405Z level=INFO msg="Starting EventSource" controller=ciscodevice controllerGroup=cisco.vk controllerKind=CiscoDevice source="kind source: *v1.RoleBinding"
+40: 2026-10-01T06:37:39.409363194Z time=2026-10-01T06:37:39.405Z level=INFO msg="Starting EventSource" controller=networkcontroller controllerGroup=cisco.vk controllerKind=NetworkController source="kind source: *v1.RoleBinding"

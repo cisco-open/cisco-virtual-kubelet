@@ -1,0 +1,6 @@
+Command: mkdocs build --strict --site-dir /tmp/cvk-november-checkpoint-site
+Exit code: 0
+Documentation built in 2.18 seconds.
+Informational notices: archived evidence/report pages are not individually in the navigation; they are linked from the handoff and evidence index.
+Command: git diff --check
+Exit code: 0

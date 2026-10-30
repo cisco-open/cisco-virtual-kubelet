@@ -1,0 +1,12 @@
+candidateCommit: c001f8f0
+device: cat9k-lab-103
+direction: downgrade-preparation
+runningVersionBefore: 17.18.03.0.5496.1776157760
+targetVersion: "17.18.02"
+validatedInactiveVersion: 17.18.02.0.4112.1766116039
+runningVersionAfter: 17.18.03.0.5496.1776157760
+phase: Prepared
+receiptHash: sha256:5561fcfb9b7ef0508bc5a964aa4132c3e647b7187e1fed2df8d32e8383436f84
+sourceDigest: sha256:c210d89b0bcbdeea4962b87b5f159c331988fe5a85d07a5a30da0438b2d99355
+activateClaimCount: 0
+result: passed

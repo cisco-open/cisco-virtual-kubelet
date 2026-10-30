@@ -1,0 +1,52 @@
+{
+  "metadata": {
+    "name": "cat9k-lab-103-vk"
+  },
+  "status": {
+    "availableReplicas": 1,
+    "conditions": [
+      {
+        "lastTransitionTime": "2026-09-29T18:49:01Z",
+        "lastUpdateTime": "2026-09-30T19:43:11Z",
+        "message": "ReplicaSet \"cat9k-lab-103-vk-7f8457f55d\" has successfully progressed.",
+        "reason": "NewReplicaSetAvailable",
+        "status": "True",
+        "type": "Progressing"
+      },
+      {
+        "lastTransitionTime": "2026-09-30T19:43:43Z",
+        "lastUpdateTime": "2026-09-30T19:43:43Z",
+        "message": "Deployment has minimum availability.",
+        "reason": "MinimumReplicasAvailable",
+        "status": "True",
+        "type": "Available"
+      }
+    ],
+    "observedGeneration": 17,
+    "readyReplicas": 1,
+    "replicas": 1,
+    "terminatingReplicas": 0,
+    "updatedReplicas": 1
+  },
+  "strategy": {
+    "type": "Recreate"
+  },
+  "workers": [
+    {
+      "image": "cvk-tas-extentions:665a7954-fix1",
+      "name": "cisco-vk",
+      "resources": {
+        "limits": {
+          "cpu": "2",
+          "ephemeral-storage": "4Gi",
+          "memory": "1Gi"
+        },
+        "requests": {
+          "cpu": "100m",
+          "ephemeral-storage": "3Gi",
+          "memory": "256Mi"
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "branch": "pr/johalley/tas-extentions",
+  "filesSha256": {
+    "api/v1alpha1/types.go": "9d0ef239d6b1505298657ddda5208821b93d467307ac34171ac1b79a774c8e56",
+    "charts/cisco-virtual-kubelet/templates/topology-rbac.yaml": "bff8d3df925c1a04f5be138e6b7c98710a07d1f10fb421df2cc2d4fcfcbeb7ba",
+    "cmd/cisco-vk/config_reconciler.go": "5bfb1f36b326e8d103e1471f004ad15aadb377c8b9c880b695e6a1c515d3d48b",
+    "internal/managedprotocol/rbac.go": "835e16e7f887ecc3259114258960f275df48fa4612bc8bdb118e05778112e435",
+    "internal/provider/maintenance/drain.go": "b848131e27eb65f754db6516ec5a028c3e0ce781eefb898f3472b39d8cc5e538",
+    "internal/provider/maintenance/drain_test.go": "b27ddb3dfb27e1059f441aeb91e1d5a4e4584cc35f8b42a3a6f4bc554ccba04f",
+    "internal/provider/softwareupgrade/managed.go": "6c29a90016a08ad159f5c0902eaaa73f390f56de9a0bbcb24e5e3e50348a0ebc",
+    "internal/provider/softwareupgrade/managed_test.go": "ad63398d54904d740deae92506c48d6206a61d1ebadf9bca36504fb7c7dc1752",
+    "internal/provider/topology_observation.go": "c8bb237724a60f62153d12ee7c107d18a317f5269186c05a331f2864b30951f0",
+    "internal/topology/graph.go": "117903d51dc23e1f627ea6e6abb5e66805d2d856a0839241276445b52c238a49",
+    "internal/topology/graph_test.go": "5a6cb73a77ce998a55c4b6f884345cb3ab340f985381941f3615e165a72b70d3",
+    "mkdocs.yml": "42b8be409030d31c341ecc0a6759337c21f9ff6b1043dc1c443bb1d463613638",
+    "scripts/iosxe-gnoi-lab-cycle.py": "9684a6f22ff7fc6f714a76b147855a6c87f51d4d7f7d8c8ab68b7017a95e4f01",
+    "scripts/tests/test_iosxe_gnoi_lab_cycle.py": "129a8920c328d8c2bb5d5ca737695416aaaa820a86d9739f892b60e05e036194",
+    "scripts/tests/test_iosxe_gnoi_lab_cycle_safety.py": "338ace5eb3afbe266bfc75a99443618b6fa54024ae0ce2d820141899be3862ba"
+  },
+  "historicalBase": "665a7954a9def499cd3ee36e972e2b5fe15256f5",
+  "meaning": "Fingerprints of saved changed source/config files; NOT an attestation of the dirty settled5 build. Resolve the enclosing checkpoint commit from Git history."
+}

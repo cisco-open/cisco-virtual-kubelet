@@ -1,0 +1,53 @@
+apiVersion: ops.cisco.vk/v1alpha1
+kind: IOSXESoftwareRollout
+metadata:
+  name: roadmap-pacing-downgrade-20261002-103
+  namespace: cvk-live
+spec:
+  plan:
+    requestedBy: system:admin
+    requestedAt: "2026-10-01T22:31:03Z"
+    targets:
+      selector:
+        matchLabels:
+          topology.cisco.vk/lab-node: cat9k-lab-103
+          topology.cisco.vk/managed: "true"
+      allowAll: false
+      maxTargets: 1
+    image:
+      sha256: c210d89b0bcbdeea4962b87b5f159c331988fe5a85d07a5a30da0438b2d99355
+      imageFamily: cat9k
+      sources:
+        - name: ubuntu16-qualified-source
+          priority: 10
+          url: sftp://10.0.2.2/home/cisco/cvk-gnoi-images/cat9k_iosxe.17.18.02.SPA.bin
+          urlSecretRef:
+            name: pr194-iosxe-image-source
+    targetVersion: "17.18.02"
+    strategy: Reload
+    rollbackOnFailure: true
+    installTimeoutSeconds: 7200
+    rebootTimeoutSeconds: 3600
+    canaries:
+      - name: c9300-24p
+        devices: [cat9k-lab-103]
+    pauseAfterCanary: false
+    budgets:
+      maxConcurrentTransfers: 1
+      maxUnavailable: 1
+      domains:
+        - topologyKey: distribution.cisco.vk/cache-domain
+          maxConcurrentTransfers: 1
+        - topologyKey: operations.cisco.vk/redundancy-domain
+          maxUnavailable: 1
+    workloads:
+      policy: BlockIfRunning
+    health:
+      maxObservationAgeSeconds: 300
+      canarySoakSeconds: 30
+      waveSoakSeconds: 30
+      network:
+        enabled: true
+        requireCompleteEvidence: true
+  control:
+    revision: 0

@@ -1,0 +1,469 @@
+{
+  "metadata": {
+    "creationTimestamp": "2026-06-17T20:39:55Z",
+    "generation": 5,
+    "name": "cat9k-live",
+    "namespace": "cvk-live",
+    "resourceVersion": "9508593",
+    "uid": "6afd6bd0-284d-4ee2-a6e4-638ca07976b4"
+  },
+  "spec": {
+    "address": "198.51.100.100",
+    "driver": "XE"
+  },
+  "status": {
+    "conditions": [
+      {
+        "lastTransitionTime": "2026-10-01T07:30:17Z",
+        "message": "Referenced gNOI Secret material is valid and the exact network worker is ready; device connectivity has not been checked",
+        "observedGeneration": 5,
+        "reason": "Validated",
+        "status": "True",
+        "type": "GNOIConfigurationReady"
+      },
+      {
+        "lastTransitionTime": "2026-09-19T13:39:21Z",
+        "message": "Node name and UID are bound to this CiscoDevice incarnation",
+        "observedGeneration": 5,
+        "reason": "UIDBound",
+        "status": "True",
+        "type": "NodeIdentityReady"
+      },
+      {
+        "lastTransitionTime": "2026-10-01T07:29:33Z",
+        "message": "required topology is projected and the live physical identity is verified",
+        "observedGeneration": 5,
+        "reason": "ProjectionComplete",
+        "status": "True",
+        "type": "TopologyReady"
+      },
+      {
+        "lastTransitionTime": "2026-09-30T13:02:55Z",
+        "message": "no managed maintenance session is active",
+        "observedGeneration": 5,
+        "reason": "Idle",
+        "status": "True",
+        "type": "MaintenanceReady"
+      },
+      {
+        "lastTransitionTime": "2026-09-19T13:41:17Z",
+        "message": "all required topology labels are present",
+        "observedGeneration": 5,
+        "reason": "ProjectionComplete",
+        "status": "False",
+        "type": "TopologyIncomplete"
+      },
+      {
+        "lastTransitionTime": "2026-10-01T07:29:33Z",
+        "message": "no topology ownership conflict is present",
+        "observedGeneration": 5,
+        "reason": "ProjectionComplete",
+        "status": "False",
+        "type": "TopologyConflict"
+      }
+    ],
+    "healthObservation": {
+      "conditionObservations": [
+        {
+          "observedAt": "2026-10-01T07:31:52Z",
+          "observedGeneration": 5,
+          "status": "True",
+          "type": "GNOIConfigurationReady"
+        },
+        {
+          "observedAt": "2026-10-01T07:31:46Z",
+          "observedGeneration": 5,
+          "status": "True",
+          "type": "NodeIdentityReady"
+        },
+        {
+          "observedAt": "2026-10-01T07:31:46Z",
+          "observedGeneration": 5,
+          "status": "True",
+          "type": "TopologyReady"
+        }
+      ],
+      "deviceConditionsHash": "sha256:fc9bbe588b931e70f88619020bdab58adfb8fa2c311f572a91d9e2fbe92409c1",
+      "network": {
+        "collectionEndedAt": "2026-10-01T07:31:39Z",
+        "collectionStartedAt": "2026-10-01T07:31:37Z",
+        "complete": true,
+        "deviceIdentityHash": "sha256:f2f616b2b7d0595d59681a9ccbcc3dfd5117057b3728149822e5d692716d7f6e",
+        "interfaces": [
+          {
+            "headroomPercent": 99,
+            "name": "AppGigabitEthernet1/0/1",
+            "operUp": true
+          },
+          {
+            "headroomPercent": 100,
+            "name": "FortyGigabitEthernet1/1/1",
+            "operUp": false
+          },
+          {
+            "headroomPercent": 100,
+            "name": "FortyGigabitEthernet1/1/2",
+            "operUp": false
+          },
+          {
+            "headroomPercent": 99,
+            "name": "GigabitEthernet0/0",
+            "operUp": true
+          },
+          {
+            "headroomPercent": 100,
+            "name": "GigabitEthernet1/0/1",
+            "operUp": true
+          },
+          {
+            "headroomPercent": 100,
+            "name": "GigabitEthernet1/0/10",
+            "operUp": false
+          },
+          {
+            "headroomPercent": 100,
+            "name": "GigabitEthernet1/0/11",
+            "operUp": false
+          },
+          {
+            "headroomPercent": 100,
+            "name": "GigabitEthernet1/0/12",
+            "operUp": false
+          },
+          {
+            "headroomPercent": 100,
+            "name": "GigabitEthernet1/0/13",
+            "operUp": false
+          },
+          {
+            "headroomPercent": 100,
+            "name": "GigabitEthernet1/0/14",
+            "operUp": false
+          },
+          {
+            "headroomPercent": 100,
+            "name": "GigabitEthernet1/0/15",
+            "operUp": false
+          },
+          {
+            "headroomPercent": 100,
+            "name": "GigabitEthernet1/0/16",
+            "operUp": false
+          },
+          {
+            "headroomPercent": 100,
+            "name": "GigabitEthernet1/0/17",
+            "operUp": false
+          },
+          {
+            "headroomPercent": 100,
+            "name": "GigabitEthernet1/0/18",
+            "operUp": false
+          },
+          {
+            "headroomPercent": 100,
+            "name": "GigabitEthernet1/0/19",
+            "operUp": false
+          },
+          {
+            "headroomPercent": 100,
+            "name": "GigabitEthernet1/0/2",
+            "operUp": true
+          },
+          {
+            "headroomPercent": 100,
+            "name": "GigabitEthernet1/0/20",
+            "operUp": false
+          },
+          {
+            "headroomPercent": 100,
+            "name": "GigabitEthernet1/0/21",
+            "operUp": false
+          },
+          {
+            "headroomPercent": 100,
+            "name": "GigabitEthernet1/0/22",
+            "operUp": true
+          },
+          {
+            "headroomPercent": 100,
+            "name": "GigabitEthernet1/0/23",
+            "operUp": true
+          },
+          {
+            "headroomPercent": 100,
+            "name": "GigabitEthernet1/0/24",
+            "operUp": false
+          },
+          {
+            "headroomPercent": 100,
+            "name": "GigabitEthernet1/0/3",
+            "operUp": false
+          },
+          {
+            "headroomPercent": 100,
+            "name": "GigabitEthernet1/0/4",
+            "operUp": false
+          },
+          {
+            "headroomPercent": 100,
+            "name": "GigabitEthernet1/0/5",
+            "operUp": false
+          },
+          {
+            "headroomPercent": 100,
+            "name": "GigabitEthernet1/0/6",
+            "operUp": false
+          },
+          {
+            "headroomPercent": 100,
+            "name": "GigabitEthernet1/0/7",
+            "operUp": false
+          },
+          {
+            "headroomPercent": 100,
+            "name": "GigabitEthernet1/0/8",
+            "operUp": false
+          },
+          {
+            "headroomPercent": 100,
+            "name": "GigabitEthernet1/0/9",
+            "operUp": false
+          },
+          {
+            "headroomPercent": 100,
+            "name": "GigabitEthernet1/1/1",
+            "operUp": false
+          },
+          {
+            "headroomPercent": 100,
+            "name": "GigabitEthernet1/1/2",
+            "operUp": false
+          },
+          {
+            "headroomPercent": 100,
+            "name": "GigabitEthernet1/1/3",
+            "operUp": false
+          },
+          {
+            "headroomPercent": 100,
+            "name": "GigabitEthernet1/1/4",
+            "operUp": false
+          },
+          {
+            "headroomPercent": 100,
+            "name": "TenGigabitEthernet1/1/1",
+            "operUp": false
+          },
+          {
+            "headroomPercent": 100,
+            "name": "TenGigabitEthernet1/1/2",
+            "operUp": false
+          },
+          {
+            "headroomPercent": 100,
+            "name": "TenGigabitEthernet1/1/3",
+            "operUp": false
+          },
+          {
+            "headroomPercent": 100,
+            "name": "TenGigabitEthernet1/1/4",
+            "operUp": false
+          },
+          {
+            "headroomPercent": 100,
+            "name": "TenGigabitEthernet1/1/5",
+            "operUp": false
+          },
+          {
+            "headroomPercent": 100,
+            "name": "TenGigabitEthernet1/1/6",
+            "operUp": false
+          },
+          {
+            "headroomPercent": 100,
+            "name": "TenGigabitEthernet1/1/7",
+            "operUp": false
+          },
+          {
+            "headroomPercent": 100,
+            "name": "TenGigabitEthernet1/1/8",
+            "operUp": false
+          },
+          {
+            "headroomPercent": 100,
+            "name": "TwentyFiveGigE1/1/1",
+            "operUp": false
+          },
+          {
+            "headroomPercent": 100,
+            "name": "TwentyFiveGigE1/1/2",
+            "operUp": false
+          },
+          {
+            "headroomPercent": 100,
+            "name": "VirtualPortGroup0",
+            "operUp": true
+          },
+          {
+            "headroomPercent": 100,
+            "name": "Vlan1",
+            "operUp": true
+          },
+          {
+            "headroomPercent": 100,
+            "name": "Vlan100",
+            "operUp": true
+          },
+          {
+            "headroomPercent": 100,
+            "name": "Vlan99",
+            "operUp": true
+          }
+        ],
+        "neighbors": [
+          {
+            "id": "C9K-2",
+            "identity": "cdp|C9K-2|GigabitEthernet1/0/1|",
+            "interface": "GigabitEthernet1/0/1",
+            "source": "cdp",
+            "state": "discovered"
+          },
+          {
+            "id": "C9K-4.dmz.cisco.com",
+            "identity": "cdp|C9K-4.dmz.cisco.com|GigabitEthernet1/0/23|",
+            "interface": "GigabitEthernet1/0/23",
+            "source": "cdp",
+            "state": "discovered"
+          },
+          {
+            "id": "MaC_Outside_Switch",
+            "identity": "cdp|MaC_Outside_Switch|GigabitEthernet0/0|",
+            "interface": "GigabitEthernet0/0",
+            "source": "cdp",
+            "state": "discovered"
+          },
+          {
+            "id": "MaC_Outside_Switch",
+            "identity": "cdp|MaC_Outside_Switch|GigabitEthernet1/0/22|",
+            "interface": "GigabitEthernet1/0/22",
+            "source": "cdp",
+            "state": "discovered"
+          },
+          {
+            "id": "Outside-Segment.cx-emea-cto-cloud-de.com",
+            "identity": "cdp|Outside-Segment.cx-emea-cto-cloud-de.com|GigabitEthernet1/0/2|",
+            "interface": "GigabitEthernet1/0/2",
+            "source": "cdp",
+            "state": "discovered"
+          }
+        ],
+        "observedAt": "2026-10-01T07:31:37Z",
+        "producerRevision": "sha256:f4b118c528c682ca1b05d305a2b6468398b0a73bdab74655629ae470c049f02c",
+        "sampleSequence": 5,
+        "workerPodUID": "6742b1b8-69e8-40ad-befe-536e881afc0f"
+      },
+      "nodeReadyHeartbeatTime": "2026-10-01T07:31:29Z",
+      "observedAt": "2026-10-01T07:31:52Z"
+    },
+    "maintenanceSession": {
+      "acknowledgedAt": "2026-10-01T06:23:48Z",
+      "controlRevision": 0,
+      "deviceUID": "6afd6bd0-284d-4ee2-a6e4-638ca07976b4",
+      "lease": {
+        "holder": "software-upgrade/7d5edc04-0bbf-4c8c-8cfa-af793675f0c0",
+        "name": "cvk-device-d55bfb3a9fd0430f-device-disruptive-mutation-98786a6c",
+        "namespace": "cvk-live",
+        "uid": "7286048b-1368-4490-ad04-6bcc7a6f539e"
+      },
+      "message": "drain, device mutation, and workload recovery are settled",
+      "nodeName": "cat9k-live",
+      "nodeUID": "1600578e-9e93-4164-9e47-b0c277a28d5e",
+      "operation": {
+        "name": "cycle-20261001062024-d04c5c-cat9k-live-upgrade-rollout-cat9k-live-e316522a",
+        "namespace": "cvk-live",
+        "uid": "7d5edc04-0bbf-4c8c-8cfa-af793675f0c0"
+      },
+      "phase": "Settled",
+      "protocolVersion": "pdb-drain-v1",
+      "purpose": "SoftwareMutation",
+      "requestedAt": "2026-10-01T06:23:45Z",
+      "sessionToken": "[REDACTED sha256:5b00af6751a6929a1972ed2a21e57993e657ebae7ab649cdbda77d5d2f0df27f]"
+    },
+    "netAsCode": {
+      "format": "netascode-iosxe",
+      "sections": [
+        "entity",
+        "device",
+        "interface"
+      ],
+      "stripe": "iosxe",
+      "type": "DeviceCentric"
+    },
+    "networkWorkerRevision": {
+      "deploymentGeneration": 21,
+      "deploymentUID": "1425a3b4-d31a-4b7b-ad2c-4cc4ff040aef",
+      "desiredRevision": "sha256:f4b118c528c682ca1b05d305a2b6468398b0a73bdab74655629ae470c049f02c",
+      "observedAt": "2026-10-01T07:30:14Z",
+      "observedRevision": "sha256:f4b118c528c682ca1b05d305a2b6468398b0a73bdab74655629ae470c049f02c",
+      "podReadyTime": "2026-10-01T07:29:37Z",
+      "podStartTime": "2026-10-01T07:29:34Z",
+      "podUID": "6742b1b8-69e8-40ad-befe-536e881afc0f"
+    },
+    "nodeIdentity": {
+      "deviceUID": "6afd6bd0-284d-4ee2-a6e4-638ca07976b4",
+      "nodeName": "cat9k-live",
+      "nodeUID": "1600578e-9e93-4164-9e47-b0c277a28d5e",
+      "physicalIdentity": "foc2520l6e8"
+    },
+    "phase": "Ready",
+    "topologyProjection": {
+      "effectiveLabelHash": "sha256:0fd425178a71292f9903f8a092316a7d152ad9355de16f4c02eec9b1200da2a4",
+      "lastSuccessfulTime": "2026-09-19T13:41:17Z",
+      "sourceResourceVersion": "6907388"
+    },
+    "workerCapabilities": [
+      {
+        "enabled": true,
+        "name": "apphosting",
+        "runtime": "per-device-worker"
+      },
+      {
+        "enabled": true,
+        "name": "config",
+        "runtime": "per-device-worker"
+      },
+      {
+        "enabled": true,
+        "name": "telemetry",
+        "runtime": "per-device-worker"
+      },
+      {
+        "enabled": true,
+        "name": "diagnostics",
+        "runtime": "per-device-worker"
+      },
+      {
+        "enabled": true,
+        "name": "operations",
+        "runtime": "per-device-worker"
+      },
+      {
+        "enabled": true,
+        "name": "lifecycle",
+        "runtime": "per-device-worker"
+      }
+    ],
+    "workerRevision": {
+      "deploymentGeneration": 21,
+      "deploymentUID": "fd3731e7-5baa-4e21-ba5b-efc94de7c29d",
+      "desiredRevision": "sha256:c7dfabddb52154cd3d68c58e1bda344f526999117931bc02b0d91f5022e1ac9d",
+      "observedAt": "2026-10-01T07:31:46Z",
+      "observedRevision": "sha256:c7dfabddb52154cd3d68c58e1bda344f526999117931bc02b0d91f5022e1ac9d",
+      "podStartTime": "2026-10-01T07:28:23Z",
+      "podUID": "c276b227-2d6c-4ce8-8157-c76156357bb0",
+      "readyHeartbeatTime": "2026-10-01T07:31:29Z"
+    },
+    "workerTopology": "PerDevice"
+  }
+}

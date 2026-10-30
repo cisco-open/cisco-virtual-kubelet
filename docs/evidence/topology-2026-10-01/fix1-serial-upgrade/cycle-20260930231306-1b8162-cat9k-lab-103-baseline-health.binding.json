@@ -1,0 +1,18 @@
+{
+  "annotations": {
+    "topology.cisco.vk/device-name": "cat9k-lab-103",
+    "topology.cisco.vk/device-uid": "782dc4b2-7e43-4188-8436-87633f0bf4fb",
+    "topology.cisco.vk/managed": "true",
+    "topology.cisco.vk/network-worker-pod-name": "u782dc4b2-7e43-4188-8436-87633f0bf4fb-network-7fb86b89cd-bwrss",
+    "topology.cisco.vk/network-worker-pod-uid": "64deb9ab-850d-492f-8749-38efaec22b85",
+    "topology.cisco.vk/network-worker-username": "system:serviceaccount:cvk-live:cisco-vk-cisco-virtual-kubelet-network-management"
+  },
+  "metadata": {
+    "creationTimestamp": "2026-09-30T23:15:04Z",
+    "generation": 1,
+    "name": "cycle-20260930231306-1b8162-cat9k-lab-103-baseline-health",
+    "namespace": "cvk-live",
+    "resourceVersion": "9417945",
+    "uid": "3ae76c20-e864-41d2-928c-2d8d9601e802"
+  }
+}

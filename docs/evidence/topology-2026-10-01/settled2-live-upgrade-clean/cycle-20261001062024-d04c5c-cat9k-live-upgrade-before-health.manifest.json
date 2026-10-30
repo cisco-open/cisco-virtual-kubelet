@@ -1,0 +1,23 @@
+{
+  "apiVersion": "ops.cisco.vk/v1alpha1",
+  "kind": "DeviceOperation",
+  "metadata": {
+    "name": "cycle-20261001062024-d04c5c-cat9k-live-upgrade-before-health",
+    "namespace": "cvk-live"
+  },
+  "spec": {
+    "deviceRef": {
+      "name": "cat9k-live"
+    },
+    "operation": {
+      "commands": [
+        "show version",
+        "show install summary",
+        "show gnxi state detail",
+        "show platform software status control-processor brief",
+        "show app-hosting list"
+      ],
+      "kind": "ShowCommand"
+    }
+  }
+}

@@ -1,0 +1,4235 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="A Virtual Kubelet provider for App-Hosting workloads on Cisco IOS-XE devices, with Beta support for Cisco Nexus NX-OS switches.">
+      
+      
+      
+        <link rel="canonical" href="https://cisco-open.github.io/cisco-virtual-kubelet/docs/topology-reference/">
+      
+      
+        <link rel="prev" href="../ARCHITECTURE/">
+      
+      
+        <link rel="next" href="../security-authorization/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>Topology design and authorization - Cisco Virtual Kubelet</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+    
+    
+      <link rel="stylesheet" href="../stylesheets/extra.css">
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="custom" data-md-color-accent="custom">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#managed-topology-design-and-authorization-reference" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="/cisco-virtual-kubelet/" title="Cisco Virtual Kubelet" class="md-header__button md-logo" aria-label="Cisco Virtual Kubelet" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Cisco Virtual Kubelet
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Topology design and authorization
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="custom" data-md-color-accent="custom"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m17.75 4.09-2.53 1.94.91 3.06-2.63-1.81-2.63 1.81.91-3.06-2.53-1.94L12.44 4l1.06-3 1.06 3zm3.5 6.91-1.64 1.25.59 1.98-1.7-1.17-1.7 1.17.59-1.98L15.75 11l2.06-.05L18.5 9l.69 1.95zm-2.28 4.95c.83-.08 1.72 1.1 1.19 1.85-.32.45-.66.87-1.08 1.27C15.17 23 8.84 23 4.94 19.07c-3.91-3.9-3.91-10.24 0-14.14.4-.4.82-.76 1.27-1.08.75-.53 1.93.36 1.85 1.19-.27 2.86.69 5.83 2.89 8.02a9.96 9.96 0 0 0 8.02 2.89m-1.64 2.02a12.08 12.08 0 0 1-7.8-3.47c-2.17-2.19-3.33-5-3.49-7.82-2.81 3.14-2.7 7.96.31 10.98 3.02 3.01 7.84 3.12 10.98.31"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="custom" data-md-color-accent="custom"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0-7 2.39 3.42C13.65 5.15 12.84 5 12 5s-1.65.15-2.39.42zM3.34 7l4.16-.35A7.2 7.2 0 0 0 5.94 8.5c-.44.74-.69 1.5-.83 2.29zm.02 10 1.76-3.77a7.131 7.131 0 0 0 2.38 4.14zM20.65 7l-1.77 3.79a7.02 7.02 0 0 0-2.38-4.15zm-.01 10-4.14.36c.59-.51 1.12-1.14 1.54-1.86.42-.73.69-1.5.83-2.29zM12 22l-2.41-3.44c.74.27 1.55.44 2.41.44.82 0 1.63-.17 2.37-.44z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+          <a href="javascript:void(0)" class="md-search__icon md-icon" title="Share" aria-label="Share" data-clipboard data-clipboard-text="" data-md-component="search-share" tabindex="-1">
+            
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9a3 3 0 0 0-3 3 3 3 0 0 0 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.15c-.05.21-.08.43-.08.66 0 1.61 1.31 2.91 2.92 2.91s2.92-1.3 2.92-2.91A2.92 2.92 0 0 0 18 16.08"/></svg>
+          </a>
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/cisco-open/cisco-virtual-kubelet" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    cisco-open/cisco-virtual-kubelet
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href=".." class="md-tabs__link">
+          
+  
+  
+  Start here
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../guides/" class="md-tabs__link">
+          
+  
+  
+  Guides
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../operator-guide/" class="md-tabs__link">
+          
+  
+  
+  Operations
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../reference/" class="md-tabs__link">
+          
+  
+  
+  Reference
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../controller-extension-guide/" class="md-tabs__link">
+          
+  
+  
+  Development
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../releases/" class="md-tabs__link">
+          
+  
+  
+  Releases and archive
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="/cisco-virtual-kubelet/" title="Cisco Virtual Kubelet" class="md-nav__button md-logo" aria-label="Cisco Virtual Kubelet" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Cisco Virtual Kubelet
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/cisco-open/cisco-virtual-kubelet" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    cisco-open/cisco-virtual-kubelet
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_1" >
+        
+          
+          <label class="md-nav__link" for="__nav_1" id="__nav_1_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Start here
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_1_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_1">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Start here
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Documentation home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../concepts/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How CVK works
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../getting-started/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting started
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../status/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Feature availability
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../glossary/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Glossary
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Guides
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Guides
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guides/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Guides overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../image-distribution/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    App image distribution
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_2_3" id="__nav_2_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Device setup
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Device setup
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../configuration-cat8000v/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Catalyst 8000V
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../configuration-cat9000/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Catalyst 9000
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../configuration-ir1101/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    IR1100 Series
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../configuration-ie3500/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    IE3500 Series
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../netascode-config/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Network as Code
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../netascode-migration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Network as Code migration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_2_6" id="__nav_2_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Managed topology
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Managed topology
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../topology-awareness/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../topology-enable/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Enable and enroll devices
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../topology-scheduling/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Schedule application workloads
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_2_7" id="__nav_2_7_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Controller adapters
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Controller adapters
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../controllers/sdwan/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Catalyst SD-WAN
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../controllers/nexus-dashboard/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Nexus Dashboard
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_8" >
+        
+          
+          <label class="md-nav__link" for="__nav_2_8" id="__nav_2_8_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Security
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2_8">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Security
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../security/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Security overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../security-credentials/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Credentials and rotation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../security-tls/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    TLS and transport trust
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Operations
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Operations
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../operator-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Operations overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../installation-maintenance/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Maintain the CVK installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../device-diagnostics/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Device diagnostics
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../device-actions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Opt-in device actions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_5" id="__nav_3_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    IOS-XE software maintenance
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    IOS-XE software maintenance
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../gnoi-iosxe-upgrade-runbook/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Single-device upgrade and downgrade
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../topology-campaigns/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Run topology-aware campaigns
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../topology-drain/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Optional workload drain
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../topology-troubleshooting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Observe and troubleshoot campaigns
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../topology-recovery/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Recovery and retirement
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../nxos-recovery/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    NX-OS configuration recovery
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../observability/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Observability
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../troubleshooting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Troubleshooting
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_9" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_9" id="__nav_3_9_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Telemetry
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_9_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_9">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Telemetry
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../telemetry/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MDT subscriptions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../telemetry-cardinality/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Cardinality management
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../lifecycle/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Lifecycle correlation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../CONFIGURATION/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CiscoDevice configuration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../crds/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CRD reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cisco-vk-cli/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI and operator plugin
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../environment-variables/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Environment variables
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/families/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    IOS-XE configuration families
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/families-nxos/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    NX-OS configuration families
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../yang-version-support/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    YANG version support
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../API/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Device and kubelet API
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../gnoi-software-lifecycle/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Software lifecycle design
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ARCHITECTURE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture and internals
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Topology design and authorization
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Topology design and authorization
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#architecture-and-ownership" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Architecture and ownership
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#managed-profile-validation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Managed-profile validation
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#delegated-authorization" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Delegated authorization
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#policy-and-plan-transitions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Policy and plan transitions
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#campaign-protocol-versions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Campaign protocol versions
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#health-and-reservation-evidence" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Health and reservation evidence
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#drain-state-and-recovery-contract" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Drain state and recovery contract
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#reverse-handoff-state-contract" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reverse-handoff state contract
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#experimental-in-tree-workloadpodgrouptas" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Experimental in-tree Workload/PodGroup/TAS
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#development-scope-and-evidence" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Development scope and evidence
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#deferred-roadmap-and-limitations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Deferred roadmap and limitations
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../security-authorization/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    RBAC and authorization
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Development
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Development
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../controller-extension-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Controller extension contract
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../family-parity/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Family parity matrix
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../production-readiness/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    NX-OS qualification plan
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../controllers/sdwan-live-test-backlog/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SD-WAN live qualification backlog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../topology-roadmap/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Topology roadmap
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../topology-roadmap-execution/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Topology execution plan
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Releases and archive
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Releases and archive
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../releases/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Releases overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../releases/v2026.11.1/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Corrected November candidate notes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../releases/v2026.11.1-readiness/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Corrected November preparation record
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_6_4" id="__nav_6_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Rejected November candidate
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_6_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Rejected November candidate
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../releases/v2026.11.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v2026.11.0 notes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../releases/v2026.11.0-readiness/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v2026.11.0 preparation record
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="https://github.com/cisco-open/cisco-virtual-kubelet/releases" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Published releases
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../releases/v2026.10.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    October preparation notes (historical)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../releases/v2026.10.0-readiness/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    October readiness ledger (historical)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../releases/v2026.9.2/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v2026.9.2 notes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6_9" >
+        
+          
+          <label class="md-nav__link" for="__nav_6_9" id="__nav_6_9_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Unpublished September drafts
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_6_9_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6_9">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Unpublished September drafts
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../releases/v2026.9.1/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v2026.9.1
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../releases/v2026.9.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v2026.9.0
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../topology-merge-scope/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Topology merge scope
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../topology-november-handoff/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    November topology handoff (October checkpoint)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#architecture-and-ownership" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Architecture and ownership
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#managed-profile-validation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Managed-profile validation
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#delegated-authorization" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Delegated authorization
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#policy-and-plan-transitions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Policy and plan transitions
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#campaign-protocol-versions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Campaign protocol versions
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#health-and-reservation-evidence" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Health and reservation evidence
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#drain-state-and-recovery-contract" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Drain state and recovery contract
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#reverse-handoff-state-contract" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reverse-handoff state contract
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#experimental-in-tree-workloadpodgrouptas" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Experimental in-tree Workload/PodGroup/TAS
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#development-scope-and-evidence" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Development scope and evidence
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#deferred-roadmap-and-limitations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Deferred roadmap and limitations
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+
+<h1 id="managed-topology-design-and-authorization-reference">Managed topology design and authorization reference</h1>
+<p><strong>For platform administrators, reviewers and contributors.</strong> This page preserves
+the detailed ownership, admission, state and qualification contracts. For a task,
+start from the <a href="../topology-awareness/">topology overview</a>; executable setup,
+approval, drain and recovery procedures keep their required checks alongside them.</p>
+<h2 id="architecture-and-ownership">Architecture and ownership</h2>
+<pre class="mermaid"><code>---
+config:
+  layout: dagre
+  theme: default
+  look: classic
+---
+flowchart LR
+    I[Administrator inventory labels] --&gt; D[CiscoDevice]
+    P[Administrator policy ConfigMap] --&gt; M[CVK manager]
+    D --&gt; M
+    M --&gt; N[Manager-bound Kubernetes Node]
+    N --&gt; S[Default kube-scheduler]
+    S --&gt; W[Device-hosted workload]
+    W --&gt; A[Shared app-hosting identity&lt;br/&gt;per managed-device namespace]
+    R[IOSXESoftwareRollout] --&gt; M
+    M --&gt; L[CAS reservation ledger]
+    M --&gt; U[Immutable IOSXESoftwareUpgrade leaf]
+    U --&gt; K[Shared network-management identity&lt;br/&gt;per managed-device namespace]
+    K --&gt; G[Secure IOS-XE gNOI service]</code></pre>
+<p>The ownership split is strict:</p>
+<table>
+<thead>
+<tr>
+<th>Surface</th>
+<th>Authority</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Desired stable topology and operational risk domains</td>
+<td>protected <code>CiscoDevice.metadata.labels</code></td>
+</tr>
+<tr>
+<td>Stable physical chassis identity used for deduplication</td>
+<td>write-once operator-declared <code>CiscoDevice.spec.physicalIdentity</code></td>
+</tr>
+<tr>
+<td>Node name, UID binding, projected labels, static/maintenance taints</td>
+<td>manager</td>
+</tr>
+<tr>
+<td>Node and Pod status, app execution</td>
+<td>app-hosting read-write identity; native admission binds each write to a manager-owned Node/Pod relationship</td>
+</tr>
+<tr>
+<td>Pod placement</td>
+<td>default kube-scheduler</td>
+</tr>
+<tr>
+<td>Fleet plan, policy evaluation, reservations, child admission</td>
+<td>manager</td>
+</tr>
+<tr>
+<td>Configuration, image transfer/install/activate/verify, limited rollback</td>
+<td>network-management identity selected as read-write</td>
+</tr>
+</tbody>
+</table>
+<p>The manager never opens a device session. The worker never chooses fleet
+policy. A rollout is not represented as a Pod or Job because scheduler retries
+cannot provide at-most-once device-mutation claims or domain reservations.</p>
+<p>The physical chassis identity is deliberately operator-declared, write-once,
+and manager-deduplicated case-insensitively. Its lowercase canonical value is
+recorded in the immutable Node-identity status. A per-device worker supplies live device inventory,
+Node health, and execution observations, so compromise of that worker can
+falsify those observations. It cannot rewrite the declared physical identity,
+protected topology, policy, or ledger authority. Treat worker evidence as a
+freshness and consistency signal, not as the root identity assertion.</p>
+<p>Managed topology defines exactly two reusable functional ServiceAccount
+identities in each namespace that contains managed CiscoDevices, regardless of
+device count: one for app hosting and one for network management. These are not
+cluster-global accounts because Kubernetes ServiceAccounts are namespaced, and
+they are never multiplied per device. Each identity selects exactly one of
+<code>disabled</code>, <code>readOnly</code>, or <code>readWrite</code>; <code>disabled</code> removes that account, its
+bindings, and its worker plane, so a namespace with a disabled plane
+materializes fewer than two accounts. App-hosting read-only is a
+delegated Kubernetes observation identity only—the manager does not create an
+app worker, the Node remains guarded from scheduling, and app hosting is
+unavailable. App-hosting read-write runs the virtual-kubelet path. Network
+read-only runs telemetry, diagnostics, and read-only operations; network
+read-write additionally permits configuration and explicitly enabled gNOI
+mutation reconcilers. Runtime gates mirror RBAC so read-only never means
+"mutate the device and then fail to report status."</p>
+<p>Topology-disabled mode retains the historical combined
+<code>cisco-virtual-kubelet</code> ServiceAccount. During upgrade, an existing combined
+or per-device identity is a keep-protected migration bridge only. A fresh
+managed install does not create that third account, and the manager retires
+old identities after their workloads are quiesced and both replacement planes
+have passed their profile audit.</p>
+<p>For a selected managed device, the manager also content-addresses the complete
+desired worker PodTemplate, excluding only the revision's own annotation and
+environment carrier. Credential, gNOI TLS, and provisioning Secret
+resourceVersions are PodTemplate inputs, but Secret bytes never enter the
+hash. The digest is injected as
+<code>CISCO_VK_WORKER_CONFIG_REVISION</code>; the running worker returns it through its
+status-only Node writer. <code>CiscoDevice.status.workerRevision</code> becomes ready only
+after the exact owned Deployment completes, exactly one non-terminating owned
+Pod is Ready, and that Pod publishes a matching heartbeat after its start
+time. A Secret rotation therefore blocks new gNOI campaign admission until the
+<code>Recreate</code> worker rollout proves that the new process loaded the new inputs.</p>
+<h2 id="managed-profile-validation">Managed-profile validation</h2>
+<p>The <code>maxPods</code> bound is a managed-topology scheduling invariant. Standalone
+mode deliberately keeps its historical compatibility behavior: values at or
+below zero fall back to 16, and otherwise the existing <code>int32</code> value is used.</p>
+<p>The default VK role name remains a migration invariant for retiring the
+topology-disabled combined identity. Steady-state managed workers instead use
+the account names under <code>topology.workerAccounts</code>; the manager may bind only
+the four fixed functional profiles and the fixed, non-selectable app-read,
+network-global-read, and Lease-only support roles. A distinct
+<code>CONFIG_LEASE_NAMESPACE</code> receives only the matching Lease support role, never
+the tenant network profile.</p>
+<p>The manager checks API discovery, policy generation, binding shape, contract
+version, built-in-resource expression warnings, and the exact live rule sets
+of the fixed functional worker and support ClusterRoles before enabling managed workers. It
+rejects role aggregation or any additional resource or verb. Each worker then
+performs positive and negative server-side dry runs with its own credentials: a
+harmless Node-status write must succeed, while a label write smuggled through
+<code>/status</code> must be denied. A version check or an empty warning list alone is not
+proof that admission works.</p>
+<p>Helm may apply the manager's narrowly scoped <code>get</code>/<code>bind</code> grant before admission
+because those are independent Kubernetes objects. No worker completion binding
+is rendered by Helm, and controller startup remains blocked until both policy
+and role attestations pass. The Helm actor and controller ServiceAccount are
+therefore trusted computing-base identities during this reconciliation window;
+protect them from compromise and concurrent out-of-band RBAC mutation.</p>
+<p>Node authorization is necessary but does not turn the functional worker token
+into a <code>system:node:*</code> credential. App read-write still has the documented
+cluster-wide workload-input reads required by upstream virtual-kubelet. Treat
+the native Node authorizer and NodeRestriction as prerequisites for the real
+kubelet that requests projected tokens, not as a substitute for the shared
+worker admission policies or the locked namespace boundary.</p>
+<h2 id="delegated-authorization">Delegated authorization</h2>
+<p>The chart creates these ClusterRoles but binds none of them:</p>
+<table>
+<thead>
+<tr>
+<th>Role suffix</th>
+<th>Delegated action</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>-topology-author</code></td>
+<td>change protected topology/risk labels and adoption/reclassification approvals</td>
+</tr>
+<tr>
+<td><code>-rollout-planner</code></td>
+<td>create campaigns and issue monotonic pause/resume/cancel controls</td>
+</tr>
+<tr>
+<td><code>-rollout-approver</code></td>
+<td>approve one exact frozen-plan hash</td>
+</tr>
+<tr>
+<td><code>-rollout-activator</code></td>
+<td>separately authorize activation bound to the frozen plan and preparation receipts</td>
+</tr>
+<tr>
+<td><code>-rollout-recoverer</code></td>
+<td>request the narrowly verified invalidation of eligible unused preparation receipts</td>
+</tr>
+<tr>
+<td><code>-topology-policy-admin</code></td>
+<td>change coherent policy content, not its ledger UID binding</td>
+</tr>
+<tr>
+<td><code>-topology-ledger-breakglass</code></td>
+<td>exceptional ledger recovery; normally unbound</td>
+</tr>
+</tbody>
+</table>
+<p>Use namespace RoleBindings and keep planner, approver, policy administrator,
+and ledger recovery identities separate where separation of duties is
+required. Kubernetes RBAC cannot constrain an arbitrary label selector's
+result; the manager therefore applies the administrator fleet selector,
+same-namespace rule, explicit <code>allowAll</code>, target cap, frozen target UIDs, and
+exact-hash approval as additional authority boundaries.</p>
+<p>Managed worker RBAC exposes four selectable roles. The manager binds the app
+account to exactly one app role and the network account to exactly one network
+role; it never stacks read-only and read-write. The app read-write role has no
+Node metadata/spec, generic Pod update/create, Pod log/exec, Lease create/delete,
+RBAC, token, or Secret write authority. Its CiscoDevice and operation-risk
+reads come from an implementation-only namespaced support role, never its
+cluster-bound profile. Both running planes may create a
+<code>SelfSubjectReview</code> to verify their Pod-bound token identity. The network roles
+are namespaced; only the non-selectable global-read support role supplies
+cluster-scoped reads. Network read-write has no Node/Pod mutation, RBAC, token,
+or cluster-wide Secret grant.
+Its bounded upgrade/action main/status verbs are stable so two Helm releases
+cannot race to redefine a cluster-shared profile. The explicit runtime gate
+still decides whether each mutation controller is registered, and native
+admission independently enforces operation ownership and protocol.</p>
+<p>Admission also reserves the two functional ServiceAccount objects to the
+manager, permits their TokenRequest subresource only to a kubelet for an exact
+Pod-bound token, and denies legacy ServiceAccount-token Secrets. This closes
+the otherwise-valid path where another token-issuing principal could reuse the
+shared username without the manager-bound worker Pod incarnation.</p>
+<p>Network worker names use the full immutable CiscoDevice UID before the
+generated suffix (<code>u&lt;device-uid&gt;-network-...</code>), independently of the device
+name length. This keeps the identity intact when Kubernetes truncates
+generated Pod names. The UID-first naming transition rotates prior worker
+accounts through the existing policy-epoch settlement and cleanup sequence;
+it does not run old and replacement network workers concurrently.</p>
+<p>At startup, the manager derives one worker-account policy epoch from every
+verified admission contract that protects reusable worker credentials: shared
+and generated ServiceAccount ownership, bound TokenRequest issuance, legacy
+ServiceAccount-token Secret prevention, and reserved Deployment, ReplicaSet,
+Pod, and Pod-update behavior. The epoch hashes each policy and binding UID,
+generation, and compiled Spec digest; <code>resourceVersion</code>, labels, and annotations
+are intentionally excluded. Every shared and generated worker ServiceAccount
+is stamped with that epoch. An account created before this boundary—or under an
+older contract—is never adopted: the manager revokes its exact bindings first,
+deletes the old ServiceAccount to invalidate every token tied to its UID,
+foreground-drains workloads using it, and only then creates the replacement.
+This one-time guarded migration also invalidates a legacy JWT whose
+immutable-type ServiceAccount-token Secret had its mutable ServiceAccount name
+and UID annotations changed to a different existing, non-reserved account.
+Legacy authentication uses the signed claims and token bytes rather than those
+mutable annotations; UID rotation invalidates the claimed old ServiceAccount
+directly.
+For a normal chart-policy epoch change, the network-management account is not
+rotated until every device in the namespace has settled its mutation Lease,
+maintenance session, admitted software-upgrade leaf, and rollout reservation.
+The independent app-hosting account completes UID rotation, RBAC regrant, and
+Deployment recreation without waiting on an unrelated network mutation; the
+blocked network account and workload remain unchanged. Generated per-device identities use the same per-device
+authority-settlement proof before an epoch-only rotation. A phase-zero legacy
+worker has no durable managed Node identity for the complete proof, so the
+manager preserves its old UID and running workload and reports a blocker; after
+the operator verifies device operations are idle and removes that workload, the
+manager performs the UID rotation. The transition reports the blocking object
+and retries, so an upgrade does not silently interrupt an active gNOI or
+configuration mutation. A concrete compromise signal—unsafe namespace RBAC,
+malformed generated workload/access, or an explicitly attributable legacy
+token Secret—takes the fail-closed quarantine path immediately instead of
+waiting.</p>
+<p>Shared-account quarantine is authority-first and does not trust deterministic
+RoleBinding names. It removes every namespaced RoleBinding whose exact subject
+is the reserved account in both the device and configured Lease namespaces,
+removes the known cluster-wide grants, deletes each exact-proven shared
+ServiceAccount with a UID precondition to invalidate minted tokens, and then
+terminates every workload using that account. Foreign objects that merely
+collide with a reserved name are retained and reported. Direct API reads
+repeat the binding audit after access is installed; a grant racing the initial
+audit triggers the same synchronous quarantine before reconcile returns.
+The manager can delete a reserved worker Pod only with its exact UID as a
+precondition. Admission denies its direct deletion of ordinary application
+Pods, including when a UID is supplied; quarantine does not grant a workload
+deletion or PodDisruptionBudget bypass.
+Native garbage collection can remove only its <code>foregroundDeletion</code> finalizer
+from already-deleting reserved worker objects, preserving spec, status,
+bindings and unrelated finalizers. This permits a foreground worker-identity
+rotation to finish without administrator finalizer repair.
+Generated-account compromise uses the same authority-first rule inside the
+device namespace: every RoleBinding with the exact UID-derived account subject
+is removed regardless of its name, role, or mutable metadata before the owned
+ServiceAccount UID is deleted. Foreign or arbitrary cluster-wide bindings stay
+inside the explicit cluster-admin trust boundary and keep reconciliation
+failed closed for operator review.</p>
+<p>Native Kubernetes node lifecycle reconciliation remains enabled: the exact
+node-controller identity can mark silent Nodes <code>Unknown</code>, reconcile built-in
+health taints, and synchronize the deprecated OS/architecture label aliases.
+It cannot publish healthy readiness, rewrite projected topology or worker
+bindings, remove CVK maintenance guards, change capacity, or clear a cordon.
+This keeps stale virtual Nodes out of ordinary scheduling without assigning
+CVK identity authority to a native controller.</p>
+<p>The manager pre-creates purpose-bound heartbeat, config-family, and mutation
+Leases. App read-write and network read-write may update only the Lease scopes
+they need; read-only network management can observe but not mutate them.
+Admission checks the manager-owned device/Node/Pod bindings on each write,
+rather than deriving authority from a per-device username.</p>
+<p>Shared identities deliberately move the residual blast radius from one device
+to one tenant namespace. The app read-write account still needs cluster-wide
+Pod and workload-input reads because a virtual Node can receive Pods from any
+namespace; Kubernetes RBAC cannot limit Secret reads to dynamically referenced
+Pod inputs. A compromised worker can also attempt peer writes under the same
+account, so fail-closed admission—not process filtering—must enforce object
+binding. This is not equivalent to Node Authorizer/NodeRestriction. Use
+separate namespaces for mutually untrusted fleets, audit every profile binding,
+and treat app-hosting workers as cluster-trusted workloads until node-scoped
+credentials or manager-mediated status are qualified. Because upstream
+<code>nodeutil</code> constructs cluster-wide Pod, Secret, ConfigMap, and Service
+informers, functional app hosting should run only in a dedicated trusted
+workload cluster, or where every workload namespace accepts the same
+Secret-read trust boundary. A compromised app read-write worker exposes those
+cluster-wide reads; namespace separation cannot contain them.</p>
+<h2 id="policy-and-plan-transitions">Policy and plan transitions</h2>
+<p>The <a href="../topology-campaigns/#submit-review-and-approve">approval patch</a> must use the
+authenticated approver identity; admission rejects an asserted different username.
+Once published, the optional <code>status.frozenPlan</code> parent
+cannot be removed and re-added or replaced; API-server transition validation
+enforces this even for manager-authenticated status writes. Policy updates are
+classified rather than treating every
+ConfigMap <code>resourceVersion</code> as executable drift:</p>
+<ul>
+<li>metadata-only or canonically equivalent rewrites update the recorded audit
+  resourceVersion without changing the active safety epoch;</li>
+<li>compatible numeric changes start a durable next epoch. The effective target
+  cap, fleet/domain transfer and unavailable ceilings, health-freshness limit,
+  active-reservation cap, and ledger-size cap are the minimum of the frozen,
+  previously effective, and current values, so an existing rollout can never
+  be loosened by a policy edit; and</li>
+<li>changing policy/ledger identity, policy version, selector, required or
+  projected topology-key sets, domain-key, risk-group or optional-budget shape, or setting
+  <code>maxCampaignTargets</code> below the frozen target count sets
+  <code>PolicyChanged=True</code> with <code>Reason=ReplanRequired</code> and requires a new rollout.</li>
+</ul>
+<p>During an epoch transition the campaign pauses and publishes a durable
+<code>status.policyTransition</code> before revoking any unclaimed authority. Zero-claim
+leaves release their old reservations and may be rearmed only after the new
+<code>status.effectivePolicy.epoch</code> is published. The manager admission, worker
+acknowledgement, reservation, and every mutation claim all carry that exact
+epoch. Pending and granted manager admission also carries the exact
+32-character topology-lock acquisition ID shared with the reservation and
+device lock. A stale cleanup or worker grant therefore cannot target a later
+acquisition that happens to reuse a reservation name. A claimed mutation is
+never rearmed or abandoned by a policy change.</p>
+<p>The frozen target also binds the CiscoDevice UID and <code>metadata.generation</code>;
+any CiscoDevice spec change, including its driver, management address/port, or
+trust-reference selection, requires re-planning and re-approval. In-place data
+rotation of an already bound Secret keeps the same Secret UID and is allowed
+only after purpose, endpoint, and trust checks pass again. Delete/recreate
+Secret replacement is not allowed under the old plan. Granted work that the
+worker has not claimed is revoked and its reservation is released.
+Already-claimed work keeps its reservation and is observed to a conclusive
+outcome; policy or target drift never silently expands or abandons existing
+mutation authority.</p>
+<h2 id="campaign-protocol-versions">Campaign protocol versions</h2>
+<p>Managed preparation and receipt-bound activation use
+<code>rollout-staged-activation-v1</code>, which also enforces pacing when configured.
+Network-enabled campaigns freeze <code>requireNetworkEvidence: true</code> in their
+immutable leaves. Non-staged network leaves use <code>rollout-network-evidence-v1</code>;
+staged network leaves use the staged protocol. Both require the exact fresh
+network evidence at each mutation claim; missing evidence cannot silently
+disable that gate. Older workers reject these new protocols.</p>
+<h2 id="health-and-reservation-evidence">Health and reservation evidence</h2>
+<p>Health freshness is manager-authenticated rather than inferred from whichever
+status field changed most recently. The manager writes
+<code>CiscoDevice.status.healthObservation</code> with its observation time, the exact
+bound Node <code>Ready</code> heartbeat time, and a SHA-256 hash of the current device
+phase and complete condition set. Planning, admission, and post-operation
+settlement re-read both live objects. The device-condition hash must still
+match. The live Node must remain <code>Ready=True</code>, its heartbeat cannot regress,
+and its nonzero Ready transition time cannot be later than the snapshotted
+heartbeat. A later live heartbeat with that unchanged transition proof is
+treated only as informer/API read skew: the authenticated snapshot heartbeat,
+not the newer live value, remains the freshness bound. The effective health
+time is the oldest of the manager observation, snapshotted Node heartbeat, and
+required condition-producer observations (and is capped at current time), so
+refreshing one source cannot make older evidence fresh and a future-dated
+heartbeat cannot extend authority. A device phase/condition hash change,
+non-True Node Ready state, heartbeat regression, or Ready transition after the
+snapshot invalidates the proof until the manager records a new snapshot; the
+post-operation gate additionally requires that authenticated time to be
+strictly later than leaf completion.</p>
+<p>The first Node binding deliberately leaves <code>healthObservation</code> absent; identity
+creation is not health evidence. Each fixed readiness condition also requires
+an explicit, current manager producer observation. For those CiscoDevice
+conditions, the controller does not fall back to <code>lastTransitionTime</code>, because
+an old transition can remain unchanged while its external evidence becomes
+stale or unavailable. Node Ready <code>lastTransitionTime</code> is used only to prove
+state continuity across heartbeat skew, never as producer or freshness time.
+<code>GNOIConfigurationReady=True</code> additionally requires the manager-owned worker
+revision proof above. Deployment availability alone is insufficient: during a
+Secret-driven <code>Recreate</code>, an old Pod or a heartbeat that predates the new Pod
+cannot authorize gNOI work.</p>
+<p>The single ConfigMap ledger is updated with resourceVersion compare-and-swap.
+It is bounded to 256 records and 256 KiB by default. Combined install/activate
+leaves conservatively hold transfer and disruption reservations through the
+leaf. Source locality alone is not an independent prefetch boundary; staged
+preparation separately retains its receipt-bound device ownership. A Lease expiry never settles an accepted device mutation.</p>
+<p>Both combined and network-only workers select strict inventory through the
+driver's explicit <code>DrainPodInventoryProvider</code> capability. The ordinary
+<code>ListPods</code> reader is never substituted for this complete scan; a missing
+capability or a partial-inventory error blocks a new device mutation.</p>
+<h2 id="drain-state-and-recovery-contract">Drain state and recovery contract</h2>
+<p>Use the <a href="../topology-drain/">drain procedure</a> for eligibility, opt-in configuration,
+operator controls and cleanup. These internals explain why an uncertain state
+must remain fenced; they are not instructions to manipulate status or Leases.</p>
+<p>The durable flow is deliberately serial and revalidates identity at every
+boundary:</p>
+<ol>
+<li>The manager freezes exact Pod, ReplicaSet/Deployment, PDB, Node, policy,
+   reservation, and worker identities under a new UUIDv4 drain session.</li>
+<li>The manager snapshots pre-existing scheduling state, applies a
+   session-owned cordon plus
+   <code>cisco.vk/device-maintenance=gnoi:NoSchedule</code>, activates the existing
+   maintenance session, and blocks ordinary device writes.</li>
+<li>The manager atomically adds its drain-session marker and one protected
+   finalizer to one exact Pod UID, revalidates its evidence, and asks the
+   Eviction subresource to terminate it. No second selected Pod is evicted
+   until the first controller has observed its current generation and returned
+   to exactly its desired total replicas. A Deployment must report every desired
+   replica updated, Ready, and available with zero unavailable; a direct
+   ReplicaSet must report every desired replica Ready and available.</li>
+<li>Only the selected Pod's provider teardown may acquire the ordinary
+   device-mutation Lease as <code>software-drain/&lt;leaf UID&gt;</code>. After teardown, the
+   worker performs a fresh, complete device workload inventory. On IOS-XE,
+   both the app-hosting configuration and operational inventories must be
+   readable and every app must have a consistent CVK workload identity; a
+   partial, malformed, or unattributed result fails closed. During active drain
+   the manager requires no foreign or unknown device workload. During terminal
+   recovery, an attributable replacement may already have returned to the
+   restored Node; a complete scan may therefore contain non-selected UIDs but
+   must still prove the exact selected UID absent and report zero unknowns.
+   A cache-lagged provider callback is resolved against the uncached live Pod;
+   an exact-UID mismatch fails closed. The worker reauthorizes the session
+   immediately before device dispatch and before every Lease renewal. Once the
+   manager has durably accepted <code>DeviceClean</code>, verified the canonical Lease is
+   idle, and removed its exact marker/finalizer, a later provider callback is a
+   completion acknowledgement only: it performs no driver call, inventory,
+   Lease operation, or Kubernetes write. Upstream Virtual Kubelet then performs
+   its existing exact-UID, zero-grace API deletion. The provider accepts this
+   narrow path from <code>DeviceClean</code> (the crash boundary before the manager records
+   <code>Released</code>) or <code>Released</code>, only with ordered accepted-Eviction, termination,
+   and positive newer inventory evidence plus a still-idle, request-free exact
+   Lease. A recovery-only <code>Protected</code> to <code>Released</code> transition without device-
+   clean evidence never qualifies. The worker logs
+   <code>managed drain device-clean completion acknowledged without device mutation</code>
+   at this boundary before upstream Virtual Kubelet completes the API deletion.</li>
+<li>After every selected Pod is complete, the manager proves that no new Pod is
+   bound to the guarded Node, the mutation Lease is idle and request-free, and
+   all frozen campaign/source/target/control facts still match. Only then does
+   it promote the reservation and maintenance session to disruptive gNOI
+   software mutation.</li>
+<li>Once the device outcome is conclusive, recovery restores only the cordon
+   and taint owned by this session, permits normal workload writes, and waits
+   for the exact controller and PDB UIDs, their current drain-safe templates,
+   selectors and healthy observed generations, post-mutation device/Node health,
+   and continuous soak. The topology reservation remains held through this
+   recovery and is settled last.</li>
+</ol>
+<p>Include failed-write quarantine and native Virtual Kubelet queue backoff in
+the maintenance window. An uncertain app lifecycle operation can retain the
+canonical mutation Lease for 31 minutes after its last renewal; expiry does
+not immediately schedule another attempt. A replacement that cannot become
+healthy prevents the next eviction and gNOI promotion. Do not clear the Lease
+or change Pod metadata merely to force a retry. The IOS-XE lifecycle wait
+defaults to 180 seconds per state; a shorter
+<code>cisco.io/apphost-package-timeout</code> override can turn a slow transition into a
+failed write and a much longer recovery wait.</p>
+<p>The leaf's durable manager states are <code>Preparing</code>, <code>Guarded</code>, <code>Evicting</code>,
+<code>Drained</code>, <code>Promoting</code>, <code>Promoted</code>, <code>Recovering</code>, and <code>Settled</code>. Each selected
+Pod advances through <code>Selected</code>, <code>Protected</code>, <code>EvictionRequested</code>,
+<code>TerminationObserved</code>, <code>DeviceClean</code>, <code>Released</code>, and <code>Complete</code>. Treat these
+as current evidence, not commands to patch manually. Manager and worker status
+ownership, immutable identity fields, Pod marker/finalizer pairing, Lease
+purpose, and monotonic transitions are protected by CRD validation and native
+admission.</p>
+<p>A control renewal also cannot silently carry an old Lease request into its new
+window. If the canonical Lease is still held under the preceding recovery
+revision, the provider returns a mutation-incomplete result, neither renews the
+old revision nor dispatches another device call, and leaves the hold quarantined
+through the exact <code>renewTime + leaseDurationSeconds</code> boundary. Only then may it
+retire the exact same Lease UID, session, operation, and holder when the request
+metadata is either complete and bound to that strictly older revision or wholly
+absent from a crash before publication. Partial, malformed, foreign, or
+unexpired state remains blocked for investigation. Retirement preserves the
+transition counter and performs no device call. On a later reconcile, cleanup
+must first obtain a fresh current-revision CiscoDevice maintenance-session
+acknowledgement before the provider can reacquire the Lease and resume
+already-accepted teardown. The 31-minute Lease TTL can outlast a recovery
+window, so an operator may need another explicit bounded renewal while waiting.
+Neither Lease expiry nor safe retirement is device-clean evidence.</p>
+<p>Worker replacement never makes old device-clean evidence current by itself.
+The provider binds drain authorization to the immutable configuration revision
+of its own running process, <code>status.workerControl</code>, the protected Node's
+<code>topology.cisco.vk/worker-observed-revision</code>, and the manager-authenticated
+Deployment/revision/exact-Pod readiness proof in
+<code>CiscoDevice.status.workerRevision</code>. If device-clean evidence is still needed
+after a credential, trust, or PodTemplate rotation,
+the replacement worker must perform and publish a strictly newer device
+inventory. The worker-drain inventory
+revision and both observation timestamps advance together with
+<code>observedWorkerConfigRevision</code>. Admission permits that rollover but rejects a
+stale process, a rewritten same-revision observation, and any manager attempt
+to consume inventory whose worker revision does not match the current control
+acknowledgement.</p>
+<p>After the manager has already persisted <code>DeviceClean</code>, that manager-owned
+record is the durable acceptance fence. Finishing deletion of the same
+terminating Pod UID does not require the worker that produced the inventory to
+remain alive, the drain deadline to remain open, or mutation-only scheduling
+guards to remain applied. This exception grants no device access: it requires
+the exact session/leaf/Pod identities, absent manager protection, ordered
+device-clean evidence, and a wholly idle request-free canonical Lease. It is
+what makes the final Kubernetes deletion restart-safe during worker rollout and
+drain recovery.</p>
+<p>The manager-side Eviction/PDB, identity, reservation, and recovery mechanics
+are deliberately above the IOS-XE driver. A future NX-OS or IOS XR adapter can
+reuse them only after it implements exact session-authorized device teardown,
+complete post-teardown device workload inventory, and a lifecycle with equally
+strong mutation/outcome guarantees. No current non-IOS-XE driver gains drain
+or software-rollout support from this gate, and the public API remains IOS-XE
+specific until a second qualified driver proves the common contract.</p>
+<h2 id="reverse-handoff-state-contract">Reverse-handoff state contract</h2>
+<p>Use the <a href="../topology-recovery/">retirement procedure</a> for permissions, exact object
+checks and the supported live Helm transition.</p>
+<p>The reverse handoff is durable and fail closed: <code>Preparing</code> records the
+authorized immutable identity, <code>LegacyWriterPending</code> records that managed API
+authority is revoked and Node release is durably authorized,
+<code>SharedWriterPending</code> records that the temporary UID-scoped worker proved a
+post-release heartbeat and is being replaced under <code>Recreate</code>, and <code>Complete</code>
+is published only after the configured namespace-shared compatibility worker
+proves a newer Ready heartbeat and the temporary ServiceAccount and bindings
+are deleted. The per-device identity is therefore transition-only; in managed
+steady state the app-hosting and network-management accounts remain the only
+worker identities. The legacy shared account exists only for devices returned
+to topology-disabled compatibility mode.
+If a crash occurs while creating the temporary identity before its
+cluster-wide binding and marker exist, a topology-disabled restart validates
+the partial ServiceAccount/RoleBinding as exact and device-owned, deletes it
+with UID preconditions, proves absence, and continues through the ordinary
+compatibility path. Drift or an additive binding remains fail closed for
+operator review; partial namespaced metadata is deliberately not used to
+force global retirement preflight because it is not cluster-admin evidence.
+Once <code>Preparing</code> exists, admission freezes the consumed
+<code>topology.cisco.vk/request-legacy-handoff</code> value against change or removal
+until the handoff reaches <code>Complete</code>; the controller does not re-read mutable
+authorization midway through the protocol. Device deletion is likewise denied
+until <code>Complete</code>, preventing lifecycle cleanup from interrupting the
+single-writer transfer.
+The manager clears its Node identity/projection/health status after isolated
+readiness, before the Recreate replacement, while the durable phase prevents
+forward enrollment until the shared readiness proof and credential retirement
+finish. The request annotation can be removed by a topology-author
+after topology is disabled; the Complete status and Node audit marker remain
+identity state.</p>
+<h2 id="experimental-in-tree-workloadpodgrouptas">Experimental in-tree Workload/PodGroup/TAS</h2>
+<p>Native Workload/PodGroup/TAS remains feature-gated upstream. Kubernetes 1.36
+introduced <a href="https://kubernetes.io/docs/concepts/workloads/workload-api/topology-aware-scheduling/">topology-aware workload scheduling</a>
+as an alpha, disabled-by-default feature. Kubernetes 1.37 exposes the
+<a href="https://kubernetes.io/docs/concepts/workloads/podgroup-api/">Workload and PodGroup resources</a>
+through <code>scheduling.k8s.io/v1beta1</code>, still disabled by default, and requires
+the <code>GenericWorkload</code> and <code>TopologyAwareWorkloadScheduling</code> feature gates on
+the relevant control-plane components. The v1beta1 API must also be enabled in
+the API server runtime configuration. Its single topology constraint co-locates
+the group in one label domain; this is different from topology spread, which
+distributes replicas across domains.</p>
+<p>For example, the repository's pinned kind qualification uses:</p>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Cluster</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">kind.x-k8s.io/v1alpha4</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="nt">featureGates</span><span class="p">:</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">  </span><span class="nt">GenericWorkload</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">  </span><span class="nt">TopologyAwareWorkloadScheduling</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="nt">runtimeConfig</span><span class="p">:</span>
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="w">  </span><span class="nt">scheduling.k8s.io/v1beta1</span><span class="p">:</span><span class="w"> </span><span class="s">"true"</span>
+</span></code></pre></div>
+<p><code>WorkloadWithJob</code> is unnecessary because the example creates its runtime
+PodGroup explicitly. <code>CompositePodGroup</code> is also intentionally disabled; it is
+a separate alpha surface and is not required for single-level CVK topology.</p>
+<p>The separately gated
+<a href="https://github.com/cisco-open/cisco-virtual-kubelet/blob/v2026.11.1/examples/topology/experimental-native-tas-v1.37.yaml"><code>experimental-native-tas-v1.37.yaml</code></a>
+shows a Workload template, standalone PodGroup, and Pods using only the default
+scheduler and CVK-projected Node labels. It is deliberately excluded from the
+Kubernetes 1.35 qualification test and must not be applied until discovery and
+<code>kubectl explain</code> confirm the v1.37 fields on the target cluster. CVK does not
+create or watch these APIs, so its current client-library line is not an
+adapter; Node labels are the compatibility layer. The earlier v1.36 alpha
+versioned schema is not promised by this example.</p>
+<p>CI runs the example in a separate, pinned Kubernetes 1.37 kind cluster. The
+test uses two synthetic Ready Nodes with different <code>topology.cisco.vk/site</code>
+values, proves that a valid group is co-located, and proves that Pods forced
+into different site domains remain unschedulable. This is API and scheduler
+conformance only: it does not run a CVK worker, contact a device, or change the
+Kubernetes 1.35 production support floor.</p>
+<p>This remains experimental rather than a production dependency because the APIs
+are disabled by default, the built-in integration is still limited, and
+multi-level <code>CompositePodGroup</code> topology is a separate v1.37 alpha feature.
+CVK ships no TAS controller, CRD, scheduler profile, or third-party component.</p>
+<h2 id="development-scope-and-evidence">Development scope and evidence</h2>
+<p>The following scope describes the bounded <code>v2026.11.1</code> topology increment and
+its qualification limits. Use <a href="../releases/">release records</a> to determine
+publication status and what is in an installed tagged image.</p>
+<p>Managed topology is an opt-in CVK operating mode that gives the default
+Kubernetes scheduler reliable device topology and gives the CVK manager a
+bounded, topology-aware admission path for IOS-XE gNOI software campaigns. It
+uses only Kubernetes-native API machinery: Nodes, labels, taints, RBAC,
+ValidatingAdmissionPolicy, ConfigMaps, Leases, the Eviction/PDB APIs, status
+conditions, Events, and the default kube-scheduler. It installs no alternate
+scheduler, scheduling plugin, webhook, or third-party topology controller.</p>
+<p>The <code>v2026.11.1</code> target extends the October managed-topology foundation with
+the <a href="../topology-merge-scope/">bounded PR #197 scope</a>. It includes:</p>
+<ul>
+<li>correct Node identity, ownership, topology projection, capacity, and
+  maintenance fencing;</li>
+<li>scheduling with ordinary affinity and topology-spread constraints; and</li>
+<li>a manager-side <code>IOSXESoftwareRollout</code> campaign above the existing,
+  per-device <code>IOSXESoftwareUpgrade</code> executor; and</li>
+<li>deterministic topology-local selection among existing operator-provided
+  artifact endpoints, with a concrete endpoint and Secret UID frozen per
+  target; and</li>
+<li>a disabled-by-default, native Eviction/PDB-aware drain for an explicitly
+  marked subset of ReplicaSet-backed workloads;</li>
+<li>IOS-XE install-only preparation with immutable receipts, retained ownership,
+  separately approved activation and narrowly authorized receipt retirement;</li>
+<li>manager-accepted network evidence, claim-time and recovery gates,
+  administrator risk protections and worker byte pacing; and</li>
+<li>read-only accepted graph diagnostics and measured worker-local distribution.</li>
+</ul>
+<p>Broader physical service/path qualification, persistent shared-cache
+optimization, grouped workload drain, multi-platform lifecycle and
+cross-cluster transfer remain separate, evidence-gated work. See
+<a href="./#deferred-roadmap-and-limitations">Deferred roadmap</a>.</p>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>Managed topology changes a cluster security and Node-writer boundary. It
+is disabled by default. Do not enable it on a production fleet until the
+admission probes, migration checks, secure gNOI path, and the
+<a href="../topology-recovery/">recovery/retirement procedure</a> have passed on that cluster. Staged/recovery
+extensions and workload drain remain controlled-evaluation capabilities
+within the documented cohort. A bounded physical voluntary drain and
+receipt-retirement test passed; the complete application/service-through-
+reload and rollback matrices remain unqualified. See the
+<a href="../topology-merge-scope/">scope and evidence</a>.</p>
+</div>
+<h2 id="deferred-roadmap-and-limitations">Deferred roadmap and limitations</h2>
+<p>The <a href="../topology-roadmap/">remaining implementation roadmap</a> maps these gaps
+to PR slices, ownership boundaries, dependencies and qualification gates. The
+<a href="../topology-roadmap-execution/">execution plan</a> records outstanding code and
+test work. Under the <a href="../topology-merge-scope/">explicit merge-scope decision</a>,
+the remaining R0–R9 qualification is future work, not a prerequisite for
+merging this bounded increment. The current code includes a T1/T2 evidence gate
+with outstanding independent forwarding/load qualification, a bounded
+ReplicaSet/Deployment drain path with partial physical evidence, ephemeral
+digest-addressed worker-local image caching, an optional Kubernetes 1.37
+native-TAS conformance lane, and a NoReboot strategy mapping. Independent
+prepare/approval/activate semantics are implemented with physical evidence for
+the tested IOS-XE cohort. Narrow observation-only retirement of eligible
+cancelled preparation is implemented and physically exercised; broader image
+drift/invalidation recovery and the complete combined service-continuity
+matrix remain open. Read-only graph comparison and
+manager-owned persisted diagnostics passed the recorded controlled
+link-change/restore qualification. Graphs do not establish independent
+forwarding-path safety. The wider roadmap is not complete; use the
+<a href="../topology-merge-scope/#evidence-supporting-this-increment">revision-specific evidence table</a> rather than
+inferring untested acceptance from feature availability.</p>
+<p>The optional <a href="../topology-campaigns/#2-review-disruption-risk-and-network-gates">network-evidence gate</a>
+is configured with the campaign. Accepted observations are scoped evidence, not a
+claim of full forwarding-path or redundant-supervisor qualification.</p>
+<p>The following remain intentionally bounded or deferred:</p>
+<ul>
+<li>shared/PVC cache, independent transfer-only admission, or claims that the
+  worker's location represents the device data path. The implemented
+  per-worker cache is digest-addressed and fail-closed; shared caching still
+  requires measured WAN benefit and a separate ownership protocol;</li>
+<li>general-purpose drain, StatefulSet/PVC/DaemonSet/Job/custom-controller
+  evacuation, forced deletion, PDB bypass or native grouped drain.
+  The implemented path is limited to ReplicaSet/Deployment owners
+  with portable workloads and PDB-aware eviction; complete physical service
+  qualification and the broader hard-placement matrix require E07;</li>
+<li>an authoritative discovered graph, graph-cost workload scheduling, a custom
+  scheduler, or automatic declared-topology mutation;</li>
+<li>a mandatory dependency on alpha native Workload/PodGroup/TAS APIs. Native
+  TAS is validated only in the separate Kubernetes 1.37 disposable conformance
+  lane and is not enabled in the Kubernetes 1.35 production baseline; and</li>
+<li>a generic NX-OS/IOS XR rollout CRD before a second driver demonstrates
+  compatible lifecycle guarantees (Phase 5).</li>
+</ul>
+<p>The initial public campaign is IOS-XE-specific by design. NX-OS and IOS XR can
+reuse internal planning, identity, reservation, and control mechanics only
+after their transfer, activation, rollback, and verification guarantees are
+proven. Unsupported drivers fail before child creation.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+    
+      
+      <nav class="md-footer__inner md-grid" aria-label="Footer" >
+        
+          
+          <a href="../ARCHITECTURE/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Architecture and internals">
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+            </div>
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Previous
+              </span>
+              <div class="md-ellipsis">
+                Architecture and internals
+              </div>
+            </div>
+          </a>
+        
+        
+          
+          <a href="../security-authorization/" class="md-footer__link md-footer__link--next" aria-label="Next: RBAC and authorization">
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Next
+              </span>
+              <div class="md-ellipsis">
+                RBAC and authorization
+              </div>
+            </div>
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11z"/></svg>
+            </div>
+          </a>
+        
+      </nav>
+    
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      Copyright © 2025-2026 Cisco Systems, Inc. All Rights Reserved. · <a href="/cisco-virtual-kubelet/LICENSE">Project license</a> · <a href="/cisco-virtual-kubelet/docs/MKDOCS_THIRD_PARTY_LICENSES.txt">MkDocs third-party licenses</a>
+    </div>
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+      <div class="md-progress" data-md-component="progress" role="progressbar"></div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["content.code.copy", "search.share", "navigation.footer", "navigation.instant.progress", "navigation.tabs", "navigation.sections", "content.code.annotate"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script>if(!window.ResizeObserver){document.write('<script src="../r.js?v=2290b5c60e0cdc62851fb687800237273ac53797595b1b133860c4f1386de378"><\/script>')}</script>
+      <script src="../m.js?v=a8a6a6f805b074a8261a2825c86f99c8054acb3b35f50bb7e24a4f9f2c3c3b9f"></script>
+      <script src="../assets/javascripts/bundle.67a2c6e1e02831e6.min.js"></script>
+      
+    
+  </body>
+</html>

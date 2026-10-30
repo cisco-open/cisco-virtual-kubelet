@@ -1,0 +1,11 @@
+{
+  "appWorkerPods": [
+    "cat9k-live-vk-8d8ccd765-khcxx"
+  ],
+  "device": "cat9k-live",
+  "managerPods": [
+    "cisco-vk-cisco-virtual-kubelet-controller-7cdf874968-9tqlk"
+  ],
+  "networkWorkerPod": "u6afd6bd0-284d-4ee2-a6e4-638ca07976b4-network-64b7b9d59d-t624g",
+  "networkWorkerPodUID": "f2cb960d-8d68-4d54-9023-f73ad485acf7"
+}

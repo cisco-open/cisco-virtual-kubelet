@@ -1,0 +1,18 @@
+{
+  "annotations": {
+    "topology.cisco.vk/device-name": "cat9k-live",
+    "topology.cisco.vk/device-uid": "6afd6bd0-284d-4ee2-a6e4-638ca07976b4",
+    "topology.cisco.vk/managed": "true",
+    "topology.cisco.vk/network-worker-pod-name": "u6afd6bd0-284d-4ee2-a6e4-638ca07976b4-network-64b7b9d59d-t624g",
+    "topology.cisco.vk/network-worker-pod-uid": "f2cb960d-8d68-4d54-9023-f73ad485acf7",
+    "topology.cisco.vk/network-worker-username": "system:serviceaccount:cvk-live:cisco-vk-cisco-virtual-kubelet-network-management"
+  },
+  "metadata": {
+    "creationTimestamp": "2026-09-30T23:13:34Z",
+    "generation": 1,
+    "name": "cycle-20260930231306-1b8162-cat9k-live-baseline-verify",
+    "namespace": "cvk-live",
+    "resourceVersion": "9417695",
+    "uid": "e74afcf9-91d2-449e-87bb-a7f379467c46"
+  }
+}
