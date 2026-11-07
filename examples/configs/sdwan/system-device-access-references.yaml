@@ -1,0 +1,34 @@
+sdwan:
+  feature_profiles:
+    policy_object_profile:
+      name: CVK-DEVICE-ACCESS-OBJECTS
+      ipv4_data_prefix_lists:
+        - name: CVK-SSH-V4-SOURCES
+          prefixes: [192.0.2.0/24]
+      ipv6_data_prefix_lists:
+        - name: CVK-SSH-V6-SOURCES
+          prefixes: [2001:db8::/32]
+    system_profiles:
+      - name: CVK-SYS-DEVICE-ACCESS
+        description: Unattached system device access fixture
+        ipv4_device_access_policy:
+          name: CVK-IPV4-DEVICE-ACCESS
+          default_action: drop
+          sequences:
+            - id: 10
+              name: SSH-V4
+              base_action: accept
+              match_entries:
+                destination_port: 22
+                source_data_prefix_list: CVK-SSH-V4-SOURCES
+                source_ports: [1024]
+        ipv6_device_access_policy:
+          name: CVK-IPV6-DEVICE-ACCESS
+          default_action: drop
+          sequences:
+            - id: 10
+              name: SSH-V6
+              base_action: accept
+              match_entries:
+                destination_port: 22
+                source_data_prefix_list: CVK-SSH-V6-SOURCES

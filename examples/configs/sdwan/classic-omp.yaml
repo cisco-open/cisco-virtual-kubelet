@@ -1,0 +1,14 @@
+sdwan:
+  edge_feature_templates:
+    omp_templates:
+      - name: CVK-CLASSIC-OMP
+        description: CVK unattached OMP template
+        device_types: [C8000V]
+        graceful_restart: true
+        shutdown: false
+        advertisement_interval: 1
+        holdtime: 60
+        send_path_limit: 4
+        ecmp_limit: 4
+        ipv4_advertise_protocols: [connected, static, ospf]
+        ipv6_advertise_protocols: [connected, static]

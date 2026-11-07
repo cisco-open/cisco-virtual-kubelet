@@ -1,0 +1,14 @@
+sdwan:
+  feature_profiles:
+    service_profiles:
+      - name: CVK-SERVICE-HA-PROFILE
+        lan_vpns:
+          - name: CVK-SERVICE-HA-VPN
+            vpn_id: 111
+        dual_router_ha_features:
+          - name: CVK-SERVICE-HA
+            enable_optimize_paths: true
+            redundancy_groups:
+              - group_id: 1
+                tag_name: CVK-HA
+                vpn_names: [CVK-SERVICE-HA-VPN]

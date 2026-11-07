@@ -1,0 +1,20 @@
+sdwan:
+  feature_profiles:
+    service_profiles:
+      - name: CVK-SERVICE-SVI-DHCP-PROFILE
+        dhcp_servers:
+          - name: CVK-SERVICE-SVI-DHCP
+            pool_network_address: 192.0.2.0
+            pool_subnet_mask: 255.255.255.0
+            default_gateway: 192.0.2.1
+            dns_servers: [192.0.2.53]
+        lan_vpns:
+          - name: CVK-SERVICE-SVI-DHCP-VPN
+            vpn_id: 119
+            svi_interfaces:
+              - name: CVK-SERVICE-SVI-DHCP-IF
+                interface_name: Vlan119
+                shutdown: true
+                ipv4_address: 192.0.2.119
+                ipv4_subnet_mask: 255.255.255.0
+                dhcp_server: CVK-SERVICE-SVI-DHCP

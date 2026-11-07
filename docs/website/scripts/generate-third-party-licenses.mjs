@@ -101,15 +101,15 @@ const vendoredFiles = {
 const vendoredDirectories = {
   react: {
     path: "node_modules/next/dist/compiled/react",
-    sha256: "f59170274b4b012be4a1762d922e0bc9ece996df213318e4046b9bf92279b731",
+    sha256: "eaad8e77f33b7e02dd68e6aa4b8d7396a93bece7081de3fc4cfb03d3d4748f87",
   },
   reactDom: {
     path: "node_modules/next/dist/compiled/react-dom",
-    sha256: "82569cda8e4e384e0df064dbdebf76a43e28492b2d897211b49798efd81495df",
+    sha256: "c796e781df7b674c612eabd50fb2027344a1e3638bc83d0dc22fa10d3bc1470c",
   },
   reactServerDomTurbopack: {
     path: "node_modules/next/dist/compiled/react-server-dom-turbopack",
-    sha256: "4c802530a1c8d5d73bb7595ff379e81ebffa22a3f361133d9a5e0efe93919a66",
+    sha256: "37a7d22da040d7983ae3681935641b79ba410ea2d4ea5327de3c23a20c270cef",
   },
   scheduler: {
     path: "node_modules/next/dist/compiled/scheduler",
@@ -124,8 +124,8 @@ for (const audited of Object.values(vendoredDirectories)) {
   verifyDirectoryHash(audited.path, audited.sha256);
 }
 
-const reactCanaryVersion = "19.3.0-canary-cbb046ab-20260731";
-const schedulerCanaryVersion = "0.28.0-canary-cbb046ab-20260731";
+const reactCanaryVersion = "19.3.0-canary-278794d7-20261002";
+const schedulerCanaryVersion = "0.28.0-canary-278794d7-20261002";
 const reactDomManifest = JSON.parse(read(path.join(websiteDir, vendoredDirectories.reactDom.path, "package.json")));
 const reactServerDomManifest = JSON.parse(read(path.join(websiteDir, vendoredDirectories.reactServerDomTurbopack.path, "package.json")));
 if (

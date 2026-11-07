@@ -1,0 +1,8 @@
+sdwan:
+  feature_profiles:
+    topology_profiles:
+      - name: CVK-TOPOLOGY-GROUP-PROFILE
+  topology_groups:
+    - name: CVK-TOPOLOGY-GROUP
+      description: Managed by CVK
+      topology_profile: CVK-TOPOLOGY-GROUP-PROFILE

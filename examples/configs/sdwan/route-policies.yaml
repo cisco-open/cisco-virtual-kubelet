@@ -1,0 +1,35 @@
+sdwan:
+  feature_profiles:
+    service_profiles:
+      - name: CVK-SERVICE-ROUTE-PROFILE
+        route_policies:
+          - name: CVK-SERVICE-ROUTE-POLICY
+            default_action: reject
+            sequences:
+              - id: 10
+                name: ACCEPT-METRIC
+                base_action: accept
+                protocol: ipv4
+                match_entries:
+                  metric: 100
+                  omp_tag: 100
+                actions:
+                  metric: 20
+                  bgp_local_preference: 150
+                  communities: ["65000:100"]
+                  communities_additive: true
+    transport_profiles:
+      - name: CVK-TRANSPORT-ROUTE-PROFILE
+        route_policies:
+          - name: CVK-TRANSPORT-ROUTE-POLICY
+            default_action: reject
+            sequences:
+              - id: 10
+                name: ACCEPT-V6
+                base_action: accept
+                protocol: ipv6
+                match_entries:
+                  ospf_tag: 200
+                actions:
+                  ipv6_next_hop: 2001:db8::1
+                  origin: igp

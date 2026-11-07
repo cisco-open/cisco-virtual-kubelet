@@ -1,0 +1,23 @@
+sdwan:
+  feature_profiles:
+    transport_profiles:
+      - name: CVK-TRANSPORT-IPSEC-TRACKER-PROFILE
+        ipv4_trackers:
+          - name: CVK-TRANSPORT-IPSEC-TRACKER
+            tracker_name: cvkipsecprobe
+            endpoint_ip: 192.0.2.101
+            interval: 60
+            multiplier: 3
+            threshold: 300
+        wan_vpn:
+          name: CVK-TRANSPORT-IPSEC-TRACKER-VPN
+          ipsec_interfaces:
+            - name: CVK-TRANSPORT-IPSEC-TRACKER-IF
+              interface_name: ipsec126
+              shutdown: true
+              ipv4_address: 192.0.2.132
+              ipv4_subnet_mask: 255.255.255.252
+              tunnel_source_ipv4_address: 198.51.100.11
+              tunnel_destination_ipv4_address: 198.51.100.12
+              ike_preshared_key_variable: cvkIPSecKey
+              ipv4_tracker: CVK-TRANSPORT-IPSEC-TRACKER

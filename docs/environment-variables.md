@@ -4,7 +4,12 @@ The Cisco Virtual Kubelet provider supports Kubernetes environment variables in 
 
 ## Overview
 
-Environment variables are passed to containers running on IOS-XE devices via Docker `-e` flags in the RunOpts configuration. The provider supports all major Kubernetes environment variable sources while respecting IOS-XE platform constraints.
+Environment variables are passed to containers running on IOS-XE devices via
+Docker `-e` flags in the RunOpts configuration. Supported sources are explicit
+`env` values, `secretKeyRef` and `configMapKeyRef`. `fieldRef` and
+`resourceFieldRef` return an error; `envFrom` is not expanded. Empty resolved
+values are omitted. This page describes IOS-XE; NX-OS has different
+[value restrictions](security-credentials.md#hosted-application-credentials).
 
 ## Supported Environment Variable Sources
 
@@ -67,16 +72,23 @@ env:
 IOS-XE App-Hosting has specific limitations for Docker RunOpts configuration:
 
 - **Maximum Lines**: 30 lines
-- **Maximum Characters Per Line**: 235 characters
-- **Total Capacity**: ~7,050 characters
+- **Maximum Characters Per Line**: 235, counted as bytes by the current implementation
+- **Gross Capacity**: 30 × 235 bytes, shared with labels, hostname, option names and quoting
 
-The provider automatically distributes environment variables across multiple RunOpts lines when needed.
+The provider distributes complete options across lines; it never splits one
+option. A single oversized option or a need for more than 30 lines fails Pod
+configuration rather than truncating a value. The gross capacity is not a
+7,050-byte allowance for environment values alone.
 
 ### Security Features
 
-- **Shell Injection Prevention**: All values are properly escaped
-- **Special Character Handling**: Quotes, dollar signs, backticks, and backslashes are safely escaped
-- **Value Wrapping**: All values are wrapped in double quotes for safe shell parsing
+- **Portable names**: Names must match `[A-Za-z_][A-Za-z0-9_]*`.
+- **Value wrapping**: Values are wrapped in single quotes; embedded single quotes are escaped by closing and reopening the quoted string.
+- **Literal special characters**: Dollar signs, backticks and double quotes remain literal inside the single-quoted value.
+
+Secret values become device app-hosting run options and can be read by device
+administrators. CVK does not include resolved options in its diagnostic logs;
+see [Hosted-application credentials](security-credentials.md#hosted-application-credentials).
 
 ## Error Handling
 
@@ -107,7 +119,7 @@ If a required key is missing from an existing Secret/ConfigMap, deployment fails
 
 ### Performance
 
-1. **Minimize total environment variable size**: Stay well under the 7,050 character limit
+1. **Minimize total environment variable size**: Leave room for option syntax, labels and hostname within the RunOpts limits
 2. **Use short variable names**: Reduces RunOpts overhead
 3. **Consolidate configuration**: Group related settings in ConfigMaps
 
@@ -121,6 +133,12 @@ If a required key is missing from an existing Secret/ConfigMap, deployment fails
 
 ### Complete Pod with Mixed Sources
 
+Create the `production` namespace first and register the intended virtual Node.
+This example targets `cat9000-1` and assumes a signed application package is
+already at `flash:/web-app.iosxe.tar` on that device. Change those values for
+your setup; a registry reference such as `nginx:latest` is not a device image.
+See [Image delivery](CONFIGURATION.md#image-delivery).
+
 ```yaml
 apiVersion: v1
 kind: Pod
@@ -128,9 +146,13 @@ metadata:
   name: web-app
   namespace: production
 spec:
+  nodeName: cat9000-1
+  tolerations:
+  - key: virtual-kubelet.io/provider
+    operator: Exists
   containers:
   - name: web-server
-    image: nginx:latest
+    image: flash:/web-app.iosxe.tar
     env:
     # Direct configuration
     - name: NODE_ENV
@@ -170,10 +192,6 @@ spec:
           name: app-config
           key: cache-ttl
           optional: true
-  
-  # Required resources must exist
-  imagePullSecrets:
-  - name: registry-credentials
 ---
 apiVersion: v1
 kind: Secret
@@ -181,8 +199,8 @@ metadata:
   name: database-credentials
   namespace: production
 type: Opaque
-data:
-  password: c3VwZXItc2VjcmV0LXBhc3N3b3Jk  # base64 encoded
+stringData:
+  password: <application-password>
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -205,21 +223,17 @@ data:
 
 ### Generated Docker Command
 
-The above pod specification would generate RunOpts similar to:
+CVK configures IOS-XE RunOpts rather than invoking a local `docker run`.
+The environment portion contains options like these, packed with the labels
+and hostname into the available lines (the password is redacted here):
 
-```bash
-docker run \
-  --label pod=web-app \
-  --label namespace=production \
-  --label container=web-server \
-  --hostname=web-server \
-  -e NODE_ENV="production" \
-  -e PORT="8080" \
-  -e DB_HOST="db.production.example.com" \
-  -e DB_PASSWORD="super-secret-password" \
-  -e API_BASE_URL="https://api.example.com/v1" \
-  -e CACHE_TTL="300" \
-  nginx:latest
+```text
+-e NODE_ENV='production'
+-e PORT='8080'
+-e DB_HOST='db.production.example.com'
+-e DB_PASSWORD='<resolved password>'
+-e API_BASE_URL='https://api.example.com/v1'
+-e CACHE_TTL='300'
 ```
 
 Note: `ANALYTICS_API_KEY` is omitted because the optional secret doesn't exist.
@@ -229,7 +243,7 @@ Note: `ANALYTICS_API_KEY` is omitted because the optional secret doesn't exist.
 ### Pod Deployment Fails
 
 1. **Check Secret/ConfigMap existence**: `kubectl get secret,configmap -n <namespace>`
-2. **Verify key names**: `kubectl describe secret <name>` or `kubectl describe configmap <name>`
+2. **Verify key names**: Describe the Secret or ConfigMap in the Pod's namespace; avoid sharing secret values in diagnostic output
 3. **Check namespaces**: Resources must be in the same namespace as the pod
 4. **Review error messages**: Pod events contain specific error details
 
@@ -237,36 +251,41 @@ Note: `ANALYTICS_API_KEY` is omitted because the optional secret doesn't exist.
 
 1. **Verify resolution worked**: Check pod events for resolution errors
 2. **Check optional vs required**: Optional missing resources are silently omitted
-3. **Validate character limits**: Excessive environment variables may be truncated
+3. **Check empty values**: Empty direct or resolved values are omitted by the current implementation
 4. **Test with direct values**: Isolate whether the issue is with resolution or container setup
 
 ### Character Limit Exceeded
 
-```bash
-# Check total environment variable size
-kubectl get pod <pod-name> -o yaml | grep -A 20 "env:" | wc -c
-```
+Inspect the Pod Events and worker error for either `single RunOpts option too
+long` or `too many RunOpts lines needed`. Counting YAML characters does not
+measure the rendered options: referenced values, quoting, labels and hostname
+all affect the result. Errors report sizes without printing resolved secrets.
 
 If approaching limits:
+
 1. **Use shorter variable names**
 2. **Consolidate related configuration into fewer variables**
-3. **Use ConfigMap volume mounts instead** for large configuration files
-4. **Split functionality across multiple containers**
+3. **Use the application's supported configuration delivery** for large files, such as packaging non-secret configuration with the app or fetching it through an authenticated application mechanism; generic ConfigMap volume projection is not provided by this RunOpts path
+4. **Split functionality only when the application supports separate containers**, each with its own bounded options
 
 ## Integration with Cisco IOS-XE
 
 ### Generated Configuration
 
-Environment variables are integrated into IOS-XE App-Hosting configuration. When environment variables are present, the provider enables `docker-resource` mode with `prepend-pkg-opts` and automatically sets the container hostname to the container name:
+Environment variables are integrated into IOS-XE App-Hosting configuration.
+The provider enables `docker-resource` mode with `prepend-pkg-opts` and sets
+the container hostname to the container name. This excerpt illustrates the
+shape; actual app IDs use `cvk<index>_<pod-uid>` and line packing depends on the
+complete options:
 
 ```
-app-hosting appid web-app
+app-hosting appid cvk00000_<pod-uid>
  app-vnic management guest-interface 0
  app-default-gateway 192.168.1.1 guest-interface 0
  app-resource docker
   prepend-pkg-opts
   run-opts 1 "--label pod=web-app --hostname=web-server -e NODE_ENV='production'"
-  run-opts 2 "-e DB_PASSWORD='super-secret-password'"
+  run-opts 2 "-e DB_PASSWORD='<resolved password>'"
  app-resource profile custom
   cpu 1000
   memory 512
@@ -282,8 +301,11 @@ Check app status and environment variable propagation:
 ```bash
 # On IOS-XE device
 show app-hosting list
-show app-hosting detail appid web-app
-show app-hosting utilization appid web-app
+show app-hosting detail appid <app-id>
+show app-hosting utilization appid <app-id>
 ```
 
-Environment variables appear in the container's runtime environment and can be verified through application logs or debugging commands if container access is available.
+Use the application's own diagnostic or logging mechanism to verify received
+settings without printing secrets. Kubernetes logs, exec, attach and
+port-forward are unsupported for hosted applications; worker Pod logs show
+CVK lifecycle and resolution errors. See [application diagnostics](troubleshooting.md#hosted-application-logs-exec-attach-and-port-forward).

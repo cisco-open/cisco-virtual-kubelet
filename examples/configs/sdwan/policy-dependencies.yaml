@@ -1,0 +1,30 @@
+# Native reference-chain fixture; live qualification needs an isolated policy profile.
+sdwan:
+  feature_profiles:
+    policy_object_profile:
+      name: CVK-POLICY-DEPENDENCIES
+      forwarding_classes:
+        - name: CVK-CLASS
+          queue: 1
+      app_probe_classes:
+        - name: CVK-PROBE
+          forwarding_class: CVK-CLASS
+          mappings:
+            - color: blue
+              dscp: 46
+      sla_classes:
+        - name: CVK-SLA
+          app_probe_class: CVK-PROBE
+          jitter_ms: 20
+          latency_ms: 100
+          loss_percentage: 1
+      security_ips_signature_lists:
+        - name: CVK-IPS-SIGNATURE
+          entries:
+            - generator_id: 1
+              signature_id: 1000
+      security_intrusion_prevention_profiles:
+        - name: CVK-IPS
+          inspection_mode: detection
+          signature_set: balanced
+          signature_allow_list: CVK-IPS-SIGNATURE

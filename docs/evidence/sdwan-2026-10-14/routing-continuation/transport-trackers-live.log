@@ -1,0 +1,4 @@
+=== RUN   TestLivePendingLifecycle
+--- PASS: TestLivePendingLifecycle (31.57s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/sdwan	31.929s

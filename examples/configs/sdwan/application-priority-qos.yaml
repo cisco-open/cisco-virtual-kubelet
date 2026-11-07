@@ -1,0 +1,7 @@
+sdwan:
+  feature_profiles:
+    application_priority_profiles:
+      - name: CVK-QOS-PROFILE
+        qos_policies:
+          - name: CVK-QOS-POLICY
+            target_interfaces: [GigabitEthernet1]

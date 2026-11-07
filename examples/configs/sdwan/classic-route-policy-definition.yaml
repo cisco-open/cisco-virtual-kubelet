@@ -1,0 +1,16 @@
+sdwan:
+  localized_policies:
+    definitions:
+      route_policies:
+        - name: CVK-CLASSIC-ROUTE
+          description: Managed by CVK
+          default_action: reject
+          sequences:
+            - id: 1
+              ip_type: ipv4
+              name: CVK-ROUTE-RULE
+              base_action: accept
+              match_criterias:
+                omp_tag: 101
+              actions:
+                metric: 50

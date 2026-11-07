@@ -1,0 +1,58 @@
+sdwan:
+  feature_profiles:
+    policy_object_profile:
+      name: CVK-POLICY-PROFILE
+      description: CVK isolated policy object profile
+      as_path_lists:
+        - name: CVK-PARCEL-ASPATH
+          id: 400
+          as_paths: ["^65000_"]
+      forwarding_classes:
+        - name: CVK-PARCEL-CLASS
+          queue: 1
+      color_lists:
+        - name: CVK-PARCEL-COLOR
+          colors: [blue, mpls]
+      extended_community_lists:
+        - name: CVK-PARCEL-EXTCOMM
+          extended_communities: ["rt 65000:100"]
+      mirrors:
+        - name: CVK-PARCEL-MIRROR
+          remote_destination_ip: 192.0.2.10
+          source_ip: 192.0.2.11
+      policers:
+        - name: CVK-PARCEL-POLICER
+          burst_bytes: 15000
+          rate_bps: 1000000
+          exceed_action: drop
+      security_data_ipv4_prefix_lists:
+        - name: CVK-PARCEL-SECPREFIX
+          prefixes: [192.0.2.0/24]
+      security_fqdn_lists:
+        - name: CVK-PARCEL-FQDN
+          fqdns: [example.com]
+      security_local_domain_lists:
+        - name: CVK-PARCEL-DOMAIN
+          local_domains: [example.com]
+      security_port_lists:
+        - name: CVK-PARCEL-PORT
+          ports: ["443", "8000-8010"]
+      security_protocol_lists:
+        - name: CVK-PARCEL-PROTOCOL
+          protocols: [tcp, udp]
+      security_url_allow_lists:
+        - name: CVK-PARCEL-URLALLOW
+          urls: ["https://example.com/allowed"]
+      security_url_block_lists:
+        - name: CVK-PARCEL-URLBLOCK
+          urls: ["https://example.com/blocked"]
+      standard_community_lists:
+        - name: CVK-PARCEL-STDCOMM
+          standard_communities: ["65000:100"]
+      tloc_lists:
+        - name: CVK-PARCEL-TLOC
+          tlocs:
+            - color: blue
+              encapsulation: ipsec
+              tloc_ip: 192.0.2.20
+              preference: 100

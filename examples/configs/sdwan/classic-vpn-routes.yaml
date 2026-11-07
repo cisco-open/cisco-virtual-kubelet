@@ -1,0 +1,13 @@
+sdwan:
+  edge_feature_templates:
+    vpn_templates:
+      - name: CVK-CLASSIC-VPN-ROUTES
+        description: CVK isolated VPN route subtype fixture
+        device_types: [C8000V]
+        vpn_id: 24
+        omp_advertise_ipv4_routes:
+          - protocol: ospf
+        route_global_exports:
+          - protocol: ospf
+        route_global_imports:
+          - protocol: static

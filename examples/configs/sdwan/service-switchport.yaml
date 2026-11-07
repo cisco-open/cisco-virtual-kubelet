@@ -1,0 +1,18 @@
+sdwan:
+  feature_profiles:
+    service_profiles:
+      - name: CVK-SERVICE-SWITCHPORT-PROFILE
+        description: Unattached switchport service fixture
+        switchport_features:
+          - name: CVK-SERVICE-SWITCHPORT
+            age_out_time: 300
+            interfaces:
+              - name: GigabitEthernet0/0/1
+                mode: trunk
+                trunk_native_vlan: 100
+                trunk_allowed_vlans: [100, 200, 300]
+                enable_dot1x: true
+            static_mac_addresses:
+              - interface_name: GigabitEthernet0/0/1
+                mac_address: 0011.2233.4455
+                vlan_id: 100

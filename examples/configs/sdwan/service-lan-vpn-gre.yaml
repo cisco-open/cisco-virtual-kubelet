@@ -1,0 +1,15 @@
+sdwan:
+  feature_profiles:
+    service_profiles:
+      - name: CVK-SERVICE-GRE-PROFILE
+        lan_vpns:
+          - name: CVK-SERVICE-GRE-VPN
+            vpn_id: 123
+            gre_interfaces:
+              - name: CVK-SERVICE-GRE
+                interface_name: gre123
+                shutdown: true
+                ipv4_address: 192.0.2.123
+                ipv4_subnet_mask: 255.255.255.252
+                tunnel_source_ipv4_address: 198.51.100.1
+                tunnel_destination_ipv4_address: 198.51.100.2

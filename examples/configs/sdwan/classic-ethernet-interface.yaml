@@ -1,0 +1,9 @@
+sdwan:
+  edge_feature_templates:
+    ethernet_interface_templates:
+      - name: CVK-CLASSIC-ETHERNET
+        description: CVK isolated Ethernet interface template
+        device_types: [C8000V]
+        interface_name: GigabitEthernet1
+        ipv4_address: 192.0.2.1/24
+        shutdown: true

@@ -2,28 +2,28 @@
   "schemaVersion": 1,
   "mermaidBundleAudit": {
     "sourceMap": "docs/website/node_modules/mermaid/dist/mermaid.min.js.map",
-    "sourceMapSha256": "43cd977e8e0f351d6c47d31302c564f1c21fdc1e0be0d9e46370ee5e23cea004",
+    "sourceMapSha256": "a5b0405411969d4fd8e2301ad6da2f6918ca1a619a6c820eb77b4dfc423376db",
     "embeddedParserPackage": "node_modules/@mermaid-js/parser",
-    "embeddedParserVersion": "1.2.1",
-    "embeddedParserIntegrity": "sha512-n12NohV3mrUyUL2o93IgG/ifeW9FTyeJn3zDxkhwa8MJ9Fxg3HQMlA3RiGmD/3UnJvheztkjjQAjA2T4LmUcpw==",
+    "embeddedParserVersion": "2.0.1",
+    "embeddedParserIntegrity": "sha512-j37dj/h6p6pots1L7pLPPNuABEEu9WP4OYg9pW1g+nYG331j0+3canE9OagtYdytYvdSAMG+2fKU5cxep6LgjA==",
     "embeddedParserChunkCount": 32,
-    "embeddedParserMapsSha256": "7771ce7eea96545867170963f44c5c59377c5f90c003b097389d6ce5be6d027d",
+    "embeddedParserMapsSha256": "e5864fff6c48e0dffcdb2717b274bd82829f436fd719ead0b7c9c65ba26d6878",
     "inventory": "third_party/mkdocs-material/9.7.7/MERMAID_RUNTIME_INVENTORY.json",
-    "inventorySha256": "13ef8b98ac8fc9447a006e1612b481a1caa39aa573263d2ca1daac2ec0c42e34",
+    "inventorySha256": "5bf3329d73cacbaf389f34e9633f0ef21a1916bc37c1a205aff8b9651c75307c",
     "licenses": "third_party/mkdocs-material/9.7.7/MERMAID_RUNTIME_LICENSES.txt",
-    "licensesSha256": "4727a71323278d1f50bc9930cdae4bccfb576efe0a09879abb412eda00a08c13"
+    "licensesSha256": "36606e66cca709517fba8bcb5dffdae95a1eea7819f085678037e169d7b53e42"
   },
   "assets": [
     {
       "name": "mermaid",
-      "version": "11.17.2",
+      "version": "12.2.0",
       "license": "MIT",
-      "packageIntegrity": "sha512-V6K3C8EBdEsPFZXSKMJe6ppQOENxuHARr9GvHX4hh47lAbhMRD9qf4oEK7LoaRQxULMa80/qt5gHO73aCleBBg==",
+      "packageIntegrity": "sha512-w7nr/SFrLO7BaVTs3dQTvYSV6nYSBj0Yy9DjBhsIJtAcHqRzXSq4Pg32ujHZ/AdWsAMNEvvhbm5dt9E2tOiHzw==",
       "source": "docs/website/node_modules/mermaid/dist/mermaid.min.js",
       "deployed": "m.js",
-      "sha256": "581ed7d74bd9048d0e3a91363927d72ef22942d7722546b27f7cc29e35390eb8",
+      "sha256": "a8a6a6f805b074a8261a2825c86f99c8054acb3b35f50bb7e24a4f9f2c3c3b9f",
       "materialRemoteURL": "https://unpkg.com/mermaid@11/dist/mermaid.min.js",
-      "materialLocalURL": "/cisco-virtual-kubelet/docs/m.js?v=581ed7d74bd90"
+      "materialLocalURL": "/cisco-virtual-kubelet/docs/m.js?v=a8a6a6f805b07"
     },
     {
       "name": "resize-observer-polyfill",

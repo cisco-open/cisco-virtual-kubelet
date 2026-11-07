@@ -1,0 +1,24 @@
+sdwan:
+  network_hierarchy:
+    groups:
+      - name: CVK-HUB-GROUP
+        sites:
+          - name: CVK-HUB-SITE
+            site_id: 4294966992
+      - name: CVK-SPOKE-GROUP
+        sites:
+          - name: CVK-SPOKE-SITE
+            site_id: 4294966993
+  feature_profiles:
+    topology_profiles:
+      - name: CVK-TOPOLOGY-HUBSPOKE
+        hub_spoke_policies:
+          - name: CVK-HUBSPOKE-POLICY
+            lan_vpn_names: ["10"]
+            selected_hub_sites: [CVK-HUB-SITE]
+            spoke_groups:
+              - name: CVK-SPOKE-GROUP-POLICY
+                spoke_site_groups: [CVK-SPOKE-GROUP]
+                hub_preferences:
+                  - hub_sites: [CVK-HUB-SITE]
+                    preference: 1

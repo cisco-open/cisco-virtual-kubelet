@@ -1,0 +1,11 @@
+sdwan:
+  feature_profiles:
+    transport_profiles:
+      - name: CVK-TRANSPORT-MEMBER-PROFILE
+        wan_vpn:
+          name: CVK-TRANSPORT-MEMBER-VPN
+          ethernet_interfaces:
+            - name: CVK-TRANSPORT-MEMBER
+              interface_name: GigabitEthernet0/0/5
+              shutdown: true
+              port_channel_member_interface: true

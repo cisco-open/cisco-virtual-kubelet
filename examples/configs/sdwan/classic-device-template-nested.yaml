@@ -1,0 +1,43 @@
+sdwan:
+  edge_feature_templates:
+    system_templates:
+      - name: CVK-NESTED-SYSTEM
+        description: CVK isolated nested device system
+        device_types: [C8000V]
+        hostname_variable: cvkHostname
+        system_ip_variable: cvkSystemIP
+        site_id_variable: cvkSiteID
+    banner_templates:
+      - name: CVK-NESTED-BANNER
+        description: CVK isolated nested device banner
+        device_types: [C8000V]
+        login: CVK nested fixture
+    vpn_templates:
+      - name: CVK-NESTED-VPN
+        description: CVK isolated nested device VPN
+        device_types: [C8000V]
+        vpn_id: 10
+        vpn_name: CVK-NESTED
+    bgp_templates:
+      - name: CVK-NESTED-BGP
+        description: CVK isolated nested device BGP
+        device_types: [C8000V]
+        as_number: 65000
+    ethernet_interface_templates:
+      - name: CVK-NESTED-ETHERNET
+        description: CVK isolated nested device Ethernet
+        device_types: [C8000V]
+        interface_name: GigabitEthernet1
+        ipv4_address: 192.0.2.1/24
+        shutdown: true
+  edge_device_templates:
+    - name: CVK-NESTED-DEVICE
+      description: CVK isolated nested device template
+      device_model: C8000V
+      system_template: CVK-NESTED-SYSTEM
+      banner_template: CVK-NESTED-BANNER
+      vpn_service_templates:
+        - name: CVK-NESTED-VPN
+          bgp_template: CVK-NESTED-BGP
+          ethernet_interface_templates:
+            - name: CVK-NESTED-ETHERNET

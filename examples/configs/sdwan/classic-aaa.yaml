@@ -1,0 +1,7 @@
+sdwan:
+  edge_feature_templates:
+    aaa_templates:
+      - name: CVK-CLASSIC-AAA
+        description: CVK isolated AAA template
+        device_types: [C8000V]
+        authentication_and_authorization_order: [local]

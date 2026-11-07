@@ -1,0 +1,20 @@
+sdwan:
+  feature_profiles:
+    service_profiles:
+      - name: CVK-ETHERNET-DHCP-PROFILE
+        dhcp_servers:
+          - name: CVK-ETHERNET-DHCP
+            pool_network_address: 192.0.2.0
+            pool_subnet_mask: 255.255.255.0
+            default_gateway: 192.0.2.1
+            dns_servers: [192.0.2.53]
+        lan_vpns:
+          - name: CVK-ETHERNET-DHCP-VPN
+            vpn_id: 120
+            ethernet_interfaces:
+              - name: CVK-ETHERNET-DHCP-IF
+                interface_name: GigabitEthernet0/0/3
+                shutdown: true
+                ipv4_address: 192.0.2.122
+                ipv4_subnet_mask: 255.255.255.0
+                dhcp_server: CVK-ETHERNET-DHCP

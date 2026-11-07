@@ -1,0 +1,28 @@
+sdwan:
+  edge_feature_templates:
+    ospf_templates:
+      - name: CVK-CLASSIC-OSPF
+        description: Unattached OSPF template fixture
+        router_id: 192.0.2.1
+        auto_cost_reference_bandwidth: 1000
+        default_information_originate: true
+        default_information_originate_metric: 10
+        route_policy_variable: ospf_route_policy
+        areas:
+          - area_number: 0
+            interfaces:
+              - name: GigabitEthernet1
+                network_type: point-to-point
+                hello_interval: 10
+                dead_interval: 40
+                cost_variable: ospf_cost
+          - area_number: 1
+            area_type: stub
+            no_summary: true
+            ranges:
+              - address: 192.0.2.0/24
+                cost: 10
+          - area_number: 2
+            area_type: nssa
+        redistributes:
+          - protocol: connected

@@ -555,11 +555,12 @@ feature gates and served schema discovery. Its current fixture Nodes verify
 scheduler binding; extend evidence to supported applications on actual virtual
 Nodes, checking startup, service behavior, recreation and group constraints.
 
-The baseline Go dependencies use Kubernetes `v0.35.0`. Audit whether typed Pod
-reads preserve the newer scheduling-group fields before using them for drain
-eligibility or hashing. Use a narrowly scoped dynamic/unstructured reader when
-needed, or qualify a client-library update against the baseline server. Do not
-assume an unknown field is absent merely because an older Go type omitted it.
+The Go dependencies use Kubernetes `v0.37.x`; the baseline server qualification
+remains Kubernetes 1.35. Verify that typed Pod reads preserve scheduling-group
+fields before using them for drain eligibility or hashing. Retain the narrowly
+scoped dynamic/unstructured guard and qualify the updated clients against the
+baseline server. Do not assume an unknown field is absent merely because an
+older Go type omitted it.
 Until recognition is proven, reject unsupported group-managed drain through
 version-aware native admission or a verified raw-object check. Include this
 negative test before any physical TAS-plus-drain run.

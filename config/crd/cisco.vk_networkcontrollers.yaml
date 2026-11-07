@@ -129,6 +129,227 @@ spec:
                 required:
                 - name
                 type: object
+              deviceAdoption:
+                description: |-
+                  DeviceAdoption opts the controller into turning its inventory into
+                  standalone CiscoDevice objects. Omitted or disabled means inventory is
+                  reported only.
+                properties:
+                  defaults:
+                    description: Defaults apply to every adopted device that has no
+                      scope override.
+                    properties:
+                      credentialSecretRef:
+                        description: |-
+                          CredentialSecretRef names the Secret copied to
+                          CiscoDevice.spec.credentialSecretRef.
+                        properties:
+                          name:
+                            description: Name of the Secret.
+                            maxLength: 253
+                            minLength: 1
+                            pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                            type: string
+                        required:
+                        - name
+                        type: object
+                      labels:
+                        additionalProperties:
+                          type: string
+                        description: |-
+                          Labels are added to every adopted CiscoDevice, both in metadata.labels
+                          (for kubectl selectors) and in spec.labels (projected onto the Node), for
+                          example to group devices into upgrade waves. The adapter's own
+                          nd.cisco.vk/ labels, the cisco.vk/ and kubernetes.io/ namespaces and
+                          scheduling-topology keys are reserved. A label removed here is removed
+                          from the devices the adapter manages.
+                        maxProperties: 16
+                        type: object
+                      tls:
+                        description: |-
+                          TLS is copied to CiscoDevice.spec.tls. Omit to keep the CiscoDevice
+                          default.
+                        properties:
+                          caFile:
+                            description: CAFile is the path to the CA certificate
+                              file.
+                            type: string
+                          caSecretRef:
+                            description: |-
+                              CASecretRef projects only ca.crt from a same-namespace Secret into both
+                              per-device workers. It does not expose client or signer private keys.
+                              Local-file and aggregator deployments must use CAFile instead.
+                            properties:
+                              name:
+                                description: Name is the Secret in the CiscoDevice's
+                                  namespace; ca.crt is required.
+                                maxLength: 253
+                                minLength: 1
+                                pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                                type: string
+                            required:
+                            - name
+                            type: object
+                          certFile:
+                            description: CertFile is the path to the client certificate
+                              file.
+                            type: string
+                          enabled:
+                            description: Enabled toggles TLS for device communication.
+                            type: boolean
+                          insecureSkipVerify:
+                            description: InsecureSkipVerify disables TLS certificate
+                              verification.
+                            type: boolean
+                          keyFile:
+                            description: KeyFile is the path to the client key file.
+                            type: string
+                        required:
+                        - enabled
+                        type: object
+                        x-kubernetes-validations:
+                        - message: caSecretRef requires verified TLS and is mutually
+                            exclusive with caFile
+                          rule: '!has(self.caSecretRef) || (self.enabled && (!has(self.insecureSkipVerify)
+                            || !self.insecureSkipVerify) && !has(self.caFile))'
+                      username:
+                        description: Username is the device login copied to CiscoDevice.spec.username.
+                        maxLength: 128
+                        minLength: 1
+                        type: string
+                    required:
+                    - credentialSecretRef
+                    - username
+                    type: object
+                  enabled:
+                    default: false
+                    description: Enabled turns adoption on.
+                    type: boolean
+                  removal:
+                    description: Removal controls devices whose switch has left the
+                      inventory.
+                    properties:
+                      gracePeriod:
+                        description: |-
+                          GracePeriod is how long a device must stay missing, across refreshes,
+                          before Prune deletes it. Defaults to 24h; between 10m and 720h.
+                        type: string
+                      maxPrunePercent:
+                        description: |-
+                          MaxPrunePercent is the guard against mass deletion: when more than this
+                          percentage of the adopted devices are due for pruning at once (at least
+                          one device is always allowed), nothing is deleted. Defaults to 25.
+                        format: int32
+                        maximum: 100
+                        minimum: 1
+                        type: integer
+                      policy:
+                        default: Retain
+                        description: Policy is Retain (default) or Prune.
+                        enum:
+                        - Retain
+                        - Prune
+                        type: string
+                    type: object
+                  scopeOverrides:
+                    description: ScopeOverrides replace default access fields per
+                      scope.
+                    items:
+                      description: |-
+                        NetworkControllerDeviceScopeOverride replaces selected access fields for the
+                        devices in one controller-defined scope (a Nexus Dashboard fabric, for
+                        example). Omitted fields inherit from spec.deviceAdoption.defaults.
+                      properties:
+                        credentialSecretRef:
+                          description: CredentialSecretRef overrides the default credential
+                            Secret.
+                          properties:
+                            name:
+                              description: Name of the Secret.
+                              maxLength: 253
+                              minLength: 1
+                              pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                              type: string
+                          required:
+                          - name
+                          type: object
+                        labels:
+                          additionalProperties:
+                            type: string
+                          description: |-
+                            Labels are merged key by key over the default labels; a key set here
+                            replaces the default value for devices in this scope.
+                          maxProperties: 16
+                          type: object
+                        scope:
+                          description: Scope is the controller-defined grouping name,
+                            matched exactly.
+                          maxLength: 64
+                          minLength: 1
+                          pattern: ^[A-Za-z0-9][A-Za-z0-9_.-]*$
+                          type: string
+                        tls:
+                          description: TLS overrides the default device TLS settings.
+                          properties:
+                            caFile:
+                              description: CAFile is the path to the CA certificate
+                                file.
+                              type: string
+                            caSecretRef:
+                              description: |-
+                                CASecretRef projects only ca.crt from a same-namespace Secret into both
+                                per-device workers. It does not expose client or signer private keys.
+                                Local-file and aggregator deployments must use CAFile instead.
+                              properties:
+                                name:
+                                  description: Name is the Secret in the CiscoDevice's
+                                    namespace; ca.crt is required.
+                                  maxLength: 253
+                                  minLength: 1
+                                  pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                                  type: string
+                              required:
+                              - name
+                              type: object
+                            certFile:
+                              description: CertFile is the path to the client certificate
+                                file.
+                              type: string
+                            enabled:
+                              description: Enabled toggles TLS for device communication.
+                              type: boolean
+                            insecureSkipVerify:
+                              description: InsecureSkipVerify disables TLS certificate
+                                verification.
+                              type: boolean
+                            keyFile:
+                              description: KeyFile is the path to the client key file.
+                              type: string
+                          required:
+                          - enabled
+                          type: object
+                          x-kubernetes-validations:
+                          - message: caSecretRef requires verified TLS and is mutually
+                              exclusive with caFile
+                            rule: '!has(self.caSecretRef) || (self.enabled && (!has(self.insecureSkipVerify)
+                              || !self.insecureSkipVerify) && !has(self.caFile))'
+                        username:
+                          description: Username overrides the default device login.
+                          maxLength: 128
+                          minLength: 1
+                          type: string
+                      required:
+                      - scope
+                      type: object
+                    maxItems: 64
+                    type: array
+                    x-kubernetes-list-map-keys:
+                    - scope
+                    x-kubernetes-list-type: map
+                type: object
+                x-kubernetes-validations:
+                - message: defaults is required when enabled is true
+                  rule: '!self.enabled || has(self.defaults)'
               endpoint:
                 description: |-
                   Endpoint is the immutable HTTPS base URL for one logical controller.

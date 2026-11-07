@@ -1,0 +1,12 @@
+sdwan:
+  edge_feature_templates:
+    igmp_templates:
+      - name: CVK-CLASSIC-IGMP
+        description: CVK unattached IGMP template
+        device_types: [C8000V]
+        interfaces:
+          - name: GigabitEthernet1
+            optional: false
+            join_groups:
+              - group_address: 239.1.1.1
+                source: 192.0.2.1

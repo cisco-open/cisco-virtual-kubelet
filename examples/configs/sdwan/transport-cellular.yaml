@@ -1,0 +1,33 @@
+sdwan:
+  feature_profiles:
+    transport_profiles:
+      - name: CVK-TRANSPORT-CELLULAR
+        description: CVK unattached cellular feature fixtures
+        cellular_controllers:
+          - name: CVK-CELLULAR-CONTROLLER
+            description: CVK cellular controller
+            cellular_id: 0/2/0
+            firmware_auto_sim: true
+            primary_sim_slot: 0
+            sim_failover_retries: 10
+            sim_failover_timeout: 5
+        cellular_profiles:
+          - name: CVK-CELLULAR-NOAUTH
+            description: CVK cellular profile without authentication
+            profile_id: 2
+            access_point_name: fixture.example
+            authentication_enable: false
+            packet_data_network_type: ipv4
+            no_overwrite: false
+          - name: CVK-CELLULAR-AUTH
+            description: CVK cellular profile with credential variables
+            profile_id: 3
+            access_point_name: fixture.example
+            authentication_enable: true
+            authentication_type: chap
+            profile_username_variable: fixture_cell_user
+            profile_password_variable: fixture_cell_password
+            packet_data_network_type: ipv4v6
+            no_overwrite: false
+            slice_type: 1
+            slice_differentiator: 10

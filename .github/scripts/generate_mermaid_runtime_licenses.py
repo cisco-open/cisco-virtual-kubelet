@@ -61,6 +61,41 @@ ROUGHJS_BUNDLED_DEPENDENCIES = {
     ("points-on-curve", "0.2.0"),
     ("points-on-path", "0.2.1"),
 }
+# These prebuilt sources hide dependencies from the pnpm-path inventory. Pin
+# their complete source, not just their notice, so changed code requires audit.
+# The path-browserify source matches index.js in the official 1.0.1 npm tarball,
+# but the parser map does not record its version; retain source attribution only.
+PATH_BROWSERIFY_SOURCE = "webpack://LIB/node_modules/path-browserify/index.js"
+PATH_BROWSERIFY_SHA256 = (
+    "f6d60f9e7cd83f65f947cda34ef846e82706c044d9a9fa7c5b69718b13b78e28"
+)
+ELK_PAIR = ("elkjs", "0.9.3")
+ELK_SOURCE = "../../../node_modules/.pnpm/elkjs@0.9.3/node_modules/elkjs/lib/elk.bundled.js"
+ELK_BUNDLE_SHA256 = (
+    "b0745abd7f23cd91690a1587e377edbe19fd7233c783300290936720546216d4"
+)
+ELK_GIT_HEAD = "a8304cf79fde75bc2ab1a89d28320f53f8637436"
+ELK_SOURCE_NOTICE = f"""Source availability for elkjs 0.9.3 (EPL-2.0)
+
+The npm package's gitHead and upstream 0.9.3 tag identify this source revision:
+https://github.com/kieler/elkjs/tree/{ELK_GIT_HEAD}
+Source archive: https://github.com/kieler/elkjs/archive/{ELK_GIT_HEAD}.tar.gz
+This revision includes the JavaScript API, generated unminified worker, and
+bundled distribution. Its lib/elk.bundled.js is byte-identical to the npm
+tarball and the source embedded in Mermaid (SHA-256 {ELK_BUNDLE_SHA256}).
+
+The upstream release describes its underlying Eclipse Layout Kernel source as
+ELK 0.9.1 plus eclipse-elk/elk PR #955:
+https://github.com/kieler/elkjs/releases/tag/0.9.3
+ELK 0.9.1 source: https://github.com/eclipse-elk/elk/tree/62d5909f96fad541bc101ad52dabaece6b7eab7e
+PR #955: https://github.com/eclipse-elk/elk/pull/955
+Merged change: https://github.com/eclipse-elk/elk/commit/7ca51784e42a24201f29bc13e458728b6fc61cdc
+The elkjs build reads a sibling ELK checkout; its exact Java build revision is
+not recorded. These links preserve the published source provenance without
+claiming a reproducible Java build revision.
+
+The embedded web-worker browser shim carries a separate Apache-2.0 notice,
+reproduced below. Its exact package version is not recorded in this bundle."""
 
 
 class MermaidAuditError(RuntimeError):
@@ -69,6 +104,52 @@ class MermaidAuditError(RuntimeError):
 
 def sha256(content: bytes) -> str:
     return hashlib.sha256(content).hexdigest()
+
+
+def pinned_source(source_map: dict, source: str, digest: str) -> str | None:
+    sources = source_map.get("sources")
+    contents = source_map.get("sourcesContent")
+    if not isinstance(sources, list) or not isinstance(contents, list):
+        raise MermaidAuditError("embedded source map lacks sources/sourcesContent")
+    if len(sources) != len(contents):
+        raise MermaidAuditError("embedded source and sourcesContent counts differ")
+    matches = [index for index, name in enumerate(sources) if name == source]
+    if not matches:
+        return None
+    if len(matches) != 1:
+        raise MermaidAuditError(f"duplicate embedded source: {source}")
+    content = contents[matches[0]]
+    if not isinstance(content, str) or sha256(content.encode("utf-8")) != digest:
+        raise MermaidAuditError(f"audited embedded source changed: {source}")
+    return content
+
+
+def path_browserify_notice(source_map: dict) -> str | None:
+    source = pinned_source(source_map, PATH_BROWSERIFY_SOURCE, PATH_BROWSERIFY_SHA256)
+    if source is None:
+        return None
+    header, separator, _ = source.partition("\n\n'use strict';")
+    if (
+        not separator
+        or "Copyright Joyent, Inc. and other Node contributors." not in header
+        or not header.endswith("// USE OR OTHER DEALINGS IN THE SOFTWARE.")
+    ):
+        raise MermaidAuditError("cannot extract embedded path-browserify notice")
+    return f"Source: {PATH_BROWSERIFY_SOURCE}\n\n{header}"
+
+
+def web_worker_notice(bundle: bytes) -> str:
+    if sha256(bundle) != ELK_BUNDLE_SHA256:
+        raise MermaidAuditError("audited elkjs bundle changed")
+    match = re.search(
+        r",4:\[function\(require,module,exports\)\{\n(/\*\*.*?\*/)\n"
+        r"module\.exports = Worker;\n\},\{\}\]\},\{\},\[3\]\)\(3\)\n\}\);\s*\Z",
+        bundle.decode("utf-8"),
+        re.DOTALL,
+    )
+    if match is None or "Copyright 2020 Google LLC" not in match.group(1):
+        raise MermaidAuditError("cannot extract embedded web-worker notice")
+    return "web-worker browser shim embedded in elkjs 0.9.3\n\n" + match.group(1)
 
 
 def package_pairs(source_map: dict) -> set[tuple[str, str]]:
@@ -112,6 +193,11 @@ def runtime_inventory() -> tuple[set[tuple[str, str]], dict[str, object]]:
     parser_maps: list[tuple[str, bytes]] = []
     embedded_parser_chunks = 0
     pairs = package_pairs(main)
+    elk_source = pinned_source(main, ELK_SOURCE, ELK_BUNDLE_SHA256)
+    if ELK_PAIR not in pairs or elk_source is None:
+        raise MermaidAuditError("audited Mermaid map no longer embeds elkjs 0.9.3")
+    web_worker_notice(elk_source.encode("utf-8"))
+    embedded_path_notice = False
     for source, expected_content in zip(main_sources, main_content, strict=True):
         if not source.startswith("../../parser/dist/") or not source.endswith(".mjs"):
             continue
@@ -125,10 +211,15 @@ def runtime_inventory() -> tuple[set[tuple[str, str]], dict[str, object]]:
         source_map_path = chunk.with_name(f"{chunk.name}.map")
         source_map_bytes = source_map_path.read_bytes()
         parser_maps.append((relative.as_posix() + ".map", source_map_bytes))
-        pairs.update(package_pairs(json.loads(source_map_bytes)))
+        parser_map = json.loads(source_map_bytes)
+        pairs.update(package_pairs(parser_map))
+        if path_browserify_notice(parser_map) is not None:
+            embedded_path_notice = True
 
     if embedded_parser_chunks == 0:
         raise MermaidAuditError("Mermaid source map contains no embedded parser chunks")
+    if not embedded_path_notice:
+        raise MermaidAuditError("audited parser maps lack embedded path-browserify")
     parser_hash = hashlib.sha256()
     for relative, content in sorted(parser_maps):
         parser_hash.update(relative.encode("utf-8"))
@@ -206,6 +297,41 @@ def normalize_license(value: object) -> str | None:
     return None
 
 
+def archive_bytes(archive: tarfile.TarFile, path: str) -> bytes:
+    members = [member for member in archive.getmembers() if member.name == path]
+    if len(members) != 1 or not members[0].isfile():
+        raise MermaidAuditError(f"npm tarball must contain one regular file: {path}")
+    extracted = archive.extractfile(members[0])
+    if extracted is None:
+        raise MermaidAuditError(f"cannot read npm tarball file: {path}")
+    return extracted.read()
+
+
+def embedded_notices(
+    pair: tuple[str, str], archive: tarfile.TarFile, metadata: dict
+) -> list[tuple[str, str]]:
+    if pair == ELK_PAIR:
+        if metadata.get("gitHead") != ELK_GIT_HEAD:
+            raise MermaidAuditError("elkjs source provenance changed")
+        bundle = archive_bytes(archive, "package/lib/elk.bundled.js")
+        return [
+            ("package/lib/elk.bundled.js (source availability)", ELK_SOURCE_NOTICE),
+            ("package/lib/elk.bundled.js (web-worker notice)", web_worker_notice(bundle)),
+        ]
+    if pair[0] == "@mermaid-js/parser":
+        notices = set()
+        for member in archive.getmembers():
+            if member.isfile() and member.name.endswith(".mjs.map"):
+                source_map = json.loads(archive_bytes(archive, member.name))
+                notice = path_browserify_notice(source_map)
+                if notice is not None:
+                    notices.add(notice)
+        if len(notices) != 1:
+            raise MermaidAuditError("parser tarball lacks one audited path-browserify notice")
+        return [("path-browserify/index.js (embedded source notice)", notices.pop())]
+    return []
+
+
 def fetch_package(
     pair: tuple[str, str]
 ) -> tuple[dict[str, object], list[tuple[str, str]]]:
@@ -234,20 +360,21 @@ def fetch_package(
         raise MermaidAuditError(f"npm package lacks HTTPS tarball: {name}@{version}")
     with urllib.request.urlopen(tarball_url, timeout=120) as response:
         tarball = response.read()
-    expected = base64.b64decode(integrity.removeprefix("sha512-"))
+    try:
+        expected = base64.b64decode(integrity.removeprefix("sha512-"), validate=True)
+    except ValueError as exc:
+        raise MermaidAuditError(f"invalid npm SHA-512 integrity: {name}@{version}") from exc
     if hashlib.sha512(tarball).digest() != expected:
         raise MermaidAuditError(f"npm tarball integrity mismatch: {name}@{version}")
 
     texts: list[tuple[str, str]] = []
     package_manifest: dict[str, object] = {}
     with tarfile.open(fileobj=io.BytesIO(tarball), mode="r:gz") as archive:
-        manifest_member = archive.getmember("package/package.json")
-        manifest_file = archive.extractfile(manifest_member)
-        if manifest_file is None:
+        package_manifest = json.loads(archive_bytes(archive, "package/package.json"))
+        if package_manifest.get("name") != name or package_manifest.get("version") != version:
             raise MermaidAuditError(
-                f"npm tarball has no package.json: {name}@{version}"
+                f"npm tarball identity mismatch for {name}@{version}"
             )
-        package_manifest = json.load(manifest_file)
         for member in archive.getmembers():
             if (
                 not member.isfile()
@@ -264,10 +391,11 @@ def fetch_package(
             fallback = readme_license(archive)
             if fallback is not None:
                 texts.append(fallback)
-    if not texts:
-        raise MermaidAuditError(
-            f"npm tarball contains no license text: {name}@{version}"
-        )
+        if not texts:
+            raise MermaidAuditError(
+                f"npm tarball contains no license text: {name}@{version}"
+            )
+        texts.extend(embedded_notices(pair, archive, metadata))
 
     license_label = normalize_license(metadata.get("license")) or normalize_license(
         package_manifest.get("license")
@@ -289,12 +417,18 @@ def fetch_package(
 def render_licenses(
     packages: list[tuple[dict[str, object], list[tuple[str, str]]]],
 ) -> str:
+    versions = {}
+    for name in ("mermaid", "@mermaid-js/parser"):
+        matches = [entry["version"] for entry, _ in packages if entry["name"] == name]
+        if len(matches) != 1:
+            raise MermaidAuditError(f"notice requires one exact {name} package")
+        versions[name] = matches[0]
     sections = [
         "MkDocs vendored browser-runtime licenses",
         "",
         "Generated from the exact package/version identities embedded in the",
-        "hash-pinned Mermaid 11.17.2 source map, recursively including its",
-        "prebuilt @mermaid-js/parser 1.2.1 chunks, plus the exact top-level",
+        f"hash-pinned Mermaid {versions['mermaid']} source map, recursively including its",
+        f"prebuilt @mermaid-js/parser {versions['@mermaid-js/parser']} chunks, plus the exact top-level",
         "Mermaid, parser, and ResizeObserver runtime packages.",
     ]
     for entry, texts in packages:

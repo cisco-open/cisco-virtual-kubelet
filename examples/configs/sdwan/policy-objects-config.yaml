@@ -1,0 +1,23 @@
+apiVersion: config.cisco.vk/v1alpha1
+kind: NetworkControllerConfig
+metadata:
+  name: policy-objects-fixture
+  namespace: sdwan-lab
+spec:
+  controllerRef:
+    name: sdwan-lab
+  scope: global
+  managedSections: [network_hierarchy, policy_objects]
+  modelSource:
+    format: netascode-sdwan
+    modelVersion: 1.5.0
+    resolved: true
+    sourceRevision: fixture-policy-objects-v1
+  source:
+    configMapRef:
+      name: sdwan-policy-objects-fixture
+      key: model.yaml
+  mode: report
+  prunePolicy: Retain
+  deletionPolicy: Retain
+  driftDetectInterval: 30s

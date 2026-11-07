@@ -1,0 +1,19 @@
+sdwan:
+  feature_profiles:
+    service_profiles:
+      - name: CVK-ETHERNET-TRACKER-PROFILE
+        ipv4_trackers:
+          - name: CVK-ETHERNET-TRACKER
+            tracker_name: cvkethprobe
+            endpoint_ip: 192.0.2.100
+            interval: 60
+            multiplier: 3
+            threshold: 300
+        lan_vpns:
+          - name: CVK-ETHERNET-TRACKER-VPN
+            vpn_id: 121
+            ethernet_interfaces:
+              - name: CVK-ETHERNET-TRACKER-IF
+                interface_name: GigabitEthernet0/0/3
+                shutdown: true
+                ipv4_tracker: CVK-ETHERNET-TRACKER

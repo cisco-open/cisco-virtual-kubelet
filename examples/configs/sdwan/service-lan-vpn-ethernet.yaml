@@ -1,0 +1,16 @@
+sdwan:
+  feature_profiles:
+    service_profiles:
+      - name: CVK-SERVICE-ETHERNET-PROFILE
+        lan_vpns:
+          - name: CVK-SERVICE-ETHERNET-VPN
+            vpn_id: 119
+            ethernet_interfaces:
+              - name: CVK-SERVICE-ETHERNET
+                interface_name: GigabitEthernet0/0/3
+                shutdown: true
+                ipv4_address: 192.0.2.120
+                ipv4_subnet_mask: 255.255.255.0
+                arp_entries:
+                  - ip_address: 192.0.2.121
+                    mac_address: 00:11:22:33:44:67

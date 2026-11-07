@@ -1,0 +1,34 @@
+sdwan:
+  feature_profiles:
+    service_profiles:
+      - name: CVK-SERVICE-ACL
+        ipv4_acls:
+          - name: CVK-SERVICE-IPV4-ACL
+            default_action: drop
+            sequences:
+              - id: 10
+                name: SSH-ACCEPT
+                base_action: accept
+                match_entries:
+                  source_data_prefix: 192.0.2.0/24
+                  destination_ports: [22]
+                  protocols: [6]
+                actions:
+                  counter_name: CVK-SSH-ACCEPT
+                  log: true
+                  dscp: 10
+    transport_profiles:
+      - name: CVK-TRANSPORT-ACL
+        ipv4_acls:
+          - name: CVK-TRANSPORT-IPV4-ACL
+            default_action: drop
+            sequences:
+              - id: 10
+                name: SSH-DROP
+                base_action: drop
+                match_entries:
+                  destination_data_prefix: 198.51.100.0/24
+                  destination_ports: [22]
+                actions:
+                  counter_name: CVK-SSH-DROP
+                  log: true

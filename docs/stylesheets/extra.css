@@ -1,0 +1,231 @@
+/* Local documentation styling. No font downloads or additional runtime code. */
+:root {
+  --md-text-font: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --md-code-font: ui-monospace, SFMono-Regular, Consolas, monospace;
+}
+
+[data-md-color-scheme="default"] {
+  --md-primary-fg-color: #101827;
+  --md-primary-fg-color--light: #1a273b;
+  --md-primary-fg-color--dark: #0a0e1a;
+  --md-primary-bg-color: #f4f7fb;
+  --md-default-bg-color: #ffffff;
+  --md-default-fg-color: #1e293b;
+  --md-default-fg-color--light: #526176;
+  --md-default-fg-color--lighter: #64748b;
+  --md-typeset-color: #1e293b;
+  --md-typeset-a-color: #006782;
+  --md-accent-fg-color: #006782;
+  --md-accent-fg-color--transparent: #00678214;
+  --md-code-bg-color: #f1f5f9;
+  --cvk-surface: #f6f9fc;
+  --cvk-border: #d7e2ec;
+  --cvk-focus: #006782;
+}
+
+[data-md-color-scheme="slate"] {
+  --md-hue: 220;
+  --md-primary-fg-color: #101827;
+  --md-primary-fg-color--light: #1a273b;
+  --md-primary-fg-color--dark: #0a0e1a;
+  --md-primary-bg-color: #f4f7fb;
+  --md-default-bg-color: #0a0e1a;
+  --md-default-fg-color: #e4e8f1;
+  --md-default-fg-color--light: #a8b7ca;
+  --md-default-fg-color--lighter: #94a3b8;
+  --md-typeset-color: #e4e8f1;
+  --md-typeset-a-color: #49d7f5;
+  --md-accent-fg-color: #49d7f5;
+  --md-accent-fg-color--transparent: #49d7f514;
+  --md-code-bg-color: #111827;
+  --cvk-surface: #111827;
+  --cvk-border: #2b3c51;
+  --cvk-focus: #49d7f5;
+}
+
+.md-header,
+.md-tabs {
+  color: #f4f7fb;
+  background: #101827;
+}
+
+.md-header {
+  box-shadow: 0 1px 0 #2b3c51;
+}
+
+.md-tabs__link {
+  color: #c2cede;
+  opacity: 1;
+}
+
+.md-tabs__item--active .md-tabs__link,
+.md-tabs__link:hover {
+  color: #49d7f5;
+}
+
+.md-grid {
+  max-width: 76rem;
+}
+
+.md-typeset {
+  font-size: 0.8rem;
+  line-height: 1.7;
+}
+
+.md-typeset h1,
+.md-typeset h2,
+.md-typeset h3 {
+  color: var(--md-typeset-color);
+  font-weight: 650;
+  letter-spacing: -0.025em;
+  line-height: 1.3;
+}
+
+.md-typeset p > a:not(.md-button),
+.md-typeset td > a {
+  text-decoration: underline;
+  text-decoration-thickness: 0.06em;
+  text-underline-offset: 0.18em;
+}
+
+.md-typeset .md-button {
+  color: var(--md-typeset-a-color);
+  border-color: var(--md-typeset-a-color);
+  border-radius: 0.5rem;
+  font-weight: 650;
+  padding: 0.55em 1.15em;
+}
+
+.md-typeset .md-button:not(.md-button--primary):is(:hover, :focus-visible) {
+  color: var(--md-typeset-a-color);
+  background: var(--md-accent-fg-color--transparent);
+  border-color: var(--md-typeset-a-color);
+}
+
+.md-typeset .md-button--primary {
+  color: #0a0e1a;
+  background: #00bceb;
+  border-color: #00bceb;
+}
+
+.md-typeset .md-button--primary:hover,
+.md-typeset .md-button--primary:focus-visible {
+  color: #0a0e1a;
+  background: #49d7f5;
+  border-color: #49d7f5;
+}
+
+:where(.md-header, .md-tabs, .md-sidebar, .md-content, .md-footer)
+  :is(a, button, input, summary):focus-visible {
+  outline: 2px solid var(--cvk-focus);
+  outline-offset: 3px;
+}
+
+.md-header,
+.md-tabs,
+.md-footer {
+  --cvk-focus: #49d7f5;
+}
+
+.md-typeset .cvk-intro {
+  padding: 0.25rem 0 1rem;
+}
+
+.md-typeset .cvk-eyebrow {
+  color: var(--md-typeset-a-color);
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.md-typeset .cvk-intro h1 {
+  margin: 0.4em 0;
+  font-size: clamp(1.65rem, 3vw, 2.35rem);
+  letter-spacing: -0.04em;
+}
+
+.md-typeset .cvk-lead {
+  max-width: 42em;
+  color: var(--md-default-fg-color--light);
+  font-size: 1rem;
+  line-height: 1.55;
+}
+
+.md-typeset .cvk-intro .md-button {
+  margin: 0.25rem 0.4rem 0.25rem 0;
+}
+
+.md-typeset .cvk-version-note {
+  padding: 0.65rem 0.85rem;
+  border-left: 3px solid var(--md-typeset-a-color);
+  border-radius: 0 0.35rem 0.35rem 0;
+  background: var(--cvk-surface);
+  font-size: 0.7rem;
+}
+
+.md-typeset .cvk-hub .grid.cards {
+  gap: 0.75rem;
+  margin: 1rem 0 1.5rem;
+}
+
+.md-typeset .cvk-hub .grid.cards > ul > li {
+  padding: 1rem;
+  border: 1px solid var(--cvk-border);
+  border-radius: 0.65rem;
+  background: var(--cvk-surface);
+  box-shadow: none;
+}
+
+.md-typeset .cvk-hub .grid.cards > ul > li:is(:hover, :focus-within) {
+  border-color: var(--md-typeset-a-color);
+  box-shadow: none;
+}
+
+.md-typeset .cvk-hub .grid.cards p:first-child {
+  font-size: 0.85rem;
+}
+
+.md-typeset .cvk-steps {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.md-typeset .cvk-diagram-hint {
+  display: none;
+}
+
+@media (max-width: 44em) {
+  .md-typeset .cvk-diagram-hint {
+    display: block;
+    color: var(--md-default-fg-color--light);
+    font-size: 0.65rem;
+  }
+  .md-typeset .cvk-steps {
+    grid-template-columns: 1fr;
+  }
+
+  .md-typeset .cvk-intro .md-button {
+    display: block;
+    width: fit-content;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .md-typeset .cvk-hub .grid.cards > ul > li {
+    transition: none;
+  }
+}
+
+/* Keep overview flows readable on narrow screens without widening the page. */
+.md-typeset .cvk-flow-diagram {
+  padding: 0.8rem;
+  overflow-x: auto;
+  border: 1px solid var(--cvk-border);
+  border-radius: 0.65rem;
+  background: var(--cvk-surface);
+}
+
+.md-typeset .cvk-flow-diagram .mermaid {
+  margin: 0;
+  min-width: 36rem;
+}

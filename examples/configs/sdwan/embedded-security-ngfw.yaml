@@ -1,0 +1,14 @@
+sdwan:
+  feature_profiles:
+    ngfw_security_profiles:
+      - name: CVK-NGFW-PROFILE
+        policies:
+          - name: CVK-NGFW-POLICY
+            default_action: drop
+            source_zone: self
+            destination_zones: [untrusted]
+            sequences:
+              - sequence_id: 1
+                sequence_name: CVK-NGFW-RULE
+                base_action: pass
+                source_data_ipv4_prefixes: [10.0.0.0/8]

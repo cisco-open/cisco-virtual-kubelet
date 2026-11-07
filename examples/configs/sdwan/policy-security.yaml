@@ -1,0 +1,59 @@
+# All objects are unattached; the Manager policy-profile singleton must be isolated for live testing.
+sdwan:
+  feature_profiles:
+    policy_object_profile:
+      name: CVK-POLICY-SECURITY
+      application_lists:
+        - name: CVK-APPS
+          applications: [http]
+          application_families: [web]
+      security_local_application_lists:
+        - name: CVK-LOCAL-APPS
+          applications: [http]
+          application_families: [web]
+      security_geo_location_lists:
+        - name: CVK-GEO
+          continent_codes: [EU]
+          country_codes: [DEU]
+      security_zones:
+        - name: CVK-ZONE
+          interfaces: [GigabitEthernet1]
+      preferred_color_groups:
+        - name: CVK-COLORS
+          primary_colors: [blue]
+          secondary_colors: [mpls]
+          tertiary_colors: [biz-internet]
+      security_url_allow_lists:
+        - name: CVK-URL-ALLOW
+          urls: [example.com]
+      security_url_filtering_profiles:
+        - name: CVK-URL-FILTER
+          block_page_action: text
+          block_page_content_body: Contact the lab operator.
+          enable_alerts: true
+          alerts: [blacklist]
+          web_categories: [malware-sites]
+          web_categories_action: block
+          web_reputation: high-risk
+          url_allow_list: CVK-URL-ALLOW
+      security_ips_signature_lists:
+        - name: CVK-SIGNATURE
+          entries:
+            - generator_id: 1
+              signature_id: 1000
+      security_intrusion_prevention_profiles:
+        - name: CVK-INTRUSION
+          inspection_mode: detection
+          signature_set: balanced
+          signature_allow_list: CVK-SIGNATURE
+      security_advanced_malware_protection_profiles:
+        - name: CVK-MALWARE
+          alert_log_level: critical
+          amp_cloud_region: nam
+          file_analysis: false
+      security_advanced_inspection_profiles:
+        - name: CVK-INSPECTION
+          tls_action: never_decrypt
+          intrusion_prevention: CVK-INTRUSION
+          url_filtering: CVK-URL-FILTER
+          advanced_malware_protection: CVK-MALWARE

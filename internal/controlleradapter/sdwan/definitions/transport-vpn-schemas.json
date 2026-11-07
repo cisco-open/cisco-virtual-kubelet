@@ -1,0 +1,3340 @@
+{
+  "management": {
+    "properties": {
+      "dnsIpv4": {
+        "additionalProperties": false,
+        "properties": {
+          "primaryDnsAddressIpv4": {
+            "description": "Primary DNS Address (IPv4)",
+            "oneOf": [
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "default": {
+                    "format": "ipv4",
+                    "type": "string"
+                  },
+                  "description": {
+                    "maxLength": 128,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "optionType": {
+                    "enum": [
+                      "variable"
+                    ],
+                    "type": "string"
+                  },
+                  "value": {
+                    "maxLength": 128,
+                    "minLength": 1,
+                    "pattern": "^\\{\\{[.\\/\\[\\]a-zA-Z0-9_-]+\\}\\}$",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "optionType",
+                  "value"
+                ]
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "optionType": {
+                    "enum": [
+                      "global"
+                    ],
+                    "type": "string"
+                  },
+                  "value": {
+                    "format": "ipv4",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "optionType",
+                  "value"
+                ]
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "optionType": {
+                    "enum": [
+                      "default"
+                    ],
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "optionType"
+                ]
+              }
+            ],
+            "type": "object"
+          },
+          "secondaryDnsAddressIpv4": {
+            "description": "Secondary DNS Address (IPv4)",
+            "oneOf": [
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "default": {
+                    "format": "ipv4",
+                    "type": "string"
+                  },
+                  "description": {
+                    "maxLength": 128,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "optionType": {
+                    "enum": [
+                      "variable"
+                    ],
+                    "type": "string"
+                  },
+                  "value": {
+                    "maxLength": 128,
+                    "minLength": 1,
+                    "pattern": "^\\{\\{[.\\/\\[\\]a-zA-Z0-9_-]+\\}\\}$",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "optionType",
+                  "value"
+                ]
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "optionType": {
+                    "enum": [
+                      "global"
+                    ],
+                    "type": "string"
+                  },
+                  "value": {
+                    "format": "ipv4",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "optionType",
+                  "value"
+                ]
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "optionType": {
+                    "enum": [
+                      "default"
+                    ],
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "optionType"
+                ]
+              }
+            ],
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "dnsIpv6": {
+        "additionalProperties": false,
+        "properties": {
+          "primaryDnsAddressIpv6": {
+            "description": "Primary DNS Address (IPv6)",
+            "oneOf": [
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "default": {
+                    "format": "ipv6",
+                    "type": "string"
+                  },
+                  "description": {
+                    "maxLength": 128,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "optionType": {
+                    "enum": [
+                      "variable"
+                    ],
+                    "type": "string"
+                  },
+                  "value": {
+                    "maxLength": 128,
+                    "minLength": 1,
+                    "pattern": "^\\{\\{[.\\/\\[\\]a-zA-Z0-9_-]+\\}\\}$",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "optionType",
+                  "value"
+                ]
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "optionType": {
+                    "enum": [
+                      "global"
+                    ],
+                    "type": "string"
+                  },
+                  "value": {
+                    "format": "ipv6",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "optionType",
+                  "value"
+                ]
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "optionType": {
+                    "enum": [
+                      "default"
+                    ],
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "optionType"
+                ]
+              }
+            ],
+            "type": "object"
+          },
+          "secondaryDnsAddressIpv6": {
+            "description": "Secondary DNS Address (IPv6)",
+            "oneOf": [
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "default": {
+                    "format": "ipv6",
+                    "type": "string"
+                  },
+                  "description": {
+                    "maxLength": 128,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "optionType": {
+                    "enum": [
+                      "variable"
+                    ],
+                    "type": "string"
+                  },
+                  "value": {
+                    "maxLength": 128,
+                    "minLength": 1,
+                    "pattern": "^\\{\\{[.\\/\\[\\]a-zA-Z0-9_-]+\\}\\}$",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "optionType",
+                  "value"
+                ]
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "optionType": {
+                    "enum": [
+                      "global"
+                    ],
+                    "type": "string"
+                  },
+                  "value": {
+                    "format": "ipv6",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "optionType",
+                  "value"
+                ]
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "optionType": {
+                    "enum": [
+                      "default"
+                    ],
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "optionType"
+                ]
+              }
+            ],
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "ipv4Route": {
+        "additionalProperties": false,
+        "description": "IPv4 Static Route",
+        "items": {
+          "additionalProperties": false,
+          "if": {
+            "properties": {
+              "gateway": {
+                "properties": {
+                  "value": {
+                    "const": "nextHop"
+                  }
+                }
+              }
+            },
+            "required": [
+              "gateway"
+            ]
+          },
+          "properties": {
+            "distance": {
+              "description": "Administrative distance",
+              "oneOf": [
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "default": {
+                      "default": 1,
+                      "maximum": 255,
+                      "minimum": 1,
+                      "type": "integer"
+                    },
+                    "description": {
+                      "maxLength": 128,
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "optionType": {
+                      "enum": [
+                        "variable"
+                      ],
+                      "type": "string"
+                    },
+                    "value": {
+                      "maxLength": 128,
+                      "minLength": 1,
+                      "pattern": "^\\{\\{[.\\/\\[\\]a-zA-Z0-9_-]+\\}\\}$",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "optionType",
+                    "value"
+                  ]
+                },
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "optionType": {
+                      "enum": [
+                        "global"
+                      ],
+                      "type": "string"
+                    },
+                    "value": {
+                      "default": 1,
+                      "maximum": 255,
+                      "minimum": 1,
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "optionType",
+                    "value"
+                  ]
+                },
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "optionType": {
+                      "enum": [
+                        "default"
+                      ],
+                      "type": "string"
+                    },
+                    "value": {
+                      "maximum": 1,
+                      "minimum": 1,
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "optionType",
+                    "value"
+                  ]
+                }
+              ],
+              "type": "object"
+            },
+            "gateway": {
+              "description": "Gateway",
+              "oneOf": [
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "optionType": {
+                      "enum": [
+                        "global"
+                      ],
+                      "type": "string"
+                    },
+                    "value": {
+                      "enum": [
+                        "nextHop",
+                        "dhcp",
+                        "null0"
+                      ],
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "optionType",
+                    "value"
+                  ]
+                },
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "optionType": {
+                      "enum": [
+                        "default"
+                      ],
+                      "type": "string"
+                    },
+                    "value": {
+                      "enum": [
+                        "nextHop"
+                      ],
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "optionType",
+                    "value"
+                  ]
+                }
+              ],
+              "type": "object"
+            },
+            "nextHop": {
+              "additionalProperties": false,
+              "description": "IPv4 Route Gateway Next Hop",
+              "items": {
+                "additionalProperties": false,
+                "properties": {
+                  "address": {
+                    "description": "Address",
+                    "oneOf": [
+                      {
+                        "additionalProperties": false,
+                        "properties": {
+                          "default": {
+                            "oneOf": [
+                              {
+                                "pattern": "^((25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]\\d|\\d)\\.){3}(25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]\\d|\\d)$",
+                                "type": "string"
+                              },
+                              {
+                                "maxLength": 32,
+                                "minLength": 3,
+                                "pattern": "(ATM|ATM-ACR|AppGigabitEthernet|AppNav-Compress|AppNav-UnCompress|Async|BD-VIF|BDI|CEM|CEM-ACR|Cellular|Dialer|Embedded-Service-Engine|Ethernet|Ethernet-Internal|FastEthernet|FiftyGigabitEthernet|FiveGigabitEthernet|FortyGigabitEthernet|FourHundredGigE|GMPLS|GigabitEthernet|Group-Async|HundredGigE|L2LISP|LISP|Loopback|MFR|Multilink|Port-channel|SM|Serial|Service-Engine|TenGigabitEthernet|Tunnel|TwentyFiveGigE|TwentyFiveGigabitEthernet|TwoGigabitEthernet|TwoHundredGigE|Vif|Virtual-PPP|Virtual-Template|VirtualPortGroup|Vlan|Wlan-GigabitEthernet|nat64|nat66|ntp|nve|ospfv3|overlay|pseudowire|ucse|vasileft|vasiright|vmi)([0-9]*(. ?[1-9][0-9]*)*|[0-9/]+|[0-9]+/[0-9]+/[0-9]+:[0-9]+|[0-9]+/[0-9]+/[0-9]+|[0-9]+/[0-9]+|[0-9]+)",
+                                "type": "string"
+                              }
+                            ]
+                          },
+                          "description": {
+                            "maxLength": 128,
+                            "minLength": 1,
+                            "type": "string"
+                          },
+                          "optionType": {
+                            "enum": [
+                              "variable"
+                            ],
+                            "type": "string"
+                          },
+                          "value": {
+                            "maxLength": 128,
+                            "minLength": 1,
+                            "pattern": "^\\{\\{[.\\/\\[\\]a-zA-Z0-9_-]+\\}\\}$",
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "optionType",
+                          "value"
+                        ]
+                      },
+                      {
+                        "additionalProperties": false,
+                        "properties": {
+                          "optionType": {
+                            "enum": [
+                              "global"
+                            ],
+                            "type": "string"
+                          },
+                          "value": {
+                            "oneOf": [
+                              {
+                                "pattern": "^((25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]\\d|\\d)\\.){3}(25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]\\d|\\d)$",
+                                "type": "string"
+                              },
+                              {
+                                "maxLength": 32,
+                                "minLength": 3,
+                                "pattern": "(ATM|ATM-ACR|AppGigabitEthernet|AppNav-Compress|AppNav-UnCompress|Async|BD-VIF|BDI|CEM|CEM-ACR|Cellular|Dialer|Embedded-Service-Engine|Ethernet|Ethernet-Internal|FastEthernet|FiftyGigabitEthernet|FiveGigabitEthernet|FortyGigabitEthernet|FourHundredGigE|GMPLS|GigabitEthernet|Group-Async|HundredGigE|L2LISP|LISP|Loopback|MFR|Multilink|Port-channel|SM|Serial|Service-Engine|TenGigabitEthernet|Tunnel|TwentyFiveGigE|TwentyFiveGigabitEthernet|TwoGigabitEthernet|TwoHundredGigE|Vif|Virtual-PPP|Virtual-Template|VirtualPortGroup|Vlan|Wlan-GigabitEthernet|nat64|nat66|ntp|nve|ospfv3|overlay|pseudowire|ucse|vasileft|vasiright|vmi)([0-9]*(. ?[1-9][0-9]*)*|[0-9/]+|[0-9]+/[0-9]+/[0-9]+:[0-9]+|[0-9]+/[0-9]+/[0-9]+|[0-9]+/[0-9]+|[0-9]+)",
+                                "type": "string"
+                              }
+                            ]
+                          }
+                        },
+                        "required": [
+                          "optionType",
+                          "value"
+                        ]
+                      }
+                    ],
+                    "type": "object"
+                  },
+                  "distance": {
+                    "description": "Administrative distance",
+                    "oneOf": [
+                      {
+                        "additionalProperties": false,
+                        "properties": {
+                          "default": {
+                            "default": 1,
+                            "maximum": 255,
+                            "minimum": 1,
+                            "type": "integer"
+                          },
+                          "description": {
+                            "maxLength": 128,
+                            "minLength": 1,
+                            "type": "string"
+                          },
+                          "optionType": {
+                            "enum": [
+                              "variable"
+                            ],
+                            "type": "string"
+                          },
+                          "value": {
+                            "maxLength": 128,
+                            "minLength": 1,
+                            "pattern": "^\\{\\{[.\\/\\[\\]a-zA-Z0-9_-]+\\}\\}$",
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "optionType",
+                          "value"
+                        ]
+                      },
+                      {
+                        "additionalProperties": false,
+                        "properties": {
+                          "optionType": {
+                            "enum": [
+                              "global"
+                            ],
+                            "type": "string"
+                          },
+                          "value": {
+                            "default": 1,
+                            "maximum": 255,
+                            "minimum": 1,
+                            "type": "integer"
+                          }
+                        },
+                        "required": [
+                          "optionType",
+                          "value"
+                        ]
+                      },
+                      {
+                        "additionalProperties": false,
+                        "properties": {
+                          "optionType": {
+                            "enum": [
+                              "default"
+                            ],
+                            "type": "string"
+                          },
+                          "value": {
+                            "maximum": 1,
+                            "minimum": 1,
+                            "type": "integer"
+                          }
+                        },
+                        "required": [
+                          "optionType",
+                          "value"
+                        ]
+                      }
+                    ],
+                    "type": "object"
+                  }
+                },
+                "required": [
+                  "address",
+                  "distance"
+                ],
+                "type": "object"
+              },
+              "type": "array",
+              "uniqueItems": true
+            },
+            "prefix": {
+              "additionalProperties": false,
+              "description": "Prefix",
+              "properties": {
+                "ipAddress": {
+                  "description": "IP Address",
+                  "oneOf": [
+                    {
+                      "additionalProperties": false,
+                      "properties": {
+                        "default": {
+                          "format": "ipv4",
+                          "type": "string"
+                        },
+                        "description": {
+                          "maxLength": 128,
+                          "minLength": 1,
+                          "type": "string"
+                        },
+                        "optionType": {
+                          "enum": [
+                            "variable"
+                          ],
+                          "type": "string"
+                        },
+                        "value": {
+                          "maxLength": 128,
+                          "minLength": 1,
+                          "pattern": "^\\{\\{[.\\/\\[\\]a-zA-Z0-9_-]+\\}\\}$",
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "optionType",
+                        "value"
+                      ]
+                    },
+                    {
+                      "additionalProperties": false,
+                      "properties": {
+                        "optionType": {
+                          "enum": [
+                            "global"
+                          ],
+                          "type": "string"
+                        },
+                        "value": {
+                          "format": "ipv4",
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "optionType",
+                        "value"
+                      ]
+                    }
+                  ],
+                  "type": "object"
+                },
+                "subnetMask": {
+                  "description": "Subnet Mask",
+                  "oneOf": [
+                    {
+                      "additionalProperties": false,
+                      "properties": {
+                        "default": {
+                          "enum": [
+                            "255.255.255.255",
+                            "255.255.255.254",
+                            "255.255.255.252",
+                            "255.255.255.248",
+                            "255.255.255.240",
+                            "255.255.255.224",
+                            "255.255.255.192",
+                            "255.255.255.128",
+                            "255.255.255.0",
+                            "255.255.254.0",
+                            "255.255.252.0",
+                            "255.255.248.0",
+                            "255.255.240.0",
+                            "255.255.224.0",
+                            "255.255.192.0",
+                            "255.255.128.0",
+                            "255.255.0.0",
+                            "255.254.0.0",
+                            "255.252.0.0",
+                            "255.248.0.0",
+                            "255.240.0.0",
+                            "255.224.0.0",
+                            "255.192.0.0",
+                            "255.128.0.0",
+                            "255.0.0.0",
+                            "254.0.0.0",
+                            "252.0.0.0",
+                            "248.0.0.0",
+                            "240.0.0.0",
+                            "224.0.0.0",
+                            "192.0.0.0",
+                            "128.0.0.0",
+                            "0.0.0.0"
+                          ],
+                          "type": "string"
+                        },
+                        "description": {
+                          "maxLength": 128,
+                          "minLength": 1,
+                          "type": "string"
+                        },
+                        "optionType": {
+                          "enum": [
+                            "variable"
+                          ],
+                          "type": "string"
+                        },
+                        "value": {
+                          "maxLength": 128,
+                          "minLength": 1,
+                          "pattern": "^\\{\\{[.\\/\\[\\]a-zA-Z0-9_-]+\\}\\}$",
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "optionType",
+                        "value"
+                      ]
+                    },
+                    {
+                      "additionalProperties": false,
+                      "properties": {
+                        "optionType": {
+                          "enum": [
+                            "global"
+                          ],
+                          "type": "string"
+                        },
+                        "value": {
+                          "enum": [
+                            "255.255.255.255",
+                            "255.255.255.254",
+                            "255.255.255.252",
+                            "255.255.255.248",
+                            "255.255.255.240",
+                            "255.255.255.224",
+                            "255.255.255.192",
+                            "255.255.255.128",
+                            "255.255.255.0",
+                            "255.255.254.0",
+                            "255.255.252.0",
+                            "255.255.248.0",
+                            "255.255.240.0",
+                            "255.255.224.0",
+                            "255.255.192.0",
+                            "255.255.128.0",
+                            "255.255.0.0",
+                            "255.254.0.0",
+                            "255.252.0.0",
+                            "255.248.0.0",
+                            "255.240.0.0",
+                            "255.224.0.0",
+                            "255.192.0.0",
+                            "255.128.0.0",
+                            "255.0.0.0",
+                            "254.0.0.0",
+                            "252.0.0.0",
+                            "248.0.0.0",
+                            "240.0.0.0",
+                            "224.0.0.0",
+                            "192.0.0.0",
+                            "128.0.0.0",
+                            "0.0.0.0"
+                          ],
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "optionType",
+                        "value"
+                      ]
+                    }
+                  ],
+                  "type": "object"
+                }
+              },
+              "required": [
+                "ipAddress",
+                "subnetMask"
+              ],
+              "type": "object"
+            }
+          },
+          "required": [
+            "prefix",
+            "gateway"
+          ],
+          "then": {
+            "required": [
+              "nextHop"
+            ]
+          },
+          "type": "object"
+        },
+        "type": "array",
+        "uniqueItems": true
+      },
+      "ipv6Route": {
+        "additionalProperties": false,
+        "description": "IPv6 Static Route",
+        "items": {
+          "additionalProperties": false,
+          "properties": {
+            "oneOfIpRoute": {
+              "oneOf": [
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "nextHopContainer": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "nextHop": {
+                          "additionalProperties": false,
+                          "description": "IPv6 Route Gateway Next Hop",
+                          "items": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "address": {
+                                "description": "Address",
+                                "oneOf": [
+                                  {
+                                    "additionalProperties": false,
+                                    "properties": {
+                                      "default": {
+                                        "format": "ipv6",
+                                        "type": "string"
+                                      },
+                                      "description": {
+                                        "maxLength": 128,
+                                        "minLength": 1,
+                                        "type": "string"
+                                      },
+                                      "optionType": {
+                                        "enum": [
+                                          "variable"
+                                        ],
+                                        "type": "string"
+                                      },
+                                      "value": {
+                                        "maxLength": 128,
+                                        "minLength": 1,
+                                        "pattern": "^\\{\\{[.\\/\\[\\]a-zA-Z0-9_-]+\\}\\}$",
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": [
+                                      "optionType",
+                                      "value"
+                                    ]
+                                  },
+                                  {
+                                    "additionalProperties": false,
+                                    "properties": {
+                                      "optionType": {
+                                        "enum": [
+                                          "global"
+                                        ],
+                                        "type": "string"
+                                      },
+                                      "value": {
+                                        "format": "ipv6",
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": [
+                                      "optionType",
+                                      "value"
+                                    ]
+                                  }
+                                ],
+                                "type": "object"
+                              },
+                              "distance": {
+                                "description": "Administrative distance",
+                                "oneOf": [
+                                  {
+                                    "additionalProperties": false,
+                                    "properties": {
+                                      "default": {
+                                        "default": 1,
+                                        "maximum": 254,
+                                        "minimum": 1,
+                                        "type": "integer"
+                                      },
+                                      "description": {
+                                        "maxLength": 128,
+                                        "minLength": 1,
+                                        "type": "string"
+                                      },
+                                      "optionType": {
+                                        "enum": [
+                                          "variable"
+                                        ],
+                                        "type": "string"
+                                      },
+                                      "value": {
+                                        "maxLength": 128,
+                                        "minLength": 1,
+                                        "pattern": "^\\{\\{[.\\/\\[\\]a-zA-Z0-9_-]+\\}\\}$",
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": [
+                                      "optionType",
+                                      "value"
+                                    ]
+                                  },
+                                  {
+                                    "additionalProperties": false,
+                                    "properties": {
+                                      "optionType": {
+                                        "enum": [
+                                          "global"
+                                        ],
+                                        "type": "string"
+                                      },
+                                      "value": {
+                                        "default": 1,
+                                        "maximum": 254,
+                                        "minimum": 1,
+                                        "type": "integer"
+                                      }
+                                    },
+                                    "required": [
+                                      "optionType",
+                                      "value"
+                                    ]
+                                  },
+                                  {
+                                    "additionalProperties": false,
+                                    "properties": {
+                                      "optionType": {
+                                        "enum": [
+                                          "default"
+                                        ],
+                                        "type": "string"
+                                      },
+                                      "value": {
+                                        "maximum": 1,
+                                        "minimum": 1,
+                                        "type": "integer"
+                                      }
+                                    },
+                                    "required": [
+                                      "optionType",
+                                      "value"
+                                    ]
+                                  }
+                                ],
+                                "type": "object"
+                              }
+                            },
+                            "required": [
+                              "address",
+                              "distance"
+                            ],
+                            "type": "object"
+                          },
+                          "type": "array",
+                          "uniqueItems": true
+                        }
+                      },
+                      "type": "object"
+                    }
+                  },
+                  "required": [
+                    "nextHopContainer"
+                  ],
+                  "type": "object"
+                },
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "null0": {
+                      "description": "IPv6 Route Gateway Next Hop",
+                      "oneOf": [
+                        {
+                          "additionalProperties": false,
+                          "properties": {
+                            "optionType": {
+                              "enum": [
+                                "global"
+                              ],
+                              "type": "string"
+                            },
+                            "value": {
+                              "type": "boolean"
+                            }
+                          },
+                          "required": [
+                            "optionType",
+                            "value"
+                          ]
+                        },
+                        {
+                          "additionalProperties": false,
+                          "properties": {
+                            "optionType": {
+                              "enum": [
+                                "default"
+                              ],
+                              "type": "string"
+                            },
+                            "value": {
+                              "enum": [
+                                true
+                              ],
+                              "type": "boolean"
+                            }
+                          },
+                          "required": [
+                            "optionType",
+                            "value"
+                          ]
+                        }
+                      ],
+                      "type": "object"
+                    }
+                  },
+                  "required": [
+                    "null0"
+                  ],
+                  "type": "object"
+                },
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "nat": {
+                      "description": "IPv6 Nat",
+                      "oneOf": [
+                        {
+                          "additionalProperties": false,
+                          "properties": {
+                            "default": {
+                              "enum": [
+                                "NAT64",
+                                "NAT66"
+                              ],
+                              "type": "string"
+                            },
+                            "description": {
+                              "maxLength": 128,
+                              "minLength": 1,
+                              "type": "string"
+                            },
+                            "optionType": {
+                              "enum": [
+                                "variable"
+                              ],
+                              "type": "string"
+                            },
+                            "value": {
+                              "maxLength": 128,
+                              "minLength": 1,
+                              "pattern": "^\\{\\{[.\\/\\[\\]a-zA-Z0-9_-]+\\}\\}$",
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "optionType",
+                            "value"
+                          ]
+                        },
+                        {
+                          "additionalProperties": false,
+                          "properties": {
+                            "optionType": {
+                              "enum": [
+                                "global"
+                              ],
+                              "type": "string"
+                            },
+                            "value": {
+                              "enum": [
+                                "NAT64",
+                                "NAT66"
+                              ],
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "optionType",
+                            "value"
+                          ]
+                        }
+                      ],
+                      "type": "object"
+                    }
+                  },
+                  "required": [
+                    "nat"
+                  ],
+                  "type": "object"
+                }
+              ]
+            },
+            "prefix": {
+              "description": "Prefix",
+              "oneOf": [
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "default": {
+                      "pattern": "((^\\s*((([0-9A-Fa-f]{1,4}:){7}([0-9A-Fa-f]{1,4}|:))|(([0-9A-Fa-f]{1,4}:){6}(:[0-9A-Fa-f]{1,4}|((25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]?\\d)(\\.(25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]?\\d)){3})|:))|(([0-9A-Fa-f]{1,4}:){5}(((:[0-9A-Fa-f]{1,4}){1,2})|:((25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]?\\d)(\\.(25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]?\\d)){3})|:))|(([0-9A-Fa-f]{1,4}:){4}(((:[0-9A-Fa-f]{1,4}){1,3})|((:[0-9A-Fa-f]{1,4})?:((25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]?\\d)(\\.(25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]?\\d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){3}(((:[0-9A-Fa-f]{1,4}){1,4})|((:[0-9A-Fa-f]{1,4}){0,2}:((25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]?\\d)(\\.(25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]?\\d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){2}(((:[0-9A-Fa-f]{1,4}){1,5})|((:[0-9A-Fa-f]{1,4}){0,3}:((25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]?\\d)(\\.(25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]?\\d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){1}(((:[0-9A-Fa-f]{1,4}){1,6})|((:[0-9A-Fa-f]{1,4}){0,4}:((25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]?\\d)(\\.(25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]?\\d)){3}))|:))|(:(((:[0-9A-Fa-f]{1,4}){1,7})|((:[0-9A-Fa-f]{1,4}){0,5}:((25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]?\\d)(\\.(25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]?\\d)){3}))|:)))(%.+)?\\s*(\\/)(\\b([0-9]{1,2}|1[01][0-9]|12[0-8])\\b)$))",
+                      "type": "string"
+                    },
+                    "description": {
+                      "maxLength": 128,
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "optionType": {
+                      "enum": [
+                        "variable"
+                      ],
+                      "type": "string"
+                    },
+                    "value": {
+                      "maxLength": 128,
+                      "minLength": 1,
+                      "pattern": "^\\{\\{[.\\/\\[\\]a-zA-Z0-9_-]+\\}\\}$",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "optionType",
+                    "value"
+                  ]
+                },
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "optionType": {
+                      "enum": [
+                        "global"
+                      ],
+                      "type": "string"
+                    },
+                    "value": {
+                      "pattern": "((^\\s*((([0-9A-Fa-f]{1,4}:){7}([0-9A-Fa-f]{1,4}|:))|(([0-9A-Fa-f]{1,4}:){6}(:[0-9A-Fa-f]{1,4}|((25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]?\\d)(\\.(25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]?\\d)){3})|:))|(([0-9A-Fa-f]{1,4}:){5}(((:[0-9A-Fa-f]{1,4}){1,2})|:((25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]?\\d)(\\.(25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]?\\d)){3})|:))|(([0-9A-Fa-f]{1,4}:){4}(((:[0-9A-Fa-f]{1,4}){1,3})|((:[0-9A-Fa-f]{1,4})?:((25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]?\\d)(\\.(25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]?\\d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){3}(((:[0-9A-Fa-f]{1,4}){1,4})|((:[0-9A-Fa-f]{1,4}){0,2}:((25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]?\\d)(\\.(25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]?\\d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){2}(((:[0-9A-Fa-f]{1,4}){1,5})|((:[0-9A-Fa-f]{1,4}){0,3}:((25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]?\\d)(\\.(25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]?\\d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){1}(((:[0-9A-Fa-f]{1,4}){1,6})|((:[0-9A-Fa-f]{1,4}){0,4}:((25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]?\\d)(\\.(25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]?\\d)){3}))|:))|(:(((:[0-9A-Fa-f]{1,4}){1,7})|((:[0-9A-Fa-f]{1,4}){0,5}:((25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]?\\d)(\\.(25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]?\\d)){3}))|:)))(%.+)?\\s*(\\/)(\\b([0-9]{1,2}|1[01][0-9]|12[0-8])\\b)$))",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "optionType",
+                    "value"
+                  ]
+                }
+              ],
+              "type": "object"
+            }
+          },
+          "required": [
+            "prefix",
+            "oneOfIpRoute"
+          ],
+          "type": "object"
+        },
+        "type": "array",
+        "uniqueItems": true
+      },
+      "name": {
+        "description": "Name",
+        "oneOf": [
+          {
+            "additionalProperties": false,
+            "properties": {
+              "default": {
+                "maxLength": 244,
+                "minLength": 0,
+                "type": "string"
+              },
+              "description": {
+                "maxLength": 128,
+                "minLength": 1,
+                "type": "string"
+              },
+              "optionType": {
+                "enum": [
+                  "variable"
+                ],
+                "type": "string"
+              },
+              "value": {
+                "maxLength": 128,
+                "minLength": 1,
+                "pattern": "^\\{\\{[.\\/\\[\\]a-zA-Z0-9_-]+\\}\\}$",
+                "type": "string"
+              }
+            },
+            "required": [
+              "optionType",
+              "value"
+            ]
+          },
+          {
+            "additionalProperties": false,
+            "properties": {
+              "optionType": {
+                "enum": [
+                  "global"
+                ],
+                "type": "string"
+              },
+              "value": {
+                "maxLength": 244,
+                "minLength": 0,
+                "type": "string"
+              }
+            },
+            "required": [
+              "optionType",
+              "value"
+            ]
+          },
+          {
+            "additionalProperties": false,
+            "properties": {
+              "optionType": {
+                "enum": [
+                  "default"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "optionType"
+            ]
+          }
+        ],
+        "type": "object"
+      },
+      "newHostMapping": {
+        "additionalProperties": false,
+        "items": {
+          "additionalProperties": false,
+          "properties": {
+            "hostName": {
+              "description": "Hostname",
+              "oneOf": [
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "default": {
+                      "maxLength": 63,
+                      "minLength": 1,
+                      "pattern": "^[a-zA-Z0-9._-]{1,63}$",
+                      "type": "string"
+                    },
+                    "description": {
+                      "maxLength": 128,
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "optionType": {
+                      "enum": [
+                        "variable"
+                      ],
+                      "type": "string"
+                    },
+                    "value": {
+                      "maxLength": 128,
+                      "minLength": 1,
+                      "pattern": "^\\{\\{[.\\/\\[\\]a-zA-Z0-9_-]+\\}\\}$",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "optionType",
+                    "value"
+                  ]
+                },
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "optionType": {
+                      "enum": [
+                        "global"
+                      ],
+                      "type": "string"
+                    },
+                    "value": {
+                      "maxLength": 63,
+                      "minLength": 1,
+                      "pattern": "^[a-zA-Z0-9._-]{1,63}$",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "optionType",
+                    "value"
+                  ]
+                }
+              ],
+              "type": "object"
+            },
+            "listOfIp": {
+              "description": "List of IP",
+              "oneOf": [
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "default": {
+                      "items": {
+                        "additionalProperties": false,
+                        "oneOf": [
+                          {
+                            "format": "ipv4"
+                          },
+                          {
+                            "format": "ipv6"
+                          }
+                        ],
+                        "type": "string",
+                        "uniqueItems": true
+                      },
+                      "maxItems": 14,
+                      "minItems": 1,
+                      "type": "array"
+                    },
+                    "description": {
+                      "maxLength": 128,
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "optionType": {
+                      "enum": [
+                        "variable"
+                      ],
+                      "type": "string"
+                    },
+                    "value": {
+                      "maxLength": 128,
+                      "minLength": 1,
+                      "pattern": "^\\{\\{[.\\/\\[\\]a-zA-Z0-9_-]+\\}\\}$",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "optionType",
+                    "value"
+                  ]
+                },
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "optionType": {
+                      "enum": [
+                        "global"
+                      ],
+                      "type": "string"
+                    },
+                    "value": {
+                      "items": {
+                        "additionalProperties": false,
+                        "oneOf": [
+                          {
+                            "format": "ipv4"
+                          },
+                          {
+                            "format": "ipv6"
+                          }
+                        ],
+                        "type": "string",
+                        "uniqueItems": true
+                      },
+                      "maxItems": 14,
+                      "minItems": 1,
+                      "type": "array"
+                    }
+                  },
+                  "required": [
+                    "optionType",
+                    "value"
+                  ]
+                }
+              ],
+              "type": "object"
+            }
+          },
+          "required": [
+            "hostName",
+            "listOfIp"
+          ],
+          "type": "object"
+        },
+        "type": "array",
+        "uniqueItems": true
+      },
+      "vpnId": {
+        "additionalProperties": false,
+        "description": "Management VPN, which will always be 512",
+        "properties": {
+          "optionType": {
+            "enum": [
+              "default"
+            ],
+            "type": "string"
+          },
+          "value": {
+            "default": 512,
+            "maximum": 512,
+            "minimum": 512,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "optionType",
+          "value"
+        ],
+        "type": "object"
+      }
+    },
+    "required": [
+      "vpnId"
+    ],
+    "type": "object"
+  },
+  "wan": {
+    "additionalProperties": false,
+    "properties": {
+      "dnsIpv4": {
+        "additionalProperties": false,
+        "dependencies": {
+          "secondaryDnsAddressIpv4": {
+            "properties": {
+              "primaryDnsAddressIpv4": {
+                "oneOf": [
+                  {
+                    "properties": {
+                      "optionType": {
+                        "enum": [
+                          "global"
+                        ],
+                        "type": "string"
+                      }
+                    }
+                  },
+                  {
+                    "properties": {
+                      "optionType": {
+                        "enum": [
+                          "variable"
+                        ],
+                        "type": "string"
+                      }
+                    }
+                  }
+                ],
+                "type": "object"
+              }
+            },
+            "required": [
+              "primaryDnsAddressIpv4"
+            ]
+          }
+        },
+        "properties": {
+          "primaryDnsAddressIpv4": {
+            "description": "Primary DNS Address (IPv4)",
+            "oneOf": [
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "default": {
+                    "format": "ipv4",
+                    "type": "string"
+                  },
+                  "description": {
+                    "maxLength": 128,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "optionType": {
+                    "enum": [
+                      "variable"
+                    ],
+                    "type": "string"
+                  },
+                  "value": {
+                    "maxLength": 128,
+                    "minLength": 1,
+                    "pattern": "^\\{\\{[.\\/\\[\\]a-zA-Z0-9_-]+\\}\\}$",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "optionType",
+                  "value"
+                ]
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "optionType": {
+                    "enum": [
+                      "global"
+                    ],
+                    "type": "string"
+                  },
+                  "value": {
+                    "format": "ipv4",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "optionType",
+                  "value"
+                ]
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "optionType": {
+                    "enum": [
+                      "default"
+                    ],
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "optionType"
+                ]
+              }
+            ],
+            "type": "object"
+          },
+          "secondaryDnsAddressIpv4": {
+            "description": "Secondary DNS Address (IPv4)",
+            "oneOf": [
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "default": {
+                    "format": "ipv4",
+                    "type": "string"
+                  },
+                  "description": {
+                    "maxLength": 128,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "optionType": {
+                    "enum": [
+                      "variable"
+                    ],
+                    "type": "string"
+                  },
+                  "value": {
+                    "maxLength": 128,
+                    "minLength": 1,
+                    "pattern": "^\\{\\{[.\\/\\[\\]a-zA-Z0-9_-]+\\}\\}$",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "optionType",
+                  "value"
+                ]
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "optionType": {
+                    "enum": [
+                      "global"
+                    ],
+                    "type": "string"
+                  },
+                  "value": {
+                    "format": "ipv4",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "optionType",
+                  "value"
+                ]
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "optionType": {
+                    "enum": [
+                      "default"
+                    ],
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "optionType"
+                ]
+              }
+            ],
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "dnsIpv6": {
+        "additionalProperties": false,
+        "dependencies": {
+          "secondaryDnsAddressIpv6": {
+            "properties": {
+              "primaryDnsAddressIpv6": {
+                "oneOf": [
+                  {
+                    "properties": {
+                      "optionType": {
+                        "enum": [
+                          "global"
+                        ],
+                        "type": "string"
+                      }
+                    }
+                  },
+                  {
+                    "properties": {
+                      "optionType": {
+                        "enum": [
+                          "variable"
+                        ],
+                        "type": "string"
+                      }
+                    }
+                  }
+                ],
+                "type": "object"
+              }
+            },
+            "required": [
+              "primaryDnsAddressIpv6"
+            ]
+          }
+        },
+        "properties": {
+          "primaryDnsAddressIpv6": {
+            "description": "Primary DNS Address (IPv6)",
+            "oneOf": [
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "default": {
+                    "format": "ipv6",
+                    "type": "string"
+                  },
+                  "description": {
+                    "maxLength": 128,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "optionType": {
+                    "enum": [
+                      "variable"
+                    ],
+                    "type": "string"
+                  },
+                  "value": {
+                    "maxLength": 128,
+                    "minLength": 1,
+                    "pattern": "^\\{\\{[.\\/\\[\\]a-zA-Z0-9_-]+\\}\\}$",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "optionType",
+                  "value"
+                ]
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "optionType": {
+                    "enum": [
+                      "global"
+                    ],
+                    "type": "string"
+                  },
+                  "value": {
+                    "format": "ipv6",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "optionType",
+                  "value"
+                ]
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "optionType": {
+                    "enum": [
+                      "default"
+                    ],
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "optionType"
+                ]
+              }
+            ],
+            "type": "object"
+          },
+          "secondaryDnsAddressIpv6": {
+            "description": "Secondary DNS Address (IPv6)",
+            "oneOf": [
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "default": {
+                    "format": "ipv6",
+                    "type": "string"
+                  },
+                  "description": {
+                    "maxLength": 128,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "optionType": {
+                    "enum": [
+                      "variable"
+                    ],
+                    "type": "string"
+                  },
+                  "value": {
+                    "maxLength": 128,
+                    "minLength": 1,
+                    "pattern": "^\\{\\{[.\\/\\[\\]a-zA-Z0-9_-]+\\}\\}$",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "optionType",
+                  "value"
+                ]
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "optionType": {
+                    "enum": [
+                      "global"
+                    ],
+                    "type": "string"
+                  },
+                  "value": {
+                    "format": "ipv6",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "optionType",
+                  "value"
+                ]
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "optionType": {
+                    "enum": [
+                      "default"
+                    ],
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "optionType"
+                ]
+              }
+            ],
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "enhanceEcmpKeying": {
+        "description": "Enhance ECMP Keying",
+        "oneOf": [
+          {
+            "additionalProperties": false,
+            "properties": {
+              "default": {
+                "type": "boolean"
+              },
+              "description": {
+                "maxLength": 128,
+                "minLength": 1,
+                "type": "string"
+              },
+              "optionType": {
+                "enum": [
+                  "variable"
+                ],
+                "type": "string"
+              },
+              "value": {
+                "maxLength": 128,
+                "minLength": 1,
+                "pattern": "^\\{\\{[.\\/\\[\\]a-zA-Z0-9_-]+\\}\\}$",
+                "type": "string"
+              }
+            },
+            "required": [
+              "optionType",
+              "value"
+            ]
+          },
+          {
+            "additionalProperties": false,
+            "properties": {
+              "optionType": {
+                "enum": [
+                  "global"
+                ],
+                "type": "string"
+              },
+              "value": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "optionType",
+              "value"
+            ]
+          },
+          {
+            "additionalProperties": false,
+            "properties": {
+              "optionType": {
+                "enum": [
+                  "default"
+                ],
+                "type": "string"
+              },
+              "value": {
+                "enum": [
+                  false
+                ],
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "optionType",
+              "value"
+            ]
+          }
+        ],
+        "type": "object"
+      },
+      "ipv4Route": {
+        "additionalProperties": false,
+        "description": "IPv4 Static Route",
+        "items": {
+          "additionalProperties": false,
+          "dependencies": {
+            "gateway": {
+              "required": [
+                "prefix"
+              ]
+            },
+            "prefix": {
+              "required": [
+                "gateway"
+              ]
+            }
+          },
+          "if": {
+            "properties": {
+              "gateway": {
+                "properties": {
+                  "value": {
+                    "const": "nextHop"
+                  }
+                }
+              }
+            },
+            "required": [
+              "gateway"
+            ]
+          },
+          "properties": {
+            "distance": {
+              "description": "Administrative distance",
+              "oneOf": [
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "default": {
+                      "default": 1,
+                      "maximum": 255,
+                      "minimum": 1,
+                      "type": "integer"
+                    },
+                    "description": {
+                      "maxLength": 128,
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "optionType": {
+                      "enum": [
+                        "variable"
+                      ],
+                      "type": "string"
+                    },
+                    "value": {
+                      "maxLength": 128,
+                      "minLength": 1,
+                      "pattern": "^\\{\\{[.\\/\\[\\]a-zA-Z0-9_-]+\\}\\}$",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "optionType",
+                    "value"
+                  ]
+                },
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "optionType": {
+                      "enum": [
+                        "global"
+                      ],
+                      "type": "string"
+                    },
+                    "value": {
+                      "default": 1,
+                      "maximum": 255,
+                      "minimum": 1,
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "optionType",
+                    "value"
+                  ]
+                },
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "optionType": {
+                      "enum": [
+                        "default"
+                      ],
+                      "type": "string"
+                    },
+                    "value": {
+                      "maximum": 1,
+                      "minimum": 1,
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "optionType",
+                    "value"
+                  ]
+                }
+              ],
+              "type": "object"
+            },
+            "gateway": {
+              "description": "Gateway",
+              "oneOf": [
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "optionType": {
+                      "enum": [
+                        "global"
+                      ],
+                      "type": "string"
+                    },
+                    "value": {
+                      "enum": [
+                        "nextHop",
+                        "dhcp",
+                        "null0"
+                      ],
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "optionType",
+                    "value"
+                  ]
+                },
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "optionType": {
+                      "enum": [
+                        "default"
+                      ],
+                      "type": "string"
+                    },
+                    "value": {
+                      "enum": [
+                        "nextHop"
+                      ],
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "optionType",
+                    "value"
+                  ]
+                }
+              ],
+              "type": "object"
+            },
+            "nextHop": {
+              "additionalProperties": false,
+              "description": "IPv4 Route Gateway Next Hop",
+              "items": {
+                "additionalProperties": false,
+                "dependencies": {
+                  "address": {
+                    "required": [
+                      "distance"
+                    ]
+                  },
+                  "distance": {
+                    "required": [
+                      "address"
+                    ]
+                  }
+                },
+                "properties": {
+                  "address": {
+                    "description": "Address",
+                    "oneOf": [
+                      {
+                        "additionalProperties": false,
+                        "properties": {
+                          "default": {
+                            "oneOf": [
+                              {
+                                "pattern": "(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)",
+                                "type": "string"
+                              },
+                              {
+                                "maxLength": 32,
+                                "minLength": 3,
+                                "pattern": "(ATM|ATM-ACR|AppGigabitEthernet|AppNav-Compress|AppNav-UnCompress|Async|BD-VIF|BDI|CEM|CEM-ACR|Cellular|Dialer|Embedded-Service-Engine|Ethernet|Ethernet-Internal|FastEthernet|FiftyGigabitEthernet|FiveGigabitEthernet|FortyGigabitEthernet|FourHundredGigE|GMPLS|GigabitEthernet|Group-Async|HundredGigE|L2LISP|LISP|Loopback|MFR|Multilink|Port-channel|SM|Serial|Service-Engine|TenGigabitEthernet|Tunnel|TwentyFiveGigE|TwentyFiveGigabitEthernet|TwoGigabitEthernet|TwoHundredGigE|Vif|Virtual-PPP|Virtual-Template|VirtualPortGroup|Vlan|Wlan-GigabitEthernet|nat64|nat66|ntp|nve|ospfv3|overlay|pseudowire|ucse|vasileft|vasiright|vmi)([0-9]*(. ?[1-9][0-9]*)*|[0-9/]+|[0-9]+/[0-9]+/[0-9]+:[0-9]+|[0-9]+/[0-9]+/[0-9]+|[0-9]+/[0-9]+|[0-9]+)",
+                                "type": "string"
+                              }
+                            ]
+                          },
+                          "description": {
+                            "maxLength": 128,
+                            "minLength": 1,
+                            "type": "string"
+                          },
+                          "optionType": {
+                            "enum": [
+                              "variable"
+                            ],
+                            "type": "string"
+                          },
+                          "value": {
+                            "maxLength": 128,
+                            "minLength": 1,
+                            "pattern": "^\\{\\{[.\\/\\[\\]a-zA-Z0-9_-]+\\}\\}$",
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "optionType",
+                          "value"
+                        ]
+                      },
+                      {
+                        "additionalProperties": false,
+                        "properties": {
+                          "optionType": {
+                            "enum": [
+                              "global"
+                            ],
+                            "type": "string"
+                          },
+                          "value": {
+                            "oneOf": [
+                              {
+                                "pattern": "(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)",
+                                "type": "string"
+                              },
+                              {
+                                "maxLength": 32,
+                                "minLength": 3,
+                                "pattern": "(ATM|ATM-ACR|AppGigabitEthernet|AppNav-Compress|AppNav-UnCompress|Async|BD-VIF|BDI|CEM|CEM-ACR|Cellular|Dialer|Embedded-Service-Engine|Ethernet|Ethernet-Internal|FastEthernet|FiftyGigabitEthernet|FiveGigabitEthernet|FortyGigabitEthernet|FourHundredGigE|GMPLS|GigabitEthernet|Group-Async|HundredGigE|L2LISP|LISP|Loopback|MFR|Multilink|Port-channel|SM|Serial|Service-Engine|TenGigabitEthernet|Tunnel|TwentyFiveGigE|TwentyFiveGigabitEthernet|TwoGigabitEthernet|TwoHundredGigE|Vif|Virtual-PPP|Virtual-Template|VirtualPortGroup|Vlan|Wlan-GigabitEthernet|nat64|nat66|ntp|nve|ospfv3|overlay|pseudowire|ucse|vasileft|vasiright|vmi)([0-9]*(. ?[1-9][0-9]*)*|[0-9/]+|[0-9]+/[0-9]+/[0-9]+:[0-9]+|[0-9]+/[0-9]+/[0-9]+|[0-9]+/[0-9]+|[0-9]+)",
+                                "type": "string"
+                              }
+                            ]
+                          }
+                        },
+                        "required": [
+                          "optionType",
+                          "value"
+                        ]
+                      }
+                    ],
+                    "type": "object"
+                  },
+                  "distance": {
+                    "description": "Administrative distance",
+                    "oneOf": [
+                      {
+                        "additionalProperties": false,
+                        "properties": {
+                          "default": {
+                            "default": 1,
+                            "maximum": 255,
+                            "minimum": 1,
+                            "type": "integer"
+                          },
+                          "description": {
+                            "maxLength": 128,
+                            "minLength": 1,
+                            "type": "string"
+                          },
+                          "optionType": {
+                            "enum": [
+                              "variable"
+                            ],
+                            "type": "string"
+                          },
+                          "value": {
+                            "maxLength": 128,
+                            "minLength": 1,
+                            "pattern": "^\\{\\{[.\\/\\[\\]a-zA-Z0-9_-]+\\}\\}$",
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "optionType",
+                          "value"
+                        ]
+                      },
+                      {
+                        "additionalProperties": false,
+                        "properties": {
+                          "optionType": {
+                            "enum": [
+                              "global"
+                            ],
+                            "type": "string"
+                          },
+                          "value": {
+                            "default": 1,
+                            "maximum": 255,
+                            "minimum": 1,
+                            "type": "integer"
+                          }
+                        },
+                        "required": [
+                          "optionType",
+                          "value"
+                        ]
+                      },
+                      {
+                        "additionalProperties": false,
+                        "properties": {
+                          "optionType": {
+                            "enum": [
+                              "default"
+                            ],
+                            "type": "string"
+                          },
+                          "value": {
+                            "maximum": 1,
+                            "minimum": 1,
+                            "type": "integer"
+                          }
+                        },
+                        "required": [
+                          "optionType",
+                          "value"
+                        ]
+                      }
+                    ],
+                    "type": "object"
+                  }
+                },
+                "type": "object"
+              },
+              "type": "array",
+              "uniqueItems": true
+            },
+            "prefix": {
+              "additionalProperties": false,
+              "dependencies": {
+                "ipAddress": {
+                  "required": [
+                    "subnetMask"
+                  ]
+                },
+                "subnetMask": {
+                  "required": [
+                    "ipAddress"
+                  ]
+                }
+              },
+              "description": "Prefix",
+              "properties": {
+                "ipAddress": {
+                  "description": "IP Address",
+                  "oneOf": [
+                    {
+                      "additionalProperties": false,
+                      "properties": {
+                        "default": {
+                          "format": "ipv4",
+                          "type": "string"
+                        },
+                        "description": {
+                          "maxLength": 128,
+                          "minLength": 1,
+                          "type": "string"
+                        },
+                        "optionType": {
+                          "enum": [
+                            "variable"
+                          ],
+                          "type": "string"
+                        },
+                        "value": {
+                          "maxLength": 128,
+                          "minLength": 1,
+                          "pattern": "^\\{\\{[.\\/\\[\\]a-zA-Z0-9_-]+\\}\\}$",
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "optionType",
+                        "value"
+                      ]
+                    },
+                    {
+                      "additionalProperties": false,
+                      "properties": {
+                        "optionType": {
+                          "enum": [
+                            "global"
+                          ],
+                          "type": "string"
+                        },
+                        "value": {
+                          "format": "ipv4",
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "optionType",
+                        "value"
+                      ]
+                    }
+                  ],
+                  "type": "object"
+                },
+                "subnetMask": {
+                  "description": "Subnet Mask",
+                  "oneOf": [
+                    {
+                      "additionalProperties": false,
+                      "properties": {
+                        "default": {
+                          "enum": [
+                            "255.255.255.255",
+                            "255.255.255.254",
+                            "255.255.255.252",
+                            "255.255.255.248",
+                            "255.255.255.240",
+                            "255.255.255.224",
+                            "255.255.255.192",
+                            "255.255.255.128",
+                            "255.255.255.0",
+                            "255.255.254.0",
+                            "255.255.252.0",
+                            "255.255.248.0",
+                            "255.255.240.0",
+                            "255.255.224.0",
+                            "255.255.192.0",
+                            "255.255.128.0",
+                            "255.255.0.0",
+                            "255.254.0.0",
+                            "255.252.0.0",
+                            "255.248.0.0",
+                            "255.240.0.0",
+                            "255.224.0.0",
+                            "255.192.0.0",
+                            "255.128.0.0",
+                            "255.0.0.0",
+                            "254.0.0.0",
+                            "252.0.0.0",
+                            "248.0.0.0",
+                            "240.0.0.0",
+                            "224.0.0.0",
+                            "192.0.0.0",
+                            "128.0.0.0",
+                            "0.0.0.0"
+                          ],
+                          "type": "string"
+                        },
+                        "description": {
+                          "maxLength": 128,
+                          "minLength": 1,
+                          "type": "string"
+                        },
+                        "optionType": {
+                          "enum": [
+                            "variable"
+                          ],
+                          "type": "string"
+                        },
+                        "value": {
+                          "maxLength": 128,
+                          "minLength": 1,
+                          "pattern": "^\\{\\{[.\\/\\[\\]a-zA-Z0-9_-]+\\}\\}$",
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "optionType",
+                        "value"
+                      ]
+                    },
+                    {
+                      "additionalProperties": false,
+                      "properties": {
+                        "optionType": {
+                          "enum": [
+                            "global"
+                          ],
+                          "type": "string"
+                        },
+                        "value": {
+                          "enum": [
+                            "255.255.255.255",
+                            "255.255.255.254",
+                            "255.255.255.252",
+                            "255.255.255.248",
+                            "255.255.255.240",
+                            "255.255.255.224",
+                            "255.255.255.192",
+                            "255.255.255.128",
+                            "255.255.255.0",
+                            "255.255.254.0",
+                            "255.255.252.0",
+                            "255.255.248.0",
+                            "255.255.240.0",
+                            "255.255.224.0",
+                            "255.255.192.0",
+                            "255.255.128.0",
+                            "255.255.0.0",
+                            "255.254.0.0",
+                            "255.252.0.0",
+                            "255.248.0.0",
+                            "255.240.0.0",
+                            "255.224.0.0",
+                            "255.192.0.0",
+                            "255.128.0.0",
+                            "255.0.0.0",
+                            "254.0.0.0",
+                            "252.0.0.0",
+                            "248.0.0.0",
+                            "240.0.0.0",
+                            "224.0.0.0",
+                            "192.0.0.0",
+                            "128.0.0.0",
+                            "0.0.0.0"
+                          ],
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "optionType",
+                        "value"
+                      ]
+                    }
+                  ],
+                  "type": "object"
+                }
+              },
+              "type": "object"
+            }
+          },
+          "then": {
+            "required": [
+              "nextHop"
+            ]
+          },
+          "type": "object"
+        },
+        "type": "array",
+        "uniqueItems": true
+      },
+      "ipv6Route": {
+        "additionalProperties": false,
+        "description": "IPv6 Static Route",
+        "items": {
+          "additionalProperties": false,
+          "properties": {
+            "oneOfIpRoute": {
+              "oneOf": [
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "nextHopContainer": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "nextHop": {
+                          "additionalProperties": false,
+                          "description": "IPv6 Route Gateway Next Hop",
+                          "items": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "address": {
+                                "description": "Address",
+                                "oneOf": [
+                                  {
+                                    "additionalProperties": false,
+                                    "properties": {
+                                      "default": {
+                                        "format": "ipv6",
+                                        "type": "string"
+                                      },
+                                      "description": {
+                                        "maxLength": 128,
+                                        "minLength": 1,
+                                        "type": "string"
+                                      },
+                                      "optionType": {
+                                        "enum": [
+                                          "variable"
+                                        ],
+                                        "type": "string"
+                                      },
+                                      "value": {
+                                        "maxLength": 128,
+                                        "minLength": 1,
+                                        "pattern": "^\\{\\{[.\\/\\[\\]a-zA-Z0-9_-]+\\}\\}$",
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": [
+                                      "optionType",
+                                      "value"
+                                    ]
+                                  },
+                                  {
+                                    "additionalProperties": false,
+                                    "properties": {
+                                      "optionType": {
+                                        "enum": [
+                                          "global"
+                                        ],
+                                        "type": "string"
+                                      },
+                                      "value": {
+                                        "format": "ipv6",
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": [
+                                      "optionType",
+                                      "value"
+                                    ]
+                                  }
+                                ],
+                                "type": "object"
+                              },
+                              "distance": {
+                                "description": "Administrative distance",
+                                "oneOf": [
+                                  {
+                                    "additionalProperties": false,
+                                    "properties": {
+                                      "default": {
+                                        "default": 1,
+                                        "maximum": 254,
+                                        "minimum": 1,
+                                        "type": "integer"
+                                      },
+                                      "description": {
+                                        "maxLength": 128,
+                                        "minLength": 1,
+                                        "type": "string"
+                                      },
+                                      "optionType": {
+                                        "enum": [
+                                          "variable"
+                                        ],
+                                        "type": "string"
+                                      },
+                                      "value": {
+                                        "maxLength": 128,
+                                        "minLength": 1,
+                                        "pattern": "^\\{\\{[.\\/\\[\\]a-zA-Z0-9_-]+\\}\\}$",
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": [
+                                      "optionType",
+                                      "value"
+                                    ]
+                                  },
+                                  {
+                                    "additionalProperties": false,
+                                    "properties": {
+                                      "optionType": {
+                                        "enum": [
+                                          "global"
+                                        ],
+                                        "type": "string"
+                                      },
+                                      "value": {
+                                        "default": 1,
+                                        "maximum": 254,
+                                        "minimum": 1,
+                                        "type": "integer"
+                                      }
+                                    },
+                                    "required": [
+                                      "optionType",
+                                      "value"
+                                    ]
+                                  },
+                                  {
+                                    "additionalProperties": false,
+                                    "properties": {
+                                      "optionType": {
+                                        "enum": [
+                                          "default"
+                                        ],
+                                        "type": "string"
+                                      },
+                                      "value": {
+                                        "maximum": 1,
+                                        "minimum": 1,
+                                        "type": "integer"
+                                      }
+                                    },
+                                    "required": [
+                                      "optionType",
+                                      "value"
+                                    ]
+                                  }
+                                ],
+                                "type": "object"
+                              }
+                            },
+                            "required": [
+                              "address",
+                              "distance"
+                            ],
+                            "type": "object"
+                          },
+                          "type": "array",
+                          "uniqueItems": true
+                        }
+                      },
+                      "type": "object"
+                    }
+                  },
+                  "required": [
+                    "nextHopContainer"
+                  ],
+                  "type": "object"
+                },
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "null0": {
+                      "description": "IPv6 Route Gateway Next Hop",
+                      "oneOf": [
+                        {
+                          "additionalProperties": false,
+                          "properties": {
+                            "optionType": {
+                              "enum": [
+                                "global"
+                              ],
+                              "type": "string"
+                            },
+                            "value": {
+                              "type": "boolean"
+                            }
+                          },
+                          "required": [
+                            "optionType",
+                            "value"
+                          ]
+                        },
+                        {
+                          "additionalProperties": false,
+                          "properties": {
+                            "optionType": {
+                              "enum": [
+                                "default"
+                              ],
+                              "type": "string"
+                            },
+                            "value": {
+                              "enum": [
+                                true
+                              ],
+                              "type": "boolean"
+                            }
+                          },
+                          "required": [
+                            "optionType",
+                            "value"
+                          ]
+                        }
+                      ],
+                      "type": "object"
+                    }
+                  },
+                  "required": [
+                    "null0"
+                  ],
+                  "type": "object"
+                },
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "nat": {
+                      "description": "IPv6 Nat",
+                      "oneOf": [
+                        {
+                          "additionalProperties": false,
+                          "properties": {
+                            "default": {
+                              "enum": [
+                                "NAT64",
+                                "NAT66"
+                              ],
+                              "type": "string"
+                            },
+                            "description": {
+                              "maxLength": 128,
+                              "minLength": 1,
+                              "type": "string"
+                            },
+                            "optionType": {
+                              "enum": [
+                                "variable"
+                              ],
+                              "type": "string"
+                            },
+                            "value": {
+                              "maxLength": 128,
+                              "minLength": 1,
+                              "pattern": "^\\{\\{[.\\/\\[\\]a-zA-Z0-9_-]+\\}\\}$",
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "optionType",
+                            "value"
+                          ]
+                        },
+                        {
+                          "additionalProperties": false,
+                          "properties": {
+                            "optionType": {
+                              "enum": [
+                                "global"
+                              ],
+                              "type": "string"
+                            },
+                            "value": {
+                              "enum": [
+                                "NAT64",
+                                "NAT66"
+                              ],
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "optionType",
+                            "value"
+                          ]
+                        }
+                      ],
+                      "type": "object"
+                    }
+                  },
+                  "required": [
+                    "nat"
+                  ],
+                  "type": "object"
+                }
+              ]
+            },
+            "prefix": {
+              "description": "Prefix",
+              "oneOf": [
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "default": {
+                      "pattern": "((^\\s*((([0-9A-Fa-f]{1,4}:){7}([0-9A-Fa-f]{1,4}|:))|(([0-9A-Fa-f]{1,4}:){6}(:[0-9A-Fa-f]{1,4}|((25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]?\\d)(\\.(25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]?\\d)){3})|:))|(([0-9A-Fa-f]{1,4}:){5}(((:[0-9A-Fa-f]{1,4}){1,2})|:((25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]?\\d)(\\.(25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]?\\d)){3})|:))|(([0-9A-Fa-f]{1,4}:){4}(((:[0-9A-Fa-f]{1,4}){1,3})|((:[0-9A-Fa-f]{1,4})?:((25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]?\\d)(\\.(25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]?\\d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){3}(((:[0-9A-Fa-f]{1,4}){1,4})|((:[0-9A-Fa-f]{1,4}){0,2}:((25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]?\\d)(\\.(25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]?\\d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){2}(((:[0-9A-Fa-f]{1,4}){1,5})|((:[0-9A-Fa-f]{1,4}){0,3}:((25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]?\\d)(\\.(25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]?\\d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){1}(((:[0-9A-Fa-f]{1,4}){1,6})|((:[0-9A-Fa-f]{1,4}){0,4}:((25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]?\\d)(\\.(25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]?\\d)){3}))|:))|(:(((:[0-9A-Fa-f]{1,4}){1,7})|((:[0-9A-Fa-f]{1,4}){0,5}:((25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]?\\d)(\\.(25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]?\\d)){3}))|:)))(%.+)?\\s*(\\/)(\\b([0-9]{1,2}|1[01][0-9]|12[0-8])\\b)$))",
+                      "type": "string"
+                    },
+                    "description": {
+                      "maxLength": 128,
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "optionType": {
+                      "enum": [
+                        "variable"
+                      ],
+                      "type": "string"
+                    },
+                    "value": {
+                      "maxLength": 128,
+                      "minLength": 1,
+                      "pattern": "^\\{\\{[.\\/\\[\\]a-zA-Z0-9_-]+\\}\\}$",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "optionType",
+                    "value"
+                  ]
+                },
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "optionType": {
+                      "enum": [
+                        "global"
+                      ],
+                      "type": "string"
+                    },
+                    "value": {
+                      "pattern": "((^\\s*((([0-9A-Fa-f]{1,4}:){7}([0-9A-Fa-f]{1,4}|:))|(([0-9A-Fa-f]{1,4}:){6}(:[0-9A-Fa-f]{1,4}|((25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]?\\d)(\\.(25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]?\\d)){3})|:))|(([0-9A-Fa-f]{1,4}:){5}(((:[0-9A-Fa-f]{1,4}){1,2})|:((25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]?\\d)(\\.(25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]?\\d)){3})|:))|(([0-9A-Fa-f]{1,4}:){4}(((:[0-9A-Fa-f]{1,4}){1,3})|((:[0-9A-Fa-f]{1,4})?:((25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]?\\d)(\\.(25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]?\\d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){3}(((:[0-9A-Fa-f]{1,4}){1,4})|((:[0-9A-Fa-f]{1,4}){0,2}:((25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]?\\d)(\\.(25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]?\\d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){2}(((:[0-9A-Fa-f]{1,4}){1,5})|((:[0-9A-Fa-f]{1,4}){0,3}:((25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]?\\d)(\\.(25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]?\\d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){1}(((:[0-9A-Fa-f]{1,4}){1,6})|((:[0-9A-Fa-f]{1,4}){0,4}:((25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]?\\d)(\\.(25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]?\\d)){3}))|:))|(:(((:[0-9A-Fa-f]{1,4}){1,7})|((:[0-9A-Fa-f]{1,4}){0,5}:((25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]?\\d)(\\.(25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]?\\d)){3}))|:)))(%.+)?\\s*(\\/)(\\b([0-9]{1,2}|1[01][0-9]|12[0-8])\\b)$))",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "optionType",
+                    "value"
+                  ]
+                }
+              ],
+              "type": "object"
+            }
+          },
+          "required": [
+            "prefix",
+            "oneOfIpRoute"
+          ],
+          "type": "object"
+        },
+        "type": "array",
+        "uniqueItems": true
+      },
+      "nat64V4Pool": {
+        "additionalProperties": false,
+        "description": "NAT64 V4 Pool",
+        "items": {
+          "additionalProperties": false,
+          "properties": {
+            "nat64V4PoolName": {
+              "description": "NAT64 v4 Pool Name",
+              "oneOf": [
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "default": {
+                      "maxLength": 32,
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "description": {
+                      "maxLength": 128,
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "optionType": {
+                      "enum": [
+                        "variable"
+                      ],
+                      "type": "string"
+                    },
+                    "value": {
+                      "maxLength": 128,
+                      "minLength": 1,
+                      "pattern": "^\\{\\{[.\\/\\[\\]a-zA-Z0-9_-]+\\}\\}$",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "optionType",
+                    "value"
+                  ]
+                },
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "optionType": {
+                      "enum": [
+                        "global"
+                      ],
+                      "type": "string"
+                    },
+                    "value": {
+                      "maxLength": 32,
+                      "minLength": 1,
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "optionType",
+                    "value"
+                  ]
+                }
+              ],
+              "type": "object"
+            },
+            "nat64V4PoolOverload": {
+              "description": "NAT64 Overload",
+              "oneOf": [
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "default": {
+                      "type": "boolean"
+                    },
+                    "description": {
+                      "maxLength": 128,
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "optionType": {
+                      "enum": [
+                        "variable"
+                      ],
+                      "type": "string"
+                    },
+                    "value": {
+                      "maxLength": 128,
+                      "minLength": 1,
+                      "pattern": "^\\{\\{[.\\/\\[\\]a-zA-Z0-9_-]+\\}\\}$",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "optionType",
+                    "value"
+                  ]
+                },
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "optionType": {
+                      "enum": [
+                        "global"
+                      ],
+                      "type": "string"
+                    },
+                    "value": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "optionType",
+                    "value"
+                  ]
+                },
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "optionType": {
+                      "enum": [
+                        "default"
+                      ],
+                      "type": "string"
+                    },
+                    "value": {
+                      "enum": [
+                        false
+                      ],
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "optionType",
+                    "value"
+                  ]
+                }
+              ],
+              "type": "object"
+            },
+            "nat64V4PoolRangeEnd": {
+              "description": "NAT64 Pool Range End",
+              "oneOf": [
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "default": {
+                      "format": "ipv4",
+                      "type": "string"
+                    },
+                    "description": {
+                      "maxLength": 128,
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "optionType": {
+                      "enum": [
+                        "variable"
+                      ],
+                      "type": "string"
+                    },
+                    "value": {
+                      "maxLength": 128,
+                      "minLength": 1,
+                      "pattern": "^\\{\\{[.\\/\\[\\]a-zA-Z0-9_-]+\\}\\}$",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "optionType",
+                    "value"
+                  ]
+                },
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "optionType": {
+                      "enum": [
+                        "global"
+                      ],
+                      "type": "string"
+                    },
+                    "value": {
+                      "format": "ipv4",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "optionType",
+                    "value"
+                  ]
+                }
+              ],
+              "type": "object"
+            },
+            "nat64V4PoolRangeStart": {
+              "description": "NAT64 Pool Range Start",
+              "oneOf": [
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "default": {
+                      "format": "ipv4",
+                      "type": "string"
+                    },
+                    "description": {
+                      "maxLength": 128,
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "optionType": {
+                      "enum": [
+                        "variable"
+                      ],
+                      "type": "string"
+                    },
+                    "value": {
+                      "maxLength": 128,
+                      "minLength": 1,
+                      "pattern": "^\\{\\{[.\\/\\[\\]a-zA-Z0-9_-]+\\}\\}$",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "optionType",
+                    "value"
+                  ]
+                },
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "optionType": {
+                      "enum": [
+                        "global"
+                      ],
+                      "type": "string"
+                    },
+                    "value": {
+                      "format": "ipv4",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "optionType",
+                    "value"
+                  ]
+                }
+              ],
+              "type": "object"
+            }
+          },
+          "required": [
+            "nat64V4PoolName",
+            "nat64V4PoolRangeStart",
+            "nat64V4PoolRangeEnd",
+            "nat64V4PoolOverload"
+          ],
+          "type": "object"
+        },
+        "type": "array",
+        "uniqueItems": true
+      },
+      "newHostMapping": {
+        "additionalProperties": false,
+        "items": {
+          "additionalProperties": false,
+          "allOf": [
+            {
+              "if": {
+                "anyOf": [
+                  {
+                    "properties": {
+                      "hostName": {
+                        "properties": {
+                          "optionType": {
+                            "const": "global"
+                          }
+                        },
+                        "required": [
+                          "optionType"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "hostName"
+                    ]
+                  },
+                  {
+                    "properties": {
+                      "listOfIp": {
+                        "properties": {
+                          "optionType": {
+                            "const": "global"
+                          }
+                        },
+                        "required": [
+                          "optionType"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "listOfIp"
+                    ]
+                  }
+                ]
+              },
+              "then": {
+                "required": [
+                  "hostName",
+                  "listOfIp"
+                ]
+              }
+            }
+          ],
+          "properties": {
+            "hostName": {
+              "description": "Hostname",
+              "oneOf": [
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "default": {
+                      "maxLength": 63,
+                      "minLength": 1,
+                      "pattern": "^[a-zA-Z0-9._-]{1,63}$",
+                      "type": "string"
+                    },
+                    "description": {
+                      "maxLength": 128,
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "optionType": {
+                      "enum": [
+                        "variable"
+                      ],
+                      "type": "string"
+                    },
+                    "value": {
+                      "maxLength": 128,
+                      "minLength": 1,
+                      "pattern": "^\\{\\{[.\\/\\[\\]a-zA-Z0-9_-]+\\}\\}$",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "optionType",
+                    "value"
+                  ]
+                },
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "optionType": {
+                      "enum": [
+                        "global"
+                      ],
+                      "type": "string"
+                    },
+                    "value": {
+                      "maxLength": 63,
+                      "minLength": 1,
+                      "pattern": "^[a-zA-Z0-9._-]{1,63}$",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "optionType",
+                    "value"
+                  ]
+                }
+              ],
+              "type": "object"
+            },
+            "listOfIp": {
+              "description": "List of IP",
+              "oneOf": [
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "default": {
+                      "items": {
+                        "additionalProperties": false,
+                        "oneOf": [
+                          {
+                            "format": "ipv4"
+                          },
+                          {
+                            "format": "ipv6"
+                          }
+                        ],
+                        "type": "string",
+                        "uniqueItems": true
+                      },
+                      "maxItems": 14,
+                      "minItems": 1,
+                      "type": "array"
+                    },
+                    "description": {
+                      "maxLength": 128,
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "optionType": {
+                      "enum": [
+                        "variable"
+                      ],
+                      "type": "string"
+                    },
+                    "value": {
+                      "maxLength": 128,
+                      "minLength": 1,
+                      "pattern": "^\\{\\{[.\\/\\[\\]a-zA-Z0-9_-]+\\}\\}$",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "optionType",
+                    "value"
+                  ]
+                },
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "optionType": {
+                      "enum": [
+                        "global"
+                      ],
+                      "type": "string"
+                    },
+                    "value": {
+                      "items": {
+                        "additionalProperties": false,
+                        "oneOf": [
+                          {
+                            "format": "ipv4"
+                          },
+                          {
+                            "format": "ipv6"
+                          }
+                        ],
+                        "type": "string",
+                        "uniqueItems": true
+                      },
+                      "maxItems": 14,
+                      "minItems": 1,
+                      "type": "array"
+                    }
+                  },
+                  "required": [
+                    "optionType",
+                    "value"
+                  ]
+                }
+              ],
+              "type": "object"
+            }
+          },
+          "type": "object"
+        },
+        "type": "array",
+        "uniqueItems": true
+      },
+      "service": {
+        "additionalProperties": false,
+        "description": "Service",
+        "items": {
+          "additionalProperties": false,
+          "properties": {
+            "serviceType": {
+              "description": "Service Type",
+              "oneOf": [
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "optionType": {
+                      "enum": [
+                        "global"
+                      ],
+                      "type": "string"
+                    },
+                    "value": {
+                      "enum": [
+                        "TE"
+                      ],
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "optionType",
+                    "value"
+                  ]
+                }
+              ],
+              "type": "object"
+            }
+          },
+          "required": [
+            "serviceType"
+          ],
+          "type": "object"
+        },
+        "type": "array",
+        "uniqueItems": true
+      },
+      "vpnId": {
+        "description": "VPN",
+        "oneOf": [
+          {
+            "additionalProperties": false,
+            "properties": {
+              "optionType": {
+                "enum": [
+                  "global"
+                ],
+                "type": "string"
+              },
+              "value": {
+                "default": 0,
+                "maximum": 0,
+                "minimum": 0,
+                "type": "integer"
+              }
+            },
+            "required": [
+              "optionType",
+              "value"
+            ]
+          },
+          {
+            "additionalProperties": false,
+            "properties": {
+              "optionType": {
+                "enum": [
+                  "default"
+                ],
+                "type": "string"
+              },
+              "value": {
+                "maximum": 0,
+                "minimum": 0,
+                "type": "integer"
+              }
+            },
+            "required": [
+              "optionType",
+              "value"
+            ]
+          }
+        ],
+        "type": "object"
+      }
+    },
+    "required": [
+      "vpnId",
+      "enhanceEcmpKeying"
+    ],
+    "type": "object"
+  }
+}

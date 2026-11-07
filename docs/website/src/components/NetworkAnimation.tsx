@@ -49,6 +49,9 @@ export default function NetworkAnimation() {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
+    const motionPreference = window.matchMedia("(prefers-reduced-motion: reduce)");
+    let inView = true;
+
     let w = 0;
     let h = 0;
 
@@ -71,14 +74,13 @@ export default function NetworkAnimation() {
     };
 
     resize();
-    window.addEventListener("resize", resize);
     canvas.addEventListener("mousemove", handleMouseMove);
     canvas.addEventListener("mouseleave", handleMouseLeave);
 
     // Initialize router nodes - kept moderate for full mesh performance
     const nodeCount = Math.min(
-      30,
-      Math.floor((w * h) / 28000)
+      22,
+      Math.floor((w * h) / 36000)
     );
     const types: Array<"router" | "switch" | "endpoint"> = [
       "router",
@@ -429,14 +431,32 @@ export default function NetworkAnimation() {
         }
       }
 
-      animationRef.current = requestAnimationFrame(animate);
+      if (!motionPreference.matches && inView && !document.hidden) {
+        animationRef.current = requestAnimationFrame(animate);
+      }
     };
 
+    const refresh = () => {
+      cancelAnimationFrame(animationRef.current);
+      animate();
+    };
+    const handleResize = () => { resize(); refresh(); };
+    const observer = new IntersectionObserver(([entry]) => {
+      inView = entry.isIntersecting;
+      refresh();
+    });
+    observer.observe(canvas);
+    motionPreference.addEventListener("change", refresh);
+    document.addEventListener("visibilitychange", refresh);
+    window.addEventListener("resize", handleResize);
     animate();
 
     return () => {
+      observer.disconnect();
+      motionPreference.removeEventListener("change", refresh);
+      document.removeEventListener("visibilitychange", refresh);
       cancelAnimationFrame(animationRef.current);
-      window.removeEventListener("resize", resize);
+      window.removeEventListener("resize", handleResize);
       canvas.removeEventListener("mousemove", handleMouseMove);
       canvas.removeEventListener("mouseleave", handleMouseLeave);
     };
@@ -444,6 +464,7 @@ export default function NetworkAnimation() {
 
   return (
     <canvas
+      aria-hidden="true"
       ref={canvasRef}
       className="absolute inset-0 w-full h-full"
       style={{ opacity: 0.85 }}

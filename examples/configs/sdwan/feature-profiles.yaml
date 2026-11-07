@@ -1,0 +1,54 @@
+{
+  "sdwan": {
+    "feature_profiles": {
+      "transport_profiles": [
+        {
+          "name": "CVK-PROFILE-transport",
+          "description": "CVK isolated profile fixture"
+        }
+      ],
+      "service_profiles": [
+        {
+          "name": "CVK-PROFILE-service",
+          "description": "CVK isolated profile fixture"
+        }
+      ],
+      "cli_profiles": [
+        {
+          "name": "CVK-PROFILE-cli",
+          "description": "CVK isolated profile fixture"
+        }
+      ],
+      "other_profiles": [
+        {
+          "name": "CVK-PROFILE-other",
+          "description": "CVK isolated profile fixture"
+        }
+      ],
+      "application_priority_profiles": [
+        {
+          "name": "CVK-PROFILE-application-priority",
+          "description": "CVK isolated profile fixture"
+        }
+      ],
+      "ngfw_security_profiles": [
+        {
+          "name": "CVK-PROFILE-ngfw-security",
+          "description": "CVK isolated profile fixture"
+        }
+      ],
+      "sse_profiles": [
+        {
+          "name": "CVK-PROFILE-sse",
+          "description": "CVK isolated profile fixture"
+        }
+      ],
+      "topology_profiles": [
+        {
+          "name": "CVK-PROFILE-topology",
+          "description": "CVK isolated profile fixture"
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,15 @@
+sdwan:
+  centralized_policies:
+    definitions:
+      data_policy:
+        application_aware_routing:
+          - name: CVK-CENTRAL-APP-ROUTE
+            description: Managed by CVK
+            sequences:
+              - id: 1
+                name: CVK-APP-ROUTE-RULE
+                ip_type: ipv4
+                match_criterias:
+                  source_data_prefix: 192.0.2.0/24
+                actions:
+                  log: true

@@ -1,0 +1,19 @@
+sdwan:
+  edge_feature_templates:
+    bfd_templates:
+      - name: CVK-CLASSIC-BFD
+        description: CVK unattached BFD template
+        device_types: [C8000V]
+        multiplier: 6
+        poll_interval: 600000
+        default_dscp: 48
+        colors:
+          - color: blue
+            hello_interval: 1000
+            multiplier: 7
+            path_mtu_discovery: true
+            default_dscp: 48
+            optional: false
+          - color: gold
+            hello_interval_variable: fixture_bfd_interval
+            optional: true

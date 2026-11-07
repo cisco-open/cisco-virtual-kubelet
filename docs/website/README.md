@@ -1,8 +1,55 @@
 # Dynamic documentation website
 
-Use `npm ci`, `npm run lint`, `npm audit --audit-level=high`, then
-`npm run build`. The build also checks the generated third-party notices.
-Run `npm run dev` for a local preview.
+The landing page is a Next.js static export. MkDocs builds the detailed guides
+under `/cisco-virtual-kubelet/docs/`.
+
+## Combined local preview
+
+Run the following from the **repository root**, using Node.js 24 and Python
+3.13 (`python3`). The [publication workflow](../../.github/workflows/develop.yml)
+pins the exact CI versions. Install Python dependencies from the hash-locked
+`requirements.txt`; the npm build checks the generated third-party notices.
+
+```bash
+(
+  set -e
+  cvk_preview="$(mktemp -d "${TMPDIR:-/tmp}/cvk-docs-preview.XXXXXX")"
+  python3 -m venv "$cvk_preview/venv"
+  "$cvk_preview/venv/bin/python" -m pip install --require-hashes -r requirements.txt
+
+  # Build the landing page and install the assets used by MkDocs.
+  (
+    cd docs/website
+    npm ci --include=dev
+    npm run lint
+    npm audit --audit-level=high
+    npm run build
+  )
+
+  # Build the guides and verify their license bundle.
+  "$cvk_preview/venv/bin/python" .github/scripts/generate_mkdocs_licenses.py --check
+  "$cvk_preview/venv/bin/python" -m mkdocs build --strict
+  "$cvk_preview/venv/bin/python" .github/scripts/generate_mkdocs_licenses.py --check --site site
+
+  # Match the deployed URL layout, keeping the virtualenv outside the server root.
+  mkdir -p "$cvk_preview/public/cisco-virtual-kubelet/docs"
+  cp -R docs/website/out/. "$cvk_preview/public/cisco-virtual-kubelet/"
+  cp -R site/. "$cvk_preview/public/cisco-virtual-kubelet/docs/"
+  "$cvk_preview/venv/bin/python" -m http.server 3000 \
+    --bind 127.0.0.1 --directory "$cvk_preview/public"
+)
+```
+
+Open the [landing page](http://127.0.0.1:3000/cisco-virtual-kubelet/) or
+[documentation](http://127.0.0.1:3000/cisco-virtual-kubelet/docs/). Stop the server
+with **Ctrl+C**. This static preview reflects the current checkout; rebuild and
+assemble fresh outputs after edits. Publication instead builds the verified tag
+of an existing published release.
+
+For landing-page iteration alone, run `npm run dev -- --hostname 127.0.0.1`
+from `docs/website` and open the same landing-page URL. **The Next.js dev server
+does not serve MkDocs**; use the combined preview to review documentation links
+and navigation.
 
 ## Lint dependency security override
 

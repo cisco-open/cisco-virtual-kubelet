@@ -1,0 +1,15 @@
+sdwan:
+  application_catalog:
+    custom_applications:
+      - name: CVK-CUSTOM-APP
+        application_family: web
+        application_group: other
+        business_relevance: Silver
+        traffic_class: transactional-data
+        server_names:
+          - cvk-fixture.example.net
+        l3l4:
+          - ip_addresses:
+              - 192.0.2.0/24
+            l4_protocol: TCP
+            ports: "8443"

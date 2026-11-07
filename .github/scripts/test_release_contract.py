@@ -62,8 +62,8 @@ class ReleaseContractTests(unittest.TestCase):
         lint_dockerfile = (ROOT / "Dockerfile.config-lint").read_text(encoding="utf-8")
         release = (ROOT / ".github/workflows/release.yml").read_text(encoding="utf-8")
         pinned_builder = (
-            "golang:1.26.7-alpine@sha256:"
-            "28d89ee9cc0ff9fec75c82ca201e6bf7fdf9a679d4b7b24dfa04f2bb766bb468"
+            "golang:1.26.10-alpine@sha256:"
+            "27f2d3b83cfc5803c8078f8e730af0f7c431bf067afaec8f60a36fb763187cba"
         )
         self.assertIn(pinned_builder, dockerfile)
         self.assertIn(pinned_builder, lint_dockerfile)
@@ -73,7 +73,7 @@ class ReleaseContractTests(unittest.TestCase):
         self.assertIn("main.BuildTime=${BUILD_TIME}", dockerfile)
         self.assertIn("github.com/google/go-licenses/v2@v2.0.1", dockerfile)
         self.assertIn("github.com/moby/spdystream/spdy/PATENTS", dockerfile)
-        self.assertIn("go-version: '1.26.7'", release)
+        self.assertIn("go-version: '1.26.10'", release)
         self.assertIn("version: v3.21.4", release)
         self.assertEqual(release.count("version: v0.36.1"), 2)
         self.assertEqual(
@@ -123,7 +123,7 @@ class ReleaseContractTests(unittest.TestCase):
         self.assertGreaterEqual(release.count(".target_commitish == $commit"), 3)
         self.assertNotIn("ubuntu-latest", release)
         self.assertNotIn("1.25", dockerfile + lint_dockerfile + release)
-        self.assertEqual((ROOT / "go.mod").read_text().splitlines()[2], "go 1.26.7")
+        self.assertEqual((ROOT / "go.mod").read_text().splitlines()[2], "go 1.26.10")
 
     def test_high_critical_image_scans_are_hard_gates(self) -> None:
         action = (
@@ -250,10 +250,6 @@ class ReleaseContractTests(unittest.TestCase):
         runbook = (ROOT / "RELEASE.md").read_text(encoding="utf-8")
         self.assertIn("render_github_release_notes.py", runbook)
         self.assertIn('--rawfile body "$release_notes"', runbook)
-        self.assertIn(
-            "I approve Cisco Virtual Kubelet v2026.10.0 for release from commit",
-            runbook,
-        )
         self.assertIn("approved release-signing identity", runbook)
         with self.assertRaises(ReleaseNotesError):
             render_release_notes(
@@ -263,38 +259,155 @@ class ReleaseContractTests(unittest.TestCase):
                 repository="cisco-open/cisco-virtual-kubelet",
             )
 
-    def test_october_release_metadata_and_upgrade_scope(self) -> None:
+    def test_november_release_preparation_metadata_and_upgrade_scope(self) -> None:
         chart = (ROOT / "charts/cisco-virtual-kubelet/Chart.yaml").read_text()
         runbook = (ROOT / "RELEASE.md").read_text()
-        self.assertIn('appVersion: "v2026.10.0"', chart)
-        self.assertIn("version: 0.1.0", chart)  # release packaging stamps CalVer
-        self.assertIn("release_version=v2026.10.0", runbook)
-        self.assertIn("v2026.9.2..HEAD", runbook)
-        self.assertIn("docs/releases/v2026.10.0.md", runbook)
-        self.assertIn("2026.10.1", runbook)  # immutable-tag recovery version
-        for name in ("ciscodevices.cisco.vk", "iosxesoftwareupgrades.ops.cisco.vk",
-                     "iosxeoperationalactions.ops.cisco.vk", "iosxesoftwarerollouts.ops.cisco.vk"):
-            self.assertIn("crd/" + name, runbook)
+        self.assertRegex(chart, r'(?m)^appVersion: "v2026\.11\.1"$')
+        self.assertRegex(chart, r"(?m)^version: 0\.1\.0$")  # packaging stamps CalVer
+        self.assertIn("release_version=v2026.11.1", runbook)
+        self.assertIn("v2026.10.0..HEAD", runbook)
+        self.assertIn("docs/releases/v2026.11.1.md", runbook)
+        self.assertIn("docs/releases/v2026.11.1-readiness.md", runbook)
+        self.assertIn("2026.11.2", runbook)  # immutable-tag recovery version
+        # Helm does not update CRDs. The November delta changes existing schemas,
+        # so apply and wait on the entire reviewed directory before the upgrade.
+        self.assertRegex(
+            runbook,
+            r"kubectl apply[^\n]*\\\n\s+-f cisco-virtual-kubelet/crds/",
+        )
+        self.assertRegex(
+            runbook,
+            r"kubectl wait --for=condition=Established[^\n]*\\\n"
+            r"\s+-f cisco-virtual-kubelet/crds/",
+        )
+        relative = pathlib.PurePosixPath("docs/releases/v2026.11.1.md")
+        source = (ROOT / relative).read_text()
+        readiness = (ROOT / "docs/releases/v2026.11.1-readiness.md").read_text()
+        for text in (source, readiness):
+            self.assertIn("v2026.11.1", text)
+            self.assertIn("v2026.10.0", text)
+        self.assertIn("](v2026.11.1-readiness.md)", source)
+        self.assertIn("](v2026.11.1.md)", readiness)
+        rendered = render_release_notes(
+            source,
+            source_relative=relative,
+            tag="v2026.11.1",
+            repository="cisco-open/cisco-virtual-kubelet",
+        )
+        self.assertNotIn("](../", rendered)
+        self.assertIn("blob/v2026.11.1/docs/topology-awareness.md", rendered)
+        self.assertIn("blob/v2026.11.1/docs/installation-maintenance.md", rendered)
+        self.assertIn("](../topology-awareness.md)", source)
+
+    def test_rejected_november_candidate_is_preserved_not_reused(self) -> None:
+        notes = (ROOT / "docs/releases/v2026.11.0.md").read_text()
+        readiness = (ROOT / "docs/releases/v2026.11.0-readiness.md").read_text()
+        current = (ROOT / "docs/releases/v2026.11.1.md").read_text()
+        runbook = (ROOT / "RELEASE.md").read_text()
+        for history in (notes, readiness):
+            self.assertIn("Rejected and unpublished", history)
+            self.assertIn("immutable", history)
+            self.assertIn("MPL-labelled embedded SD-WAN JSON", history)
+            self.assertIn("v2026.10.0", history)
+            self.assertIn("](v2026.11.1.md)", history)
+        self.assertIn("Prepared **29 October 2026** for **v2026.11.0**", readiness)
+        self.assertIn("Target release date: 1 November 2026", notes)
+        self.assertIn("Proposed corrected November candidate", current)
+        self.assertIn("Until it is public", current)
+        self.assertIn("/licenses/embedded-source/", current)
+        self.assertIn("byte-for-byte", runbook)
+        self.assertIn("Never publish its draft", runbook)
+        self.assertIn("089c5c4a2f13e09c2b1ef462da230841184a30f5", runbook)
+
+    def test_historical_october_release_notes_remain_tag_pinned(self) -> None:
         relative = pathlib.PurePosixPath("docs/releases/v2026.10.0.md")
         source = (ROOT / relative).read_text()
-        rendered = render_release_notes(source, source_relative=relative,
-                                        tag="v2026.10.0", repository="cisco-open/cisco-virtual-kubelet")
+        rendered = render_release_notes(
+            source,
+            source_relative=relative,
+            tag="v2026.10.0",
+            repository="cisco-open/cisco-virtual-kubelet",
+        )
         self.assertNotIn("](../", rendered)
         self.assertIn("blob/v2026.10.0/docs/topology-awareness.md", rendered)
         self.assertIn("unpublished release candidate", rendered)
 
-    def test_october_features_are_visible_on_all_overview_surfaces(self) -> None:
-        # Keep the end-user overviews aligned with the shipped October scope,
-        # including maturity/continuity limits rather than roadmap promises.
-        paths = ("README.md", "docs/index.md", "docs/website/src/components/Features.tsx")
-        for path in paths:
+    def test_landing_foundations_link_to_task_guides_and_feature_status(self) -> None:
+        # Landing pages introduce the foundations; detailed prerequisites and
+        # qualification limits belong in reachable task and reference pages.
+        features = (ROOT / "docs/website/src/components/Features.tsx").read_text()
+        destinations = set(re.findall(
+            r'(?:href:\s*|href=)["\'](/cisco-virtual-kubelet/docs/[^"\']+)["\']',
+            features,
+        ))
+        for route in ("getting-started", "netascode-config", "operator-guide", "status"):
+            with self.subTest(route=route):
+                self.assertIn(f"/cisco-virtual-kubelet/docs/{route}/", destinations)
+                self.assertTrue((ROOT / "docs" / f"{route}.md").is_file())
+
+        home = (ROOT / "docs/index.md").read_text()
+        home_links = {link.split("#", 1)[0] for link in re.findall(r"\]\(([^)\s]+)\)", home)}
+        for path in (
+            "getting-started.md", "concepts.md", "guides.md", "operator-guide.md",
+            "security.md", "status.md", "reference/index.md",
+        ):
             with self.subTest(path=path):
-                text = (ROOT / path).read_text()
-                for concept in ("IOSXESoftwareRollout", "gNOI", "PDB", "Secret", "1.35"):
-                    self.assertIn(concept, text)
-                self.assertIn("disabled by default", text.lower())
-                self.assertIn("zero-downtime", text)
-                self.assertIn("ServiceAccount", text)
+                self.assertIn(path, home_links)
+                self.assertTrue((ROOT / "docs" / path).is_file())
+
+    def test_navigation_exposes_task_guides_and_release_records(self) -> None:
+        navigation = (ROOT / "mkdocs.yml").read_text().split("nav:\n", 1)[1].split("\ntheme:", 1)[0]
+        routes = set(re.findall(
+            r":\s*['\"]?([\w/.-]+\.md)['\"]?\s*$", navigation, re.MULTILINE,
+        ))
+        required = {
+            "index.md", "guides.md", "operator-guide.md", "reference/index.md",
+            "status.md", "releases/index.md", "releases/v2026.11.1.md",
+            "releases/v2026.11.1-readiness.md", "releases/v2026.11.0.md",
+            "releases/v2026.11.0-readiness.md", "releases/v2026.10.0.md",
+            "installation-maintenance.md", "device-diagnostics.md", "device-actions.md",
+            "nxos-recovery.md", "security.md", "security-credentials.md",
+            "security-tls.md", "security-authorization.md", "topology-awareness.md",
+            "topology-enable.md", "topology-scheduling.md", "topology-campaigns.md",
+            "topology-drain.md", "topology-troubleshooting.md", "topology-recovery.md",
+            "topology-reference.md",
+        }
+        self.assertFalse(required - routes, f"Missing navigation routes: {required - routes}")
+        for path in routes:
+            with self.subTest(path=path):
+                self.assertTrue((ROOT / "docs" / path).is_file())
+
+    def test_detailed_guides_retain_maturity_and_authorization_boundaries(self) -> None:
+        status = (ROOT / "docs/status.md").read_text()
+        for maturity in ("Stable", "Beta", "Alpha", "Development preview", "Experimental"):
+            self.assertIn(maturity, status)
+        self.assertRegex(status, r"Managed topology[^\n]*Kubernetes 1\.35\+")
+        self.assertRegex(
+            status,
+            r"PDB-aware drain[^\n]*Disabled by default[^\n]*No zero-downtime or continuity guarantee",
+        )
+
+        topology = (ROOT / "docs/topology-awareness.md").read_text()
+        for guide in ("enable", "scheduling", "campaigns", "drain", "recovery", "reference"):
+            self.assertIn(f"](topology-{guide}.md)", topology)
+        enable = " ".join((ROOT / "docs/topology-enable.md").read_text().split())
+        self.assertIn("Kubernetes 1.35 or newer", enable)
+        self.assertIn("NodeRestriction", enable)
+        self.assertIn("failurePolicy: Fail", enable)
+        self.assertIn("validationActions: [Deny]", enable)
+
+        drain = " ".join((ROOT / "docs/topology-drain.md").read_text().split())
+        self.assertIn("disabled at both administrator and campaign layers", drain)
+        self.assertIn("BlockIfRunning", drain)
+        self.assertIn("not general-purpose", drain)
+        self.assertIn("continuity guarantee", drain)
+        self.assertIn("](topology-campaigns.md)", drain)
+
+        authorization = (ROOT / "docs/security-authorization.md").read_text()
+        for boundary in ("RBAC", "ServiceAccount", "cluster-wide Secret reads"):
+            self.assertIn(boundary, authorization)
+        security = (ROOT / "docs/security.md").read_text()
+        self.assertIn("](security-authorization.md)", security)
 
     def test_workflow_runtimes_are_current_and_do_not_use_mutable_binfmt(
         self,
@@ -362,13 +475,13 @@ class ReleaseContractTests(unittest.TestCase):
             text=True,
         )
         text = installer.read_text(encoding="utf-8")
-        self.assertIn('PINNED_GO_VERSION="1.26.7"', text)
+        self.assertIn('PINNED_GO_VERSION="1.26.10"', text)
         for required in (
-            "ffb5f8de10c62550dfddab66b36b57030721e0a44a3218e9e1181d7b59f121ca",
-            "5a4ec883379d51ee9ce1040d5e87f8d35e20387574dd8c947feb01eabc3c1b37",
-            "675c26c449cbb18fc24b74650de1eabbae6e16f64326fd85a283fb3b58280685",
-            "51798d2c42d0e1c6ed7fd9f48728b4193abac9e8aad6dbac2fe96a81f5909bda",
-            "go1.26.7+ or go1.27.0+",
+            "ccfe7ae822d2c2f41f4fe7c956199967a4dac22d0ee0d2b2bfdb440aab3b20c5",
+            "3f4227ce7b206a513e794f1393adb473a07b46e94d18bd15d1c684bbb7319797",
+            "65efbc80fdc1fa2cd2631cad5b481777a68e8725f34e89f50fc6ac714e379b40",
+            "a06e99309dbcbdca1a8ccd2282c3ee146e55930886e26b4f1193269587165f49",
+            "go1.26.10+ or go1.27.3+",
         ):
             self.assertIn(required, text)
         self.assertNotIn("1.25", text)
@@ -387,7 +500,7 @@ class ReleaseContractTests(unittest.TestCase):
             fake_go.write_text(
                 "#!/bin/sh\n"
                 'if [ "$1 $2" = "env GOVERSION" ]; then\n'
-                "  printf 'go1.26.7\\n'\n"
+                "  printf 'go1.26.10\\n'\n"
                 "  exit 0\n"
                 "fi\n"
                 "exit 64\n",
@@ -398,7 +511,7 @@ class ReleaseContractTests(unittest.TestCase):
             env.pop("GO_VERSION", None)
             env["PATH"] = f"{temp_dir}{os.pathsep}{env['PATH']}"
             explicit_override = subprocess.run(
-                ["bash", str(installer), "--go-version", "1.27.0"],
+                ["bash", str(installer), "--go-version", "1.27.3"],
                 cwd=ROOT,
                 env=env,
                 check=False,
@@ -407,7 +520,7 @@ class ReleaseContractTests(unittest.TestCase):
             )
         self.assertEqual(explicit_override.returncode, 1)
         self.assertIn(
-            "exact Go 1.27.0 was requested",
+            "exact Go 1.27.3 was requested",
             explicit_override.stdout,
         )
 
@@ -438,7 +551,7 @@ class ReleaseContractTests(unittest.TestCase):
             fake_go.write_text(
                 "#!/bin/sh\n"
                 'if [ "$1 $2" = "env GOVERSION" ]; then\n'
-                "  printf 'go1.26.7\\n'\n"
+                "  printf 'go1.26.10\\n'\n"
                 "  exit 0\n"
                 "fi\n"
                 "exit 64\n",
@@ -456,7 +569,7 @@ class ReleaseContractTests(unittest.TestCase):
                     + "\n"
                     + selection_function.group(0)
                     + "\n"
-                    + "GO_VERSION=1.27.0\n"
+                    + "GO_VERSION=1.27.3\n"
                     + "GO_VERSION_EXPLICIT=true\n"
                     + "MISSING_DEPS=false\n"
                     + "NEED_GO=false\n"
@@ -471,7 +584,7 @@ class ReleaseContractTests(unittest.TestCase):
                     + 'INSTALLED_GO_VERSION=""\n'
                     + missing_handler
                     + "\n"
-                    + 'test "$INSTALLED_GO_VERSION" = "1.27.0"\n'
+                    + 'test "$INSTALLED_GO_VERSION" = "1.27.3"\n'
                     + 'printf "installed=%s\\n" "$INSTALLED_GO_VERSION"\n',
                 ],
                 cwd=ROOT,
@@ -480,7 +593,7 @@ class ReleaseContractTests(unittest.TestCase):
                 capture_output=True,
                 text=True,
             )
-        self.assertIn("installed=1.27.0", forced_install.stdout)
+        self.assertIn("installed=1.27.3", forced_install.stdout)
         # The privileged toolchain must always be replaced from the freshly
         # verified archive; an executable left by an earlier user is not a
         # trust signal. Keep the exact-target, root ownership, and no-group/
@@ -538,12 +651,15 @@ class ReleaseContractTests(unittest.TestCase):
         )
         self.assertIsNotNone(function)
         support_checks = """
-go_version_is_supported go1.26.7
-go_version_is_supported go1.26.99
-go_version_is_supported go1.27.0
+go_version_is_supported go1.26.10
+go_version_is_supported go1.26.109
+go_version_is_supported go1.27.3
 go_version_is_supported go1.27.9
 ! go_version_is_supported go1.25.14
-! go_version_is_supported go1.26.6
+! go_version_is_supported go1.26.8
+! go_version_is_supported go1.26.10
+! go_version_is_supported go1.27.1
+! go_version_is_supported go1.27.3
 ! go_version_is_supported go1.28.0
 ! go_version_is_supported devel
 """
@@ -731,7 +847,7 @@ go_version_is_supported go1.27.9
         self.assertEqual(core_js_entry.count('license: "MIT"'), 1)
 
         for package, version in (
-            ("mermaid", "11.17.2"),
+            ("mermaid", "12.2.0"),
             ("resize-observer-polyfill", "1.5.1"),
         ):
             self.assertEqual(website_manifest["devDependencies"][package], version)
@@ -755,10 +871,13 @@ go_version_is_supported go1.27.9
         exact_runtime = {
             (package["name"], package["version"]) for package in inventory["packages"]
         }
-        self.assertEqual(len(exact_runtime), 79)
+        self.assertEqual(len(exact_runtime), 80)
         for required_runtime in (
-            ("mermaid", "11.17.2"),
-            ("@mermaid-js/parser", "1.2.1"),
+            ("mermaid", "12.2.0"),
+            ("@mermaid-js/parser", "2.0.1"),
+            ("katex", "0.18.11"),
+            ("elkjs", "0.9.3"),
+            ("@chevrotain/cst-dts-gen", "13.2.0"),
             ("js-yaml", "4.3.0"),
             ("vscode-uri", "3.1.0"),
             ("hachure-fill", "0.5.2"),
@@ -841,7 +960,7 @@ go_version_is_supported go1.27.9
         self.assertNotIn("OSPO", runbook)
         self.assertIn("networkcontrollers.cisco.vk", runbook)
         self.assertIn("networkcontrollerconfigs.config.cisco.vk", runbook)
-        self.assertIn("go1.26.7", runbook)
+        self.assertIn("go1.26.10", runbook)
         self.assertNotIn("go1.25", runbook)
 
     def test_all_actions_are_commit_pinned(self) -> None:

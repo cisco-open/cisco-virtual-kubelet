@@ -19,7 +19,7 @@
 # multi-arch build (e.g. linux/arm64 on an amd64 runner) — emulated Go builds
 # are what pushed the release pipeline past its timeout. CGO is disabled, so the
 # cross-compile is pure-Go and needs no target-arch toolchain.
-FROM --platform=$BUILDPLATFORM golang:1.26.7-alpine@sha256:28d89ee9cc0ff9fec75c82ca201e6bf7fdf9a679d4b7b24dfa04f2bb766bb468 AS builder
+FROM --platform=$BUILDPLATFORM golang:1.26.10-alpine@sha256:27f2d3b83cfc5803c8078f8e730af0f7c431bf067afaec8f60a36fb763187cba AS builder
 
 WORKDIR /app
 
@@ -74,6 +74,15 @@ RUN mkdir -p /out/licenses/go && \
     test -s /out/licenses/third-party/github.com/moby/spdystream/spdy/PATENTS && \
     cp "$(go env GOROOT)/LICENSE" /out/licenses/go/LICENSE && \
     cp "$(go env GOROOT)/PATENTS" /out/licenses/go/PATENTS
+
+# Module-level license detection does not cover separately licensed embedded data.
+# Inventory follows the image target; the stdlib-only helper runs on the builder.
+RUN GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} go list -mod=readonly -deps -json ./cmd/cisco-vk \
+      > /out/embedded-packages.json && \
+    GOOS="$(go env GOHOSTOS)" GOARCH="$(go env GOHOSTARCH)" GOENV=off GOTOOLCHAIN=local \
+      go run .github/scripts/package_embedded_licenses.go \
+      --repo-root /app --packages /out/embedded-packages.json \
+      --output /out/licenses/embedded-source
 
 FROM gcr.io/distroless/static-debian12@sha256:d75cdd72874d4790092fcb1b058493ecf6bb5bf2b2b897045b00ff01d91843f2
 COPY --from=builder /app/cisco-vk /usr/local/bin/cisco-vk

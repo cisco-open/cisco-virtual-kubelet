@@ -1,0 +1,14 @@
+sdwan:
+  feature_profiles:
+    service_profiles:
+      - name: CVK-SERVICE-VPN-EIGRP-PROFILE
+        eigrp_features:
+          - name: CVK-SERVICE-VPN-EIGRP
+            autonomous_system_id: 101
+            networks:
+              - network_address: 192.0.2.0
+                subnet_mask: 255.255.255.0
+        lan_vpns:
+          - name: CVK-SERVICE-VPN-EIGRP-VPN
+            vpn_id: 114
+            eigrp: CVK-SERVICE-VPN-EIGRP

@@ -1,0 +1,36 @@
+# Native transport trackers, unattached. HTTP/ICMP and IPv4/IPv6 variants.
+sdwan:
+  feature_profiles:
+    transport_profiles:
+      - name: CVK-TRANSPORT-TRACKERS
+        ipv4_trackers:
+          - name: CVK-TRACKER4-HTTP
+            tracker_name: tracker4-http
+            endpoint_tracker_type: http
+            endpoint_api_url: http://example.com/health
+            interval: 60
+          - name: CVK-TRACKER4-ICMP
+            tracker_name: tracker4-icmp
+            endpoint_tracker_type: icmp
+            endpoint_ip: 192.0.2.1
+            interval: 2
+        ipv4_tracker_groups:
+          - name: CVK-TRACKER4-GROUP
+            trackers: [CVK-TRACKER4-HTTP, CVK-TRACKER4-ICMP]
+            tracker_boolean: and
+        ipv6_trackers:
+          - name: CVK-TRACKER6-HTTP
+            tracker_name: tracker6-http
+            endpoint_tracker_type: http
+            endpoint_api_url: http://example.com/health
+            interval: 60
+          - name: CVK-TRACKER6-ICMP
+            tracker_name: tracker6-icmp
+            endpoint_tracker_type: icmp
+            endpoint_tcp_udp_ip: "2001:db8::1"
+            interval_variable: icmp6_interval
+        ipv6_tracker_groups:
+          - name: CVK-TRACKER6-GROUP
+            tracker_name: tracker6-group
+            trackers: [CVK-TRACKER6-HTTP, CVK-TRACKER6-ICMP]
+            tracker_boolean: or

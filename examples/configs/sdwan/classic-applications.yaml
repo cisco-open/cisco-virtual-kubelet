@@ -1,0 +1,20 @@
+sdwan:
+  edge_feature_templates:
+    thousandeyes_templates:
+      - name: CVK-CLASSIC-TE
+        description: CVK unattached ThousandEyes template
+        device_types: [C8000V]
+        account_group_token_variable: fixture_te_token
+        ip: 192.0.2.10/24
+        default_gateway: 192.0.2.1
+        hostname: cvk-te
+        name_server: 192.0.2.53
+        vpn_id: 10
+        proxy_type: none
+    secure_app_hosting_templates:
+      - name: CVK-CLASSIC-UTD
+        description: CVK unattached security application template
+        device_types: [C8000V]
+        nat: true
+        download_url_database_on_device: false
+        resource_profile: low

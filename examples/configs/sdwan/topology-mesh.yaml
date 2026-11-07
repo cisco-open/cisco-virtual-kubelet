@@ -1,0 +1,14 @@
+sdwan:
+  network_hierarchy:
+    groups:
+      - name: CVK-MESH-GROUP
+        sites:
+          - name: CVK-MESH-SITE
+            site_id: 4294966991
+  feature_profiles:
+    topology_profiles:
+      - name: CVK-TOPOLOGY-MESH
+        mesh_policies:
+          - name: CVK-MESH-POLICY
+            lan_vpn_names: ["10"]
+            site_groups: [CVK-MESH-GROUP]

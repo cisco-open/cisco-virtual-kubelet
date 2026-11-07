@@ -1,0 +1,19 @@
+sdwan:
+  network_hierarchy:
+    groups:
+      - name: CVK-HIER-G0
+        description: CVK isolated hierarchy fixture
+        regions:
+          - name: CVK-HIER-R1
+        groups:
+          - name: CVK-HIER-G1
+            regions:
+              - name: CVK-HIER-R2
+            groups:
+              - name: CVK-HIER-G2
+                sites:
+                  - name: CVK-HIER-SITE
+                    site_id: 4294967000
+                    location: Undisclosed
+    regions:
+      - name: CVK-HIER-R0

@@ -1,0 +1,9 @@
+# Certificate identifiers are Manager references; replace with an existing lab certificate for live tests.
+sdwan:
+  feature_profiles:
+    system_profiles:
+      - name: CVK-CA-PROFILE
+        ca_certificate:
+          certificates:
+            - trustpoint_name: CVK-ROOT
+              certificate_id: 00000000-0000-4000-8000-000000000001

@@ -1,0 +1,19 @@
+sdwan:
+  edge_feature_templates:
+    vpn_templates:
+      - name: CVK-CLASSIC-VPN-DNS
+        description: CVK isolated DNS VPN template
+        device_types: [C8000V]
+        vpn_id: 22
+        vpn_name: CVK-DNS
+        ipv4_primary_dns_server: 192.0.2.53
+        ipv4_secondary_dns_server_variable: cvkBackupDNS
+        ipv6_primary_dns_server: 2001:db8::53
+        ipv4_dns_hosts:
+          - hostname: cvk-a.example.invalid
+            ips: [192.0.2.10]
+            optional: false
+        ipv6_dns_hosts:
+          - hostname: cvk-b.example.invalid
+            ips: [2001:db8::10]
+            optional: false

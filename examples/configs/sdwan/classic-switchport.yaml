@@ -1,0 +1,23 @@
+sdwan:
+  edge_feature_templates:
+    switchport_templates:
+      - name: CVK-CLASSIC-SWITCHPORT
+        description: Unattached switchport fixture
+        module_type: "4"
+        slot: 0
+        sub_slot: 0
+        interfaces:
+          - name: GigabitEthernet0/0/1
+            mode: trunk
+            trunk_native_vlan: 100
+            trunk_allowed_vlans: [100, 200]
+            trunk_allowed_vlans_ranges:
+              - from: 300
+                to: 305
+            dot1x:
+              enable: true
+              port_control_mode: auto
+        static_mac_addresses:
+          - interface_name: GigabitEthernet0/0/1
+            mac_address: 00:11:22:33:44:55
+            vlan: 100

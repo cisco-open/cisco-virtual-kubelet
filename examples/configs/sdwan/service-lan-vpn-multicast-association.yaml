@@ -1,0 +1,21 @@
+sdwan:
+  feature_profiles:
+    service_profiles:
+      - name: CVK-SERVICE-VPN-MCAST-PROFILE
+        multicast_features:
+          - name: CVK-SERVICE-VPN-MCAST
+            pim_source_specific_multicast: true
+            auto_rp: false
+            igmp_interfaces:
+              - interface_name: GigabitEthernet8
+                version: 3
+                join_groups:
+                  - group_address: 239.1.1.1
+                    source_address: 192.0.2.1
+            pim_interfaces:
+              - interface_name: GigabitEthernet8
+                join_prune_interval: 60
+        lan_vpns:
+          - name: CVK-SERVICE-VPN-MCAST-VPN
+            vpn_id: 115
+            multicast: CVK-SERVICE-VPN-MCAST

@@ -1,0 +1,15 @@
+sdwan:
+  feature_profiles:
+    service_profiles:
+      - name: CVK-EIGRP-SERVICE
+        description: Unattached EIGRP service fixture
+        eigrp_features:
+          - name: CVK-EIGRP
+            autonomous_system_id: 100
+            hello_interval: 5
+            networks:
+              - network_address: 192.0.2.0
+                subnet_mask: 255.255.255.0
+            interfaces:
+              - name: GigabitEthernet1
+                shutdown: false

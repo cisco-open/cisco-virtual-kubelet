@@ -48,7 +48,9 @@ on:
 jobs:
   build-and-smoke:
     runs-on: ubuntu-24.04
-    timeout-minutes: 35
+    # Race/envtest gates and both image builds can consume 35 minutes on a
+    # cold runner. Reserve time for device-startup checks and diagnostics.
+    timeout-minutes: 50
     env:
       KIND_NODE_IMAGE: kindest/node:v1.35.0@sha256:4613778f3cfcd10e615029370f5786704559103cf27bef934597ba562b269661
     permissions:
@@ -61,7 +63,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
         with:
-          go-version: '1.26.7'
+          go-version: '1.26.10'
           cache: true
 
       - name: Setup Python for documentation checks
@@ -92,8 +94,10 @@ jobs:
         # and internal/drivers/iosxe/models.go (ygot output — reformatting it
         # by hand would drift it from the generator; see the drift check
         # below, which asserts generated artefacts match their sources).
+        # Qualification fixtures are immutable captured evidence, not runtime
+        # sources. Their SHA256SUMS bind their original bytes; do not reformat.
         run: |
-          fmt_out="$(gofmt -l . | grep -v '/configdriver/generated/' | grep -v 'internal/drivers/iosxe/models.go' || true)"
+          fmt_out="$(gofmt -l . | grep -v '/configdriver/generated/' | grep -v 'internal/drivers/iosxe/models.go' | grep -v '^docs/evidence/' || true)"
           if [ -n "$fmt_out" ]; then
             echo "gofmt violations in first-party files:"
             echo "$fmt_out"
@@ -107,6 +111,14 @@ jobs:
           python3 -m unittest discover \
             -s .github/scripts \
             -p 'test_release_contract.py' \
+            -v
+          python3 -m unittest discover \
+            -s .github/scripts \
+            -p 'test_generate_mermaid_runtime_licenses.py' \
+            -v
+          python3 -m unittest discover \
+            -s .github/scripts \
+            -p 'test_package_embedded_licenses.py' \
             -v
           go run github.com/rhysd/actionlint/cmd/actionlint@v1.7.12 \
             -config-file .github/actionlint.yaml \
@@ -281,16 +293,12 @@ jobs:
 
       - name: setup-envtest binaries
         # Pinned per pre-pr-test-enrichment-plan §6 — never @latest in
-        # CI. The setup-envtest sub-module of controller-runtime is
-        # not independently tagged; the canonical pin is a Go
-        # pseudo-version from the same release branch as the
-        # controller-runtime release used by go.mod. Bump them together and
-        # re-run the suite before locking in.
+        # CI. Keep setup-envtest on the same release line as the
+        # controller-runtime dependency and re-run the suite when upgrading.
         run: |
-          # The setup-envtest submodule has no tags of its own. Keep this
-          # pseudo-version on controller-runtime's release-0.23 branch so it
-          # stays compatible with the v0.23 controller-runtime dependency.
-          go install sigs.k8s.io/controller-runtime/tools/setup-envtest@v0.0.0-20260305142021-f9589b9f2b9d
+          # The submodule now publishes versioned tags; use the matching
+          # v0.25.2 tool while retaining the Kubernetes 1.35 server baseline.
+          go install sigs.k8s.io/controller-runtime/tools/setup-envtest@v0.25.2
           echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
 
       - name: Real-apiserver smoke (envtest)
@@ -584,6 +592,7 @@ jobs:
           kubectl -n cisco-vk-nxos-smoke get nxosconfig nxos-smoke
 
       - name: Verify IOS-XE and NX-OS pods reach device-call boundary
+        timeout-minutes: 8
         # The only expected blocker past this point is an unreachable device,
         # which CI does not provide. A transport-level connection refusal or
         # timeout proves the binary reached the device call.
@@ -710,7 +719,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
         with:
-          go-version: '1.26.7'
+          go-version: '1.26.10'
           cache: true
           cache-dependency-path: tools/terraform-provider-iosxeconfig/go.sum
 
@@ -773,7 +782,7 @@ jobs:
       - name: Set up pinned Go
         uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
         with:
-          go-version: '1.26.7'
+          go-version: '1.26.10'
           cache: true
           cache-dependency-path: |
             go.sum
@@ -797,7 +806,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
         with:
-          go-version: '1.26.7'
+          go-version: '1.26.10'
           cache: true
 
       - name: Download YANG modules

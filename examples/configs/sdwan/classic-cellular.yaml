@@ -1,0 +1,17 @@
+sdwan:
+  edge_feature_templates:
+    cellular_controller_templates:
+      - name: CVK-CLASSIC-CELL-CONTROLLER
+        description: CVK unattached cellular controller template
+        cellular_interface_id: 0/1/0
+        primary_sim_slot: 0
+        sim_failover_retries: 10
+        sim_failover_timeout: 5
+    cellular_profile_templates:
+      - name: CVK-CLASSIC-CELL-PROFILE
+        description: CVK unattached cellular profile template
+        profile_id: 1
+        access_point_name: example.invalid
+        authentication_type: none
+        packet_data_network_type: ipv4v6
+        no_overwrite: true

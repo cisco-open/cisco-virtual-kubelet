@@ -1,0 +1,12 @@
+sdwan:
+  feature_profiles:
+    system_profiles:
+      - name: CVK-SDWAN-SYSTEM-FIXTURE
+        description: CVK NetAsCode system profile parity fixture
+        banner:
+          login: "CVK fixture login\n"
+          motd_variable: fixture_motd
+  configuration_groups:
+    - name: CVK-SDWAN-GROUP-FIXTURE
+      description: CVK unattached configuration group parity fixture
+      system_profile: CVK-SDWAN-SYSTEM-FIXTURE

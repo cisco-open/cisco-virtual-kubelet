@@ -1,0 +1,32 @@
+sdwan:
+  feature_profiles:
+    service_profiles:
+      - name: CVK-SERVICE-LAN-VPN-PROFILE
+        lan_vpns:
+          - name: CVK-SERVICE-LAN-VPN
+            vpn_id: 110
+            vpn_name: CVK service VPN
+            ipv4_omp_admin_distance: 251
+            ipv4_primary_dns_address: 192.0.2.53
+            ipv6_primary_dns_address: 2001:db8::53
+            sdwan_remote_access: false
+            host_mappings:
+              - hostname: lan.example.test
+                ips: [192.0.2.12]
+            ipv4_static_routes:
+              - network_address: 198.51.100.0
+                subnet_mask: 255.255.255.0
+                gateway: nexthop
+                next_hops:
+                  - address: 198.51.100.1
+              - network_address: 203.0.113.0
+                subnet_mask: 255.255.255.0
+                gateway: null0
+                administrative_distance: 10
+            ipv6_static_routes:
+              - prefix: 2001:db8:2::/64
+                gateway: null0
+              - prefix: 2001:db8:3::/64
+                gateway: nexthop
+                next_hops:
+                  - address: 2001:db8::1

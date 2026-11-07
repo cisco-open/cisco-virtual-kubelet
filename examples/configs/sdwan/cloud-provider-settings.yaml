@@ -1,0 +1,6 @@
+sdwan:
+  settings:
+    cloud_provider_settings:
+      umbrella_org_id: "123456"
+      cisco_sse_org_id: "654321"
+      cisco_sse_context_sharing: false

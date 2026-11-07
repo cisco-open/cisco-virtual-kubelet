@@ -1,0 +1,20 @@
+sdwan:
+  edge_feature_templates:
+    ntp_templates:
+      - name: CVK-CLASSIC-NTP
+        description: CVK unattached NTP template
+        device_types: [C8000V]
+        master: false
+        authentication_keys:
+          - id: 1
+            value_variable: fixture_ntp_auth_key
+            optional: false
+        trusted_keys: [1]
+        servers:
+          - hostname_ip: 192.0.2.123
+            authentication_key_id: 1
+            vpn_id: 0
+            version: 4
+            prefer: true
+            source_interface: GigabitEthernet1
+            optional: false

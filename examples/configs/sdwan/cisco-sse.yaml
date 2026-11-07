@@ -1,0 +1,19 @@
+# Unattached profile. Live deployment and forwarding behavior remain unqualified.
+sdwan:
+  feature_profiles:
+    sse_profiles:
+      - name: CVK-SSE-PROFILE
+        cisco:
+          name: CVK-CISCO-SSE
+          context_sharing_for_sgt: false
+          context_sharing_for_vpn: false
+          region: us-east
+          tracker_source_ip: 192.0.2.10
+          interfaces:
+            - interface_name: ipsec1
+              tunnel_source_interface: GigabitEthernet1
+              shutdown: true
+          trackers:
+            - name: CVK-SSE-TRACKER
+              endpoint_api_url: http://example.com/health
+              interval: 60

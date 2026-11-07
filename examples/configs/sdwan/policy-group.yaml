@@ -1,0 +1,11 @@
+sdwan:
+  feature_profiles:
+    application_priority_profiles:
+      - name: CVK-POLICY-GROUP-APP-PROFILE
+    sse_profiles:
+      - name: CVK-POLICY-GROUP-SSE-PROFILE
+  policy_groups:
+    - name: CVK-POLICY-GROUP
+      description: Managed by CVK
+      application_priority: CVK-POLICY-GROUP-APP-PROFILE
+      sse: CVK-POLICY-GROUP-SSE-PROFILE

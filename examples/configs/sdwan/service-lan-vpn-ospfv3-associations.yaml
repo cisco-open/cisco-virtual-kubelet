@@ -1,0 +1,27 @@
+sdwan:
+  feature_profiles:
+    service_profiles:
+      - name: CVK-SERVICE-VPN-OSPFV3-PROFILE
+        ospfv3_ipv4_features:
+          - name: CVK-SERVICE-VPN-OSPFV3-V4
+            router_id: 192.0.2.8
+            areas:
+              - number: 0
+                interfaces:
+                  - name: GigabitEthernet9
+                    cost: 20
+        ospfv3_ipv6_features:
+          - name: CVK-SERVICE-VPN-OSPFV3-V6
+            router_id: 192.0.2.9
+            areas:
+              - number: 0
+                interfaces:
+                  - name: GigabitEthernet10
+                    cost: 30
+        lan_vpns:
+          - name: CVK-SERVICE-VPN-OSPFV3-V4-VPN
+            vpn_id: 116
+            ospfv3_ipv4: CVK-SERVICE-VPN-OSPFV3-V4
+          - name: CVK-SERVICE-VPN-OSPFV3-V6-VPN
+            vpn_id: 117
+            ospfv3_ipv6: CVK-SERVICE-VPN-OSPFV3-V6

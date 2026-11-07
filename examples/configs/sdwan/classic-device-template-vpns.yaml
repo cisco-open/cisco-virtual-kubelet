@@ -1,0 +1,86 @@
+sdwan:
+  edge_feature_templates:
+    system_templates:
+      - name: CVK-VPN-DEVICE-SYSTEM
+        description: CVK isolated VPN device system
+        device_types: [C8000V]
+        hostname_variable: cvkHostname
+        system_ip_variable: cvkSystemIP
+        site_id_variable: cvkSiteID
+    logging_templates:
+      - name: CVK-VPN-DEVICE-LOGGING
+        description: CVK isolated VPN device logging
+        device_types: [C8000V]
+        disk_logging: true
+        log_rotations: 5
+        max_size: 10
+    ntp_templates:
+      - name: CVK-VPN-DEVICE-NTP
+        description: CVK isolated VPN device NTP
+        device_types: [C8000V]
+        master: false
+        servers:
+          - hostname_ip: 192.0.2.123
+            vpn_id: 0
+            version: 4
+            prefer: true
+            optional: false
+    vpn_templates:
+      - name: CVK-VPN-DEVICE-TRANSPORT
+        description: CVK isolated transport VPN
+        device_types: [C8000V]
+        vpn_id: 0
+      - name: CVK-VPN-DEVICE-MANAGEMENT
+        description: CVK isolated management VPN
+        device_types: [C8000V]
+        vpn_id: 512
+      - name: CVK-VPN-DEVICE-SERVICE
+        description: CVK isolated service VPN
+        device_types: [C8000V]
+        vpn_id: 10
+    ethernet_interface_templates:
+      - name: CVK-VPN-DEVICE-WAN-ETHERNET
+        description: CVK isolated WAN Ethernet
+        device_types: [C8000V]
+        interface_name: GigabitEthernet1
+        ipv4_address: 198.51.100.1/24
+        shutdown: true
+      - name: CVK-VPN-DEVICE-MGMT-ETHERNET
+        description: CVK isolated management Ethernet
+        device_types: [C8000V]
+        interface_name: GigabitEthernet2
+        ipv4_address: 192.0.2.1/24
+        shutdown: true
+      - name: CVK-VPN-DEVICE-LAN-ETHERNET
+        description: CVK isolated LAN Ethernet
+        device_types: [C8000V]
+        interface_name: GigabitEthernet3
+        ipv4_address: 203.0.113.1/24
+        shutdown: true
+    dhcp_server_templates:
+      - name: CVK-VPN-DEVICE-DHCP
+        description: CVK isolated service DHCP
+        device_types: [C8000V]
+        address_pool: 203.0.113.0/24
+        default_gateway: 203.0.113.1
+        lease_time: 86400
+  edge_device_templates:
+    - name: CVK-VPN-DEVICE-TEMPLATE
+      description: CVK isolated multi-VPN device template
+      device_model: C8000V
+      system_template: CVK-VPN-DEVICE-SYSTEM
+      logging_template: CVK-VPN-DEVICE-LOGGING
+      ntp_template: CVK-VPN-DEVICE-NTP
+      vpn_0_template:
+        name: CVK-VPN-DEVICE-TRANSPORT
+        ethernet_interface_templates:
+          - name: CVK-VPN-DEVICE-WAN-ETHERNET
+      vpn_512_template:
+        name: CVK-VPN-DEVICE-MANAGEMENT
+        ethernet_interface_templates:
+          - name: CVK-VPN-DEVICE-MGMT-ETHERNET
+      vpn_service_templates:
+        - name: CVK-VPN-DEVICE-SERVICE
+          ethernet_interface_templates:
+            - name: CVK-VPN-DEVICE-LAN-ETHERNET
+              dhcp_server_template: CVK-VPN-DEVICE-DHCP

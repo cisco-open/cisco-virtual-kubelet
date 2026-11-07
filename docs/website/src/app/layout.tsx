@@ -27,9 +27,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Cisco Virtual Kubelet — Network Workloads and Topology-Aware Upgrades",
+  title: "Cisco Virtual Kubelet — Bring Kubernetes to Cisco Network Devices",
   description:
-    "Native Kubernetes app hosting and configuration on Cisco devices, with opt-in topology-aware IOS-XE rollouts, secure gNOI and topology-scoped image selection. NX-OS app hosting and configuration remain Beta.",
+    "A Virtual Kubelet provider for app-hosted workloads, declarative configuration and opt-in topology-aware IOS-XE application deployment. Use native Kubernetes placement, scheduling, observability and security constructs.",
   keywords: [
     "Cisco",
     "Virtual Kubelet",
@@ -48,7 +48,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Cisco Virtual Kubelet",
     description:
-      "Place app-hosted workloads and coordinate opt-in topology-aware IOS-XE software upgrades using native Kubernetes workflows and secure gNOI.",
+      "A Virtual Kubelet provider for app-hosted workloads, declarative configuration and opt-in topology-aware IOS-XE application deployment. Use native Kubernetes placement, scheduling, observability and security constructs.",
     type: "website",
   },
 };

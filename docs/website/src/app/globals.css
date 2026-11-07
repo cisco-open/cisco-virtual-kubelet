@@ -27,7 +27,7 @@
   --surface-light: #1a2332;
   --surface-lighter: #243044;
   --border: #1e2d3d;
-  --text-muted: #8896aa;
+  --text-muted: #9aa9bd;
   --success: #34d399;
   --gradient-start: #00bceb;
   --gradient-end: #6b5ce7;
@@ -180,4 +180,33 @@ body {
 .arch-connector {
   width: 2px;
   background: linear-gradient(180deg, var(--primary), var(--accent));
+}
+
+/* Clear keyboard navigation and a calm alternative to decorative motion. */
+:where(a, button, [tabindex]):focus-visible {
+  outline: 2px solid var(--primary-light);
+  outline-offset: 5px;
+}
+.skip-link {
+  position: fixed;
+  top: 0.75rem;
+  left: 1rem;
+  z-index: 100;
+  padding: 0.75rem 1rem;
+  border-radius: 0.5rem;
+  background: var(--primary);
+  color: var(--background);
+  transform: translateY(-200%);
+}
+.skip-link:focus { transform: translateY(0); }
+.foundation-visual {
+  background-image: radial-gradient(ellipse at 50% 40%, rgba(107, 92, 231, 0.08), transparent 75%), radial-gradient(rgba(136, 150, 170, 0.12) 1px, transparent 1px);
+  background-size: auto, 20px 20px;
+}
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after {
+    animation: none !important;
+    transition: none !important;
+  }
 }
