@@ -1,0 +1,21 @@
+{
+  "collectedAtUTC": "2026-11-05T20:34:32.077887+00:00",
+  "commands": [
+    {
+      "command": "show app-hosting list",
+      "output": "show app-hosting list\nApp id                                   State\n---------------------------------------------------------\niris                                     RUNNING\nc9ktest                                  DEPLOYED\n\nEdge-9K"
+    },
+    {
+      "command": "show app-hosting infra",
+      "output": "show app-hosting infra\nIOX version: 2.13.0\nApp signature verification: disabled\nCAF Health: Stable\nInternal working directory: /vol/usb1/iox\n\nApplication Interface Mapping\nAppGigabitEthernet Port #  Interface Name                 Port Type            Bandwidth  \n           1               AppGigabitEthernet1/0/1        KR Port - Internal   1G\n        \n\nCPU:\n  Quota: 25(Percentage) \n  Available: 23(Percentage)\n  Quota: 7400(Units)\n  Available: 7000(Units)\n\nEdge-9K"
+    },
+    {
+      "command": "show ip http server status | include trustpoint",
+      "output": "show ip http server status | include trustpoint\nHTTP secure server trustpoint: cvk-gnoi-20260904\nHTTP secure server peer validation trustpoint: \nEdge-9K"
+    },
+    {
+      "command": "show running-config | include ^ip http client secure-trustpoint",
+      "output": "show running-config | include ^ip http client secure-trustpoint\nip http client secure-trustpoint IRIS\nEdge-9K"
+    }
+  ]
+}

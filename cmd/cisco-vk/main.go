@@ -34,6 +34,7 @@ Available subcommands:
 	run                Start the Virtual Kubelet provider
 	manager            Start the CRD controller manager
 	controller-worker  Run one isolated network-controller adapter
+	artifact           Preflight optional Verified application artifacts
 	version            Print build provenance`,
 }
 
@@ -47,6 +48,7 @@ func init() {
 	rootCmd.AddCommand(runCmd)
 	rootCmd.AddCommand(managerCmd)
 	rootCmd.AddCommand(controllerWorkerCmd)
+	rootCmd.AddCommand(newArtifactCommand())
 }
 
 func main() {

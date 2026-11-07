@@ -1,0 +1,26 @@
+{
+  "passed": true,
+  "startedAtUTC": "2026-11-03T08:49:20.633723+00:00",
+  "finishedAtUTC": "2026-11-03T09:21:52.308529+00:00",
+  "operation": "activate",
+  "podUID": "1d31f788-3bae-4871-9593-8903667a6db1",
+  "appID": "cvk0000_1d31f7883bae487195938903667a6db1",
+  "journalUID": "48532744-e5b4-4310-947c-185e680c398f",
+  "oldWorkerUID": "637e7e53-1541-4734-82e6-4df52ef1fa3e",
+  "newWorkerUID": "fb00b681-4a62-4988-81ab-e48a57181241",
+  "expiryUTC": "2026-11-03T09:20:21.191735+00:00",
+  "fencedObservationCount": 113,
+  "forwardedLifecycleCounts": {
+    "copy": 1,
+    "configuration": 1,
+    "install": 1,
+    "activate": 1,
+    "start": 1
+  },
+  "samePodAppJournalRetained": true,
+  "normalGuardedRecovery": true,
+  "ready": true,
+  "httpRelease": "A",
+  "topLevelStatusCleared": true,
+  "leaseManuallyModified": false
+}

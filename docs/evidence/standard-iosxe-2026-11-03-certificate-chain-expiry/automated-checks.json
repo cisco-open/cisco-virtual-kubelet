@@ -1,0 +1,52 @@
+{
+  "physicalCharacterizationComplete": true,
+  "expiryRejectionQualified": true,
+  "caseOutcomes": [
+    {
+      "case": "root",
+      "classification": "expired-ca-rejected",
+      "rejectionQualified": true,
+      "appHealthyUnderExpiredCA": false,
+      "recoveryRequired": true,
+      "samePodRetained": true,
+      "freshDeliveryAfterReplacementPassed": true
+    },
+    {
+      "case": "intermediate",
+      "classification": "expired-ca-rejected",
+      "rejectionQualified": true,
+      "appHealthyUnderExpiredCA": false,
+      "recoveryRequired": true,
+      "samePodRetained": true,
+      "freshDeliveryAfterReplacementPassed": true
+    }
+  ],
+  "independentTLSControls": "passed; code 10 at both expired-CA negative phases",
+  "offlinePublicCertificateControls": "seven passed; expired CA isolated at depth 1",
+  "nativeClockControls": "nine passed; NTP measured; no time configuration changes",
+  "nativeCAFingerprints": "two initial roots, naturally expired stored root and renewed root checked",
+  "rootDirectOverwriteUnsupported": true,
+  "rootTrustpointRecreatedForReplacement": true,
+  "rootHarnessStopAndContinuationPreserved": true,
+  "rootNegativePhaseReinjected": false,
+  "intermediateImportedAsTrustAnchor": false,
+  "separatePositiveIntermediateAvoidsAlternateValidPath": true,
+  "nativeTLSResumptionObserved": false,
+  "independentEvidenceConsistencyAssessment": "passed",
+  "canonicalMutationLeaseRecreated": false,
+  "manualLeaseOrJournalChanges": false,
+  "ephemeralPrivateKeysRemaining": 0,
+  "labBaselineRestored": true,
+  "productionSourceChanged": false,
+  "goRaceTestsRerun": false,
+  "priorGoRaceResults": "../verified-iosxe-2026-11-03-replies/test-results.json",
+  "historicalEvidenceUnchanged": true,
+  "strictDocumentationBuild": {
+    "command": ".venv/bin/mkdocs build --strict",
+    "passed": true
+  },
+  "whitespace": {
+    "command": "git diff --check",
+    "passed": true
+  }
+}

@@ -1,0 +1,5 @@
+import pathlib,json,tarfile,sys
+R=pathlib.Path('/tmp/cvk-intrefresh-20261105');assert json.loads((R/'qualification-result.json').read_text())['executionComplete'];assert json.loads((R/'final-cleanup.json').read_text())['passed']
+with tarfile.open(fileobj=sys.stdout.buffer,mode='w|') as t:
+ for p in sorted(R.iterdir()):
+  if p.is_file() and (p.suffix in ['.json','.jsonl','.yaml','.crt','.crl','.pem'] or p.name=='qualification.log'):t.add(p,arcname=p.name)

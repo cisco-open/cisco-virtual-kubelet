@@ -1,0 +1,110 @@
+[
+  {
+    "kind": "tls-established",
+    "certMode": "original",
+    "client": "10.1.1.1",
+    "clientPort": 26413,
+    "sessionReused": false,
+    "tlsVersion": "TLSv1.3",
+    "atUTC": "2026-11-05T06:39:53.852301+00:00"
+  },
+  {
+    "kind": "crl-served",
+    "crl": "issuer",
+    "client": "192.168.129.2",
+    "clientPort": 19530,
+    "path": "/issuer.crl",
+    "status": 200,
+    "sha256": "922fa380b7a436ce3149a0794e49a7ee25f7f091448716f47ff5256c40cfa2a5",
+    "bytes": 435,
+    "version": 1,
+    "revokedSerialsHex": [],
+    "atUTC": "2026-11-05T06:39:53.854042+00:00"
+  },
+  {
+    "kind": "crl-served",
+    "crl": "intermediate",
+    "client": "192.168.129.2",
+    "clientPort": 21049,
+    "path": "/intermediate.crl",
+    "status": 200,
+    "sha256": "24a62783fc70550bfc86c3423c2727c1f323438276b9245b5e91e22b1e0257fc",
+    "bytes": 443,
+    "version": 1,
+    "revokedSerialsHex": [],
+    "atUTC": "2026-11-05T06:39:53.859485+00:00"
+  },
+  {
+    "kind": "http-request",
+    "phase": "valid",
+    "certMode": "original",
+    "client": "10.1.1.1",
+    "clientPort": 26413,
+    "path": "/valid.tar",
+    "status": 200,
+    "package": true,
+    "atUTC": "2026-11-05T06:39:53.899988+00:00"
+  },
+  {
+    "kind": "package-sent",
+    "phase": "valid",
+    "certMode": "original",
+    "client": "10.1.1.1",
+    "bytes": 5959680,
+    "sha256": "ad10656af953e9057abe76a417ef4015610392f07f32d4f2d186aed027ef3074",
+    "atUTC": "2026-11-05T06:39:56.974975+00:00"
+  },
+  {
+    "kind": "tls-established",
+    "certMode": "original",
+    "client": "10.1.1.1",
+    "clientPort": 47888,
+    "sessionReused": false,
+    "tlsVersion": "TLSv1.3",
+    "atUTC": "2026-11-05T06:42:13.573019+00:00"
+  },
+  {
+    "kind": "http-request",
+    "phase": "cached",
+    "certMode": "original",
+    "client": "10.1.1.1",
+    "clientPort": 47888,
+    "path": "/cached.tar",
+    "status": 200,
+    "package": true,
+    "atUTC": "2026-11-05T06:42:13.615194+00:00"
+  },
+  {
+    "kind": "package-sent",
+    "phase": "cached",
+    "certMode": "original",
+    "client": "10.1.1.1",
+    "bytes": 5959680,
+    "sha256": "b1062027df214c2ea4b95efc84000948a8b50aebd323f05733bb4ea2b1fd310a",
+    "atUTC": "2026-11-05T06:42:16.641163+00:00"
+  },
+  {
+    "kind": "tls-established",
+    "certMode": "original",
+    "client": "10.1.1.1",
+    "clientPort": 25684,
+    "sessionReused": false,
+    "tlsVersion": "TLSv1.3",
+    "atUTC": "2026-11-05T06:49:57.019220+00:00"
+  },
+  {
+    "kind": "crl-served",
+    "crl": "issuer",
+    "client": "192.168.129.2",
+    "clientPort": 19302,
+    "path": "/issuer.crl",
+    "status": 200,
+    "sha256": "7ed5e8f4e68e49595c07805243c64a04ee6da00a649753284f2190250123c12a",
+    "bytes": 490,
+    "version": 2,
+    "revokedSerialsHex": [
+      "2f2f8ee2e9c17c3c502f6cb3b13ab373f892c0f9"
+    ],
+    "atUTC": "2026-11-05T06:49:57.020857+00:00"
+  }
+]

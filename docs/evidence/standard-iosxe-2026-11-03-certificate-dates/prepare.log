@@ -1,0 +1,5 @@
+Traceback (most recent call last):
+  File "/tmp/cvk-stddate-20261103/prepare_device.py", line 22, in <module>
+    else:raise RuntimeError('Authenticated direct RESTCONF unavailable')
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+RuntimeError: Authenticated direct RESTCONF unavailable

@@ -1,0 +1,14 @@
+import pathlib,hashlib,subprocess,json,datetime
+root=pathlib.Path('/Users/johalley/Git/cisco-virtual-kubelet');r=pathlib.Path('/private/tmp/cvk-crlrefresh-20261104');candidate=json.loads((r/'candidate.json').read_text());names=subprocess.check_output(['git','ls-files','-co','--exclude-standard','-z'],cwd=root).decode().split('\0');names=sorted({n for n in names if n and (n.startswith(('api/','cmd/','internal/','charts/')) or n in ('go.mod','go.sum','Dockerfile','Makefile')) and (root/n).is_file()});h=hashlib.sha256()
+for n in names:h.update(n.encode()+b'\0'+hashlib.sha256((root/n).read_bytes()).hexdigest().encode()+b'\n')
+assert h.hexdigest()==candidate['dirtySourceSHA256'] and len(names)==candidate['sourceFiles']
+hist=[]
+for d in sorted((root/'docs/evidence').glob('*')):
+ if not d.is_dir() or d.name=='standard-iosxe-2026-11-04-crl-refresh':continue
+ p=d/'SHA256SUMS'
+ if not p.exists():continue
+ count=0
+ for line in p.read_text().splitlines():
+  digest,name=line.split('  ',1);assert hashlib.sha256((d/name).read_bytes()).hexdigest()==digest,(d/name);count+=1
+ hist.append({'directory':d.name,'verifiedFiles':count})
+report={'atUTC':datetime.datetime.now(datetime.timezone.utc).isoformat(),'productionSourceUnchanged':True,'dirtySourceSHA256':h.hexdigest(),'sourceFiles':len(names),'historicalEvidenceUnchanged':True,'historicalManifests':hist};(r/'static-checks.json').write_text(json.dumps(report,indent=2)+'\n');print(json.dumps(report))

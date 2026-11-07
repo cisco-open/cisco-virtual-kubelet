@@ -1,0 +1,143 @@
+{
+  "startedAtUTC": "2026-11-02T22:22:32.845597+00:00",
+  "ownedPaths": [
+    "flash:cvk-0000000020261102-ed8c257297a526229b154cbaabe1c466de239d4c011e4edfd25c7cb440fa071c.tar",
+    "flash:cvk-3869409d78f8ce16-ed8c257297a526229b154cbaabe1c466de239d4c011e4edfd25c7cb440fa071c.tar",
+    "flash:cvk-3afc7f8a10350d9f-ed8c257297a526229b154cbaabe1c466de239d4c011e4edfd25c7cb440fa071c.tar",
+    "flash:cvk-63332312914165f0-febf34ebd664bbac03002f67578fbdf5b54c0358d24baa83b6abdb201266892f.tar",
+    "flash:cvk-6ba4b96f55a11f2c-ed8c257297a526229b154cbaabe1c466de239d4c011e4edfd25c7cb440fa071c.tar",
+    "flash:cvk-c1f764739cd16b1b-ed8c257297a526229b154cbaabe1c466de239d4c011e4edfd25c7cb440fa071c.tar",
+    "flash:cvk-d2ae58566b07d1b7-ed8c257297a526229b154cbaabe1c466de239d4c011e4edfd25c7cb440fa071c.tar"
+  ],
+  "retainedFailedJournalPhase": "staging",
+  "safetyLeaseManuallyModified": false,
+  "commands": [
+    {
+      "command": "show app-hosting list",
+      "output": "show app-hosting list\nApp id                                   State\n---------------------------------------------------------\niris                                     RUNNING\nc9ktest                                  DEPLOYED\n\nEdge-9K"
+    },
+    {
+      "command": "dir flash:cvk-0000000020261102-ed8c257297a526229b154cbaabe1c466de239d4c011e4edfd25c7cb440fa071c.tar",
+      "output": "dir flash:cvk-0000000020261102-ed8c257297a526229b154cbaabe1c466de239d4c011e4edfd25c7cb440fa071c.tar\n%Error opening flash:/cvk-0000000020261102-ed8c257297a526229b154cbaabe1c466de239d4c011e4edfd25c7cb440fa071c.tar (No such file or directory)\nEdge-9K"
+    },
+    {
+      "command": "dir flash:cvk-3869409d78f8ce16-ed8c257297a526229b154cbaabe1c466de239d4c011e4edfd25c7cb440fa071c.tar",
+      "output": "dir flash:cvk-3869409d78f8ce16-ed8c257297a526229b154cbaabe1c466de239d4c011e4edfd25c7cb440fa071c.tar\n%Error opening flash:/cvk-3869409d78f8ce16-ed8c257297a526229b154cbaabe1c466de239d4c011e4edfd25c7cb440fa071c.tar (No such file or directory)\nEdge-9K"
+    },
+    {
+      "command": "dir flash:cvk-3afc7f8a10350d9f-ed8c257297a526229b154cbaabe1c466de239d4c011e4edfd25c7cb440fa071c.tar",
+      "output": "dir flash:cvk-3afc7f8a10350d9f-ed8c257297a526229b154cbaabe1c466de239d4c011e4edfd25c7cb440fa071c.tar\n%Error opening flash:/cvk-3afc7f8a10350d9f-ed8c257297a526229b154cbaabe1c466de239d4c011e4edfd25c7cb440fa071c.tar (No such file or directory)\nEdge-9K"
+    },
+    {
+      "command": "dir flash:cvk-63332312914165f0-febf34ebd664bbac03002f67578fbdf5b54c0358d24baa83b6abdb201266892f.tar",
+      "output": "dir flash:cvk-63332312914165f0-febf34ebd664bbac03002f67578fbdf5b54c0358d24baa83b6abdb201266892f.tar\n%Error opening flash:/cvk-63332312914165f0-febf34ebd664bbac03002f67578fbdf5b54c0358d24baa83b6abdb201266892f.tar (No such file or directory)\nEdge-9K"
+    },
+    {
+      "command": "dir flash:cvk-6ba4b96f55a11f2c-ed8c257297a526229b154cbaabe1c466de239d4c011e4edfd25c7cb440fa071c.tar",
+      "output": "dir flash:cvk-6ba4b96f55a11f2c-ed8c257297a526229b154cbaabe1c466de239d4c011e4edfd25c7cb440fa071c.tar\n%Error opening flash:/cvk-6ba4b96f55a11f2c-ed8c257297a526229b154cbaabe1c466de239d4c011e4edfd25c7cb440fa071c.tar (No such file or directory)\nEdge-9K"
+    },
+    {
+      "command": "dir flash:cvk-c1f764739cd16b1b-ed8c257297a526229b154cbaabe1c466de239d4c011e4edfd25c7cb440fa071c.tar",
+      "output": "dir flash:cvk-c1f764739cd16b1b-ed8c257297a526229b154cbaabe1c466de239d4c011e4edfd25c7cb440fa071c.tar\n%Error opening flash:/cvk-c1f764739cd16b1b-ed8c257297a526229b154cbaabe1c466de239d4c011e4edfd25c7cb440fa071c.tar (No such file or directory)\nEdge-9K"
+    },
+    {
+      "command": "dir flash:cvk-d2ae58566b07d1b7-ed8c257297a526229b154cbaabe1c466de239d4c011e4edfd25c7cb440fa071c.tar",
+      "output": "dir flash:cvk-d2ae58566b07d1b7-ed8c257297a526229b154cbaabe1c466de239d4c011e4edfd25c7cb440fa071c.tar\n%Error opening flash:/cvk-d2ae58566b07d1b7-ed8c257297a526229b154cbaabe1c466de239d4c011e4edfd25c7cb440fa071c.tar (No such file or directory)\nEdge-9K"
+    },
+    {
+      "command": "configure terminal",
+      "output": "configure terminal\nEnter configuration commands, one per line.  End with CNTL/Z.\nEdge-9K(config)"
+    },
+    {
+      "command": "ip http secure-trustpoint TP-self-signed-806566997",
+      "output": "ip http secure-trustpoint TP-self-signed-806566997\nEdge-9K(config)"
+    },
+    {
+      "command": "no crypto pki trustpoint CVK-QUAL-20261102",
+      "output": "no crypto pki trustpoint CVK-QUAL-20261102\n% Can't find policy CVK-QUAL-20261102\n\nEdge-9K(config)"
+    },
+    {
+      "command": "end",
+      "output": "end\nEdge-9K"
+    },
+    {
+      "command": "show app-hosting list",
+      "output": "show app-hosting list\nApp id                                   State\n---------------------------------------------------------\niris                                     RUNNING\nc9ktest                                  DEPLOYED\n\nEdge-9K"
+    },
+    {
+      "command": "show app-hosting infra",
+      "output": "show app-hosting infra\nIOX version: 2.13.0\nApp signature verification: disabled\nCAF Health: Stable\nInternal working directory: /vol/usb1/iox\n\nApplication Interface Mapping\nAppGigabitEthernet Port #  Interface Name                 Port Type            Bandwidth  \n           1               AppGigabitEthernet1/0/1        KR Port - Internal   1G\n        \n\nCPU:\n  Quota: 25(Percentage) \n  Available: 23(Percentage)\n  Quota: 7400(Units)\n  Available: 7000(Units)\n\nEdge-9K"
+    },
+    {
+      "command": "show ip http server status | include trustpoint",
+      "output": "show ip http server status | include trustpoint\nHTTP secure server trustpoint: TP-self-signed-806566997\nHTTP secure server peer validation trustpoint: \nEdge-9K"
+    },
+    {
+      "command": "show running-config | include ^ip http client secure-trustpoint|^ip http secure-trustpoint|^crypto pki trustpoint CVK-QUAL-20261102",
+      "output": "show running-config | include ^ip http client secure-trustpoint|^ip http secure-trustpoint|^crypto pki trustpoint CVK-QUAL-20261102\nip http secure-trustpoint TP-self-signed-806566997\nip http client secure-trustpoint IRIS\nEdge-9K"
+    },
+    {
+      "command": "dir flash:cvk-0000000020261102-ed8c257297a526229b154cbaabe1c466de239d4c011e4edfd25c7cb440fa071c.tar",
+      "output": "dir flash:cvk-0000000020261102-ed8c257297a526229b154cbaabe1c466de239d4c011e4edfd25c7cb440fa071c.tar\n%Error opening flash:/cvk-0000000020261102-ed8c257297a526229b154cbaabe1c466de239d4c011e4edfd25c7cb440fa071c.tar (No such file or directory)\nEdge-9K"
+    },
+    {
+      "command": "dir flash:cvk-3869409d78f8ce16-ed8c257297a526229b154cbaabe1c466de239d4c011e4edfd25c7cb440fa071c.tar",
+      "output": "dir flash:cvk-3869409d78f8ce16-ed8c257297a526229b154cbaabe1c466de239d4c011e4edfd25c7cb440fa071c.tar\n%Error opening flash:/cvk-3869409d78f8ce16-ed8c257297a526229b154cbaabe1c466de239d4c011e4edfd25c7cb440fa071c.tar (No such file or directory)\nEdge-9K"
+    },
+    {
+      "command": "dir flash:cvk-3afc7f8a10350d9f-ed8c257297a526229b154cbaabe1c466de239d4c011e4edfd25c7cb440fa071c.tar",
+      "output": "dir flash:cvk-3afc7f8a10350d9f-ed8c257297a526229b154cbaabe1c466de239d4c011e4edfd25c7cb440fa071c.tar\n%Error opening flash:/cvk-3afc7f8a10350d9f-ed8c257297a526229b154cbaabe1c466de239d4c011e4edfd25c7cb440fa071c.tar (No such file or directory)\nEdge-9K"
+    },
+    {
+      "command": "dir flash:cvk-63332312914165f0-febf34ebd664bbac03002f67578fbdf5b54c0358d24baa83b6abdb201266892f.tar",
+      "output": "dir flash:cvk-63332312914165f0-febf34ebd664bbac03002f67578fbdf5b54c0358d24baa83b6abdb201266892f.tar\n%Error opening flash:/cvk-63332312914165f0-febf34ebd664bbac03002f67578fbdf5b54c0358d24baa83b6abdb201266892f.tar (No such file or directory)\nEdge-9K"
+    },
+    {
+      "command": "dir flash:cvk-6ba4b96f55a11f2c-ed8c257297a526229b154cbaabe1c466de239d4c011e4edfd25c7cb440fa071c.tar",
+      "output": "dir flash:cvk-6ba4b96f55a11f2c-ed8c257297a526229b154cbaabe1c466de239d4c011e4edfd25c7cb440fa071c.tar\n%Error opening flash:/cvk-6ba4b96f55a11f2c-ed8c257297a526229b154cbaabe1c466de239d4c011e4edfd25c7cb440fa071c.tar (No such file or directory)\nEdge-9K"
+    },
+    {
+      "command": "dir flash:cvk-c1f764739cd16b1b-ed8c257297a526229b154cbaabe1c466de239d4c011e4edfd25c7cb440fa071c.tar",
+      "output": "dir flash:cvk-c1f764739cd16b1b-ed8c257297a526229b154cbaabe1c466de239d4c011e4edfd25c7cb440fa071c.tar\n%Error opening flash:/cvk-c1f764739cd16b1b-ed8c257297a526229b154cbaabe1c466de239d4c011e4edfd25c7cb440fa071c.tar (No such file or directory)\nEdge-9K"
+    },
+    {
+      "command": "dir flash:cvk-d2ae58566b07d1b7-ed8c257297a526229b154cbaabe1c466de239d4c011e4edfd25c7cb440fa071c.tar",
+      "output": "dir flash:cvk-d2ae58566b07d1b7-ed8c257297a526229b154cbaabe1c466de239d4c011e4edfd25c7cb440fa071c.tar\n%Error opening flash:/cvk-d2ae58566b07d1b7-ed8c257297a526229b154cbaabe1c466de239d4c011e4edfd25c7cb440fa071c.tar (No such file or directory)\nEdge-9K"
+    }
+  ],
+  "containers": [
+    {
+      "name": "cvk-verified-k3s-20261102b",
+      "id": "ae2bb2827e3c8235fac432429f7f15126ef1a8ec7370fb2d267f90dc25f65862",
+      "before": "exited",
+      "removed": true
+    },
+    {
+      "name": "cvk-verified-k3s-20261102",
+      "id": "14dab56ae0c533e5f8355f10bece3e3180a358962ade350cd9e25d5d301ae8bb",
+      "before": "exited",
+      "removed": true
+    }
+  ],
+  "services": [
+    {
+      "name": "store",
+      "pid": 147503,
+      "stopped": true
+    },
+    {
+      "name": "fault-store",
+      "pid": 155772,
+      "stopped": true
+    }
+  ],
+  "sharedHostNode": {
+    "name": "cisco",
+    "ready": true,
+    "kubeletVersion": "v1.34.5+k3s1"
+  },
+  "restorationConfigDelta": "Original HTTPS certificate restored through explicit ip http secure-trustpoint TP-self-signed-806566997. With no explicit selector, IOS-XE now chooses existing cvk-gnoi-20260904; no existing certificate/trustpoint was removed to change that preference.",
+  "finishedAtUTC": "2026-11-02T22:22:39.450973+00:00",
+  "passed": true,
+  "retention": "Private isolated-cluster data, original archives and diagnostic captures retained under the run directory; no shared cluster or registry was removed."
+}

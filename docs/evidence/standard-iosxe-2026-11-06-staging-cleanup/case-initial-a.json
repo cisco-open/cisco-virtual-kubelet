@@ -1,0 +1,11 @@
+{
+  "label": "initial-a",
+  "phase": "a",
+  "preloaded": false,
+  "release": "STD-GC-A-20261106-a85d9b305139",
+  "podUID": "c5263495-106e-4a95-b8e3-ca83815a6a8b",
+  "revision": "2",
+  "deploymentUID": "59a1e5ef-afab-4e89-9ec7-bb2a4d6e96d5",
+  "generation": 2,
+  "atUTC": "2026-11-06T10:34:05.276059+00:00"
+}

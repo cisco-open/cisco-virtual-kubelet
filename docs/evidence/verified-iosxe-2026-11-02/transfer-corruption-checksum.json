@@ -1,0 +1,37 @@
+{
+  "productionVerifier": {
+    "error": "on-device application package SHA512 mismatch or unsupported verification response",
+    "expectedBytes": 5963776,
+    "expectedSHA512": "e50300677be5f0827b4a7fedc9d317d684a96627f4ea2b3c9a86836e753c671179d85a2bce4360277b7157b684901858402451f85540862d415a8776f1762a2d",
+    "hostKeyPinned": true,
+    "path": "flash:cvk-3869409d78f8ce16-ed8c257297a526229b154cbaabe1c466de239d4c011e4edfd25c7cb440fa071c.tar",
+    "success": false
+  },
+  "nativeCommands": {
+    "collectedAtUTC": "2026-11-02T22:19:25.592619+00:00",
+    "commands": [
+      {
+        "command": "dir flash:cvk-3869409d78f8ce16-ed8c257297a526229b154cbaabe1c466de239d4c011e4edfd25c7cb440fa071c.tar",
+        "output": "dir flash:cvk-3869409d78f8ce16-ed8c257297a526229b154cbaabe1c466de239d4c011e4edfd25c7cb440fa071c.tar\nDirectory of flash:/cvk-3869409d78f8ce16-ed8c257297a526229b154cbaabe1c466de239d4c011e4edfd25c7cb440fa071c.tar\n\n254048  -rw-          5963776   Nov 2 2026 22:19:19 +00:00  cvk-3869409d78f8ce16-ed8c257297a526229b154cbaabe1c466de239d4c011e4edfd25c7cb440fa071c.tar\n\n11353194496 bytes total (5356683264 bytes free)\nEdge-9K"
+      },
+      {
+        "command": "verify /sha512 flash:cvk-3869409d78f8ce16-ed8c257297a526229b154cbaabe1c466de239d4c011e4edfd25c7cb440fa071c.tar",
+        "output": "verify /sha512 flash:cvk-3869409d78f8ce16-ed8c257297a526229b154cbaabe1c466de239d4c011e4edfd25c7cb440fa071c.tar\n...........................................................................................Done!\nverify /sha512 (flash:cvk-3869409d78f8ce16-ed8c257297a526229b154cbaabe1c466de239d4c011e4edfd25c7cb440fa071c.tar) = 32468461995f9a707eba42a7531184d46abd905a35a72a3a48273a76506c49d824c3e68286ca9e0cef1d8a8250df3696a373f5e005fed28a25f0347f96f60c11\n\n\nEdge-9K"
+      }
+    ]
+  },
+  "assertions": {
+    "passed": true,
+    "case": "same-size device-only transfer corruption",
+    "startedAtUTC": "2026-11-02T22:18:32.893779+00:00",
+    "archiveSize": 5963776,
+    "expectedSHA512": "e50300677be5f0827b4a7fedc9d317d684a96627f4ea2b3c9a86836e753c671179d85a2bce4360277b7157b684901858402451f85540862d415a8776f1762a2d",
+    "deviceCorruptSHA512": "32468461995f9a707eba42a7531184d46abd905a35a72a3a48273a76506c49d824c3e68286ca9e0cef1d8a8250df3696a373f5e005fed28a25f0347f96f60c11",
+    "podNotReady": true,
+    "nativeFixtureAbsent": true,
+    "journalPhase": "staging",
+    "workerReceivedCorrectBytes": true,
+    "deviceReceivedSameSizeCorruptBytes": true,
+    "noInstallGatePassed": true
+  }
+}

@@ -1,0 +1,14 @@
+2026-11-03T05:21:26.639952+00:00 Read-only preparation hold; waiting for normal expiry 2026-11-03T05:50:49.757419+00:00
+2026-11-03T05:50:49.757542+00:00 Preparation lease expired normally; fault case may proceed
+namespace/cvk-pending-apps-20261103 unchanged
+ 
+deployment.apps/cvk-verified-fixture unchanged
+ 
+2026-11-03T05:50:50.693772+00:00 Waiting for accepted native install and suppressed reply
+2026-11-03T05:51:07.683181+00:00 Accepted install reply lost; journal installPending and native DEPLOYED; rolling worker through manager
+ciscodevice.cisco.vk/c9k-pending-20261103 patched
+Traceback (most recent call last):
+  File "/tmp/cvk-pending-20261103/qualify.py", line 54, in <module>
+    s=snap('replacement-still-fenced');pending(s,uid,juid,aid);new=s['workers'][0];assert new['uid']!=old[0]['uid'];assert s['pods'][0]['metadata']['annotations']['topology.cisco.vk/app-worker-pod-uid']==new['uid']
+                                                                                                                           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+KeyError: 'topology.cisco.vk/app-worker-pod-uid'

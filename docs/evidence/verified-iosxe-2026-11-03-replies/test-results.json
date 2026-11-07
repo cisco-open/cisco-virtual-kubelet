@@ -1,0 +1,22 @@
+{
+  "targeted-tests": {
+    "passedPackageLines": 4,
+    "failedPackageLines": 0,
+    "raceWarnings": 0,
+    "command": "go test -race ./internal/drivers/iosxe ./internal/provider ./internal/provider/maintenance ./internal/devicecoordination"
+  },
+  "full-race-tests": {
+    "passedPackageLines": 62,
+    "failedPackageLines": 0,
+    "raceWarnings": 0,
+    "command": "go test -race ./..."
+  },
+  "documentation": {
+    "command": ".venv/bin/mkdocs build --strict",
+    "passed": true
+  },
+  "whitespace": {
+    "command": "git diff --check",
+    "passed": true
+  }
+}

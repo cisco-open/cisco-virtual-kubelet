@@ -1,0 +1,98 @@
+{
+  "atUTC": "2026-11-03T18:05:05.170788+00:00",
+  "passed": true,
+  "scope": "Offline public-certificate checks with explicit OpenSSL trust/name arguments; no C9K trust/configuration change",
+  "deviceTrustChanged": false,
+  "cases": [
+    {
+      "case": "valid",
+      "command": [
+        "openssl",
+        "verify",
+        "-CAfile",
+        "/tmp/cvk-stdcert-20261103/trusted-ca.crt",
+        "-purpose",
+        "sslserver",
+        "-verify_ip",
+        "192.168.129.111",
+        "/tmp/cvk-stdcert-20261103/valid.crt"
+      ],
+      "expectedSuccess": true,
+      "exitCode": 0,
+      "stdout": "/tmp/cvk-stdcert-20261103/valid.crt: OK\n",
+      "stderr": ""
+    },
+    {
+      "case": "untrusted-leaf-valid-under-own-root",
+      "command": [
+        "openssl",
+        "verify",
+        "-CAfile",
+        "/tmp/cvk-stdcert-20261103/untrusted-ca.crt",
+        "-purpose",
+        "sslserver",
+        "-verify_ip",
+        "192.168.129.111",
+        "/tmp/cvk-stdcert-20261103/untrusted.crt"
+      ],
+      "expectedSuccess": true,
+      "exitCode": 0,
+      "stdout": "/tmp/cvk-stdcert-20261103/untrusted.crt: OK\n",
+      "stderr": ""
+    },
+    {
+      "case": "hostname-leaf-valid-for-its-own-name",
+      "command": [
+        "openssl",
+        "verify",
+        "-CAfile",
+        "/tmp/cvk-stdcert-20261103/trusted-ca.crt",
+        "-purpose",
+        "sslserver",
+        "-verify_hostname",
+        "wrong.example.invalid",
+        "/tmp/cvk-stdcert-20261103/hostname.crt"
+      ],
+      "expectedSuccess": true,
+      "exitCode": 0,
+      "stdout": "/tmp/cvk-stdcert-20261103/hostname.crt: OK\n",
+      "stderr": ""
+    },
+    {
+      "case": "untrusted-root-rejected-under-trusted-root",
+      "command": [
+        "openssl",
+        "verify",
+        "-CAfile",
+        "/tmp/cvk-stdcert-20261103/trusted-ca.crt",
+        "-purpose",
+        "sslserver",
+        "-verify_ip",
+        "192.168.129.111",
+        "/tmp/cvk-stdcert-20261103/untrusted.crt"
+      ],
+      "expectedSuccess": false,
+      "exitCode": 2,
+      "stdout": "",
+      "stderr": "CN = 192.168.129.111\nerror 20 at 0 depth lookup: unable to get local issuer certificate\nerror /tmp/cvk-stdcert-20261103/untrusted.crt: verification failed\n"
+    },
+    {
+      "case": "hostname-mismatch-rejected-under-trusted-root",
+      "command": [
+        "openssl",
+        "verify",
+        "-CAfile",
+        "/tmp/cvk-stdcert-20261103/trusted-ca.crt",
+        "-purpose",
+        "sslserver",
+        "-verify_ip",
+        "192.168.129.111",
+        "/tmp/cvk-stdcert-20261103/hostname.crt"
+      ],
+      "expectedSuccess": false,
+      "exitCode": 2,
+      "stdout": "",
+      "stderr": "CN = wrong.example.invalid\nerror 64 at 0 depth lookup: IP address mismatch\nerror /tmp/cvk-stdcert-20261103/hostname.crt: verification failed\n"
+    }
+  ]
+}

@@ -1,0 +1,117 @@
+{
+  "status": "standard-owned-staging-cleanup-qualified",
+  "executionComplete": true,
+  "passed": true,
+  "upgradeAToB": true,
+  "historyRollbackBToA": true,
+  "failedTruncatedHTTPSUpgradeBlocked": true,
+  "bothImagesPreviouslyExecuted": true,
+  "deviceImageCacheNotPruned": true,
+  "privateNativeCacheContentsInspected": false,
+  "failedUpgradeNoConfigurationRuntimeOrReady": true,
+  "rollbackAfterFailedUpgradeRespectedOriginalFence": true,
+  "retryUpgradeAfterSourceRepair": true,
+  "finalHistoryRollbackA": true,
+  "deploymentUID": "59a1e5ef-afab-4e89-9ec7-bb2a4d6e96d5",
+  "canonicalLeaseUID": "3f70b86b-784c-4a43-9a07-078e3634ebc0",
+  "caseReleases": [
+    {
+      "label": "preloaded-before",
+      "release": "STD-GC-A-20261106-a85d9b305139",
+      "podUID": "f6bceeb3-c299-4ef2-b4b1-458e2fc39173",
+      "revision": "1"
+    },
+    {
+      "label": "initial-a",
+      "release": "STD-GC-A-20261106-a85d9b305139",
+      "podUID": "c5263495-106e-4a95-b8e3-ca83815a6a8b",
+      "revision": "2"
+    },
+    {
+      "label": "upgrade-b",
+      "release": "STD-GC-B-20261106-a85d9b305139",
+      "podUID": "0a02d83d-8af5-4b7a-9a31-22844cb36cec",
+      "revision": "3"
+    },
+    {
+      "label": "rollback-a",
+      "release": "STD-GC-A-20261106-a85d9b305139",
+      "podUID": "cbd4447b-726d-4fc4-ba94-3df35ffaeacc",
+      "revision": "4"
+    },
+    {
+      "label": "failed-upgrade-rollback-a",
+      "release": "STD-GC-A-20261106-a85d9b305139",
+      "podUID": "428e7765-56b4-4b6c-91da-23691cfc809e",
+      "revision": "6"
+    },
+    {
+      "label": "retry-upgrade-b",
+      "release": "STD-GC-B-20261106-a85d9b305139",
+      "podUID": "9bdd1fc4-9c64-4a8d-887e-fe24f7aa83e8",
+      "revision": "7"
+    },
+    {
+      "label": "final-rollback-a",
+      "release": "STD-GC-A-20261106-a85d9b305139",
+      "podUID": "e76fde1b-9ce6-4aba-9534-43582e126577",
+      "revision": "8"
+    },
+    {
+      "label": "preloaded-after",
+      "release": "STD-GC-A-20261106-a85d9b305139",
+      "podUID": "f89f450b-a451-42cd-a981-7311a5c0783c",
+      "revision": "9"
+    }
+  ],
+  "failedPodUID": "1ee05639-4038-46d1-8ef6-cc748677da83",
+  "negativeWindowSeconds": 314.0057452414185,
+  "rollbackRequestedUTC": "2026-11-06T10:45:01.217588+00:00",
+  "naturalFenceExpiryUTC": "2026-11-06T11:10:44.005660+00:00",
+  "failedUpgradeRollbackHealthyUTC": "2026-11-06T11:12:28.206268+00:00",
+  "recoveryRecheckUTC": "2026-11-06T11:50:10.610994+00:00",
+  "harnessOnlyTraceCorrelationCorrected": true,
+  "authenticatedARPObserverFallbackQualified": true,
+  "operOnlyObservationsPreserved": true,
+  "originalHarnessStopPreserved": true,
+  "rollbackRequestToHealthySeconds": 1646.98868,
+  "guardedObservations": 92,
+  "earlierEvidencePreserved": true,
+  "earlierRawFilesVerified": 3409,
+  "productionSourceMatchesTestedCandidate": true,
+  "candidateSourceSHA256": "32b4472e3204549536fc131ed3c89da2d797e3e9a36b68cb920611233c8feb7f",
+  "normalDeletionAndBaselineCleanupPassed": true,
+  "ownedStagingPaths": [
+    "flash:/cvk-stage-2554f120d741402c8a19dcc9e5755582.tar",
+    "flash:/cvk-stage-68387df409b64d80959b581082f67139.tar",
+    "flash:/cvk-stage-d08ff7931f14474d94c6bb02eb603fd4.tar",
+    "flash:/cvk-stage-afde99a205384e5b9da8a4f34930af75.tar",
+    "flash:/cvk-stage-99508ac6bf6b4e2caf786283a513a0e9.tar",
+    "flash:/cvk-stage-20a78343233a42b0b54422b4cfc91ba4.tar",
+    "flash:/cvk-stage-151a5d41f06c42c69937948d7e775094.tar"
+  ],
+  "independentlyObservedCompleteTarThenAbsent": [
+    "flash:/cvk-stage-68387df409b64d80959b581082f67139.tar",
+    "flash:/cvk-stage-d08ff7931f14474d94c6bb02eb603fd4.tar",
+    "flash:/cvk-stage-99508ac6bf6b4e2caf786283a513a0e9.tar",
+    "flash:/cvk-stage-20a78343233a42b0b54422b4cfc91ba4.tar",
+    "flash:/cvk-stage-151a5d41f06c42c69937948d7e775094.tar"
+  ],
+  "automaticOwnedStagingCleanupQualified": true,
+  "ownedStagingFilesRemovedManually": false,
+  "preloadedPath": "flash:/cvk-stage-cdab804e32744611b282036c11686f66.tar",
+  "preloadedNeverBeforeAndAfterQualified": true,
+  "preloadedSHA512Unchanged": true,
+  "preexistingTarInventoryPreserved": true,
+  "testOwnedPreloadedCanaryRemovedAfterProof": true,
+  "workerRestartOrUncertainCopyGarbageCollectionQualified": false,
+  "physicalPartialResidueDeletionProven": false,
+  "artifactMetadataOrJournalRequired": false,
+  "defaultMode": "Standard",
+  "governed": "deferred",
+  "strategy": "Recreate, one fixture slot; old healthy fixture is removed before the replacement. Failed upgrade and retained fence therefore cause an availability gap.",
+  "zeroDowntimeQualified": false,
+  "scope": "C9300-24UX / IOS-XE 17.18.1 fc2; direct HTTPS DockerResource packages A/B with immutable per-release bytes; actual Deployment history undo; Truncated HTTPS package injection under valid TLS; failed download left no file on this firmware; unit tests cover definitive-error partial-file deletion; no forced Lease or journal changes, image cache pruning, device clock changes or new transport. RollingUpdate/capacity and automatic vulnerability selection are outside this run.",
+  "startedAtUTC": "2026-11-06T10:30:38.963881+00:00",
+  "finishedAtUTC": "2026-11-06T12:00:54.068600+00:00"
+}

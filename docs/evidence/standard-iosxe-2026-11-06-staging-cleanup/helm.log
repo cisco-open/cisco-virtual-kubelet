@@ -1,0 +1,121 @@
+Release "cvk-stdgc" does not exist. Installing it now.
+NAME: cvk-stdgc
+LAST DEPLOYED: Fri Nov  6 10:29:47 2026
+NAMESPACE: cvk-stdgc-20261106
+STATUS: deployed
+REVISION: 1
+TEST SUITE: None
+NOTES:
+═══════════════════════════════════════════════════════════════════════════════
+  cisco-virtual-kubelet installed — release cvk-stdgc
+═══════════════════════════════════════════════════════════════════════════════
+
+  Verify the install:
+
+    kubectl get pod -n cvk-stdgc-20261106 \
+      -l app.kubernetes.io/name=cisco-virtual-kubelet
+    kubectl get crd | grep cisco.vk
+
+  Apply your first CiscoDevice CR (see examples/configs/ciscodevice-crs.yaml).
+
+  Documentation:
+    https://cisco-open.github.io/cisco-virtual-kubelet/docs/getting-started/
+    https://cisco-open.github.io/cisco-virtual-kubelet/docs/cisco-vk-cli/
+    https://cisco-open.github.io/cisco-virtual-kubelet/docs/operations/
+    https://cisco-open.github.io/cisco-virtual-kubelet/docs/troubleshooting/
+
+═══════════════════════════════════════════════════════════════════════════════
+
+The per-pod kubelet topology is configured.
+
+  controller image: cvk-stdgc-qual:20261106-3a8365261343
+  vk image:         cvk-stdgc-qual:20261106-3a8365261343
+  metrics:          :8080
+  gNOI global default/override: auto
+  diag admin:       127.0.0.1:8082 inside each per-device pod
+
+  ⚠️  MANAGED TOPOLOGY IS ENABLED (KUBERNETES 1.35+ TRUST BOUNDARY).
+
+  Manager leader election is required and enabled. It reduces overlapping
+  reconciliation; ledger/CAS and admission remain the durable safety fence.
+
+  policy: cvk-stdgc-20261106/cvk-stdgc-cisco-virtual-kubelet-topology-policy
+  ledger: cvk-stdgc-20261106/cvk-stdgc-cisco-virtual-kubelet-topology-ledger
+
+  The manager validates the policy selector and the complete versioned admission
+  policy/binding pairs before initializing ledger.json with the ledger
+  ConfigMap's live UID and binding that UID into the policy annotation. It
+  fails closed if admission discovery/type checking, either object identity,
+  or the binding is invalid.
+  A later live Helm upgrade preserves the immutable policy binding and omits
+  the kept, manager-owned ledger from its update set. It refuses partial or
+  UID-mismatched retained state rather than creating replacement authority.
+  Do not use helm upgrade --force and do not recreate the ledger to clear an
+  error. The ledger, policy, admission pairs, and functional profile roles carry
+  Helm keep protection; disabling or uninstalling does not retire them. Verify
+  all policy bindings and that type checking has no warnings:
+
+    kubectl get validatingadmissionpolicies.admissionregistration.k8s.io \
+      -l app.kubernetes.io/instance=cvk-stdgc
+    kubectl get validatingadmissionpolicybindings.admissionregistration.k8s.io \
+      -l app.kubernetes.io/instance=cvk-stdgc
+    kubectl get validatingadmissionpolicies.admissionregistration.k8s.io \
+      -l app.kubernetes.io/instance=cvk-stdgc \
+      -o jsonpath='{range .items[*].status.typeChecking.expressionWarnings[*]}{.fieldRef}{": "}{.warning}{"\n"}{end}'
+
+  Kubernetes does not type-check these expressions against CRD schemas. Empty
+  warnings are necessary but do not replace live API-server denial probes.
+  The manager pre-creates retained Node-heartbeat, config-family, and
+  disruptive-mutation Leases. Functional workers can update only their exact
+  bound objects and cannot create/delete Leases. Do not remove them or recreate
+  a same-name CiscoDevice until reservations and maintenance are settled and
+  the documented retirement is complete.
+
+  Managed namespaces use at most two shared functional accounts, independent
+  of device count:
+    app hosting:        cvk-stdgc-cisco-virtual-kubelet-app-hosting (readWrite)
+    network management: cvk-stdgc-cisco-virtual-kubelet-network-management (readOnly)
+  Each account is bound to exactly one fixed profile. App readOnly/disabled
+  launches no app worker and leaves Nodes unschedulable. Network readOnly runs
+  only telemetry, diagnostics, and read-only operations; configuration and
+  gNOI mutation need readWrite. Native admission remains the object-level
+  boundary for the namespace-shared identities.
+  Resolved account names are cluster-reserved by admission. If you override
+  either derived name, keep it unique across every CVK release.
+
+  ServiceAccounts are namespaced: these are the only two functional identities
+  defined per managed CiscoDevice namespace, not two cluster-global accounts
+  and not two accounts per device. A disabled plane is removed. Access-mode
+  changes drain the old worker objects before RBAC is replaced or revoked.
+
+  Managed-device namespaces must be dedicated and administrator-controlled.
+  Do not grant tenant edit/admin, ServiceAccount impersonation, either shared
+  account, worker Pod logs/exec/attach/portforward/proxy, scale, or delete
+  authority. ClusterRoleBinding writers remain a cluster-admin trust boundary.
+  Kubelets must authenticate as system:node:<nodeName> with the Node and RBAC
+  authorizers and NodeRestriction enabled.
+
+  CONFIG_LEASE_NAMESPACE is bootstrap-immutable (current value:
+  <device namespace>). Retire
+  managed topology and re-enroll before moving Lease authority.
+
+  Graph-viewer, planner, approver, topology-author, policy-admin, and ledger-breakglass roles
+  are intentionally unbound. Delegate only the roles required in each target
+  namespace. See charts/cisco-virtual-kubelet/README.md before enrolling a
+  CiscoDevice or changing policy.
+
+  ℹ️  Managed topology projection is active, but rollout-created IOS-XE
+  upgrade leaves will not execute until gnoi.disabled=false and
+  gnoi.enableSoftwareUpgrade=true and networkManagement.accessMode=readWrite
+  enable the existing mutation gate.
+
+  Direct/unmanaged IOSXESoftwareUpgrade objects are not executed or modified
+  by a managed worker. Submit an IOSXESoftwareRollout so the manager can create
+  UID-, reservation-, and worker-bound leaves.
+
+  Policy resourceVersion churn alone does not revoke a campaign. Equivalent
+  rewrites update audit status; compatible numeric changes publish a stricter
+  policy epoch after fencing zero-claim leaves. Structural policy or ledger
+  identity changes require a new approved rollout.
+
+═══════════════════════════════════════════════════════════════════════════════

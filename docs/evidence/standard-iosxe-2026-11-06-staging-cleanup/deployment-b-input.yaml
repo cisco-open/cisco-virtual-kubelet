@@ -1,0 +1,46 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    qualification: 20261106-stdgc
+  name: cvk-stdgc-fixture
+  namespace: cvk-stdgc-apps-20261106
+spec:
+  replicas: 1
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app: cvk-stdgc-fixture
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: cvk-stdgc-fixture
+        qualification: 20261106-stdgc
+        release: b
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchFields:
+              - key: metadata.name
+                operator: In
+                values:
+                - c9k-stdgc-20261106
+      containers:
+      - image: https://192.168.129.111:18482/b.tar
+        imagePullPolicy: Always
+        name: agent
+        ports:
+        - containerPort: 8080
+        resources:
+          limits:
+            memory: 128Mi
+          requests:
+            memory: 128Mi
+      tolerations:
+      - effect: NoSchedule
+        key: cisco.vk/device
+        operator: Exists

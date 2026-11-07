@@ -1,0 +1,11 @@
+{
+  "atUTC": "2026-11-04T10:23:59.468473+00:00",
+  "passed": true,
+  "recoveryRequired": false,
+  "packageURLUnchanged": true,
+  "podUIDs": [
+    "74ea96d3-da94-46ac-bf09-d1112a6c0be2"
+  ],
+  "mode": "disabled-good",
+  "artifactJournals": 0
+}

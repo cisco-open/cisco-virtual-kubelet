@@ -1,0 +1,11 @@
+{
+  "atUTC": "2026-11-03T06:26:35.399219+00:00",
+  "ownedContainers": [],
+  "listeners": {
+    "16448": false,
+    "18443": false,
+    "18445": false
+  },
+  "passed": true,
+  "nativeChecksumProbeSHA256": "1a8f4f6e385480a9b80901091b637cb9e92bab748794afedfaf79cdcd3468d71"
+}

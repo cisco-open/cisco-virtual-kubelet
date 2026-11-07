@@ -1,0 +1,11 @@
+{"kind": "servers-ready", "TLSport": 18475, "CRLport": 18476, "atUTC": "2026-11-05T20:19:05.198034+00:00"}
+{"kind": "tls-established", "certMode": "original", "client": "192.168.129.111", "clientPort": 42136, "sessionReused": false, "tlsVersion": "TLSv1.3", "atUTC": "2026-11-05T20:19:06.010515+00:00"}
+{"kind": "http-request", "phase": null, "certMode": "original", "client": "192.168.129.111", "clientPort": 42136, "path": "/_probe", "status": 200, "package": false, "atUTC": "2026-11-05T20:19:06.011626+00:00"}
+{"kind": "tls-established", "certMode": "original", "client": "10.1.1.1", "clientPort": 49450, "sessionReused": false, "tlsVersion": "TLSv1.3", "atUTC": "2026-11-05T20:19:08.721326+00:00"}
+{"kind": "crl-served", "crl": "issuer", "client": "192.168.129.2", "clientPort": 48620, "path": "/issuer.crl", "status": 200, "sha256": "4d37741f5a3db22dc626992d5e6ba18c8ec7de6557bd47b5112cc71aab784dc1", "bytes": 432, "version": 1, "revokedSerialsHex": [], "atUTC": "2026-11-05T20:19:08.723148+00:00"}
+{"kind": "crl-served", "crl": "intermediate", "client": "192.168.129.2", "clientPort": 44548, "path": "/intermediate.crl", "status": 200, "sha256": "b9ae37460d8076c226cf87234e19223247d67f1ff178f6fa801950fe7ef5d357", "bytes": 440, "version": 1, "revokedSerialsHex": [], "atUTC": "2026-11-05T20:19:08.728622+00:00"}
+{"kind": "http-request", "phase": "valid", "certMode": "original", "client": "10.1.1.1", "clientPort": 49450, "path": "/valid.tar", "status": 200, "package": true, "atUTC": "2026-11-05T20:19:08.765956+00:00"}
+{"kind": "tls-established", "certMode": "original", "client": "10.1.1.1", "clientPort": 12915, "sessionReused": false, "tlsVersion": "TLSv1.3", "atUTC": "2026-11-05T20:19:08.840903+00:00"}
+{"kind": "http-request", "phase": "valid", "certMode": "original", "client": "10.1.1.1", "clientPort": 12915, "path": "/valid.tar", "status": 200, "package": true, "atUTC": "2026-11-05T20:19:08.886062+00:00"}
+{"kind": "package-write-error", "phase": "valid", "client": "10.1.1.1", "errorType": "SSLEOFError", "atUTC": "2026-11-05T20:19:08.987970+00:00"}
+{"kind": "package-write-error", "phase": "valid", "client": "10.1.1.1", "errorType": "SSLEOFError", "atUTC": "2026-11-05T20:19:09.115948+00:00"}

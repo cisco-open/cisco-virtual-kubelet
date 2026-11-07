@@ -1,0 +1,30 @@
+import pathlib,subprocess,json,datetime,time,yaml,sys
+r=pathlib.Path('/tmp/cvk-verified-qual-20261102');k=['kubectl','--kubeconfig',str(r/'kubeconfig')];ns='cvk-qual-20261102';apps='cvk-qual-apps-20261102';name='cvk-device-77c5286ea9b30e32-device-disruptive-mutation-a553792b'
+def run(a,**kw):return subprocess.run(a,check=True,**kw)
+def stamp(msg):print(datetime.datetime.now(datetime.timezone.utc).isoformat(),msg,flush=True)
+run(k+['-n',apps,'scale','deployment/cvk-verified-fixture','--replicas=0'])
+expected='device-write/12d45d43-d0f0-4ad8-a1bb-15469b0954b7';deadline=time.monotonic()+2400
+while time.monotonic()<deadline:
+ lease=json.loads(subprocess.check_output(k+['-n',ns,'get','lease',name,'-o','json'],text=True));s=lease.get('spec',{});holder=s.get('holderIdentity')
+ if not holder:break
+ if holder!=expected:raise RuntimeError('Unexpected mutation holder; stop without altering lease')
+ expiry=datetime.datetime.fromisoformat(s['renewTime'].replace('Z','+00:00'))+datetime.timedelta(seconds=s['leaseDurationSeconds']+5)
+ if datetime.datetime.now(datetime.timezone.utc)>expiry:break
+ stamp('Waiting for normal retained-lease expiry '+expiry.isoformat());time.sleep(30)
+else:raise RuntimeError('Lease did not expire within bound')
+(r/'lease-before-consistent-rollout.json').write_text(json.dumps(lease,indent=2)+'\n')
+image=(r/'image-name-consistent').read_text().strip();assert image=='cvk-verified-qual:20261102-consistent-0afc2dec6bb8'
+images=subprocess.check_output(['docker','exec','cvk-verified-k3s-20261102b','ctr','-n','k8s.io','images','list','-q'],text=True);assert 'docker.io/library/'+image in images
+v=yaml.safe_load((r/'values.yaml').read_text());v['image']['tag']=image.split(':',1)[1];(r/'values-consistent.yaml').write_text(yaml.safe_dump(v))
+with (r/'helm-consistent.log').open('w') as f:run(['helm','upgrade','cvk-verified-qual',str(r/'cisco-virtual-kubelet'),'--kubeconfig',str(r/'kubeconfig'),'-n',ns,'-f',str(r/'values-consistent.yaml'),'--wait','--timeout','240s'],stdout=f,stderr=subprocess.STDOUT)
+run(k+['-n',ns,'rollout','status','deployment/c9k-verified-20261102-vk','--timeout=240s'])
+for i in range(30):
+ subprocess.run(['python3',str(r/'snapshot.py'),'consistent-clean-baseline'],check=True,stdout=subprocess.DEVNULL)
+ s=json.loads((r/'snapshot-consistent-clean-baseline.json').read_text());native={a['appID']:a['details'].get('state') for a in s['nativeApps']};records=[json.loads(v) for j in s['journals'] for v in (j.get('data') or {}).values()]
+ if native=={'iris':'RUNNING','c9ktest':'DEPLOYED'} and all(x['phase']=='deleted' for x in records):break
+ time.sleep(5)
+else:raise RuntimeError('Native cleanup and journal tombstones not both confirmed')
+stamp('Baseline restored through normal CVK cleanup; applying fresh A')
+run(['python3',str(r/'workload.py'),'A'])
+run(['python3',str(r/'wait_health.py'),'consistent-a','A'])
+stamp('Fresh consistent candidate A qualified')

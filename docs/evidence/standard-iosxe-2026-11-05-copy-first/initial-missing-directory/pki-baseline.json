@@ -1,0 +1,39 @@
+{
+  "atUTC": "2026-11-05T20:19:08.350796+00:00",
+  "deviceUTC": "2026-11-05T20:19:06+00:00",
+  "deviceTimeSource": "NTP",
+  "allCertificatesCurrentlyValid": true,
+  "publishedCRLCurrentlyValid": true,
+  "publishedCRLversion": 1,
+  "publishedCRLSHA256": "4d37741f5a3db22dc626992d5e6ba18c8ec7de6557bd47b5112cc71aab784dc1",
+  "defaultCachePolicyUnchanged": true,
+  "revocationCheckCRLUnchanged": true,
+  "deviceWritesIssued": 0,
+  "clockChanged": false,
+  "nativeEvidence": {
+    "collectedAtUTC": "2026-11-05T20:19:08.325619+00:00",
+    "commands": [
+      {
+        "command": "show clock detail",
+        "output": "show clock detail\n20:19:06.881 UTC Thu Nov 5 2026\nTime source is NTP\nEdge-9K"
+      },
+      {
+        "command": "show running-config all | section ^crypto pki trustpoint CVK-STDCOPYFIX",
+        "output": "show running-config all | section ^crypto pki trustpoint CVK-STDCOPYFIX\ncrypto pki trustpoint CVK-STDCOPYFIX-20261105\n enrollment retry count 999\n enrollment retry period 1\n enrollment terminal pem\n revocation-check crl\n hash sha512\nEdge-9K"
+      },
+      {
+        "command": "show crypto pki crls",
+        "output": "show crypto pki crls\nEdge-9K"
+      },
+      {
+        "command": "show ip interface brief | include ^Vlan129",
+        "output": "show ip interface brief | include ^Vlan129\nVlan129                192.168.129.2   YES NVRAM  up                    up      \nEdge-9K"
+      },
+      {
+        "command": "show running-config | include ^ip http secure-trustpoint|^ip http client secure-trustpoint",
+        "output": "show running-config | include ^ip http secure-trustpoint|^ip http client secure-trustpoint\nip http secure-trustpoint cvk-gnoi-20260904\nip http client secure-trustpoint IRIS\nEdge-9K"
+      }
+    ]
+  },
+  "runIssuerInCache": false
+}

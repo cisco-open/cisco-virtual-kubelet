@@ -1,0 +1,11 @@
+"""Explicit-time controls isolate root versus intermediate expiry at chain depths."""
+import pathlib,json,subprocess,datetime
+R=pathlib.Path('/tmp/cvk-stdchain-20261103');m=json.loads((R/'pki-manifest.json').read_text());now=datetime.datetime.now(datetime.timezone.utc);rootExpiry=datetime.datetime.fromisoformat(m['rootExpiresAtUTC']);results=[]
+cases=[('separate-control-intermediate','intermediate-root','control-leaf','control-intermediate',now,True),('root-before-expiry','root-old','root-leaf',None,now,True),('root-after-expiry','root-old','root-leaf',None,rootExpiry+datetime.timedelta(seconds=120),False),('root-renewed-after-expiry','root-renewed','root-leaf',None,rootExpiry+datetime.timedelta(seconds=120),True),('intermediate-expired-now','intermediate-root','intermediate-leaf','intermediate-expired',now,False),('intermediate-renewed-now','intermediate-root','intermediate-leaf','intermediate-renewed',now,True),('intermediate-before-expiry','intermediate-root','intermediate-leaf','intermediate-expired',now-datetime.timedelta(days=3),True)]
+for label,root,leaf,intermediate,at,expected in cases:
+ cmd=['openssl','verify','-CAfile',str(R/(root+'.crt')),'-purpose','sslserver','-verify_ip','192.168.129.111','-attime',str(int(at.timestamp()))]
+ if intermediate:cmd+=['-untrusted',str(R/(intermediate+'.crt'))]
+ cmd+=[str(R/(leaf+'.crt'))];q=subprocess.run(cmd,capture_output=True,text=True,timeout=10);assert (q.returncode==0)==expected,(label,q.stdout,q.stderr)
+ if not expected:assert 'certificate has expired' in q.stderr and ('at 1 depth' in q.stderr)
+ results.append({'case':label,'command':cmd,'verificationEpochUTC':at.isoformat(),'expectedSuccess':expected,'exitCode':q.returncode,'stdout':q.stdout,'stderr':q.stderr})
+(R/'offline-certificate-controls.json').write_text(json.dumps({'atUTC':now.isoformat(),'passed':True,'deviceClockOrTrustChanged':False,'cases':results},indent=2)+'\n');print('PASS seven offline chain controls; expiry failures isolated at CA depth 1',flush=True)

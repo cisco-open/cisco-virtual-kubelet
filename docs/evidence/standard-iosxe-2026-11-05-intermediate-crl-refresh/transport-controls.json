@@ -1,0 +1,14 @@
+{
+  "atUTC": "2026-11-05T06:38:19.708791+00:00",
+  "directRESTCONF": true,
+  "managementTLSVerified": true,
+  "relayUsed": false,
+  "NATInjected": false,
+  "ordinaryOriginTrustpoints": [
+    "CVK-INTREFRESH-20261105"
+  ],
+  "clientIdentityTrustpointPreserved": "IRIS",
+  "nativeSignaturePolicyChanged": false,
+  "verifiedConfigurationRequired": false,
+  "deviceClockChanged": false
+}

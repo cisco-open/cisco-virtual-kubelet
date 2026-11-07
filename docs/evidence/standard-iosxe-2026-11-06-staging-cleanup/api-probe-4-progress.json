@@ -1,0 +1,66 @@
+{
+  "startedAtUTC": "2026-11-06T10:13:30.920510+00:00",
+  "path": "flash:/cvk-gc-probe-4b7a2dcf4cab45b39df108a1aad25178.tar",
+  "installsIssued": 0,
+  "commands": [],
+  "filesystemBefore": {
+    "status": 200,
+    "body": {
+      "Cisco-IOS-XE-platform-software-oper:q-filesystem": [
+        {
+          "fru": "fru-rp",
+          "slot": 0,
+          "bay": 0,
+          "chassis": -1,
+          "partitions": [
+            {
+              "name": "webui:",
+              "is-writable": true
+            },
+            {
+              "name": "usbflash1:",
+              "is-writable": true
+            },
+            {
+              "name": "ucode0:",
+              "is-writable": true
+            },
+            {
+              "name": "obfl10:",
+              "is-writable": true
+            },
+            {
+              "name": "lic1:",
+              "is-writable": true
+            },
+            {
+              "name": "lic0:",
+              "is-writable": true
+            },
+            {
+              "name": "flash:",
+              "is-writable": true
+            },
+            {
+              "name": "drec0:",
+              "is-writable": true
+            },
+            {
+              "name": "crashinfo:",
+              "is-writable": true
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "copy": {
+    "status": 200,
+    "body": {
+      "Cisco-IOS-XE-rpc:output": {
+        "result": "RPC request successful"
+      }
+    }
+  },
+  "nativeAfterCopy": "dir flash:/cvk-gc-probe-4b7a2dcf4cab45b39df108a1aad25178.tar\nDirectory of flash:/cvk-gc-probe-4b7a2dcf4cab45b39df108a1aad25178.tar\n\n254040  -rw-               51   Nov 6 2026 10:13:34 +00:00  cvk-gc-probe-4b7a2dcf4cab45b39df108a1aad25178.tar\n\n11353194496 bytes total (5398511616 bytes free)\nEdge-9K"
+}

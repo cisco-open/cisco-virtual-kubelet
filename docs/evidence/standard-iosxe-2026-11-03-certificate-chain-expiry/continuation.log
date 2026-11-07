@@ -1,0 +1,110 @@
+2026-11-04T06:04:08.653724+00:00 CONTINUATION sealed root outcome; firmware-required run-owned CA trustpoint replacement
+PASS run-owned root certificate renewed and native PEM fingerprint verified
+2026-11-04T06:04:11.300702+00:00 root CA certificate replaced; normal guarded recovery only
+PASS native NTP clock/chain validity: root-after-repair
+2026-11-04T06:04:14.142453+00:00 root waiting for existing mutation guard 2026-11-04T06:34:42.533708+00:00
+2026-11-04T06:05:21.376469+00:00 root waiting for existing mutation guard 2026-11-04T06:36:12.534640+00:00
+2026-11-04T06:06:28.565876+00:00 root waiting for existing mutation guard 2026-11-04T06:37:12.534052+00:00
+2026-11-04T06:07:36.092023+00:00 root waiting for existing mutation guard 2026-11-04T06:38:12.532682+00:00
+2026-11-04T06:08:43.439976+00:00 root waiting for existing mutation guard 2026-11-04T06:39:12.534374+00:00
+2026-11-04T06:09:50.594678+00:00 root waiting for existing mutation guard 2026-11-04T06:40:42.533682+00:00
+2026-11-04T06:10:57.875908+00:00 root waiting for existing mutation guard 2026-11-04T06:41:42.533738+00:00
+2026-11-04T06:12:05.131953+00:00 root waiting for existing mutation guard 2026-11-04T06:42:42.535843+00:00
+2026-11-04T06:13:13.896502+00:00 root waiting for existing mutation guard 2026-11-04T06:43:42.530634+00:00
+2026-11-04T06:14:21.452239+00:00 root waiting for existing mutation guard 2026-11-04T06:45:12.533671+00:00
+2026-11-04T06:15:28.832382+00:00 root waiting for existing mutation guard 2026-11-04T06:46:12.532683+00:00
+2026-11-04T06:16:36.167760+00:00 root waiting for existing mutation guard 2026-11-04T06:47:12.534038+00:00
+2026-11-04T06:17:43.348075+00:00 root waiting for existing mutation guard 2026-11-04T06:47:12.534038+00:00
+2026-11-04T06:18:50.906363+00:00 root waiting for existing mutation guard 2026-11-04T06:47:12.534038+00:00
+2026-11-04T06:19:58.096819+00:00 root waiting for existing mutation guard 2026-11-04T06:47:12.534038+00:00
+2026-11-04T06:21:05.192011+00:00 root waiting for existing mutation guard 2026-11-04T06:47:12.534038+00:00
+2026-11-04T06:22:12.683093+00:00 root waiting for existing mutation guard 2026-11-04T06:47:12.534038+00:00
+2026-11-04T06:23:19.830000+00:00 root waiting for existing mutation guard 2026-11-04T06:47:12.534038+00:00
+2026-11-04T06:24:27.190294+00:00 root waiting for existing mutation guard 2026-11-04T06:47:12.534038+00:00
+2026-11-04T06:25:34.540601+00:00 root waiting for existing mutation guard 2026-11-04T06:47:12.534038+00:00
+2026-11-04T06:26:41.898075+00:00 root waiting for existing mutation guard 2026-11-04T06:47:12.534038+00:00
+2026-11-04T06:27:49.377115+00:00 root waiting for existing mutation guard 2026-11-04T06:47:12.534038+00:00
+2026-11-04T06:28:56.541518+00:00 root waiting for existing mutation guard 2026-11-04T06:47:12.534038+00:00
+2026-11-04T06:30:04.599023+00:00 root waiting for existing mutation guard 2026-11-04T06:47:12.534038+00:00
+2026-11-04T06:31:11.757510+00:00 root waiting for existing mutation guard 2026-11-04T06:47:12.534038+00:00
+2026-11-04T06:32:19.095902+00:00 root waiting for existing mutation guard 2026-11-04T06:47:12.534038+00:00
+2026-11-04T06:33:26.638586+00:00 root waiting for existing mutation guard 2026-11-04T06:47:12.534038+00:00
+2026-11-04T06:34:34.196930+00:00 root waiting for existing mutation guard 2026-11-04T06:47:12.534038+00:00
+2026-11-04T06:35:42.020704+00:00 root waiting for existing mutation guard 2026-11-04T06:47:12.534038+00:00
+2026-11-04T06:36:49.130737+00:00 root waiting for existing mutation guard 2026-11-04T06:47:12.534038+00:00
+2026-11-04T06:37:56.396288+00:00 root waiting for existing mutation guard 2026-11-04T06:47:12.534038+00:00
+2026-11-04T06:39:03.855587+00:00 root waiting for existing mutation guard 2026-11-04T06:47:12.534038+00:00
+2026-11-04T06:40:10.848708+00:00 root waiting for existing mutation guard 2026-11-04T06:47:12.534038+00:00
+2026-11-04T06:41:17.947474+00:00 root waiting for existing mutation guard 2026-11-04T06:47:12.534038+00:00
+2026-11-04T06:42:25.214050+00:00 root waiting for existing mutation guard 2026-11-04T06:47:12.534038+00:00
+2026-11-04T06:43:32.502686+00:00 root waiting for existing mutation guard 2026-11-04T06:47:12.534038+00:00
+2026-11-04T06:44:40.156347+00:00 root waiting for existing mutation guard 2026-11-04T06:47:12.534038+00:00
+2026-11-04T06:45:47.611553+00:00 root waiting for existing mutation guard 2026-11-04T06:47:12.534038+00:00
+2026-11-04T06:46:54.920767+00:00 root waiting for existing mutation guard 2026-11-04T06:47:12.534038+00:00
+{"atUTC": "2026-11-04T06:47:14.637622+00:00", "label": "root-corrected-recovery", "release": "A", "podUIDs": ["cd3e421f-5d68-4846-ae96-953b4d37f18a"], "nativeStates": {"iris": "RUNNING", "c9ktest": "DEPLOYED"}, "ready": false, "httpReleaseConfirmed": false, "oldNativeAppsAbsent": false, "artifactJournalCount": 0}
+{"atUTC": "2026-11-04T06:47:41.764076+00:00", "label": "root-corrected-recovery", "release": "A", "podUIDs": ["cd3e421f-5d68-4846-ae96-953b4d37f18a"], "nativeStates": {"iris": "RUNNING", "c9ktest": "DEPLOYED", "cvk0000_cd3e421f5d684846ae96953b4d37f18a": "ACTIVATED"}, "ready": false, "httpReleaseConfirmed": false, "oldNativeAppsAbsent": true, "artifactJournalCount": 0}
+PASS root-corrected-recovery Ready/HTTP A without artifacts or journal
+deployment.apps/cvk-stdchain-fixture scaled
+2026-11-04T06:48:12.330580+00:00 root normal deletion pending; guard 2026-11-04 07:19:05.566622+00:00
+deployment.apps/cvk-stdchain-fixture configured
+{"atUTC": "2026-11-04T06:49:01.954733+00:00", "label": "root-fresh-replacement", "release": "A", "podUIDs": ["56048d56-5f50-40a3-bc99-c2f6041a09ff"], "nativeStates": {"iris": "RUNNING", "c9ktest": "DEPLOYED"}, "ready": false, "httpReleaseConfirmed": false, "oldNativeAppsAbsent": false, "artifactJournalCount": 0}
+{"atUTC": "2026-11-04T06:49:28.999608+00:00", "label": "root-fresh-replacement", "release": "A", "podUIDs": ["56048d56-5f50-40a3-bc99-c2f6041a09ff"], "nativeStates": {"iris": "RUNNING", "c9ktest": "DEPLOYED", "cvk0000_56048d565f5040a3bc99c2f6041a09ff": "RUNNING"}, "ready": false, "httpReleaseConfirmed": false, "oldNativeAppsAbsent": true, "artifactJournalCount": 0}
+{"atUTC": "2026-11-04T06:49:55.840414+00:00", "label": "root-fresh-replacement", "release": "A", "podUIDs": ["56048d56-5f50-40a3-bc99-c2f6041a09ff"], "nativeStates": {"iris": "RUNNING", "c9ktest": "DEPLOYED", "cvk0000_56048d565f5040a3bc99c2f6041a09ff": "RUNNING"}, "ready": true, "httpReleaseConfirmed": false, "oldNativeAppsAbsent": true, "artifactJournalCount": 0}
+{"atUTC": "2026-11-04T06:50:22.703312+00:00", "label": "root-fresh-replacement", "release": "A", "podUIDs": ["56048d56-5f50-40a3-bc99-c2f6041a09ff"], "nativeStates": {"iris": "RUNNING", "c9ktest": "DEPLOYED", "cvk0000_56048d565f5040a3bc99c2f6041a09ff": "RUNNING"}, "ready": true, "httpReleaseConfirmed": false, "oldNativeAppsAbsent": true, "artifactJournalCount": 0}
+PASS root-fresh-replacement Ready/HTTP A without artifacts or journal
+deployment.apps/cvk-stdchain-fixture scaled
+2026-11-04T06:50:38.786709+00:00 root-fresh normal deletion pending; guard 2026-11-04 07:21:32.083534+00:00
+2026-11-04T06:51:26.147373+00:00 CASE RESULT {"case": "root", "startedAtUTC": "2026-11-03T23:09:14.046897+00:00", "finishedAtUTC": "2026-11-04T06:51:26.147345+00:00", "classification": "expired-ca-rejected", "rejectionQualified": true, "appHealthyUnderExpiredCA": false, "postReplacementHealthPassed": true, "freshDeliveryAfterReplacementPassed": true, "normalDeletionPassed": true, "packageURL": "https://192.168.129.111:18457/root-agent-a.tar", "resumedAfterCAReplacementHarnessFailure": true}
+PASS native NTP clock/chain validity: intermediate-before
+deployment.apps/cvk-stdchain-fixture configured
+{"atUTC": "2026-11-04T06:51:29.359659+00:00", "case": "intermediate", "invalidCertificateMode": "intermediate-expired", "podUIDs": ["4de45663-cb76-4d78-a53f-7a871f988d17"], "ready": false, "nativeRunning": false, "tlsRejections": 1, "packageHTTPRequests": 0, "leaseRenewAgeSeconds": 1.834854, "leaseExpiresUTC": "2026-11-04T07:22:27.524611+00:00", "artifactJournals": 0}
+{"atUTC": "2026-11-04T06:52:16.723713+00:00", "case": "intermediate", "invalidCertificateMode": "intermediate-expired", "podUIDs": ["4de45663-cb76-4d78-a53f-7a871f988d17"], "ready": false, "nativeRunning": false, "tlsRejections": 1, "packageHTTPRequests": 0, "leaseRenewAgeSeconds": 19.172711, "leaseExpiresUTC": "2026-11-04T07:22:57.550837+00:00", "artifactJournals": 0}
+{"atUTC": "2026-11-04T06:53:04.092778+00:00", "case": "intermediate", "invalidCertificateMode": "intermediate-expired", "podUIDs": ["4de45663-cb76-4d78-a53f-7a871f988d17"], "ready": false, "nativeRunning": false, "tlsRejections": 1, "packageHTTPRequests": 0, "leaseRenewAgeSeconds": 6.542065, "leaseExpiresUTC": "2026-11-04T07:23:57.550438+00:00", "artifactJournals": 0}
+{"atUTC": "2026-11-04T06:53:52.050888+00:00", "case": "intermediate", "invalidCertificateMode": "intermediate-expired", "podUIDs": ["4de45663-cb76-4d78-a53f-7a871f988d17"], "ready": false, "nativeRunning": false, "tlsRejections": 1, "packageHTTPRequests": 0, "leaseRenewAgeSeconds": 24.502894, "leaseExpiresUTC": "2026-11-04T07:24:27.547809+00:00", "artifactJournals": 0}
+{"atUTC": "2026-11-04T06:54:39.516108+00:00", "case": "intermediate", "invalidCertificateMode": "intermediate-expired", "podUIDs": ["4de45663-cb76-4d78-a53f-7a871f988d17"], "ready": false, "nativeRunning": false, "tlsRejections": 2, "packageHTTPRequests": 0, "leaseRenewAgeSeconds": 11.967302, "leaseExpiresUTC": "2026-11-04T07:25:27.548503+00:00", "artifactJournals": 0}
+{"atUTC": "2026-11-04T06:55:27.008969+00:00", "case": "intermediate", "invalidCertificateMode": "intermediate-expired", "podUIDs": ["4de45663-cb76-4d78-a53f-7a871f988d17"], "ready": false, "nativeRunning": false, "tlsRejections": 2, "packageHTTPRequests": 0, "leaseRenewAgeSeconds": 59.460295, "leaseExpiresUTC": "2026-11-04T07:25:27.548503+00:00", "artifactJournals": 0}
+{"atUTC": "2026-11-04T06:56:14.334363+00:00", "case": "intermediate", "invalidCertificateMode": "intermediate-expired", "podUIDs": ["4de45663-cb76-4d78-a53f-7a871f988d17"], "ready": false, "nativeRunning": false, "tlsRejections": 2, "packageHTTPRequests": 0, "leaseRenewAgeSeconds": 106.785691, "leaseExpiresUTC": "2026-11-04T07:25:27.548503+00:00", "artifactJournals": 0}
+PASS native NTP clock/chain validity: intermediate-boundary
+2026-11-04T06:56:39.338979+00:00 intermediate CA certificate replaced; normal guarded recovery only
+PASS native NTP clock/chain validity: intermediate-after-repair
+2026-11-04T06:56:42.146137+00:00 intermediate waiting for existing mutation guard 2026-11-04T07:25:27.548503+00:00
+2026-11-04T06:57:49.242085+00:00 intermediate waiting for existing mutation guard 2026-11-04T07:25:27.548503+00:00
+2026-11-04T06:58:57.107704+00:00 intermediate waiting for existing mutation guard 2026-11-04T07:25:27.548503+00:00
+2026-11-04T07:00:04.584683+00:00 intermediate waiting for existing mutation guard 2026-11-04T07:25:27.548503+00:00
+2026-11-04T07:01:12.474388+00:00 intermediate waiting for existing mutation guard 2026-11-04T07:25:27.548503+00:00
+2026-11-04T07:02:19.811300+00:00 intermediate waiting for existing mutation guard 2026-11-04T07:25:27.548503+00:00
+2026-11-04T07:03:27.381657+00:00 intermediate waiting for existing mutation guard 2026-11-04T07:25:27.548503+00:00
+2026-11-04T07:04:34.803615+00:00 intermediate waiting for existing mutation guard 2026-11-04T07:25:27.548503+00:00
+2026-11-04T07:05:42.029577+00:00 intermediate waiting for existing mutation guard 2026-11-04T07:25:27.548503+00:00
+2026-11-04T07:06:49.624931+00:00 intermediate waiting for existing mutation guard 2026-11-04T07:25:27.548503+00:00
+2026-11-04T07:07:57.036532+00:00 intermediate waiting for existing mutation guard 2026-11-04T07:25:27.548503+00:00
+2026-11-04T07:09:04.580834+00:00 intermediate waiting for existing mutation guard 2026-11-04T07:25:27.548503+00:00
+2026-11-04T07:10:11.813727+00:00 intermediate waiting for existing mutation guard 2026-11-04T07:25:27.548503+00:00
+2026-11-04T07:11:19.065588+00:00 intermediate waiting for existing mutation guard 2026-11-04T07:25:27.548503+00:00
+2026-11-04T07:12:26.332505+00:00 intermediate waiting for existing mutation guard 2026-11-04T07:25:27.548503+00:00
+2026-11-04T07:13:33.566191+00:00 intermediate waiting for existing mutation guard 2026-11-04T07:25:27.548503+00:00
+2026-11-04T07:14:40.909346+00:00 intermediate waiting for existing mutation guard 2026-11-04T07:25:27.548503+00:00
+2026-11-04T07:15:48.068814+00:00 intermediate waiting for existing mutation guard 2026-11-04T07:25:27.548503+00:00
+2026-11-04T07:16:55.410149+00:00 intermediate waiting for existing mutation guard 2026-11-04T07:25:27.548503+00:00
+2026-11-04T07:18:03.005829+00:00 intermediate waiting for existing mutation guard 2026-11-04T07:25:27.548503+00:00
+2026-11-04T07:19:10.363579+00:00 intermediate waiting for existing mutation guard 2026-11-04T07:25:27.548503+00:00
+2026-11-04T07:20:17.829592+00:00 intermediate waiting for existing mutation guard 2026-11-04T07:25:27.548503+00:00
+2026-11-04T07:21:25.408199+00:00 intermediate waiting for existing mutation guard 2026-11-04T07:25:27.548503+00:00
+2026-11-04T07:22:32.567074+00:00 intermediate waiting for existing mutation guard 2026-11-04T07:25:27.548503+00:00
+2026-11-04T07:23:39.884966+00:00 intermediate waiting for existing mutation guard 2026-11-04T07:25:27.548503+00:00
+2026-11-04T07:24:47.536096+00:00 intermediate waiting for existing mutation guard 2026-11-04T07:25:27.548503+00:00
+{"atUTC": "2026-11-04T07:25:29.327870+00:00", "label": "intermediate-corrected-recovery", "release": "A", "podUIDs": ["4de45663-cb76-4d78-a53f-7a871f988d17"], "nativeStates": {"iris": "RUNNING", "c9ktest": "DEPLOYED"}, "ready": false, "httpReleaseConfirmed": false, "oldNativeAppsAbsent": false, "artifactJournalCount": 0}
+{"atUTC": "2026-11-04T07:25:56.067805+00:00", "label": "intermediate-corrected-recovery", "release": "A", "podUIDs": ["4de45663-cb76-4d78-a53f-7a871f988d17"], "nativeStates": {"iris": "RUNNING", "c9ktest": "DEPLOYED", "cvk0000_4de45663cb764d78a53f7a871f988d17": "ACTIVATED"}, "ready": false, "httpReleaseConfirmed": false, "oldNativeAppsAbsent": true, "artifactJournalCount": 0}
+PASS intermediate-corrected-recovery Ready/HTTP A without artifacts or journal
+deployment.apps/cvk-stdchain-fixture scaled
+2026-11-04T07:26:25.853377+00:00 intermediate normal deletion pending; guard 2026-11-04 07:57:19.094655+00:00
+deployment.apps/cvk-stdchain-fixture configured
+{"atUTC": "2026-11-04T07:27:15.179354+00:00", "label": "intermediate-fresh-replacement", "release": "A", "podUIDs": ["51617da9-c861-41a6-9b4c-103166a492fc"], "nativeStates": {"iris": "RUNNING", "c9ktest": "DEPLOYED"}, "ready": false, "httpReleaseConfirmed": false, "oldNativeAppsAbsent": false, "artifactJournalCount": 0}
+{"atUTC": "2026-11-04T07:27:42.098335+00:00", "label": "intermediate-fresh-replacement", "release": "A", "podUIDs": ["51617da9-c861-41a6-9b4c-103166a492fc"], "nativeStates": {"iris": "RUNNING", "c9ktest": "DEPLOYED", "cvk0000_51617da9c86141a69b4c103166a492fc": "RUNNING"}, "ready": true, "httpReleaseConfirmed": false, "oldNativeAppsAbsent": true, "artifactJournalCount": 0}
+{"atUTC": "2026-11-04T07:28:09.087877+00:00", "label": "intermediate-fresh-replacement", "release": "A", "podUIDs": ["51617da9-c861-41a6-9b4c-103166a492fc"], "nativeStates": {"iris": "RUNNING", "c9ktest": "DEPLOYED", "cvk0000_51617da9c86141a69b4c103166a492fc": "RUNNING"}, "ready": true, "httpReleaseConfirmed": false, "oldNativeAppsAbsent": true, "artifactJournalCount": 0}
+{"atUTC": "2026-11-04T07:28:35.959567+00:00", "label": "intermediate-fresh-replacement", "release": "A", "podUIDs": ["51617da9-c861-41a6-9b4c-103166a492fc"], "nativeStates": {"iris": "RUNNING", "c9ktest": "DEPLOYED", "cvk0000_51617da9c86141a69b4c103166a492fc": "RUNNING"}, "ready": true, "httpReleaseConfirmed": true, "oldNativeAppsAbsent": true, "artifactJournalCount": 0}
+PASS intermediate-fresh-replacement Ready/HTTP A without artifacts or journal
+deployment.apps/cvk-stdchain-fixture scaled
+2026-11-04T07:28:45.256921+00:00 intermediate-fresh normal deletion pending; guard 2026-11-04 07:59:38.572311+00:00
+2026-11-04T07:29:32.674892+00:00 CASE RESULT {"case": "intermediate", "startedAtUTC": "2026-11-04T06:51:26.151484+00:00", "finishedAtUTC": "2026-11-04T07:29:32.674873+00:00", "classification": "expired-ca-rejected", "rejectionQualified": true, "appHealthyUnderExpiredCA": false, "postReplacementHealthPassed": true, "freshDeliveryAfterReplacementPassed": true, "normalDeletionPassed": true, "packageURL": "https://192.168.129.111:18458/intermediate-agent-a.tar"}
+COMPLETE actual Standard CA-expiry qualification: True

@@ -1,0 +1,12 @@
+{
+  "atUTC": "2026-11-05T06:52:03.025205+00:00",
+  "actualReleases": [
+    {
+      "appID": "cvk0000_635c7b93fadf4f698335fafe65ce40aa",
+      "release": "CRL-REFRESH-REFRESH-20261104-a674b004ffa2",
+      "ip": "192.168.129.242"
+    }
+  ],
+  "samePodRetained": true,
+  "expectedReleasePassed": false
+}

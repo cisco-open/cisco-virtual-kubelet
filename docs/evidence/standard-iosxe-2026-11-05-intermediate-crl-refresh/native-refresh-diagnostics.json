@@ -1,0 +1,15 @@
+{
+  "collectedAtUTC": "2026-11-05T06:50:22.338603+00:00",
+  "commands": [
+    {
+      "command": "show crypto pki crls",
+      "output": "show crypto pki crls\nCRL Issuer Name: \n    cn=CVK intermediate refresh root abeba16b6a7f\n    LastUpdate: 06:41:07 UTC Nov 5 2026\n    NextUpdate: 08:41:12 UTC Nov 5 2026\n\n    CRL downloaded at: 06:49:57 UTC Nov 5 2026\n\n    Retrieved from CRL Distribution Point: \n      http://192.168.129.111:18473/issuer.crl\n\n CRL DER is 490 bytes\n CRL is stored in parsed CRL cache\n\nCRL Issuer Name: \n    cn=CVK intermediate refresh intermediate abeba16b6a7f\n    LastUpdate: 06:33:11 UTC Nov 5 2026\n    NextUpdate: 06:38:11 UTC Nov 6 2026\n\n    CRL downloaded at: 06:39:53 UTC Nov 5 2026\n\n    Retrieved from CRL Distribution Point: \n      http://192.168.129.111:18473/intermediate.crl\n\n CRL DER is 443 bytes\n CRL is stored in parsed CRL cache\n\n\nParsed CRL cache current size is 933 bytes\nParsed CRL cache maximum size is 65536 bytes\n\nEdge-9K"
+    },
+    {
+      "command": "show logging | include CERTIFICATE_REVOKED",
+      "output": "Nov  5 06:49:57.030: %PKI-3-CERTIFICATE_REVOKED: Certificate chain validation has failed. The certificate (SN: 2F2F8EE2E9C17C3C502F6CB3B13AB373F892C0F9) is revoked"
+    }
+  ],
+  "readOnly": true,
+  "unrelatedLogLinesOmitted": true
+}

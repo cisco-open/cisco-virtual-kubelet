@@ -1,0 +1,32 @@
+{
+  "atUTC": "2026-11-05T06:41:12.869711+00:00",
+  "passed": true,
+  "cases": [
+    {
+      "chain": "original",
+      "CRLChecking": false,
+      "expectedSuccess": true,
+      "exitCode": 0,
+      "stdout": "/tmp/cvk-intrefresh-20261105/leaf.crt: OK\n",
+      "stderr": ""
+    },
+    {
+      "chain": "original",
+      "CRLChecking": true,
+      "expectedSuccess": false,
+      "exitCode": 2,
+      "stdout": "",
+      "stderr": "CN = CVK intermediate refresh intermediate abeba16b6a7f\nerror 23 at 1 depth lookup: certificate revoked\nerror /tmp/cvk-intrefresh-20261105/leaf.crt: verification failed\n"
+    },
+    {
+      "chain": "replacement",
+      "CRLChecking": true,
+      "expectedSuccess": true,
+      "exitCode": 0,
+      "stdout": "/tmp/cvk-intrefresh-20261105/leaf.crt: OK\n",
+      "stderr": ""
+    }
+  ],
+  "intermediateOnlyRevocationDepth": 1,
+  "C9KContacted": false
+}

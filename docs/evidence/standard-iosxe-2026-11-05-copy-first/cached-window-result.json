@@ -1,0 +1,14 @@
+{
+  "atUTC": "2026-11-05T20:54:18.987457+00:00",
+  "classification": "fresh-image-accepted-using-cached-unrevoked-CRL",
+  "actualReleases": [
+    {
+      "appID": "cvk0000_b5b6dad574914618a2518b7b5f748096",
+      "release": "STD-COPYFIX-CACHED-20261105-0609ed4e6d25",
+      "ip": "192.168.129.185"
+    }
+  ],
+  "ready": true,
+  "originalCRLNextUpdateUTC": "2026-11-05T21:00:28+00:00",
+  "beforeOriginalNextUpdate": true
+}

@@ -1,0 +1,10 @@
+{
+  "issue": "Native CRL downloads use the C9K Vlan129 address, while package TLS uses its management/loopback address.",
+  "actorManagementSourceFilter": "10.1.1.1",
+  "verifiedNativeCRLSourceIPv4": "192.168.129.2",
+  "nativeProof": "native-crl-source-proof.json",
+  "qualifyExecutedSHA256": "0983452791530cc817a7c1ef6f672af7cba70c9ebe044a54d5af9bb0a1ce684e",
+  "effect": "The actor raw CRL-fetch summary is management-address-only. Package rejection/acceptance observations are unaffected. Independent assessment recomputes CRL provenance from the immutable full server trace and pinned native interface/cache evidence; raw actor results remain unchanged.",
+  "nativeFaultRepeated": false,
+  "deviceWritesIssued": 0
+}

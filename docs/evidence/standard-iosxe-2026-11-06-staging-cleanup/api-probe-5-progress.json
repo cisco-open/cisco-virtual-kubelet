@@ -1,0 +1,62 @@
+{
+  "startedAtUTC": "2026-11-06T10:19:18.761088+00:00",
+  "path": "flash:/cvk-gc-probe-588c34ef767c4555a5d7b65163262bd3.tar",
+  "installsIssued": 0,
+  "commands": [],
+  "filesystemBefore": {
+    "status": 200,
+    "body": {
+      "Cisco-IOS-XE-platform-software-oper:q-filesystem": [
+        {
+          "fru": "fru-rp",
+          "slot": 0,
+          "bay": 0,
+          "chassis": -1,
+          "partitions": [
+            {
+              "name": "webui:",
+              "is-writable": true
+            },
+            {
+              "name": "usbflash1:",
+              "is-writable": true
+            },
+            {
+              "name": "ucode0:",
+              "is-writable": true
+            },
+            {
+              "name": "obfl10:",
+              "is-writable": true
+            },
+            {
+              "name": "lic1:",
+              "is-writable": true
+            },
+            {
+              "name": "lic0:",
+              "is-writable": true
+            },
+            {
+              "name": "flash:",
+              "is-writable": true
+            },
+            {
+              "name": "drec0:",
+              "is-writable": true
+            },
+            {
+              "name": "crashinfo:",
+              "is-writable": true
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "copy": {
+    "status": 400,
+    "body": "{\n  \"ietf-restconf:errors\": {\n    \"error\": [\n      {\n        \"error-type\": \"application\",\n        \"error-tag\": \"invalid-value\",\n        \"error-path\": \"/Cisco-IOS-XE-rpc:copy\",\n        \"error-message\": \"inconsistent value: \\r\\nAccessing http://192.168.129.111:18481/probe...\\r\\n%Error opening http://192.168.129.111:18481/probe (I/O error)\"\n      }\n    ]\n  }\n}\n"
+  },
+  "nativeAfterCopy": "dir flash:/cvk-gc-probe-588c34ef767c4555a5d7b65163262bd3.tar\n%Error opening flash:/cvk-gc-probe-588c34ef767c4555a5d7b65163262bd3.tar (No such file or directory)\nEdge-9K"
+}

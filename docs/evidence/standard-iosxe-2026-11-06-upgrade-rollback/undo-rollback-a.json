@@ -1,0 +1,7 @@
+{
+  "atUTC": "2026-11-06T08:32:06.525395+00:00",
+  "command": "kubectl rollout undo",
+  "targetRevision": "1",
+  "deploymentUID": "6d61f17e-a446-4456-8bee-163e6dec33b0",
+  "generationBefore": 2
+}

@@ -1,0 +1,26 @@
+{
+  "atUTC": "2026-11-04T10:16:47.235525+00:00",
+  "passed": true,
+  "policies": {
+    "disabled": {
+      "trustpoint": "CVK-STDREVOKE-NONE-20261104",
+      "revocationCheck": "none",
+      "noneFallback": true,
+      "runningConfig": "crypto pki trustpoint CVK-STDREVOKE-NONE-20261104\n enrollment retry count 999\n enrollment retry period 1\n enrollment terminal pem\n revocation-check none\n hash sha512\n"
+    },
+    "leaf": {
+      "trustpoint": "CVK-STDREVOKE-LEAF-20261104",
+      "revocationCheck": "crl",
+      "noneFallback": false,
+      "runningConfig": "crypto pki trustpoint CVK-STDREVOKE-LEAF-20261104\n enrollment retry count 999\n enrollment retry period 1\n enrollment terminal pem\n revocation-check crl\n hash sha512\n"
+    },
+    "intermediate": {
+      "trustpoint": "CVK-STDREVOKE-CHAIN-20261104",
+      "revocationCheck": "crl",
+      "noneFallback": false,
+      "runningConfig": "crypto pki trustpoint CVK-STDREVOKE-CHAIN-20261104\n enrollment retry count 999\n enrollment retry period 1\n enrollment terminal pem\n revocation-check crl\n hash sha512\nEdge-9K"
+    }
+  },
+  "globalPolicyChanged": false,
+  "CRLCacheManuallyCleared": false
+}

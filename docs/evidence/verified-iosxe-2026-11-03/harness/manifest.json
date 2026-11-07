@@ -1,0 +1,77 @@
+{
+  "purpose": "Lab-only source evidence; not a production component. qualify.py is the initial observer (including retained binding-window failure); post_loss_recovery.py is its read-only continuation for the SAME fault. Credentials and private keys are not included.",
+  "files": [
+    {
+      "file": "bootstrap.py.txt",
+      "sha256": "f50ca9211981160d89b77f4219609023e9564d7bdedbf323f34c3debd3579f97"
+    },
+    {
+      "file": "prepare_device.py.txt",
+      "sha256": "6dfda5fdaa060133901ce0080c9da8961738eeb2fef04abb9dd7599c0c4cd773"
+    },
+    {
+      "file": "start_services.py.txt",
+      "sha256": "9cbd51ac5ee934f0073c1b7c6dddf0117b38fb69dbf2f7311c3d0429d8bf2248"
+    },
+    {
+      "file": "deploy.py.txt",
+      "sha256": "469f3121d85a14d0a956b526ff72509b8b43c2a86ab6ad602ae72b9c037a6ab9"
+    },
+    {
+      "file": "relay.py.txt",
+      "sha256": "f1ec17f34f35ec314162214a2359900a63da5f0fba0b330a1ed7875869066a34"
+    },
+    {
+      "file": "store.py.txt",
+      "sha256": "1b1fdd74ab5a7be15af62e84a4b7f58787eb8e36719f515de5eab013b64da487"
+    },
+    {
+      "file": "qualify.py.txt",
+      "sha256": "810387ef90fdc01ec2988a13124f6092eb5dd4bc1f1faa50dbde10c916a1940a"
+    },
+    {
+      "file": "post_loss_recovery.py.txt",
+      "sha256": "29de61b01567e4fe7c9ab78a870f2cafcde8a41581cca20648ce8d4938e92246"
+    },
+    {
+      "file": "pending_ssh_observation.py.txt",
+      "sha256": "c5967734cf097a8ea98ad89c6e2499eedb69d9e910e55bcf0681f1698777f1f4"
+    },
+    {
+      "file": "snapshot.py.txt",
+      "sha256": "4736ddb101f0f6f21ca11cb75b8c7670ba80b0898abcfe30cebc11a2bdbbc0ab"
+    },
+    {
+      "file": "wait_health.py.txt",
+      "sha256": "dd74747bd860a334399f8100cc299fb8fee54202be26671522b3d34818269900"
+    },
+    {
+      "file": "workload.py.txt",
+      "sha256": "9a6e941dcabcbaa2744751e1e235c0bc6e09875460ec4a4f22e9dd8c0b924366"
+    },
+    {
+      "file": "device_cli.py.txt",
+      "sha256": "4c0a625eed0792f03600d5ca4c21102c9892008097aaec36c0aa168102cc42f3"
+    },
+    {
+      "file": "test_relay_scope.py.txt",
+      "sha256": "30fd9bdab4b5646340636a7bb3df7abd604e86909c28ab012d6163db8be86a98"
+    },
+    {
+      "file": "cleanup.py.txt",
+      "sha256": "a402bb09184bec1361ceb72ea41ef4acc57a2d3380f6658607d8df78c98836d3"
+    },
+    {
+      "file": "assess.py.txt",
+      "sha256": "971dde8eebad1a6a311c604683cbbdc62b0b2ba1b572a1d8742e684bffab5d62"
+    },
+    {
+      "file": "sanitize_evidence.py.txt",
+      "sha256": "4b939f00173f5460393bb85ad900c303aff43b097ab02426f2f40b7542b5ff24"
+    },
+    {
+      "file": "checksum-probe.go.txt",
+      "sha256": "f4a937e23ae527f17fd5e4642b780d1bd728aa632632aa297bbd8d5acaf23567"
+    }
+  ]
+}

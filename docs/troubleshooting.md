@@ -465,20 +465,17 @@ State:          Waiting
 
 ### What is happening
 
-The VK attempted a device-native HTTP pull that timed out (default 3 minutes), and is now running the copy fallback: it downloads the image tar from the HTTP URL and copies it to device flash via RESTCONF, then reinstalls from that local path. The copy RPC is synchronous and can take several minutes depending on image size and network speed.
+For a new remote Standard installation, the device first downloads the tar to
+flash through the synchronous RESTCONF copy RPC. CVK requires a successful copy
+before app configuration and local installation. This can take several minutes,
+depending on package size and network speed. A native `DEPLOYED` observation is
+not evidence that a failed download succeeded.
 
-You can monitor progress via pod events:
-
-```bash
-kubectl describe pod <name>
-# Look for the Events section at the bottom:
-#
-#   Normal  Pulling          <time>   cisco-virtual-kubelet  Pulling image https://...
-#   Warning ImagePullFallback <time>  cisco-virtual-kubelet  Device-native pull timed out...
-#   Normal  Copying          <time>   cisco-virtual-kubelet  Copying image ... to flash:/...
-#   Normal  Pulled           <time>   cisco-virtual-kubelet  Image successfully copied to ...
-#   Normal  Started          <time>   cisco-virtual-kubelet  App ... is running
-```
+Monitor the `Pulling` and `Pulled` events with `kubectl describe pod <name>`.
+If copying fails, inspect the worker error and device logs. Check origin
+reachability, HTTPS certificate validation, device storage and the destination
+path. Correct the cause and let normal retry/fencing proceed; do not reset
+mutation Leases or run an install against a leftover cache filename.
 
 ### Wait times
 
@@ -486,12 +483,12 @@ kubectl describe pod <name>
 - If the pod does not transition to `Running` after 10 minutes, check VK logs for errors:
 
 ```bash
-kubectl -n <device-namespace> logs deploy/<device-name>-vk | grep -E "copy|fallback|error|Error"
+kubectl -n <device-namespace> logs deploy/<device-name>-vk | grep -E "copy|error|Error"
 ```
 
-### Avoiding the copy fallback
+### Using a preloaded local package
 
-To use the copy path intentionally and skip the device-native pull attempt entirely, set `imagePullPolicy: Never` and pre-copy the tar to flash yourself. Then reference the flash path directly in the pod spec:
+For offline deployment, pre-copy the tar to flash and reference that path with `imagePullPolicy: Never`:
 
 ```yaml
 image: flash:/virtual-kubelet/my-app.tar
@@ -504,20 +501,23 @@ imagePullPolicy: Never
 
 ### Symptom
 
-You set `imagePullPolicy: IfNotPresent` expecting the image to be reused from a local cache, but each pod creation issues a fresh download. `dir flash:` shows no cached tar.
+You set `imagePullPolicy: IfNotPresent` expecting a previous tar filename to be
+reused, but a new app deployment downloads the remote package again.
 
 ### Why
 
-IOS-XE App Hosting does not leave a copy of the image on flash when using the device-native install path (`app-hosting install appid ... package <url>`). The device fetches and loads the image directly into the container runtime without writing it to flash. Since no flash copy is ever created, there is nothing for `IfNotPresent` to reuse — it behaves identically to `Always` on the device-native pull path.
+A cache filename alone does not establish which image it contains. Standard
+requires a completed device copy before every new remote installation, under
+both `IfNotPresent` and `Always`. This avoids installing older package data after
+a failed download. Existing app lifecycle reconciliation can reuse the installed
+app; it does not treat an unchecked flash filename as proof of a successful pull.
 
-The `IfNotPresent` flash-cache optimization only activates when the VK's **copy fallback path** has run at least once (i.e., the device-native pull timed out and the VK copied the tar to flash itself). After that first copy, subsequent deploys with `IfNotPresent` will reuse the cached tar.
+### Offline deployment
 
-### Workaround
-
-To reliably benefit from local caching, force the copy path by one of the following:
-
-- Pre-copy the image to flash manually on the device, then use `imagePullPolicy: Never` with a flash path (`flash:/virtual-kubelet/my-app.tar`).
-- Accept that on platforms where the device-native pull succeeds quickly, re-downloading from the registry on each deploy is the expected behaviour.
+Preload the desired package and use a device-local reference with
+`imagePullPolicy: Never`, for example `flash:/virtual-kubelet/my-app.tar`.
+Optional Verified adds package identity checks and a durable installation journal;
+Standard does not require that configuration.
 
 ---
 
@@ -624,3 +624,18 @@ kubectl -n <ns> rollout restart deploy/<device-name>-vk
   - `kubectl describe ciscodevice` output
   - VK pod logs (`--tail=200`)
   - `show app-hosting detail appid <id>` from the device
+
+## Standard staging tar remains on flash
+
+Check worker logs for `Standard staging cleanup confirmed absent`, cleanup
+failure, or ownership-unavailable warnings. Automatic cleanup only covers fresh
+files with a live ownership receipt; preloaded/explicit destinations, legacy
+files and restart or uncertain-operation orphans are deliberately retained.
+Never delete files just because their names begin with `cvk-` or `cvk-stage-`.
+Inspect the exact file, active app/install state, worker diagnostics and normal
+mutation fence before operator-directed removal. A consumed temporary tar can be
+removed while its app runs, but an unconsumed installation may still need it.
+Verify RESTCONF filesystem-read and exact `delete` RPC permissions if cleanup
+fails. Do not clear a Lease or journal to accelerate cleanup or rollback. Keep
+prior versioned upstream packages or caller-owned local packages for rollback.
+See [Standard staging cleanup](CONFIGURATION.md#standard-staging-cleanup).

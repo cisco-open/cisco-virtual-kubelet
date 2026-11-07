@@ -1,0 +1,15 @@
+{
+  "atUTC": "2026-11-04T10:23:53.547802+00:00",
+  "case": "disabled",
+  "onlyCertificateAndMatchingLeafKeyReplaced": true,
+  "onlyIntermediateCertificateReplaced": false,
+  "rootTrustChanged": false,
+  "revocationPolicyChanged": false,
+  "CRLChanged": false,
+  "revokedSerialRemoved": false,
+  "packageURLChanged": false,
+  "payloadChanged": false,
+  "newMode": "disabled-good",
+  "independentCRLCheckingTLSProbePassed": true,
+  "leaseManuallyModified": false
+}

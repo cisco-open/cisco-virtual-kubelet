@@ -33,6 +33,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	ciskov1 "github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
+	"github.com/cisco/virtual-kubelet-cisco/internal/appartifact"
 	"github.com/cisco/virtual-kubelet-cisco/internal/managedprotocol"
 )
 
@@ -54,6 +55,7 @@ func (e *namespaceRBACRisk) Error() string {
 }
 
 type managedWorkerNameScope struct {
+	journals            map[string]struct{}
 	deployments         map[string]struct{}
 	podPrefixes         []string
 	serviceAccounts     map[string]struct{}
@@ -63,10 +65,14 @@ type managedWorkerNameScope struct {
 func newManagedWorkerNameScope(devices []ciskov1.CiscoDevice, current *ciskov1.CiscoDevice) managedWorkerNameScope {
 	names := make(map[string]struct{}, 2*(len(devices)+1))
 	serviceAccounts := make(map[string]struct{}, 2*(len(devices)+1))
+	journals := map[string]struct{}{}
 	scopePlaintext := false
 	add := func(device *ciskov1.CiscoDevice) {
 		if device == nil || device.Name == "" {
 			return
+		}
+		if device.UID != "" && device.Spec.AppArtifacts.EffectiveMode() == ciskov1.AppArtifactModeVerified {
+			journals[appartifact.ManagedJournalName(string(device.UID))] = struct{}{}
 		}
 		names[device.Name+deploymentSuffix] = struct{}{}
 		names[networkDeploymentName(string(device.UID))] = struct{}{}
@@ -101,7 +107,7 @@ func newManagedWorkerNameScope(devices []ciskov1.CiscoDevice, current *ciskov1.C
 	}
 	sort.Strings(prefixes)
 	return managedWorkerNameScope{
-		deployments: names, podPrefixes: prefixes, serviceAccounts: serviceAccounts,
+		deployments: names, podPrefixes: prefixes, serviceAccounts: serviceAccounts, journals: journals,
 		plaintextCredential: scopePlaintext,
 	}
 }
@@ -111,6 +117,9 @@ func (s managedWorkerNameScope) includes(resource, name string) bool {
 		return true
 	}
 	switch resource {
+	case "configmaps":
+		_, found := s.journals[name]
+		return found
 	case "serviceaccounts":
 		_, found := s.serviceAccounts[name]
 		return found
@@ -401,6 +410,14 @@ func unsafeManagedNamespaceRule(rule rbacv1.PolicyRule, appSA, networkSA string,
 		return capability
 	}
 
+	if !allowTrustedReads && len(scope.journals) > 0 && policyValueMatches(rule.APIGroups, "") && policyResourceMatches(rule.Resources, "configmaps") {
+		if policyVerbMatches(rule.Verbs, "create") && len(rule.ResourceNames) == 0 {
+			return "creation or replacement of Verified installation journals"
+		}
+		if policyVerbMatches(rule.Verbs, "update", "patch", "delete") && ruleAppliesToManagedNames(rule, "configmaps", scope) || len(rule.ResourceNames) == 0 && policyVerbMatches(rule.Verbs, "deletecollection") {
+			return "mutation of Verified installation journals"
+		}
+	}
 	if policyValueMatches(rule.APIGroups, "") {
 		for _, resource := range []string{"pods/binding", "bindings"} {
 			if policyResourceMatches(rule.Resources, resource) &&
@@ -506,6 +523,27 @@ func (r *CiscoDeviceReconciler) inspectManagedWorkerNamespaceRBAC(ctx context.Co
 		return fmt.Errorf("list CiscoDevices for managed worker RBAC name scope in namespace %q: %w", device.Namespace, err)
 	}
 	scope := newManagedWorkerNameScope(devices.Items, device)
+	var journals corev1.ConfigMapList
+	if err := r.reader().List(ctx, &journals, client.InNamespace(device.Namespace)); err != nil {
+		return err
+	}
+	for _, cm := range journals.Items {
+		if cm.Annotations[appartifact.JournalKindAnnotation] == "v1" {
+			scope.journals[cm.Name] = struct{}{}
+		}
+	}
+
+	// The retained Role remains a marker even if a journal's annotations are
+	// removed while it is unbound. Never let that erase the protected name.
+	var journalRoles rbacv1.RoleList
+	if err := r.reader().List(ctx, &journalRoles, client.InNamespace(device.Namespace)); err != nil {
+		return err
+	}
+	for _, role := range journalRoles.Items {
+		if role.Annotations[appartifact.JournalKindAnnotation] == "v1" {
+			scope.journals[role.Name] = struct{}{}
+		}
+	}
 	leaseNamespace := strings.TrimSpace(r.LeaseNamespace)
 	if leaseNamespace == "" {
 		leaseNamespace = device.Namespace
@@ -528,11 +566,19 @@ func (r *CiscoDeviceReconciler) inspectManagedWorkerNamespaceRBAC(ctx context.Co
 			sharedSubject := hasWorkerSubject(binding.Subjects, device.Namespace, appSA) ||
 				hasWorkerSubject(binding.Subjects, device.Namespace, networkSA)
 			trustedShared := trustedSharedWorkerRoleBinding(binding, device.Namespace, leaseNamespace, appSA, networkSA)
+			trustedArtifact := false
+			if binding.Annotations[appartifact.JournalKindAnnotation] == "v1" && hasWorkerSubject(binding.Subjects, device.Namespace, appSA) {
+				if err := r.validateArtifactGrant(ctx, binding, device.Namespace, appSA); err != nil {
+					return err
+				}
+				trustedArtifact = true
+			}
+
 			// Only the exact controller binding may delegate a reserved reusable
 			// identity. Reject even a currently dangling additive binding: otherwise
 			// its Role can appear immediately after a clean audit and authorize an old
 			// projected token before the watch-driven quarantine completes.
-			if sharedSubject && !trustedShared {
+			if sharedSubject && !trustedShared && !trustedArtifact {
 				return fmt.Errorf("unexpected RoleBinding %s grants a reserved shared worker ServiceAccount",
 					client.ObjectKeyFromObject(binding))
 			}
@@ -564,7 +610,7 @@ func (r *CiscoDeviceReconciler) inspectManagedWorkerNamespaceRBAC(ctx context.Co
 			}
 			for ruleIndex, rule := range rules {
 				if capability := unsafeManagedNamespaceRule(rule, appSA, networkSA, scope,
-					trustedShared || trustedGenerated || trustedLegacyShared); capability != "" {
+					trustedShared || trustedGenerated || trustedLegacyShared || trustedArtifact); capability != "" {
 					return &namespaceRBACRisk{
 						binding: client.ObjectKeyFromObject(binding), roleRef: binding.RoleRef,
 						rule: ruleIndex + 1, capability: capability,

@@ -1,0 +1,304 @@
+{
+  "status": "core-copy-profile-qualified",
+  "dateUTC": "2026-11-02",
+  "defaultMode": "Standard",
+  "governed": "deferred, not implemented",
+  "target": {
+    "hostname": "Edge-9K",
+    "address": "10.1.1.1",
+    "model": "C9300-24UX",
+    "serial": "FCW2247C1AJ",
+    "iosXeVersion": "17.18.1 RELEASE SOFTWARE (fc2)",
+    "ioxVersion": "2.13.0",
+    "nativePackageSignaturePolicy": "disabled at baseline, preserved"
+  },
+  "environment": {
+    "host": "ux-agx",
+    "hostAddress": "192.168.129.111",
+    "isolation": "owned nested k3s on ux-agx; shared existing cluster untouched",
+    "k3sVersion": "v1.35.9+k3s1",
+    "workloadNamespace": "cvk-qual-apps-20261102",
+    "deviceNamespace": "cvk-qual-20261102",
+    "ciscoDeviceUID": "488843d5-85e8-48d6-a3e7-7e945d548369",
+    "virtualNodeUID": "777828bf-9330-4953-9fcb-b3ba3936cd0f",
+    "journalUID": "b04225bb-c9b9-4364-a98c-f6e628907226",
+    "rbacProfile": "strict managed shared app-hosting readWrite; network worker readOnly"
+  },
+  "delivery": {
+    "stage": "existing RESTCONF copy RPC",
+    "onDeviceVerification": "native dir size plus verify /sha512 over pinned SSH",
+    "archiveIdentity": "signed descriptor SHA256 and exact bytes; SHA512 derived from validated archive",
+    "gnoiFileGet": "unsupported on this firmware; not used for this profile",
+    "scpOnDevice": "not used"
+  },
+  "cases": [
+    {
+      "case": "consistent-a",
+      "result": "PASS",
+      "assertions": {
+        "collectedAtUTC": "2026-11-02T22:06:12.078865+00:00",
+        "label": "consistent-a",
+        "release": "A",
+        "ready": true,
+        "correctJournal": true,
+        "httpReleaseConfirmed": true,
+        "oldNativeAppsAbsent": true,
+        "podUIDs": [
+          "a7d0dd69-ed81-458b-a9b3-e02bb4c33f63"
+        ],
+        "nativeStates": {
+          "iris": "RUNNING",
+          "c9ktest": "DEPLOYED",
+          "cvk0000_a7d0dd69ed81458ba9b3e02bb4c33f63": "RUNNING"
+        },
+        "podStates": [
+          [
+            {
+              "containerID": "cvk0000_a7d0dd69ed81458ba9b3e02bb4c33f63",
+              "image": "https://192.168.129.111:18443/v1/packages/sha256/ed8c257297a526229b154cbaabe1c466de239d4c011e4edfd25c7cb440fa071c/package.tar",
+              "imageID": "127.0.0.1:15443/cvk-qual-20261102/agent@sha256:24193e6eae32de28d622fe59cf2c5896b4929f325991ebf405f91c70920ebcd2",
+              "lastState": {},
+              "name": "agent",
+              "ready": true,
+              "restartCount": 0,
+              "state": {
+                "running": {
+                  "startedAt": null
+                }
+              }
+            }
+          ]
+        ],
+        "passed": true
+      },
+      "evidence": [
+        "snapshot-consistent-a.json",
+        "checksum-consistent-a.json",
+        "lease-consistent-a.json"
+      ]
+    },
+    {
+      "case": "consistent-b",
+      "result": "PASS",
+      "assertions": {
+        "collectedAtUTC": "2026-11-02T22:08:36.205891+00:00",
+        "label": "consistent-b",
+        "release": "B",
+        "ready": true,
+        "correctJournal": true,
+        "httpReleaseConfirmed": true,
+        "oldNativeAppsAbsent": true,
+        "podUIDs": [
+          "d2aad048-307f-4ae0-93f3-17c46d9c8be7"
+        ],
+        "nativeStates": {
+          "iris": "RUNNING",
+          "c9ktest": "DEPLOYED",
+          "cvk0000_d2aad048307f4ae093f317c46d9c8be7": "RUNNING"
+        },
+        "podStates": [
+          [
+            {
+              "containerID": "cvk0000_d2aad048307f4ae093f317c46d9c8be7",
+              "image": "https://192.168.129.111:18443/v1/packages/sha256/febf34ebd664bbac03002f67578fbdf5b54c0358d24baa83b6abdb201266892f/package.tar",
+              "imageID": "127.0.0.1:15443/cvk-qual-20261102/agent@sha256:a2d5775b7d78452bf6cc4b963f627e68948a15fa1a2ffd8ee53f42c7d5021de3",
+              "lastState": {},
+              "name": "agent",
+              "ready": true,
+              "restartCount": 0,
+              "state": {
+                "running": {
+                  "startedAt": null
+                }
+              }
+            }
+          ]
+        ],
+        "passed": true
+      },
+      "evidence": [
+        "snapshot-consistent-b.json",
+        "checksum-consistent-b.json",
+        "lease-consistent-b.json"
+      ]
+    },
+    {
+      "case": "rollback-a",
+      "result": "PASS",
+      "assertions": {
+        "collectedAtUTC": "2026-11-02T22:10:57.938595+00:00",
+        "label": "rollback-a",
+        "release": "A",
+        "ready": true,
+        "correctJournal": true,
+        "httpReleaseConfirmed": true,
+        "oldNativeAppsAbsent": true,
+        "podUIDs": [
+          "307fb269-b02f-43eb-b487-1ce6546f0025"
+        ],
+        "nativeStates": {
+          "iris": "RUNNING",
+          "c9ktest": "DEPLOYED",
+          "cvk0000_307fb269b02f43ebb4871ce6546f0025": "RUNNING"
+        },
+        "podStates": [
+          [
+            {
+              "containerID": "cvk0000_307fb269b02f43ebb4871ce6546f0025",
+              "image": "https://192.168.129.111:18443/v1/packages/sha256/ed8c257297a526229b154cbaabe1c466de239d4c011e4edfd25c7cb440fa071c/package.tar",
+              "imageID": "127.0.0.1:15443/cvk-qual-20261102/agent@sha256:24193e6eae32de28d622fe59cf2c5896b4929f325991ebf405f91c70920ebcd2",
+              "lastState": {},
+              "name": "agent",
+              "ready": true,
+              "restartCount": 0,
+              "state": {
+                "running": {
+                  "startedAt": null
+                }
+              }
+            }
+          ]
+        ],
+        "passed": true
+      },
+      "evidence": [
+        "snapshot-rollback-a.json",
+        "checksum-rollback-a.json",
+        "lease-rollback-a.json"
+      ]
+    },
+    {
+      "case": "worker-replaced-a",
+      "result": "PASS",
+      "assertions": {
+        "collectedAtUTC": "2026-11-02T22:17:25.237514+00:00",
+        "label": "worker-replaced-a",
+        "release": "A",
+        "ready": true,
+        "correctJournal": true,
+        "httpReleaseConfirmed": true,
+        "oldNativeAppsAbsent": true,
+        "podUIDs": [
+          "307fb269-b02f-43eb-b487-1ce6546f0025"
+        ],
+        "nativeStates": {
+          "iris": "RUNNING",
+          "c9ktest": "DEPLOYED",
+          "cvk0000_307fb269b02f43ebb4871ce6546f0025": "RUNNING"
+        },
+        "podStates": [
+          [
+            {
+              "containerID": "cvk0000_307fb269b02f43ebb4871ce6546f0025",
+              "image": "https://192.168.129.111:18443/v1/packages/sha256/ed8c257297a526229b154cbaabe1c466de239d4c011e4edfd25c7cb440fa071c/package.tar",
+              "imageID": "127.0.0.1:15443/cvk-qual-20261102/agent@sha256:24193e6eae32de28d622fe59cf2c5896b4929f325991ebf405f91c70920ebcd2",
+              "lastState": {},
+              "name": "agent",
+              "ready": true,
+              "restartCount": 0,
+              "state": {
+                "running": {
+                  "startedAt": null
+                }
+              }
+            }
+          ]
+        ],
+        "passed": true
+      },
+      "evidence": [
+        "snapshot-worker-replaced-a.json",
+        "checksum-worker-replaced-a.json",
+        "lease-worker-replaced-a.json"
+      ]
+    },
+    {
+      "case": "device-only-same-size-corruption",
+      "result": "PASS",
+      "assertions": {
+        "passed": true,
+        "case": "same-size device-only transfer corruption",
+        "startedAtUTC": "2026-11-02T22:18:32.893779+00:00",
+        "archiveSize": 5963776,
+        "expectedSHA512": "e50300677be5f0827b4a7fedc9d317d684a96627f4ea2b3c9a86836e753c671179d85a2bce4360277b7157b684901858402451f85540862d415a8776f1762a2d",
+        "deviceCorruptSHA512": "32468461995f9a707eba42a7531184d46abd905a35a72a3a48273a76506c49d824c3e68286ca9e0cef1d8a8250df3696a373f5e005fed28a25f0347f96f60c11",
+        "podNotReady": true,
+        "nativeFixtureAbsent": true,
+        "journalPhase": "staging",
+        "workerReceivedCorrectBytes": true,
+        "deviceReceivedSameSizeCorruptBytes": true,
+        "noInstallGatePassed": true
+      },
+      "evidence": [
+        "snapshot-transfer-corruption.json",
+        "transfer-corruption-checksum.json",
+        "lease-transfer-corruption.json"
+      ]
+    }
+  ],
+  "additionalCases": [
+    {
+      "case": "native verifier wrong checksum",
+      "result": "PASS",
+      "evidence": "native-checksum-wrong-checksum.json"
+    },
+    {
+      "case": "native verifier wrong SSH pin",
+      "result": "PASS",
+      "evidence": "native-checksum-wrong-host-key.json"
+    },
+    {
+      "case": "pending accepted-operation lost-response worker replacement",
+      "result": "NOT_RUN_ON_HARDWARE",
+      "coverage": "automated recovery tests only"
+    },
+    {
+      "case": "physical Standard control deployment",
+      "result": "NOT_RUN",
+      "coverage": "Standard default/configuration and isolation regression tests passed"
+    }
+  ],
+  "limitations": [
+    "Single exact hardware/firmware/Linux-amd64 Docker-save fixture profile; no fleet-wide claim.",
+    "A/B fixtures model defect/fixed replacement mechanics; no particular CVE fix is asserted.",
+    "One-replica Recreate; no uninterrupted availability or stateful data migration qualification.",
+    "Fixture requests memory 128Mi only. Node does not advertise CPU/ephemeral-storage scheduling capacity; general resource scheduling is not qualified.",
+    "Original package-signature policy was disabled; other native package trust policies need compatible packaging/signing qualification.",
+    "Native RPC install counters unavailable; no archive refetch and stable native app identity are narrower than a native installation-count assertion.",
+    "No claim of an observed runtime rootfs/image digest; journal source image is the verified source identity."
+  ],
+  "failedAttempts": [
+    {
+      "candidate": "initial lab image recipes",
+      "outcome": "launch rejected for executable mode/path; corrected before physical lifecycle qualification"
+    },
+    {
+      "candidate": "8d92739d30e2 and 37c608455d7f",
+      "outcome": "native A ran, but Kubernetes status/desired configuration identity did not converge; not deployment passes. Corrected upstream environment expansion mismatch and read-only status handling in final candidate."
+    },
+    {
+      "candidate": "partial staged observer binary image",
+      "outcome": "checksum/launch controls rejected it before deployment; complete staged binary was used for subsequent build"
+    },
+    {
+      "action": "direct worker Pod deletion by lab admin",
+      "outcome": "denied by existing native worker admission policy; successful replacement used manager-controlled CiscoDevice logLevel change"
+    },
+    {
+      "action": "initial cleanup restoration check",
+      "outcome": "Strict check detected retained gNOI HTTPS runtime selection. Restored the original self-signed certificate explicitly; preserved every preexisting trustpoint and documented the one-line selector difference."
+    }
+  ],
+  "mutationFenceHandling": "No mutation Lease was edited/deleted to obtain progress. Earlier retained lease expired normally. Checksum-negative run retains its fence and journal; workers are quiesced before exact owned-file cleanup.",
+  "provenance": "candidate-provenance.json",
+  "automatedChecks": "automated-checks.json",
+  "cleanup": {
+    "result": "PASS",
+    "evidence": [
+      "final-cleanup.json",
+      "final-host-check.json"
+    ],
+    "configurationDelta": "Original HTTPS certificate restored through explicit ip http secure-trustpoint TP-self-signed-806566997. With no explicit selector, IOS-XE now chooses existing cvk-gnoi-20260904; no existing certificate/trustpoint was removed to change that preference.",
+    "localProducerTunnel": "closed"
+  }
+}

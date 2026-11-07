@@ -1,0 +1,55 @@
+{
+  "atUTC": "2026-11-06T10:29:05.367287+00:00",
+  "probes": [
+    {
+      "originalPath": "/tmp/cvk-stdgc-20261106-probe/probe.json",
+      "exportName": "api-probe-1-probe.json",
+      "sha256": "c572c11c22f09e5c55065ab5afdddd1bda6a6c3424021fed9bdfe1bae63e00c7"
+    },
+    {
+      "originalPath": "/tmp/cvk-stdgc-20261106-probe2/probe.json",
+      "exportName": "api-probe-2-probe.json",
+      "sha256": "d682426f68ae61addd02119b0802beb2aba64ee0fab618db92e8477965aab267"
+    },
+    {
+      "originalPath": "/tmp/cvk-stdgc-20261106-probe2/progress.json",
+      "exportName": "api-probe-2-progress.json",
+      "sha256": "4c1d3675e0afb7eba3f1b99e7d0ce1dac457983d2c91d6fdf46fb675cf2a1520"
+    },
+    {
+      "originalPath": "/tmp/cvk-stdgc-20261106-probe3/probe.json",
+      "exportName": "api-probe-3-probe.json",
+      "sha256": "7645d87b80e85c4f05ccdea497bfbd54827dd669bf6966d5b05e2d95bc6c5755"
+    },
+    {
+      "originalPath": "/tmp/cvk-stdgc-20261106-probe3/progress.json",
+      "exportName": "api-probe-3-progress.json",
+      "sha256": "561edf22ff01a80c065c4c6095b890075a4c718f008cfb0f73be93c206ed1e00"
+    },
+    {
+      "originalPath": "/tmp/cvk-stdgc-20261106-probe4/probe.json",
+      "exportName": "api-probe-4-probe.json",
+      "sha256": "9cd497066d4b257808013431dbac3b35491599da61e9f5f514ad14fb2f9ca280"
+    },
+    {
+      "originalPath": "/tmp/cvk-stdgc-20261106-probe4/progress.json",
+      "exportName": "api-probe-4-progress.json",
+      "sha256": "64e9cef76d325a15c5f8c4043130e14c7c0b495ecef0b81d462bc9ecad49464e"
+    },
+    {
+      "originalPath": "/tmp/cvk-stdgc-20261106-probe5/probe.json",
+      "exportName": "api-probe-5-probe.json",
+      "sha256": "5a83ab50378b359d2460cf4fe40b4ce7d13929df2a0093bc5835a98395e38fd5"
+    },
+    {
+      "originalPath": "/tmp/cvk-stdgc-20261106-probe5/progress.json",
+      "exportName": "api-probe-5-progress.json",
+      "sha256": "c1738aca8c0af53c4a3133eecf53e7ed14df4f22a922316729252aea6eb4df8b"
+    }
+  ],
+  "initialBroadQueryFailure": "HTTP IncompleteRead after 3691709 bytes; no app install/copy issued; management selector restored",
+  "laterFilteredQueries": "writable flash metadata with fields; exact basename partition-content key; post-delete 404 invalid-value uri keypath not found",
+  "deleteRPC": "qualified exact-path delete and already-missing idempotent success",
+  "truncatedProbe": "synchronous HTTP400 I/O error; no file remained; selector restored",
+  "productionTransferTransportChanged": false
+}

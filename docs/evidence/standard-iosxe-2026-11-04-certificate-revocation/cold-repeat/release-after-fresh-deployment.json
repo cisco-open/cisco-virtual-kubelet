@@ -1,0 +1,17 @@
+{
+  "atUTC": "2026-11-04T17:59:24.764584+00:00",
+  "passed": true,
+  "expectedRelease": "REVOCATION-COLD-20261104-35d8a9c90cb2",
+  "actualReleases": [
+    {
+      "appID": "cvk0000_19a9ea42a177452e8e47afcbbe938834",
+      "release": "REVOCATION-COLD-20261104-35d8a9c90cb2",
+      "ip": "192.168.129.186"
+    }
+  ],
+  "podUIDs": [
+    "19a9ea42-a177-452e-8e47-afcbbe938834"
+  ],
+  "transfersBefore": 1,
+  "transfersAfter": 2
+}

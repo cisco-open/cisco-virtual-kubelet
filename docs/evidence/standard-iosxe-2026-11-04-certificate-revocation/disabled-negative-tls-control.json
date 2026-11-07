@@ -1,0 +1,9 @@
+{
+  "atUTC": "2026-11-04T10:22:24.023447+00:00",
+  "case": "disabled",
+  "accepted": false,
+  "CRLChecking": true,
+  "verificationCode": 23,
+  "verificationMessage": "certificate revoked",
+  "rootCertificate": "disabled-root"
+}

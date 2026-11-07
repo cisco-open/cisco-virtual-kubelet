@@ -1,0 +1,8 @@
+import pathlib,subprocess,json,hashlib,datetime,os
+r=pathlib.Path('/tmp/cvk-stdcopyfix-20261105');files=[]
+for name in ['/tmp/cvk-stdrevoke-20261104','/tmp/cvk-stdrevoke-20261104/cold','/tmp/cvk-crlrefresh-20261104','/tmp/cvk-crlrefresh-20261104/prepublication-attempt','/tmp/cvk-intrefresh-20261105']:
+ for p in sorted(pathlib.Path(name).iterdir()):
+  if p.is_file() and p.suffix in ['.json','.jsonl','.yaml','.crt','.crl','.pem','.py','.log']:
+   b=p.read_bytes();files.append({'path':str(p),'bytes':len(b),'sha256':hashlib.sha256(b).hexdigest()})
+(r/'earlier-remote-hashes.json').write_text(json.dumps({'capturedAtUTC':datetime.datetime.now(datetime.timezone.utc).isoformat(),'files':files},indent=2)+'\n')
+for n in ['smoke_host','generate_pki','prepare_device','deploy']:subprocess.run(['python3',str(r/(n+'.py'))],check=True)

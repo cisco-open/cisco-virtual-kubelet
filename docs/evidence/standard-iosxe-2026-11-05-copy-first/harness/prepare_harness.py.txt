@@ -1,0 +1,21 @@
+from pathlib import Path
+import json
+r=Path('/private/tmp/cvk-stdcopyfix-20261105');old=Path('/private/tmp/cvk-intrefresh-20261105')
+subs=[('cvk-intrefresh','cvk-stdcopyfix'),('c9k-intrefresh','c9k-stdcopyfix'),('20261105-intrefresh','20261105-stdcopyfix'),('CVK-INTREFRESH','CVK-STDCOPYFIX'),('INT-REFRESH-','STD-COPYFIX-'),('intermediate refresh','Standard copy fix'),('16457','16458'),('18472','18475'),('18473','18476'),('18474','18477'),('10.76.0.0','10.78.0.0'),('10.77.0.0','10.79.0.0')]
+for n in ['bootstrap','deploy','device_cli','control_functions','snapshot','build_payloads','smoke_host','pki_io','prepare_device','check_pki','servers','cleanup','launch','verify_earlier','qualify','generate_pki','publish_crl','validate_pki','setup','main']:
+ p=old/(n+('.go' if n=='main' else '.py'));s=p.read_text()
+ for a,b in subs:s=s.replace(a,b)
+ if n=='bootstrap':s=s.replace('/tmp/cvk-replies-20261103/image.tar','/tmp/cvk-stdcopyfix-20261105/image.tar')
+ if n=='deploy':
+  s=s.replace("'repository':'cvk-replies-qual','tag':'20261103-529e98f251b3'","'repository':'cvk-stdcopyfix-qual','tag':'20261105-7cd903ed3dd4'")
+  s=s.replace("str(OLD/'cisco-virtual-kubelet')","str(R/'chart')")
+ if n=='control_functions':s=s.replace("IMAGE='sha256:6d5cda316de797b803829a9ae9ac9302ea2eda984c40ecf7e2878a3be9b2527d'","IMAGE=json.loads((R/'candidate.json').read_text())['dockerImageID']")
+ if n=='build_payloads':s=s.replace('d.mkdir()','d.mkdir(exist_ok=True)')
+ if n=='setup':s=s.replace("'/tmp/cvk-crlrefresh-20261104/prepublication-attempt'","'/tmp/cvk-crlrefresh-20261104/prepublication-attempt','/tmp/cvk-intrefresh-20261105'")
+ if n=='qualify':
+  s=s.replace('len(alerts)>=2 or nativeFailures>=2','len(alerts)>=1 or nativeFailures>=1')
+  # Stop immediately on any stale execution; preserve it as a failure.
+  needle="mode=json.loads((R/'server-mode.json').read_text());"
+  s=s.replace(needle,"assert classification=='new-intermediate-revocation-discovered-and-fresh-delivery-rejected',classification\nassert not bad['nativeApps'] or {a['appID'] for a in bad['nativeApps']}=={'iris','c9ktest'}\n# Restart only the owned managed worker while transfer remains revoked.\noldWorkers={w['uid'] for w in bad['workers']};oldLease=lease();run(K+['-n',NS,'rollout','restart','deployment/'+DEV+'-vk']);run(K+['-n',NS,'rollout','status','deployment/'+DEV+'-vk','--timeout=240s']);time.sleep(15);restart=observe('revoked-worker-restart');assert not any(ready(p) for p in restart['pods']) and not releases(restart);assert {a['appID'] for a in restart['nativeApps']}=={'iris','c9ktest'};assert oldWorkers.isdisjoint({w['uid'] for w in restart['workers']});assert lease()['metadata']['uid']==oldLease['metadata']['uid'];save('negative-worker-restart',{'atUTC':now(),'passed':True,'previousWorkerUIDs':sorted(oldWorkers),'newWorkerUIDs':[w['uid'] for w in restart['workers']],'sameLeaseUID':True,'noRuntime':True,'noReady':True})\n"+needle)
+ (r/p.name).write_text(s)
+print('Prepared new isolated harness')

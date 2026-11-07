@@ -1,0 +1,15 @@
+import pathlib,json,subprocess,urllib.request,time,datetime,socket
+R=pathlib.Path('/tmp/cvk-stdgc-20261106');P=json.loads((R/'payload-provenance.json').read_text());checks=[];name='cvk-stdgc-smoke-20261104'
+assert not subprocess.check_output(['docker','ps','-a','--filter','name=^'+name+'$','--format','{{.ID}}'],text=True).strip()
+s=socket.socket();assert s.connect_ex(('127.0.0.1',18483))!=0;s.close()
+for phase,p in P['phases'].items():
+ subprocess.run(['docker','load','-i',str(R/phase/'package.tar')],check=True,capture_output=True);image=json.loads(subprocess.check_output(['docker','image','inspect',p['repoTag']],text=True))[0];assert image['Id']==p['dockerConfigID'];subprocess.run(['docker','run','-d','--name',name,'--label','apphosting.cisco.com/qualification=20261106-stdgc','-p','127.0.0.1:18483:8080',p['repoTag']],check=True,capture_output=True)
+ try:
+  for i in range(30):
+   try:
+    with urllib.request.urlopen('http://127.0.0.1:18483/',timeout=3) as resp:body=json.loads(resp.read());assert body['release']==p['release'];break
+   except OSError:time.sleep(.5)
+  else:raise RuntimeError('Host smoke failed')
+  checks.append({'phase':phase,'expectedRelease':p['release'],'actualRelease':body['release'],'dockerConfigID':image['Id']})
+ finally:subprocess.run(['docker','rm','-f',name],check=True,capture_output=True)
+(R/'host-smoke.json').write_text(json.dumps({'atUTC':datetime.datetime.now(datetime.timezone.utc).isoformat(),'passed':True,'loopbackOnly':True,'C9KImagesPrimed':False,'checks':checks},indent=2)+'\n');print('PASS three host-only image/release checks')

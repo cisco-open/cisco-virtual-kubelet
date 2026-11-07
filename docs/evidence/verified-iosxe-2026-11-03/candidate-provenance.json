@@ -1,0 +1,31 @@
+{
+  "cvk": {
+    "baseCommit": "1791a7e1634961936233ee94170f1c63cea1b64c",
+    "branch": "pr/johalley/verified-app-artifacts",
+    "dirtyWorktree": true,
+    "sourceTreeDigest": "sha256:22e3de72f9f5dc02127316b4bedaf28328bf4e6c33a5eacd25071f41d681db9c",
+    "sourceFileCount": 1555,
+    "binarySHA256": "0afc2dec6bb8151ab90f40db85bae248f5482d445d5675de25dc965b84855a46",
+    "image": "cvk-verified-qual:20261102-consistent-0afc2dec6bb8",
+    "dockerImageID": "sha256:cc9db942e9bbe1295c961a3ec1de554befaac33d07de4d456cd711b1bd3e13c4",
+    "containerdManifestDigest": "sha256:251e6bb18d65199ebeab7a295c5266e8ad910bc3142e9116e3ff6e0fecec09bf",
+    "reproducibleSecondBuildSHA256": "0afc2dec6bb8151ab90f40db85bae248f5482d445d5675de25dc965b84855a46"
+  },
+  "passthrough": {
+    "baseCommit": "813624e3d403c24da8102953ab218ec16f38023d",
+    "branch": "pr/johalley/verified-artifact-prepare",
+    "dirtyWorktree": true,
+    "sourceTreeDigest": "sha256:39e41956af842d9f5800b8769c9d64a54dbc559eface04e53cdf6dfa7e05faa1",
+    "sourceFileCount": 11,
+    "binarySHA256": "dc75544917ecb246fe4213afffd1466d95834bbf41a41092ad116c23c1f88949"
+  },
+  "sourceDigestAlgorithm": "Sort unique git ls-files -co --exclude-standard regular files under api/, cmd/, internal/, charts/, plus go.mod, go.sum, Dockerfile, Makefile. SHA256 of concatenated UTF-8 relative path, NUL, lowercase file SHA256, newline. Test files included; docs excluded.",
+  "nativeChecksumProbe": {
+    "binarySHA256": "1a8f4f6e385480a9b80901091b637cb9e92bab748794afedfaf79cdcd3468d71",
+    "source": "harness/checksum-probe.go.txt",
+    "productionImplementation": "internal/drivers/iosxe/configdriver/transport/app_checksum.go",
+    "productionSourceSHA256": "15d4384af3b5c49e9e41a9bd1fe083296c297be6f932b44b308465a4ab928c2b"
+  },
+  "qualificationRun": "2026-11-03",
+  "candidateChanged": false
+}

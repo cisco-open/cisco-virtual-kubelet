@@ -1,0 +1,122 @@
+{
+  "apiVersion": "apps/v1",
+  "kind": "Deployment",
+  "metadata": {
+    "annotations": {
+      "deployment.kubernetes.io/revision": "1"
+    },
+    "creationTimestamp": "2026-11-03T22:52:08Z",
+    "generation": 1,
+    "labels": {
+      "qualification": "20261103-stdchain"
+    },
+    "name": "cvk-stdchain-fixture",
+    "namespace": "cvk-stdchain-apps-20261103",
+    "resourceVersion": "1036",
+    "uid": "097c6752-632c-488c-9161-54492eb24e3b"
+  },
+  "spec": {
+    "progressDeadlineSeconds": 600,
+    "replicas": 1,
+    "revisionHistoryLimit": 10,
+    "selector": {
+      "matchLabels": {
+        "app": "cvk-stdchain-fixture"
+      }
+    },
+    "strategy": {
+      "type": "Recreate"
+    },
+    "template": {
+      "metadata": {
+        "labels": {
+          "app": "cvk-stdchain-fixture",
+          "cert-case": "valid-root",
+          "qualification": "20261103-stdchain"
+        }
+      },
+      "spec": {
+        "affinity": {
+          "nodeAffinity": {
+            "requiredDuringSchedulingIgnoredDuringExecution": {
+              "nodeSelectorTerms": [
+                {
+                  "matchFields": [
+                    {
+                      "key": "metadata.name",
+                      "operator": "In",
+                      "values": [
+                        "c9k-stdchain-20261103"
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        },
+        "containers": [
+          {
+            "image": "https://192.168.129.111:18455/valid-root-agent-a.tar",
+            "imagePullPolicy": "Always",
+            "name": "agent",
+            "ports": [
+              {
+                "containerPort": 8080,
+                "protocol": "TCP"
+              }
+            ],
+            "resources": {
+              "limits": {
+                "memory": "128Mi"
+              },
+              "requests": {
+                "memory": "128Mi"
+              }
+            },
+            "terminationMessagePath": "/dev/termination-log",
+            "terminationMessagePolicy": "File"
+          }
+        ],
+        "dnsPolicy": "ClusterFirst",
+        "restartPolicy": "Always",
+        "schedulerName": "default-scheduler",
+        "securityContext": {},
+        "terminationGracePeriodSeconds": 30,
+        "tolerations": [
+          {
+            "effect": "NoSchedule",
+            "key": "cisco.vk/device",
+            "operator": "Exists"
+          }
+        ]
+      }
+    }
+  },
+  "status": {
+    "availableReplicas": 1,
+    "conditions": [
+      {
+        "lastTransitionTime": "2026-11-03T22:52:32Z",
+        "lastUpdateTime": "2026-11-03T22:52:32Z",
+        "message": "Deployment has minimum availability.",
+        "reason": "MinimumReplicasAvailable",
+        "status": "True",
+        "type": "Available"
+      },
+      {
+        "lastTransitionTime": "2026-11-03T22:52:08Z",
+        "lastUpdateTime": "2026-11-03T22:52:32Z",
+        "message": "ReplicaSet \"cvk-stdchain-fixture-86d57ccf49\" has successfully progressed.",
+        "reason": "NewReplicaSetAvailable",
+        "status": "True",
+        "type": "Progressing"
+      }
+    ],
+    "observedGeneration": 1,
+    "readyReplicas": 1,
+    "replicas": 1,
+    "terminatingReplicas": 0,
+    "updatedReplicas": 1
+  }
+}

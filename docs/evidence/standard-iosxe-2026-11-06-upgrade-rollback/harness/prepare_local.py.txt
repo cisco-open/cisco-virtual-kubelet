@@ -1,0 +1,16 @@
+from pathlib import Path
+import json
+r=Path('/private/tmp/cvk-stdupgrade-20261106');old=Path('/private/tmp/cvk-stdcopyfix-20261105')
+subs=[('cvk-stdcopyfix','cvk-stdupgrade'),('c9k-stdcopyfix','c9k-stdupgrade'),('20261105-stdcopyfix','20261106-stdupgrade'),('CVK-STDCOPYFIX-20261105','CVK-STDUPGRADE-20261106'),('16458','16459'),('18475','18479'),('18477','18480'),('10.78.0.0','10.80.0.0'),('10.79.0.0','10.81.0.0'),('stdupgrade-20261105','stdupgrade-20261106'),('stdupgrade-k3s-20261105','stdupgrade-k3s-20261106'),('stdupgrade-apps-20261105','stdupgrade-apps-20261106')]
+for n in ['bootstrap','deploy','device_cli','control_functions','snapshot','smoke_host','pki_io','verify_static','verify_earlier','build_payloads']:
+ s=(old/(n+'.py')).read_text()
+ for a,b in subs:s=s.replace(a,b)
+ if n=='bootstrap':s=s.replace('/tmp/cvk-stdupgrade-20261106/image.tar','/tmp/cvk-stdcopyfix-20261105/image.tar')
+ if n=='deploy':s=s.replace("'repository':'cvk-stdupgrade-qual'","'repository':'cvk-stdcopyfix-qual'")
+ if n=='verify_static':s=s.replace("d.name=='standard-iosxe-2026-11-05-copy-first'","d.name=='standard-iosxe-2026-11-06-upgrade-rollback'")
+ if n=='build_payloads':s=s.replace("['valid','cached','refresh']","['a','b']").replace("STD-COPYFIX-","STD-UPGRADE-").replace("'-20261105-'","'-20261106-'").replace('Built three fresh independent images','Built two fresh independent images').replace('Run-owned CRL refresh fixture','Run-owned upgrade/rollback fixture')
+ (r/(n+'.py')).write_text(s)
+(r/'main.go').write_text((old/'main.go').read_text().replace('intermediate-refresh','upgrade-rollback'))
+x=json.loads((old/'candidate.json').read_text());x['physicalControl']='Standard copy-first app upgrade, Deployment-history rollback, failed HTTPS upgrade download and retry';x['priorCandidateEvidence']='../standard-iosxe-2026-11-05-copy-first/candidate.json';x.pop('qualificationAmendment',None);(r/'candidate.json').write_text(json.dumps(x,indent=2)+'\n')
+# Bootstrap imports the retained qualified image, without altering its identity.
+s=(r/'bootstrap.py').read_text().replace('/tmp/cvk-stdupgrade-20261105/image.tar','/tmp/cvk-stdcopyfix-20261105/image.tar');(r/'bootstrap.py').write_text(s)

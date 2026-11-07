@@ -1,0 +1,28 @@
+{
+  "scope": "owned isolated cluster network namespace only",
+  "rule": [
+    "docker",
+    "exec",
+    "cvk-replies-k3s-20261103",
+    "iptables",
+    "-t",
+    "nat",
+    "-I",
+    "PREROUTING",
+    "1",
+    "-s",
+    "10.60.0.0/16",
+    "-d",
+    "10.1.1.1",
+    "-p",
+    "tcp",
+    "--dport",
+    "443",
+    "-j",
+    "DNAT",
+    "--to-destination",
+    "172.17.0.1:18446"
+  ],
+  "hostRulesModified": false,
+  "sshPortRedirected": false
+}

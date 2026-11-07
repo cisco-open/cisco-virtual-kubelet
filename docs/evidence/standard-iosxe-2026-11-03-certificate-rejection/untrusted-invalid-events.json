@@ -1,0 +1,523 @@
+[
+  {
+    "action": "Binding",
+    "apiVersion": "v1",
+    "eventTime": "2026-11-03T17:34:05.148158Z",
+    "firstTimestamp": null,
+    "involvedObject": {
+      "apiVersion": "v1",
+      "kind": "Pod",
+      "name": "cvk-stdcert-fixture-5b5cf7f959-t5qc2",
+      "namespace": "cvk-stdcert-apps-20261103",
+      "resourceVersion": "1025",
+      "uid": "e49e4cd6-1cec-462b-8377-e9267d275775"
+    },
+    "kind": "Event",
+    "lastTimestamp": null,
+    "message": "Successfully assigned cvk-stdcert-apps-20261103/cvk-stdcert-fixture-5b5cf7f959-t5qc2 to c9k-stdcert-20261103",
+    "metadata": {
+      "creationTimestamp": "2026-11-03T17:34:05Z",
+      "name": "cvk-stdcert-fixture-5b5cf7f959-t5qc2.18e4996d06ff1372",
+      "namespace": "cvk-stdcert-apps-20261103",
+      "resourceVersion": "1030",
+      "uid": "693c542a-7ae7-4be3-95c2-5594a8776481"
+    },
+    "reason": "Scheduled",
+    "reportingComponent": "default-scheduler",
+    "reportingInstance": "default-scheduler-7e036c17d233",
+    "source": {},
+    "type": "Normal"
+  },
+  {
+    "apiVersion": "v1",
+    "count": 1,
+    "eventTime": null,
+    "firstTimestamp": "2026-11-03T17:34:06Z",
+    "involvedObject": {
+      "apiVersion": "v1",
+      "kind": "Pod",
+      "name": "cvk-stdcert-fixture-5b5cf7f959-t5qc2",
+      "namespace": "cvk-stdcert-apps-20261103",
+      "resourceVersion": "1027",
+      "uid": "e49e4cd6-1cec-462b-8377-e9267d275775"
+    },
+    "kind": "Event",
+    "lastTimestamp": "2026-11-03T17:34:06Z",
+    "message": "Pulling image https://192.168.129.111:18449/valid-agent-a.tar",
+    "metadata": {
+      "creationTimestamp": "2026-11-03T17:34:06Z",
+      "name": "cvk-stdcert-fixture-5b5cf7f959-t5qc2.18e4996d409d6d37",
+      "namespace": "cvk-stdcert-apps-20261103",
+      "resourceVersion": "1038",
+      "uid": "796a770d-57c5-4ff8-a14d-3872deabba94"
+    },
+    "reason": "Pulling",
+    "reportingComponent": "cisco-virtual-kubelet",
+    "reportingInstance": "",
+    "source": {
+      "component": "cisco-virtual-kubelet"
+    },
+    "type": "Normal"
+  },
+  {
+    "apiVersion": "v1",
+    "count": 1,
+    "eventTime": null,
+    "firstTimestamp": "2026-11-03T17:34:30Z",
+    "involvedObject": {
+      "apiVersion": "v1",
+      "kind": "Pod",
+      "name": "cvk-stdcert-fixture-5b5cf7f959-t5qc2",
+      "namespace": "cvk-stdcert-apps-20261103",
+      "resourceVersion": "1027",
+      "uid": "e49e4cd6-1cec-462b-8377-e9267d275775"
+    },
+    "kind": "Event",
+    "lastTimestamp": "2026-11-03T17:34:30Z",
+    "message": "Create pod in provider successfully",
+    "metadata": {
+      "creationTimestamp": "2026-11-03T17:34:30Z",
+      "name": "cvk-stdcert-fixture-5b5cf7f959-t5qc2.18e49973091e8353",
+      "namespace": "cvk-stdcert-apps-20261103",
+      "resourceVersion": "1076",
+      "uid": "94513221-0d80-41f1-9cfa-929d679f861d"
+    },
+    "reason": "ProviderCreateSuccess",
+    "reportingComponent": "c9k-stdcert-20261103/pod-controller",
+    "reportingInstance": "",
+    "source": {
+      "component": "c9k-stdcert-20261103/pod-controller"
+    },
+    "type": "Normal"
+  },
+  {
+    "apiVersion": "v1",
+    "count": 1,
+    "eventTime": null,
+    "firstTimestamp": "2026-11-03T17:34:31Z",
+    "involvedObject": {
+      "apiVersion": "v1",
+      "kind": "Pod",
+      "name": "cvk-stdcert-fixture-5b5cf7f959-t5qc2",
+      "namespace": "cvk-stdcert-apps-20261103",
+      "resourceVersion": "1072",
+      "uid": "e49e4cd6-1cec-462b-8377-e9267d275775"
+    },
+    "kind": "Event",
+    "lastTimestamp": "2026-11-03T17:34:31Z",
+    "message": "Update pod in provider successfully",
+    "metadata": {
+      "creationTimestamp": "2026-11-03T17:34:31Z",
+      "name": "cvk-stdcert-fixture-5b5cf7f959-t5qc2.18e49973363d1c4e",
+      "namespace": "cvk-stdcert-apps-20261103",
+      "resourceVersion": "1082",
+      "uid": "fabbcc2b-01f6-432a-b4c4-86bba4b5ba76"
+    },
+    "reason": "ProviderUpdateSuccess",
+    "reportingComponent": "c9k-stdcert-20261103/pod-controller",
+    "reportingInstance": "",
+    "source": {
+      "component": "c9k-stdcert-20261103/pod-controller"
+    },
+    "type": "Normal"
+  },
+  {
+    "apiVersion": "v1",
+    "count": 2,
+    "eventTime": null,
+    "firstTimestamp": "2026-11-03T17:35:03Z",
+    "involvedObject": {
+      "apiVersion": "v1",
+      "kind": "Pod",
+      "name": "cvk-stdcert-fixture-5b5cf7f959-t5qc2",
+      "namespace": "cvk-stdcert-apps-20261103",
+      "resourceVersion": "1101",
+      "uid": "e49e4cd6-1cec-462b-8377-e9267d275775"
+    },
+    "kind": "Event",
+    "lastTimestamp": "2026-11-03T17:35:34Z",
+    "message": "Delete pod in provider successfully",
+    "metadata": {
+      "creationTimestamp": "2026-11-03T17:35:03Z",
+      "name": "cvk-stdcert-fixture-5b5cf7f959-t5qc2.18e4997aba19dd2f",
+      "namespace": "cvk-stdcert-apps-20261103",
+      "resourceVersion": "1171",
+      "uid": "c64dd1e1-bea8-4bde-8543-6f6f6db6e0a5"
+    },
+    "reason": "ProviderDeleteSuccess",
+    "reportingComponent": "c9k-stdcert-20261103/pod-controller",
+    "reportingInstance": "",
+    "source": {
+      "component": "c9k-stdcert-20261103/pod-controller"
+    },
+    "type": "Normal"
+  },
+  {
+    "apiVersion": "v1",
+    "count": 1,
+    "eventTime": null,
+    "firstTimestamp": "2026-11-03T17:34:05Z",
+    "involvedObject": {
+      "apiVersion": "apps/v1",
+      "kind": "ReplicaSet",
+      "name": "cvk-stdcert-fixture-5b5cf7f959",
+      "namespace": "cvk-stdcert-apps-20261103",
+      "resourceVersion": "1022",
+      "uid": "3c7a87f2-1225-49ca-99b6-8efdc3b1c0a7"
+    },
+    "kind": "Event",
+    "lastTimestamp": "2026-11-03T17:34:05Z",
+    "message": "Created pod: cvk-stdcert-fixture-5b5cf7f959-t5qc2",
+    "metadata": {
+      "creationTimestamp": "2026-11-03T17:34:05Z",
+      "name": "cvk-stdcert-fixture-5b5cf7f959.18e4996d06b2a4ca",
+      "namespace": "cvk-stdcert-apps-20261103",
+      "resourceVersion": "1026",
+      "uid": "7c1e2830-8542-4175-96ab-c75870a529bb"
+    },
+    "reason": "SuccessfulCreate",
+    "reportingComponent": "replicaset-controller",
+    "reportingInstance": "",
+    "source": {
+      "component": "replicaset-controller"
+    },
+    "type": "Normal"
+  },
+  {
+    "apiVersion": "v1",
+    "count": 1,
+    "eventTime": null,
+    "firstTimestamp": "2026-11-03T17:34:43Z",
+    "involvedObject": {
+      "apiVersion": "apps/v1",
+      "kind": "ReplicaSet",
+      "name": "cvk-stdcert-fixture-5b5cf7f959",
+      "namespace": "cvk-stdcert-apps-20261103",
+      "resourceVersion": "1099",
+      "uid": "3c7a87f2-1225-49ca-99b6-8efdc3b1c0a7"
+    },
+    "kind": "Event",
+    "lastTimestamp": "2026-11-03T17:34:43Z",
+    "message": "Deleted pod: cvk-stdcert-fixture-5b5cf7f959-t5qc2",
+    "metadata": {
+      "creationTimestamp": "2026-11-03T17:34:43Z",
+      "name": "cvk-stdcert-fixture-5b5cf7f959.18e49975f0fb7869",
+      "namespace": "cvk-stdcert-apps-20261103",
+      "resourceVersion": "1103",
+      "uid": "95a3fd4e-7eaf-49ca-aef3-da43dc7e71da"
+    },
+    "reason": "SuccessfulDelete",
+    "reportingComponent": "replicaset-controller",
+    "reportingInstance": "",
+    "source": {
+      "component": "replicaset-controller"
+    },
+    "type": "Normal"
+  },
+  {
+    "action": "Binding",
+    "apiVersion": "v1",
+    "eventTime": "2026-11-03T17:35:37.401981Z",
+    "firstTimestamp": null,
+    "involvedObject": {
+      "apiVersion": "v1",
+      "kind": "Pod",
+      "name": "cvk-stdcert-fixture-5f68554b9-pbjdf",
+      "namespace": "cvk-stdcert-apps-20261103",
+      "resourceVersion": "1185",
+      "uid": "5532698d-0056-4d6d-83f9-5429697774e0"
+    },
+    "kind": "Event",
+    "lastTimestamp": null,
+    "message": "Successfully assigned cvk-stdcert-apps-20261103/cvk-stdcert-fixture-5f68554b9-pbjdf to c9k-stdcert-20261103",
+    "metadata": {
+      "creationTimestamp": "2026-11-03T17:35:37Z",
+      "name": "cvk-stdcert-fixture-5f68554b9-pbjdf.18e4998281c0bd71",
+      "namespace": "cvk-stdcert-apps-20261103",
+      "resourceVersion": "1189",
+      "uid": "0582deba-1949-4a5e-b7e3-4a9774fba6e6"
+    },
+    "reason": "Scheduled",
+    "reportingComponent": "default-scheduler",
+    "reportingInstance": "default-scheduler-7e036c17d233",
+    "source": {},
+    "type": "Normal"
+  },
+  {
+    "apiVersion": "v1",
+    "count": 1,
+    "eventTime": null,
+    "firstTimestamp": "2026-11-03T17:35:37Z",
+    "involvedObject": {
+      "apiVersion": "v1",
+      "kind": "Pod",
+      "name": "cvk-stdcert-fixture-5f68554b9-pbjdf",
+      "namespace": "cvk-stdcert-apps-20261103",
+      "resourceVersion": "1187",
+      "uid": "5532698d-0056-4d6d-83f9-5429697774e0"
+    },
+    "kind": "Event",
+    "lastTimestamp": "2026-11-03T17:35:37Z",
+    "message": "Pulling image https://192.168.129.111:18450/untrusted-agent-a.tar",
+    "metadata": {
+      "creationTimestamp": "2026-11-03T17:35:37Z",
+      "name": "cvk-stdcert-fixture-5f68554b9-pbjdf.18e499829cf6004e",
+      "namespace": "cvk-stdcert-apps-20261103",
+      "resourceVersion": "1196",
+      "uid": "e63309ff-ff89-4115-85a2-b0519553039e"
+    },
+    "reason": "Pulling",
+    "reportingComponent": "cisco-virtual-kubelet",
+    "reportingInstance": "",
+    "source": {
+      "component": "cisco-virtual-kubelet"
+    },
+    "type": "Normal"
+  },
+  {
+    "apiVersion": "v1",
+    "count": 1,
+    "eventTime": null,
+    "firstTimestamp": "2026-11-03T17:38:38Z",
+    "involvedObject": {
+      "apiVersion": "v1",
+      "kind": "Pod",
+      "name": "cvk-stdcert-fixture-5f68554b9-pbjdf",
+      "namespace": "cvk-stdcert-apps-20261103",
+      "resourceVersion": "1187",
+      "uid": "5532698d-0056-4d6d-83f9-5429697774e0"
+    },
+    "kind": "Event",
+    "lastTimestamp": "2026-11-03T17:38:38Z",
+    "message": "Device-native pull timed out after 3m0s; falling back to copy-then-install",
+    "metadata": {
+      "creationTimestamp": "2026-11-03T17:38:38Z",
+      "name": "cvk-stdcert-fixture-5f68554b9-pbjdf.18e499acba401a04",
+      "namespace": "cvk-stdcert-apps-20261103",
+      "resourceVersion": "1414",
+      "uid": "fbce9617-42fe-40d6-a825-b57036ef4284"
+    },
+    "reason": "ImagePullFallback",
+    "reportingComponent": "cisco-virtual-kubelet",
+    "reportingInstance": "",
+    "source": {
+      "component": "cisco-virtual-kubelet"
+    },
+    "type": "Warning"
+  },
+  {
+    "apiVersion": "v1",
+    "count": 1,
+    "eventTime": null,
+    "firstTimestamp": "2026-11-03T17:38:39Z",
+    "involvedObject": {
+      "apiVersion": "v1",
+      "kind": "Pod",
+      "name": "cvk-stdcert-fixture-5f68554b9-pbjdf",
+      "namespace": "cvk-stdcert-apps-20261103",
+      "resourceVersion": "1187",
+      "uid": "5532698d-0056-4d6d-83f9-5429697774e0"
+    },
+    "kind": "Event",
+    "lastTimestamp": "2026-11-03T17:38:39Z",
+    "message": "Copying image https://192.168.129.111:18450/untrusted-agent-a.tar to flash:/virtual-kubelet/cvk0000_5532698d00564d6d83f95429697774e0.tar (may take several minutes)",
+    "metadata": {
+      "creationTimestamp": "2026-11-03T17:38:39Z",
+      "name": "cvk-stdcert-fixture-5f68554b9-pbjdf.18e499acdc971ad4",
+      "namespace": "cvk-stdcert-apps-20261103",
+      "resourceVersion": "1416",
+      "uid": "fe11d869-0b59-46ef-bd61-c26644185266"
+    },
+    "reason": "Copying",
+    "reportingComponent": "cisco-virtual-kubelet",
+    "reportingInstance": "",
+    "source": {
+      "component": "cisco-virtual-kubelet"
+    },
+    "type": "Normal"
+  },
+  {
+    "apiVersion": "v1",
+    "count": 1,
+    "eventTime": null,
+    "firstTimestamp": "2026-11-03T17:38:39Z",
+    "involvedObject": {
+      "apiVersion": "v1",
+      "kind": "Pod",
+      "name": "cvk-stdcert-fixture-5f68554b9-pbjdf",
+      "namespace": "cvk-stdcert-apps-20261103",
+      "uid": "5532698d-0056-4d6d-83f9-5429697774e0"
+    },
+    "kind": "Event",
+    "lastTimestamp": "2026-11-03T17:38:39Z",
+    "message": "failed to deploy app for container agent: copy failed for app cvk0000_5532698d00564d6d83f95429697774e0: copy RPC failed (https://192.168.129.111:18450/untrusted-agent-a.tar -> flash:/virtual-kubelet/cvk0000_5532698d00564d6d83f95429697774e0.tar): request failed with status 400 Bad Request (RESTCONF error-tag invalid-value)",
+    "metadata": {
+      "creationTimestamp": "2026-11-03T17:38:39Z",
+      "name": "cvk-stdcert-fixture-5f68554b9-pbjdf.18e499ace227ae8b",
+      "namespace": "cvk-stdcert-apps-20261103",
+      "resourceVersion": "1417",
+      "uid": "eae3c9b6-ca1b-4936-b1cb-e41e54a691c0"
+    },
+    "reason": "ProviderCreateFailed",
+    "reportingComponent": "c9k-stdcert-20261103/pod-controller",
+    "reportingInstance": "",
+    "source": {
+      "component": "c9k-stdcert-20261103/pod-controller"
+    },
+    "type": "Warning"
+  },
+  {
+    "apiVersion": "v1",
+    "count": 13,
+    "eventTime": null,
+    "firstTimestamp": "2026-11-03T17:38:39Z",
+    "involvedObject": {
+      "apiVersion": "v1",
+      "kind": "Pod",
+      "name": "cvk-stdcert-fixture-5f68554b9-pbjdf",
+      "namespace": "cvk-stdcert-apps-20261103",
+      "uid": "5532698d-0056-4d6d-83f9-5429697774e0"
+    },
+    "kind": "Event",
+    "lastTimestamp": "2026-11-03T17:40:03Z",
+    "message": "device maintenance: mutation lease held by device-write/1ca4cf28-5b0f-4979-ba89-924e7c69f17f",
+    "metadata": {
+      "creationTimestamp": "2026-11-03T17:38:39Z",
+      "name": "cvk-stdcert-fixture-5f68554b9-pbjdf.18e499aceb5bbd98",
+      "namespace": "cvk-stdcert-apps-20261103",
+      "resourceVersion": "1536",
+      "uid": "dac4d401-e924-497e-9e79-8b2f4b33abdf"
+    },
+    "reason": "ProviderUpdateFailed",
+    "reportingComponent": "c9k-stdcert-20261103/pod-controller",
+    "reportingInstance": "",
+    "source": {
+      "component": "c9k-stdcert-20261103/pod-controller"
+    },
+    "type": "Warning"
+  },
+  {
+    "apiVersion": "v1",
+    "count": 1,
+    "eventTime": null,
+    "firstTimestamp": "2026-11-03T17:35:37Z",
+    "involvedObject": {
+      "apiVersion": "apps/v1",
+      "kind": "ReplicaSet",
+      "name": "cvk-stdcert-fixture-5f68554b9",
+      "namespace": "cvk-stdcert-apps-20261103",
+      "resourceVersion": "1182",
+      "uid": "fad3ca7e-e75a-4131-bf29-00dfcadeea99"
+    },
+    "kind": "Event",
+    "lastTimestamp": "2026-11-03T17:35:37Z",
+    "message": "Created pod: cvk-stdcert-fixture-5f68554b9-pbjdf",
+    "metadata": {
+      "creationTimestamp": "2026-11-03T17:35:37Z",
+      "name": "cvk-stdcert-fixture-5f68554b9.18e4998281888f84",
+      "namespace": "cvk-stdcert-apps-20261103",
+      "resourceVersion": "1186",
+      "uid": "a9921f28-8245-410e-837b-648874e04a78"
+    },
+    "reason": "SuccessfulCreate",
+    "reportingComponent": "replicaset-controller",
+    "reportingInstance": "",
+    "source": {
+      "component": "replicaset-controller"
+    },
+    "type": "Normal"
+  },
+  {
+    "apiVersion": "v1",
+    "count": 1,
+    "eventTime": null,
+    "firstTimestamp": "2026-11-03T17:34:05Z",
+    "involvedObject": {
+      "apiVersion": "apps/v1",
+      "kind": "Deployment",
+      "name": "cvk-stdcert-fixture",
+      "namespace": "cvk-stdcert-apps-20261103",
+      "resourceVersion": "1021",
+      "uid": "0fc71923-4f58-44b3-aeb8-88e3af75cd13"
+    },
+    "kind": "Event",
+    "lastTimestamp": "2026-11-03T17:34:05Z",
+    "message": "Scaled up replica set cvk-stdcert-fixture-5b5cf7f959 from 0 to 1",
+    "metadata": {
+      "creationTimestamp": "2026-11-03T17:34:05Z",
+      "name": "cvk-stdcert-fixture.18e4996d064bb943",
+      "namespace": "cvk-stdcert-apps-20261103",
+      "resourceVersion": "1023",
+      "uid": "4b84b10c-4539-402e-b5a6-0075f529a872"
+    },
+    "reason": "ScalingReplicaSet",
+    "reportingComponent": "deployment-controller",
+    "reportingInstance": "",
+    "source": {
+      "component": "deployment-controller"
+    },
+    "type": "Normal"
+  },
+  {
+    "apiVersion": "v1",
+    "count": 1,
+    "eventTime": null,
+    "firstTimestamp": "2026-11-03T17:34:43Z",
+    "involvedObject": {
+      "apiVersion": "apps/v1",
+      "kind": "Deployment",
+      "name": "cvk-stdcert-fixture",
+      "namespace": "cvk-stdcert-apps-20261103",
+      "resourceVersion": "1098",
+      "uid": "0fc71923-4f58-44b3-aeb8-88e3af75cd13"
+    },
+    "kind": "Event",
+    "lastTimestamp": "2026-11-03T17:34:43Z",
+    "message": "Scaled down replica set cvk-stdcert-fixture-5b5cf7f959 from 1 to 0",
+    "metadata": {
+      "creationTimestamp": "2026-11-03T17:34:43Z",
+      "name": "cvk-stdcert-fixture.18e49975f0b7a7e4",
+      "namespace": "cvk-stdcert-apps-20261103",
+      "resourceVersion": "1100",
+      "uid": "21becbed-d1c0-46b4-9221-16f7b7d20841"
+    },
+    "reason": "ScalingReplicaSet",
+    "reportingComponent": "deployment-controller",
+    "reportingInstance": "",
+    "source": {
+      "component": "deployment-controller"
+    },
+    "type": "Normal"
+  },
+  {
+    "apiVersion": "v1",
+    "count": 1,
+    "eventTime": null,
+    "firstTimestamp": "2026-11-03T17:35:37Z",
+    "involvedObject": {
+      "apiVersion": "apps/v1",
+      "kind": "Deployment",
+      "name": "cvk-stdcert-fixture",
+      "namespace": "cvk-stdcert-apps-20261103",
+      "resourceVersion": "1181",
+      "uid": "0fc71923-4f58-44b3-aeb8-88e3af75cd13"
+    },
+    "kind": "Event",
+    "lastTimestamp": "2026-11-03T17:35:37Z",
+    "message": "Scaled up replica set cvk-stdcert-fixture-5f68554b9 from 0 to 1",
+    "metadata": {
+      "creationTimestamp": "2026-11-03T17:35:37Z",
+      "name": "cvk-stdcert-fixture.18e4998281398d08",
+      "namespace": "cvk-stdcert-apps-20261103",
+      "resourceVersion": "1183",
+      "uid": "9222ab53-a3cd-43d9-aabf-6805dfe7c636"
+    },
+    "reason": "ScalingReplicaSet",
+    "reportingComponent": "deployment-controller",
+    "reportingInstance": "",
+    "source": {
+      "component": "deployment-controller"
+    },
+    "type": "Normal"
+  }
+]

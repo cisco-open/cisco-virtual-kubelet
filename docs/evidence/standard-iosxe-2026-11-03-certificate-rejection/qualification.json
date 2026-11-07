@@ -1,0 +1,77 @@
+{
+  "status": "standard-certificate-rejection-qualified",
+  "rejectionQualified": true,
+  "executionComplete": true,
+  "defaultMode": "Standard",
+  "governed": "deferred",
+  "target": {
+    "model": "C9300-24UX",
+    "serial": "FCW2247C1AJ",
+    "iosXeVersion": "17.18.1 fc2"
+  },
+  "candidate": {
+    "atUTC": "2026-11-03T08:45:28.205503+00:00",
+    "baseCommit": "1791a7e1634961936233ee94170f1c63cea1b64c",
+    "branch": "pr/johalley/verified-app-artifacts",
+    "dirtySourceSHA256": "d07b6ea671fb9508e3eb648014e642eabf845d5fe45d1bd339557cf8b0c098ac",
+    "sourceFiles": 1555,
+    "binarySHA256": "529e98f251b320567712d7077dcf9b54e5d93737e36100252cf809b2b6db2040",
+    "standardDefault": true,
+    "governed": "deferred",
+    "dockerConfigID": "sha256:6d5cda316de797b803829a9ae9ac9302ea2eda984c40ecf7e2878a3be9b2527d",
+    "imageTag": "cvk-replies-qual:20261103-529e98f251b3",
+    "containerdManifestDigest": "sha256:2dd4dc81a1f4c6ca3b3360ba7ce5cdd025819000938d261d1f79d9474f898dfe",
+    "chartMatchesCurrentSource": true,
+    "physicalControl": "Standard HTTPS invalid-CA and hostname rejection; no appArtifacts",
+    "priorCandidateEvidence": "../standard-iosxe-2026-11-03-https-local/candidate.json"
+  },
+  "positiveControlPassed": true,
+  "cases": [
+    {
+      "case": "untrusted",
+      "rejectionQualified": true,
+      "classification": "invalid-certificate-rejected",
+      "deviceTLSRejections": 2,
+      "devicePackageRequestsUnderInvalidCertificate": 0,
+      "devicePackageTransfersUnderInvalidCertificate": 0,
+      "appHealthyUnderInvalidCertificate": false,
+      "invalidPhaseObservations": 27,
+      "guardedRecoveryObservations": 103,
+      "postCorrectionHealthPassed": true,
+      "samePodRetained": true,
+      "recoveryPodUID": "5532698d-0056-4d6d-83f9-5429697774e0",
+      "normalDeletionPassed": true
+    },
+    {
+      "case": "hostname",
+      "rejectionQualified": true,
+      "classification": "invalid-certificate-rejected",
+      "deviceTLSRejections": 2,
+      "devicePackageRequestsUnderInvalidCertificate": 0,
+      "devicePackageTransfersUnderInvalidCertificate": 0,
+      "appHealthyUnderInvalidCertificate": false,
+      "invalidPhaseObservations": 27,
+      "guardedRecoveryObservations": 103,
+      "postCorrectionHealthPassed": true,
+      "samePodRetained": true,
+      "recoveryPodUID": "47f9872b-f661-4272-9961-48491a4ec4b2",
+      "normalDeletionPassed": true
+    }
+  ],
+  "metadataAndJournalOmitted": true,
+  "manualLeaseOrJournalEdits": false,
+  "canonicalLeaseUID": "193bf342-532f-4277-b9aa-fff60677cd88",
+  "canonicalLeaseRecreated": false,
+  "normalAppDeletionPassed": true,
+  "baselineCleanupPassed": true,
+  "startedAtUTC": "2026-11-03T17:34:04.163631+00:00",
+  "finishedAtUTC": "2026-11-03T18:48:11.128680+00:00",
+  "limits": [
+    "Named device/firmware/package/profile only; no fleet-wide guarantee.",
+    "Private test CA not imported for the untrusted case; trusted issuer with wrong DNS SAN for the hostname case.",
+    "Ordinary native HTTPS pull/fallback behavior measured under existing IRIS client identity and temporary trusted root; no validation setting weakened.",
+    "No expired/revoked certificates, intermediate-chain variations, redirects, TLS downgrade, mTLS or registry authentication were tested.",
+    "No artifact producer authentication, journal recovery, Governed workflow or specific CVE remediation claim.",
+    "Native signature policy disabled at baseline and unchanged."
+  ]
+}

@@ -1,0 +1,23 @@
+from pathlib import Path
+r=Path('/private/tmp/cvk-intrefresh-20261105');s=Path('/private/tmp/cvk-crlrefresh-20261104/discovery.py').read_text()
+for a,b in [('/tmp/cvk-crlrefresh-20261104','/tmp/cvk-intrefresh-20261105'),('20261104-crlrefresh','20261105-intrefresh'),('18469','18472'),('publish_discovery_crl.py','publish_crl.py'),('crl-v3.json','crl-v1.json'),('crl-v4.json','crl-v2.json'),("pub(3)","pub(1)"),("pub(4)","pub(2)"),("get('version')==3","get('version')==1"),("get('version')==4","get('version')==2"),("'CRLversion':4","'CRLversion':2")]:s=s.replace(a,b)
+a=s.index('def events(');b=s.index('def lease(',a);s=s[:a]+'''def events(case=None):
+ return [e for line in (R/'server-events.jsonl').read_text().splitlines() if (e:=json.loads(line)).get('client') in IPS and (case is None or e.get('phase')==case)]
+''' + s[b:]
+s=s.replace("e['kind']=='crl-served' and e.get('version')", "e['kind']=='crl-served' and e.get('crl')=='issuer' and e.get('version')")
+a=s.index('started=now();');b=s.index("pki('baseline');deploy('valid')",a)
+s=s[:a]+'''def diagnostics():
+ cmds=['show crypto pki crls','show logging | include CERTIFICATE_REVOKED'];x=run(['python3',str(R/'device_cli.py')],input=json.dumps(cmds),text=True,capture_output=True);proof=json.loads(x.stdout);serial=json.loads((R/'pki-manifest.json').read_text())['certificates']['original']['serialHex'];proof['commands'][1]['output']='\\n'.join(l for l in proof['commands'][1]['output'].splitlines() if 'CERTIFICATE_REVOKED' in l and serial.upper() in l.upper());proof['readOnly']=True;proof['unrelatedLogLinesOmitted']=True;save('native-refresh-diagnostics',proof);return len(proof['commands'][1]['output'].splitlines())
+started=now();baseline=observe('baseline');assert not baseline['pods'];pub(1)
+with (R/'servers.log').open('wb') as out:server=subprocess.Popen(['python3',str(R/'servers.py')],stdout=out,stderr=subprocess.STDOUT,start_new_session=True)
+(R/'servers.pid').write_text(str(server.pid))
+for i in range(30):
+ try:probe('valid',True);break
+ except OSError:time.sleep(1)
+else:raise RuntimeError('Origin unavailable')
+''' + s[b:]
+s=s.replace("if time.monotonic()-start>=300 and v2 and len(alerts)>=2 and not row['ready'] and not running and (end is None or age>=90):classification='new-revocation-discovered-and-fresh-delivery-rejected';bad=s;break", "if time.monotonic()-start>=300 and v2 and not row['ready'] and not running and (end is None or age>=90):\n  nativeFailures=diagnostics()\n  if len(alerts)>=2 or nativeFailures>=2:classification='new-intermediate-revocation-discovered-and-fresh-delivery-rejected';bad=s;break")
+s=s.replace("pki('revoked-boundary');save(","diagnostics();pki('revoked-boundary');save(")
+s=s.replace("'onlyLeafCertificateAndKeyChanged':True", "'onlyServedIntermediateCertificateChanged':True,'rootOrLeafChanged':False,'intermediateSubjectOrKeyChanged':False")
+s=s.replace("classification=='new-revocation-discovered-and-fresh-delivery-rejected'","classification=='new-intermediate-revocation-discovered-and-fresh-delivery-rejected'")
+(r/'qualify.py').write_text(s)

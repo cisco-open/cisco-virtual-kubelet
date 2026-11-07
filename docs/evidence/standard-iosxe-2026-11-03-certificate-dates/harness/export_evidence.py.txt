@@ -1,0 +1,46 @@
+import pathlib,json,yaml,re,hashlib,shutil
+R=pathlib.Path('/private/tmp/cvk-stddate-20261103');ROOT=pathlib.Path('/Users/johalley/Git/cisco-virtual-kubelet');OUT=ROOT/'docs/evidence/standard-iosxe-2026-11-03-certificate-dates';q=json.loads((R/'qualification-assessed.json').read_text());assert q['executionComplete'] and q['baselineCleanupPassed'];OUT.mkdir(parents=True,exist_ok=True)
+def clean(v):
+ if isinstance(v,list):return [clean(x) for x in v]
+ if isinstance(v,dict):return {k:clean(x) for k,x in v.items() if k not in ['managedFields','kubectl.kubernetes.io/last-applied-configuration']}
+ return v
+names=['static-checks.json','preparation-readiness-continuation.json','preparation-observer-note.json','device-baseline.json','device-preparation.json','pki-manifest.json','independent-tls-controls.json','offline-certificate-controls.json','candidate.json','qualification-result.json','final-cleanup.json']
+if (R/'automated-checks.json').exists():names.append('automated-checks.json')
+names += [p+'valid-control.json' for p in ['snapshot-','controls-','deployment-','native-','leases-']]
+for case in ['expired','future']:
+ names += [case+'-'+x+'.json' for x in ['invalid-server-events','invalid-lease','worker-diagnostics','invalid-events','invalid-outcome','certificate-corrected','recovery-result']]+['snapshot-'+case+'-invalid-boundary.json']
+ for suffix in ['invalid-accepted','corrected-recovery']:
+  for prefix in ['snapshot-','controls-','deployment-','native-','leases-']:
+   n=prefix+case+'-'+suffix+'.json'
+   if (R/n).exists():names.append(n)
+for label in ['baseline','valid-normal-cleanup','expired-normal-cleanup','future-normal-cleanup']:
+ names.append('controls-'+label+'.json')
+ if label!='baseline':names+=['snapshot-'+label+'.json','leases-'+label+'.json']
+names += ['clock-'+label+'.json' for label in ['baseline']+[c+'-'+phase for c in ['expired','future'] for phase in ['before','boundary','after-repair']]]
+for n in names:
+ x=clean(json.loads((R/n).read_text()))
+ if isinstance(x,dict) and 'devices' in x:
+  for d in x['devices']:
+   if d.get('status'):d['status']={k:v for k,v in d['status'].items() if k in ['phase','conditions','nodeIdentity','workerRevision','networkWorkerRevision','workerCapabilities']}
+  for a in x.get('nativeApps',[]):
+   if not a.get('appID','').startswith('cvk0000_'):a.pop('networkInterfaces',None)
+ (OUT/n).write_text(json.dumps(x,indent=2)+'\n')
+(OUT/'qualification.json').write_text(json.dumps(clean(q),indent=2)+'\n')
+jsonlines=['server-events.jsonl','wait-valid-control.jsonl']
+for case in ['expired','future']:
+ jsonlines.append(case+'-invalid-observations.jsonl')
+ for n in [case+'-guarded-observations.jsonl','wait-'+case+'-invalid-accepted.jsonl','wait-'+case+'-corrected-recovery.jsonl']:
+  if (R/n).exists():jsonlines.append(n)
+for n in jsonlines:(OUT/n).write_text(''.join(json.dumps(clean(json.loads(l)))+'\n' for l in (R/n).read_text().splitlines()))
+for n in ['device-input.yaml','deployment-valid-input.yaml','deployment-expired-input.yaml','deployment-future-input.yaml','values.yaml']:
+ v=yaml.safe_load((R/n).read_text());assert 'password' not in json.dumps(v).lower();(OUT/n).write_text(yaml.safe_dump(v))
+for n in ['trusted-ca.crt','valid.crt','expired.crt','future.crt','qualification.log','prepare.log']:shutil.copyfile(R/n,OUT/n)
+(OUT/'harness').mkdir(exist_ok=True)
+for n in ['bootstrap','deploy','device_cli','snapshot','control_functions','generate_pki','validate_pki','check_clock','prepare_device','prepare_device-original','readiness_continuation','servers','start_services','qualify','cleanup','bundle_evidence','assess','verify_static','export_evidence']:shutil.copyfile(R/(n+'.py'),OUT/'harness'/(n+'.py.txt'))
+rows=['| Leaf condition | Native TLS rejections | Package GETs while invalid | Same Pod recovered | Normal deletion |','| --- | --- | --- | --- | --- |']
+for c in q['cases']:rows.append('| '+({'expired':'Expired','future':'Not yet valid'}[c['case']])+' | '+str(c['deviceTLSRejections'])+' | '+str(c['devicePackageRequestsUnderInvalidCertificate'])+' | '+('Yes' if c['samePodRetained'] else 'No')+' | '+('Passed' if c['normalDeletionPassed'] else 'Failed')+' |')
+(OUT/'README.md').write_text((R/'evidence-readme.md').read_text().replace('@@RESULTS@@','\n'.join(rows)))
+pattern=re.compile(r'^-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----|^\s*client-key-data:\s*[A-Za-z0-9+/]{24,}|password\s*[=:]\s*cisco\b|^Authorization:\s*(?:Basic|Bearer)\s+\S|\b(?:Basic|Bearer)[ \t]+[A-Za-z0-9+/_.=-]{16,}',re.I|re.M)
+for p in OUT.rglob('*'):
+ if p.is_file():assert not pattern.search(p.read_text()),p
+manifest=''.join(hashlib.sha256(p.read_bytes()).hexdigest()+'  '+str(p.relative_to(OUT))+'\n' for p in sorted(OUT.rglob('*')) if p.is_file() and p.name!='SHA256SUMS');(OUT/'SHA256SUMS').write_text(manifest);print('PASS exported',len(manifest.splitlines()),'sanitized certificate-control evidence files')

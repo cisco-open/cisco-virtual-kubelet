@@ -1,0 +1,17 @@
+{
+  "atUTC": "2026-11-03T05:22:44.283816+00:00",
+  "passed": true,
+  "readOnlyProbes": [
+    {
+      "path": "/.well-known/host-meta",
+      "status": 200,
+      "bodySHA256": "cd7648da649ac8db503a0159145be8fd1a97d7dd8354a83aac7fa9ea5b96887a"
+    },
+    {
+      "path": "/restconf/data/Cisco-IOS-XE-app-hosting-oper:app-hosting-oper-data?fields=app",
+      "status": 200,
+      "bodySHA256": "694401374b2afe1cfad36cda10b23f4c3d2d41106a315399d859db058eee959c"
+    }
+  ],
+  "tlsHostnameVerified": true
+}

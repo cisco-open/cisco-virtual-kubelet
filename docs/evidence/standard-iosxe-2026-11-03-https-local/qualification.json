@@ -1,0 +1,115 @@
+{
+  "status": "standard-https-and-preloaded-local-qualified",
+  "defaultMode": "Standard",
+  "governed": "deferred",
+  "target": {
+    "model": "C9300-24UX",
+    "serial": "FCW2247C1AJ",
+    "iosXeVersion": "17.18.1 fc2"
+  },
+  "candidate": {
+    "atUTC": "2026-11-03T08:45:28.205503+00:00",
+    "baseCommit": "1791a7e1634961936233ee94170f1c63cea1b64c",
+    "branch": "pr/johalley/verified-app-artifacts",
+    "dirtySourceSHA256": "d07b6ea671fb9508e3eb648014e642eabf845d5fe45d1bd339557cf8b0c098ac",
+    "sourceFiles": 1555,
+    "binarySHA256": "529e98f251b320567712d7077dcf9b54e5d93737e36100252cf809b2b6db2040",
+    "standardDefault": true,
+    "governed": "deferred",
+    "dockerConfigID": "sha256:6d5cda316de797b803829a9ae9ac9302ea2eda984c40ecf7e2878a3be9b2527d",
+    "imageTag": "cvk-replies-qual:20261103-529e98f251b3",
+    "containerdManifestDigest": "sha256:2dd4dc81a1f4c6ca3b3360ba7ce5cdd025819000938d261d1f79d9474f898dfe",
+    "chartMatchesCurrentSource": true,
+    "physicalControl": "Standard HTTPS and offline preloaded local images with appArtifacts omitted",
+    "priorCandidateEvidence": "../standard-iosxe-2026-11-03/candidate.json"
+  },
+  "startedAtUTC": "2026-11-03T14:56:44.208424+00:00",
+  "finishedAtUTC": "2026-11-03T15:01:31.966536+00:00",
+  "cases": [
+    {
+      "case": "https-a",
+      "podUID": "b5e263e7-0c37-47c6-8dc1-fe40355414c9",
+      "appID": "cvk0000_b5e263e70c3747c68dc1fe40355414c9",
+      "ready": true,
+      "httpRelease": "A",
+      "deploymentAvailable": true,
+      "artifactJournalCount": 0,
+      "observations": 6
+    },
+    {
+      "case": "local-a",
+      "podUID": "9f697a19-127c-444f-95f5-92c1f8196b06",
+      "appID": "cvk0000_9f697a19127c444f95f592c1f8196b06",
+      "ready": true,
+      "httpRelease": "A",
+      "deploymentAvailable": true,
+      "artifactJournalCount": 0,
+      "observations": 12
+    },
+    {
+      "case": "local-worker-replacement-a",
+      "podUID": "9f697a19-127c-444f-95f5-92c1f8196b06",
+      "appID": "cvk0000_9f697a19127c444f95f592c1f8196b06",
+      "ready": true,
+      "httpRelease": "A",
+      "deploymentAvailable": true,
+      "artifactJournalCount": 0,
+      "observations": 1
+    }
+  ],
+  "appArtifactsOmitted": true,
+  "artifactMetadataOrJournalRequired": false,
+  "artifactJournalOrGrantCreated": false,
+  "httpsDeviceRequests": [
+    {
+      "atUTC": "2026-11-03T14:56:46.457810+00:00",
+      "method": "GET",
+      "path": "/standard-agent-a.tar",
+      "client": "10.1.1.1",
+      "status": 200,
+      "tlsVersion": "TLSv1.3",
+      "cipher": "TLS_AES_256_GCM_SHA384"
+    },
+    {
+      "atUTC": "2026-11-03T14:58:19.245732+00:00",
+      "method": "GET",
+      "path": "/standard-agent-a.tar",
+      "client": "10.1.1.1",
+      "status": 200,
+      "tlsVersion": "TLSv1.3",
+      "cipher": "TLS_AES_256_GCM_SHA384"
+    },
+    {
+      "atUTC": "2026-11-03T14:58:19.321532+00:00",
+      "method": "GET",
+      "path": "/standard-agent-a.tar",
+      "client": "10.1.1.1",
+      "status": 200,
+      "tlsVersion": "TLSv1.3",
+      "cipher": "TLS_AES_256_GCM_SHA384"
+    }
+  ],
+  "httpsFallbackEventsObserved": [],
+  "preloadMethod": "Existing RESTCONF copy RPC, authenticated management TLS; independent CLI size/SHA512 qualification check",
+  "localOriginOfflineBeforePodCreated": true,
+  "localPullPolicy": "Never",
+  "localWorkerReplacement": {
+    "oldUID": "89d2729e-e872-4fb2-adeb-22f8190f292e",
+    "newUID": "f2b2e35e-de87-4f57-a64c-709c41862628",
+    "samePodAndApp": true,
+    "originRemainedOffline": true
+  },
+  "normalDeletion": true,
+  "cleanupPassed": true,
+  "cleanupFinishedAtUTC": "2026-11-03T15:03:01.120601+00:00",
+  "limits": [
+    "One device/firmware and Linux/amd64 Docker-save fixture; no fleet-wide qualification.",
+    "Positive HTTPS delivery to a valid certificate with an ordinary origin CA trustpoint; invalid CA/hostname rejection on the C9K installer was not exercised.",
+    "Wrong-hostname rejection was checked by the independent ux-agx Python TLS client only.",
+    "Independent local size/SHA512 checks are qualification evidence, not a required Standard runtime gate.",
+    "One-replica Recreate; no uninterrupted service, stateful migration, Service-routing or specific CVE-remediation claim.",
+    "No pending-operation or lost-reply fault was injected into Standard in this run.",
+    "Native package-signature verification disabled at baseline and preserved.",
+    "HTTPS/local update and history rollback were not repeated here; the separate ordinary HTTP control records that lifecycle matrix."
+  ]
+}

@@ -1,0 +1,19 @@
+from pathlib import Path
+r=Path('/private/tmp/cvk-intrefresh-20261105');s=Path('/private/tmp/cvk-crlrefresh-20261104/assess.py').read_text().replace('/private/tmp/cvk-crlrefresh-20261104','/private/tmp/cvk-intrefresh-20261105').replace('crls[3]','crls[1]').replace('crls[4]','crls[2]').replace('for v in [1,3,4]:','for v in [1,2]:')
+a=s.index("assert hashlib.sha256((R/'discovery.py')");b=s.index("for n,c in m['certificates'].items():",a);s=s[:a]+s[b:]
+s=s.replace("assert c['issuer']==m['certificates']['root']['subject']", "assert c['issuer']==m['certificates']['original' if n=='leaf' else 'root']['subject']")
+s=s.replace("result=subprocess.run(['openssl','verify','-CAfile',str(R/'root.crt'),str(R/(n+'.crt'))]", "result=subprocess.run(['openssl','verify','-CAfile',str(R/'root.crt')]+(['-untrusted',str(R/'original.crt')] if n=='leaf' else [])+[str(R/(n+'.crt'))]")
+s=s.replace("['original']['SPKISHA256']!=m['certificates']['replacement']['SPKISHA256']", "['original']['SPKISHA256']==m['certificates']['replacement']['SPKISHA256'] and m['certificates']['original']['subject']==m['certificates']['replacement']['subject']")
+a=s.index("assert read('prepublication-rearm')");b=s.index("prep=read('device-preparation')",a);s=s[:a]+s[b:];s=s.replace("['policies']['leaf']","['policies']['intermediate']")
+a=s.index('versions={');b=s.index('for e in fetch:',a);s=s[:a]+'''native=[e for e in rows('server-events') if e.get('client') in ['10.1.1.1','192.168.129.2']];assert all(e['sessionReused'] is False for e in native if e['kind']=='tls-established');fetch=[e for e in native if e['kind']=='crl-served' and e.get('crl')=='issuer' and e.get('status')==200];assert {e['version'] for e in fetch}=={1,2}
+static=[e for e in native if e['kind']=='crl-served' and e.get('crl')=='intermediate' and e.get('status')==200];assert static and all(e['sha256']==m['intermediateCRL']['sha256'] and e['revokedSerialsHex']==[] for e in static)
+assert hashlib.sha256((R/'intermediate.crl').read_bytes()).hexdigest()==m['intermediateCRL']['sha256'];check=subprocess.run(['openssl','crl','-inform','DER','-in',str(R/'intermediate.crl'),'-verify','-CAfile',str(R/'original.crt'),'-noout'],text=True,capture_output=True);assert check.returncode==0
+''' + s[b:]
+s=s.replace("e['version']==3","e['version']==1").replace("e['version']==4","e['version']==2").replace("Nov +4 ","Nov +5 ").replace("2026-11-04T","2026-11-05T")
+s=s.replace("fix['onlyLeafCertificateAndKeyChanged']", "fix['onlyServedIntermediateCertificateChanged'] and not fix['rootOrLeafChanged'] and not fix['intermediateSubjectOrKeyChanged']")
+s=s.replace("if m['nonce'] in b", "if m['certificates']['root']['subject'].removeprefix('CN=') in b")
+s=s.replace("[(initialCache,3),(read('pki-cached-boundary')['nativeEvidence']['commands'][2]['output'],3),(newCache,4)]", "[(initialCache,1),(read('pki-cached-boundary')['nativeEvidence']['commands'][2]['output'],1),(newCache,2)]")
+s=s.replace("'initialCRLNumber':3,'revokedCRLNumber':4", "'initialCRLNumber':1,'revokedCRLNumber':2").replace("'rawEmptyCRLVersionObserverCorrectionDocumented':True,'initialPrepublicationStopsPreserved':True,", "'rootLeafAndIntermediateCRLUnchangedDuringRepair':True,'intermediateReplacementSameSubjectAndKey':True,")
+s=s.replace('natural-crl-refresh-and-revocation-discovery-qualified','natural-intermediate-crl-refresh-and-revocation-discovery-qualified').replace('valid directly issued leaf','valid root/intermediate/leaf chain').replace('intermediate revocation discovery, OCSP','leaf-only discovery in this run, OCSP')
+# Only the active test CRLs are examined in per-boundary records.
+(r/'assess.py').write_text(s)

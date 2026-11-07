@@ -1,0 +1,22 @@
+"""Wait for normal workload deletion and unchanged fence expiry before a new run."""
+import pathlib,subprocess,json,time,datetime,os,hashlib
+R=pathlib.Path('/tmp/cvk-stdcopyfix-20261105');K=['kubectl','--kubeconfig',str(R/'kubeconfig')];NS='cvk-stdcopyfix-20261105';APPS='cvk-stdcopyfix-apps-20261105';initial=json.loads((R/'initial-missing-directory/initial-path-failure.json').read_text());original=initial['lease'];deadline=time.monotonic()+3900
+while time.monotonic()<deadline:
+ pods=json.loads(subprocess.check_output(K+['-n',APPS,'get','pods','-o','json'],text=True))['items'];leases=json.loads(subprocess.check_output(K+['-n',NS,'get','leases','-o','json'],text=True))['items'];l=next(v for v in leases if v.get('metadata',{}).get('labels',{}).get('cisco.vk/family')=='device-disruptive-mutation');assert l['metadata']['uid']==original['metadata']['uid'];row={'atUTC':datetime.datetime.now(datetime.timezone.utc).isoformat(),'podUIDs':[p['metadata']['uid'] for p in pods],'leaseUID':l['metadata']['uid'],'holder':l['spec'].get('holderIdentity'),'renewTime':l['spec'].get('renewTime'),'naturalFenceExpiryUTC':initial['naturalFenceExpiryUTC']}
+ with (R/'initial-fence-observations.jsonl').open('a') as f:f.write(json.dumps(row)+'\n')
+ if not pods and (not l['spec'].get('holderIdentity') or datetime.datetime.now(datetime.timezone.utc)>=datetime.datetime.fromisoformat(initial['naturalFenceExpiryUTC'])):break
+ if l['spec'].get('holderIdentity')==original['spec']['holderIdentity']:assert l['spec']['renewTime']==original['spec']['renewTime']
+ print('WAIT',json.dumps(row),flush=True);time.sleep(30)
+else:raise RuntimeError('Natural cleanup timeout; never reset fence')
+subprocess.run(['python3',str(R/'snapshot.py'),'initial-normal-cleanup'],check=True,capture_output=True)
+s=json.loads((R/'snapshot-initial-normal-cleanup.json').read_text());assert not s['pods'] and {a['appID']:a['details'].get('state') for a in s['nativeApps']}=={'iris':'RUNNING','c9ktest':'DEPLOYED'}
+ns={};exec(compile((R/'pki_io.py').read_text(),'pki_io.py','exec'),ns);p=ns['CLI']()
+try:
+ p.cmd('configure terminal');p.cmd('ip http secure-trustpoint TP-self-signed-806566997');p.p.sendline('no crypto pki trustpoint CVK-STDCOPYFIX-20261105');i=p.p.expect([r'(?i)\[yes/no\]\s*:',r'(?i)\[confirm\]',r'[>#] ?$'])
+ if i<2:p.p.sendline('yes' if i==0 else '');p.p.expect(r'[>#] ?$')
+ p.cmd('end');assert 'HTTP secure server trustpoint: TP-self-signed-806566997' in p.cmd('show ip http server status | include trustpoint')
+finally:p.close()
+(R/'initial-attempt-normal-cleanup.json').write_text(json.dumps({'atUTC':datetime.datetime.now(datetime.timezone.utc).isoformat(),'passed':True,'normalDeletion':True,'naturalFenceExpiredOrReleased':True,'sameLeaseUID':l['metadata']['uid'],'manualLeaseReset':False,'initialTrustpointRemovedAfterDeletion':True,'CRLCacheCleared':False,'deviceCommands':p.records},indent=2)+'\n')
+for n in ['generate_pki','prepare_device']:subprocess.run(['python3',str(R/(n+'.py'))],check=True)
+# A new actor receives its own fresh signed lists; the previous attempt is immutable.
+subprocess.run(['python3',str(R/'launch.py')],check=True)

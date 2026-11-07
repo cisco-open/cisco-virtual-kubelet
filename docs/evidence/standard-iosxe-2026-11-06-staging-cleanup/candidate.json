@@ -1,0 +1,93 @@
+{
+  "atUTC": "2026-11-06T10:22:35.149862+00:00",
+  "baseCommit": "1791a7e1634961936233ee94170f1c63cea1b64c",
+  "branch": "pr/johalley/verified-app-artifacts",
+  "dirtySourceSHA256": "32b4472e3204549536fc131ed3c89da2d797e3e9a36b68cb920611233c8feb7f",
+  "sourceFiles": 1558,
+  "binarySHA256": "3a83652613439b6dc9bbf51cbd629cd197cb311c33a17ad53c1fce803cb3acc4",
+  "imageTag": "cvk-stdgc-qual:20261106-3a8365261343",
+  "standardDefault": true,
+  "governed": "deferred",
+  "goVersion": "go version go1.26.7 darwin/arm64",
+  "physicalControl": "Ownership-safe Standard staging cleanup: preloaded preservation, upgrade, rollback and truncated failed download",
+  "priorCandidateEvidence": "../standard-iosxe-2026-11-06-upgrade-rollback/candidate.json",
+  "dockerImageID": "sha256:135fbe301171ad677714bb6f613abf3c942a9743ebc6195c410767df6d5ae7ff",
+  "dockerImageInspection": {
+    "Id": "sha256:135fbe301171ad677714bb6f613abf3c942a9743ebc6195c410767df6d5ae7ff",
+    "RepoTags": [
+      "cvk-stdgc-qual:20261106-3a8365261343"
+    ],
+    "RepoDigests": [],
+    "Parent": "",
+    "Comment": "buildkit.dockerfile.v0",
+    "Created": "2026-11-06T10:23:53.549533158Z",
+    "DockerVersion": "",
+    "Author": "",
+    "Config": {
+      "Hostname": "",
+      "Domainname": "",
+      "User": "65532:65532",
+      "AttachStdin": false,
+      "AttachStdout": false,
+      "AttachStderr": false,
+      "Tty": false,
+      "OpenStdin": false,
+      "StdinOnce": false,
+      "Env": [
+        "PATH=/usr/local/bin:/usr/bin:/bin",
+        "SSL_CERT_FILE=/etc/ssl/certs/cvk-qualification.pem"
+      ],
+      "Cmd": null,
+      "Image": "",
+      "Volumes": null,
+      "WorkingDir": "/",
+      "Entrypoint": [
+        "/usr/local/bin/cisco-vk"
+      ],
+      "OnBuild": null,
+      "Labels": {
+        "apphosting.cisco.com/qualification": "20261106-stdgc",
+        "apphosting.cisco.com/source-sha256": "32b4472e3204549536fc131ed3c89da2d797e3e9a36b68cb920611233c8feb7f"
+      }
+    },
+    "Architecture": "amd64",
+    "Os": "linux",
+    "Size": 369329798,
+    "GraphDriver": {
+      "Data": {
+        "LowerDir": "/var/lib/docker/overlay2/smm9o9domew7oz8r0j28enarx/diff:/var/lib/docker/overlay2/ljis1oq7jcocg4ecgztfhb9q6/diff:/var/lib/docker/overlay2/u8mvx6exjt3s5x8tw7iajfbwi/diff:/var/lib/docker/overlay2/c962f8c0af4c0fb2f3d2909fcd3c56cfd9c19489bc599a9b1bdfb4ec7938e73c/diff:/var/lib/docker/overlay2/ac5d7dad6a0b40b34f4b0aae2d183f0c821b13643bc91a06c4bfdcd17561c95c/diff:/var/lib/docker/overlay2/b38aaf61f70942c9681d11b3abfbc612b2c3f508cdb2273eb30a00d6f32e97fe/diff:/var/lib/docker/overlay2/9ca41cf166316268a18e8a7908ff76aaffd8ad5c93b5a456784665bee06651b4/diff:/var/lib/docker/overlay2/476d699e25a929d6ce066d14027708baad2a627fb0fa63d75f629f22e74a075f/diff:/var/lib/docker/overlay2/b905a19e7bc97a2ee999bd91c0f64e9a7784af8ce84aef362c2d3550e48f8f04/diff:/var/lib/docker/overlay2/47e5147550716eaf51172021102bdcd0083e6c16099afd8a46004a8e4b088775/diff:/var/lib/docker/overlay2/b662c1ec1d4455c5bae1d938ef452dd3a38626d75a6585bbc4099f10d8eae420/diff:/var/lib/docker/overlay2/54643e6b199c7a9973787a1f0728d51f1e3135035ace79c203571ec6732b8c1b/diff:/var/lib/docker/overlay2/db0d8864ff7ba5b0e2b8d5a0871b4a54faa296611bb66d9804f48e27e32884cf/diff:/var/lib/docker/overlay2/b3959f83836e480340757027c7ee8877d8db7d3f73503e466501926b00eb21fd/diff:/var/lib/docker/overlay2/06053b0874f18585917f7ecb1c1a8ef01dcee8fd6ba63fd567104e96ffa95825/diff",
+        "MergedDir": "/var/lib/docker/overlay2/wsru45y6zaqz08jbeptk87hn9/merged",
+        "UpperDir": "/var/lib/docker/overlay2/wsru45y6zaqz08jbeptk87hn9/diff",
+        "WorkDir": "/var/lib/docker/overlay2/wsru45y6zaqz08jbeptk87hn9/work"
+      },
+      "Name": "overlay2"
+    },
+    "RootFS": {
+      "Type": "layers",
+      "Layers": [
+        "sha256:7223ea1323e8c1159ec17f07d35acc27bdd1cc2bc3ed425b44ef21dac9915db0",
+        "sha256:8fa10c0194df9b7c054c90dbe482585f768a54428fc90a5b78a0066a123b1bba",
+        "sha256:35b5ba6e08cdd034b8d1920f9c7203e5d66f258e1915f164a01de0af14f34710",
+        "sha256:114dde0fefebbca13165d0da9c500a66190e497a82a53dcaabc3172d630be1e9",
+        "sha256:4d049f83d9cf21d1f5cc0e11deaf36df02790d0e60c1a3829538fb4b61685368",
+        "sha256:af5aa97ebe6ce1604747ec1e21af7136ded391bcabe4acef882e718a87c86bcc",
+        "sha256:6f1cdceb6a3146f0ccb986521156bef8a422cdbb0863396f7f751f575ba308f4",
+        "sha256:bd3cdfae1d3fdd83a2231d608969b38b82349777c2fff9a7c12d54f8ac5c9b38",
+        "sha256:4cde6b0bb6f50a5f255eef7b2a42162c661cf776b803225dcac9a659e396bb6b",
+        "sha256:ad51d0769d16ba578106a177987dfe3d2e02c1668c852b795b2f6b024068242a",
+        "sha256:6e7fbcf090d09b73a4aa85f9dce690d0ace73877c150b7c56955487b6e7a822a",
+        "sha256:5904c32f457c96a16c8c68f5ccdf518c8138cd9e5971de9ce6d564fc481af222",
+        "sha256:6b5baa48e5aca56d688c591a969b5c5b30faef3ee0746cdcf5cef41c3bcf248c",
+        "sha256:7b0a8b84bc31d0e0d92268c24ba54a1d5f9864e14126f0f042196b9bdee954a4",
+        "sha256:e5c90f28575df5a70743db1063fc6d3e5ebe6787e294697f684930841382387c",
+        "sha256:d26db44e4a39f8b82a099bb4ebe924f3797835ed9d31f15be977ac065ab6e17c"
+      ]
+    },
+    "Metadata": {
+      "LastTagTime": "2026-11-06T10:23:58.149485562Z"
+    }
+  },
+  "imageArchiveSHA256": "467f104167f78b438dca6a354c1e0c733c0c0ddd8f27aeb7de00c4f94909728f",
+  "imageBinarySHA256": "3a83652613439b6dc9bbf51cbd629cd197cb311c33a17ad53c1fce803cb3acc4",
+  "builtAtUTC": "2026-11-06T10:24:36.918808+00:00"
+}

@@ -1,0 +1,11 @@
+"""Ordinary HTTPS package origin; no artifact metadata API."""
+import http.server,pathlib,json,datetime,ssl,hashlib
+R=pathlib.Path('/tmp/cvk-stdtls-20261103');OLD=pathlib.Path('/tmp/cvk-verified-qual-20261102');P=OLD/'release-a-final/package.tar';assert hashlib.sha256(P.read_bytes()).hexdigest()=='ed8c257297a526229b154cbaabe1c466de239d4c011e4edfd25c7cb440fa071c'
+class Handler(http.server.BaseHTTPRequestHandler):
+ def log_message(self,*args):pass
+ def do_GET(self):
+  status=200 if self.path in ['/standard-agent-a.tar','/_tls_probe'] else 404;package=self.path=='/standard-agent-a.tar';size=P.stat().st_size if package else 0
+  with (R/'store-requests.jsonl').open('a') as f:f.write(json.dumps({'atUTC':datetime.datetime.now(datetime.timezone.utc).isoformat(),'method':'GET','path':self.path,'client':self.client_address[0],'status':status,'tlsVersion':self.connection.version(),'cipher':self.connection.cipher()[0]})+'\n')
+  self.send_response(status);self.send_header('Content-Length',str(size));self.send_header('Content-Type','application/octet-stream');self.end_headers()
+  if package:self.wfile.write(P.read_bytes())
+s=http.server.ThreadingHTTPServer(('0.0.0.0',18448),Handler);ctx=ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER);ctx.minimum_version=ssl.TLSVersion.TLSv1_2;ctx.set_ciphers('AES256-GCM-SHA384:AES128-GCM-SHA256:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-RSA-AES128-GCM-SHA256');ctx.load_cert_chain(str(OLD/'store.crt'),str(OLD/'store.key'));s.socket=ctx.wrap_socket(s.socket,server_side=True);s.serve_forever()

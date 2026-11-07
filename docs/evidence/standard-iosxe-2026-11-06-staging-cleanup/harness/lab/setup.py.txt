@@ -1,0 +1,12 @@
+import pathlib,subprocess,json,hashlib,datetime
+R=pathlib.Path('/tmp/cvk-stdgc-20261106');files=[]
+roots=['/tmp/cvk-stdrevoke-20261104','/tmp/cvk-stdrevoke-20261104/cold','/tmp/cvk-crlrefresh-20261104','/tmp/cvk-crlrefresh-20261104/prepublication-attempt','/tmp/cvk-intrefresh-20261105','/tmp/cvk-stdcopyfix-20261105','/tmp/cvk-stdcopyfix-20261105/initial-missing-directory','/tmp/cvk-stdupgrade-20261106','/tmp/cvk-stdgc-20261106-probe','/tmp/cvk-stdgc-20261106-probe2','/tmp/cvk-stdgc-20261106-probe3','/tmp/cvk-stdgc-20261106-probe4','/tmp/cvk-stdgc-20261106-probe5']
+for root in roots:
+ for p in sorted(pathlib.Path(root).iterdir()):
+  if p.is_file() and p.suffix in ['.json','.jsonl','.yaml','.crt','.crl','.pem','.py','.log','.txt']:
+   b=p.read_bytes();files.append({'path':str(p),'bytes':len(b),'sha256':hashlib.sha256(b).hexdigest()})
+(R/'earlier-remote-hashes.json').write_text(json.dumps({'capturedAtUTC':datetime.datetime.now(datetime.timezone.utc).isoformat(),'files':files},indent=2)+'\n')
+for n in ['smoke_host','generate_pki','prepare_device','deploy']:subprocess.run(['python3',str(R/(n+'.py'))],check=True)
+(R/'executed-source-hashes.json').write_text(json.dumps({p.name:hashlib.sha256(p.read_bytes()).hexdigest() for p in R.glob('*.py')},indent=2)+'\n')
+with (R/'qualification.log').open('wb') as out:proc=subprocess.Popen(['python3','-u',str(R/'qualify.py')],stdout=out,stderr=subprocess.STDOUT,start_new_session=True)
+(R/'qualification.pid').write_text(str(proc.pid));print('Started qualification PID',proc.pid,flush=True)

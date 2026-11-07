@@ -1,0 +1,9 @@
+import pathlib,json,hashlib,datetime
+r=pathlib.Path('/tmp/cvk-stdrevoke-20261104');p=r/'earlier-evidence-hashes.json';m=json.loads(p.read_text())
+for x in m['files']:
+ b=(r/x['name']).read_bytes()
+ if x['appendOnlyPrefix']:assert len(b)>=x['bytes'];b=b[:x['bytes']]
+ else:assert len(b)==x['bytes'],x['name']
+ assert hashlib.sha256(b).hexdigest()==x['sha256'],x['name']
+out={'passed':True,'verifiedAtUTC':datetime.datetime.now(datetime.timezone.utc).isoformat(),'filesVerified':len(m['files']),'manifestSHA256':hashlib.sha256(p.read_bytes()).hexdigest(),'appendOnlyPrefixesVerified':sum(x['appendOnlyPrefix'] for x in m['files']),'originalEvidenceRewritten':False}
+(r/'earlier-evidence-preservation.json').write_text(json.dumps(out,indent=2)+'\n');print(json.dumps(out))

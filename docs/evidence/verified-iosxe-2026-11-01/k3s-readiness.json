@@ -1,0 +1,26 @@
+{
+  "collectedAtUTC": "2026-11-01T06:21:51.207491+00:00",
+  "checks": [
+    {
+      "args": [
+        "get",
+        "--raw=/readyz"
+      ],
+      "exitCode": 0,
+      "stdout": "ok",
+      "stderr": ""
+    },
+    {
+      "args": [
+        "get",
+        "nodes",
+        "-o",
+        "wide"
+      ],
+      "exitCode": 0,
+      "stdout": "NAME               STATUS   ROLES           AGE     VERSION        INTERNAL-IP   EXTERNAL-IP   OS-IMAGE           KERNEL-VERSION      CONTAINER-RUNTIME\ncvk-verified-k3s   Ready    control-plane   2m16s   v1.35.9+k3s1   172.17.0.3    <none>        K3s v1.35.9+k3s1   6.8.0-124-generic   containerd://2.2.7-k3s1\n",
+      "stderr": ""
+    }
+  ],
+  "cvkDeployed": false
+}

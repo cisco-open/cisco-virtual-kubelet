@@ -1,0 +1,40 @@
+{
+  "generatedAtUTC": "2026-11-04T19:18:00.019951+00:00",
+  "nonce": "f9561e3ce389",
+  "certificates": {
+    "root": {
+      "sha256": "74be8f32e50672caeb543a72f658032503858bef87b639fc47c671450bd85f27",
+      "SPKISHA256": "104361b8a89d216f21f37d9eaa234593c96ed4f88527ed3c5edfa7345d1efb27",
+      "serialHex": "1735bf00926fd0f3b353e6b3c3f462f64d474ff",
+      "subject": "CN=CVK CRL refresh root f9561e3ce389",
+      "issuer": "CN=CVK CRL refresh root f9561e3ce389",
+      "validFromUTC": "2026-11-03T19:18:00+00:00",
+      "validUntilUTC": "2026-11-11T19:18:00+00:00"
+    },
+    "original": {
+      "sha256": "03580d4ae8fbbc976b763a4181670a8891104eb80c25d401e828b2d46b698162",
+      "SPKISHA256": "1f14c12c2e814eff41ef28c2a5bc22fc89a7019112b4190b6d9032f69a5b8dc3",
+      "serialHex": "3bfea9015d726674567c7ab833744692c8acd0c9",
+      "subject": "CN=192.168.129.111",
+      "issuer": "CN=CVK CRL refresh root f9561e3ce389",
+      "validFromUTC": "2026-11-03T19:18:00+00:00",
+      "validUntilUTC": "2026-11-11T19:18:00+00:00"
+    },
+    "replacement": {
+      "sha256": "787fa96dd53c034d5e38f8bbb35c69aa65bab4f80c9aedaab66c52aeefd722bb",
+      "SPKISHA256": "b73942dba2e87fedffe1644b06fd367bdfb0204e1de03d4e13528433cd6d7ca4",
+      "serialHex": "7d804d6332632c1c5b64256047c736758644bb9e",
+      "subject": "CN=192.168.129.111",
+      "issuer": "CN=CVK CRL refresh root f9561e3ce389",
+      "validFromUTC": "2026-11-03T19:18:00+00:00",
+      "validUntilUTC": "2026-11-11T19:18:00+00:00"
+    }
+  },
+  "ephemeralPrivateKeys": [
+    "root.key",
+    "original.key",
+    "replacement.key"
+  ],
+  "revocationTrustpoint": "CVK-CRLREFRESH-20261104",
+  "CDP": "http://192.168.129.111:18470/issuer.crl"
+}

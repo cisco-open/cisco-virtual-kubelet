@@ -1,0 +1,13 @@
+{
+  "collectedAtUTC": "2026-11-03T05:24:20.266117+00:00",
+  "commands": [
+    {
+      "command": "show crypto pki certificates CVK-QUAL-20261103",
+      "output": "show crypto pki certificates CVK-QUAL-20261103\nCA Certificate\n  Status: Available\n  Certificate Serial Number (hex): 594CACB4A1BE0955211AA1D659917FEF3C6C49AC\n  Certificate Usage: General Purpose\n  Issuer: \n    cn=CVK qualification 20261102 CA\n  Subject: \n    cn=CVK qualification 20261102 CA\n  Validity Date: \n    start date: 19:53:44 UTC Nov 2 2026\n    end   date: 19:58:44 UTC Nov 9 2026\n  Associated Trustpoints: CVK-QUAL-20261103 \n\n\nEdge-9K"
+    },
+    {
+      "command": "show app-hosting list",
+      "output": "show app-hosting list\nApp id                                   State\n---------------------------------------------------------\niris                                     RUNNING\nc9ktest                                  DEPLOYED\n\nEdge-9K"
+    }
+  ]
+}

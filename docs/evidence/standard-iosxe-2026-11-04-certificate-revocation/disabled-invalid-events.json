@@ -1,0 +1,678 @@
+[
+  {
+    "action": "Binding",
+    "apiVersion": "v1",
+    "eventTime": "2026-11-04T10:19:54.689799Z",
+    "firstTimestamp": null,
+    "involvedObject": {
+      "apiVersion": "v1",
+      "kind": "Pod",
+      "name": "cvk-stdrevoke-fixture-54f957567f-r7dz2",
+      "namespace": "cvk-stdrevoke-apps-20261104",
+      "resourceVersion": "1247",
+      "uid": "76fe65c6-860d-4b61-b55c-ec72adab9bde"
+    },
+    "kind": "Event",
+    "lastTimestamp": null,
+    "message": "Successfully assigned cvk-stdrevoke-apps-20261104/cvk-stdrevoke-fixture-54f957567f-r7dz2 to c9k-stdrevoke-20261104",
+    "metadata": {
+      "creationTimestamp": "2026-11-04T10:19:54Z",
+      "name": "cvk-stdrevoke-fixture-54f957567f-r7dz2.18e4d0503ffcfe4e",
+      "namespace": "cvk-stdrevoke-apps-20261104",
+      "resourceVersion": "1251",
+      "uid": "6369ff9c-df04-4494-a450-2080b60b5565"
+    },
+    "reason": "Scheduled",
+    "reportingComponent": "default-scheduler",
+    "reportingInstance": "default-scheduler-f580bf984f85",
+    "source": {},
+    "type": "Normal"
+  },
+  {
+    "apiVersion": "v1",
+    "count": 1,
+    "eventTime": null,
+    "firstTimestamp": "2026-11-04T10:19:55Z",
+    "involvedObject": {
+      "apiVersion": "v1",
+      "kind": "Pod",
+      "name": "cvk-stdrevoke-fixture-54f957567f-r7dz2",
+      "namespace": "cvk-stdrevoke-apps-20261104",
+      "resourceVersion": "1249",
+      "uid": "76fe65c6-860d-4b61-b55c-ec72adab9bde"
+    },
+    "kind": "Event",
+    "lastTimestamp": "2026-11-04T10:19:55Z",
+    "message": "Pulling image https://192.168.129.111:18461/valid-chain-agent-a.tar",
+    "metadata": {
+      "creationTimestamp": "2026-11-04T10:19:55Z",
+      "name": "cvk-stdrevoke-fixture-54f957567f-r7dz2.18e4d0505b220fcc",
+      "namespace": "cvk-stdrevoke-apps-20261104",
+      "resourceVersion": "1258",
+      "uid": "a2f1c4cd-e7e1-4a9f-b0e9-2b71fa70696a"
+    },
+    "reason": "Pulling",
+    "reportingComponent": "cisco-virtual-kubelet",
+    "reportingInstance": "",
+    "source": {
+      "component": "cisco-virtual-kubelet"
+    },
+    "type": "Normal"
+  },
+  {
+    "apiVersion": "v1",
+    "count": 1,
+    "eventTime": null,
+    "firstTimestamp": "2026-11-04T10:20:21Z",
+    "involvedObject": {
+      "apiVersion": "v1",
+      "kind": "Pod",
+      "name": "cvk-stdrevoke-fixture-54f957567f-r7dz2",
+      "namespace": "cvk-stdrevoke-apps-20261104",
+      "resourceVersion": "1249",
+      "uid": "76fe65c6-860d-4b61-b55c-ec72adab9bde"
+    },
+    "kind": "Event",
+    "lastTimestamp": "2026-11-04T10:20:21Z",
+    "message": "Create pod in provider successfully",
+    "metadata": {
+      "creationTimestamp": "2026-11-04T10:20:21Z",
+      "name": "cvk-stdrevoke-fixture-54f957567f-r7dz2.18e4d05698a460ca",
+      "namespace": "cvk-stdrevoke-apps-20261104",
+      "resourceVersion": "1291",
+      "uid": "eabdae11-6efa-4b06-9d87-aa76c291f3e6"
+    },
+    "reason": "ProviderCreateSuccess",
+    "reportingComponent": "c9k-stdrevoke-20261104/pod-controller",
+    "reportingInstance": "",
+    "source": {
+      "component": "c9k-stdrevoke-20261104/pod-controller"
+    },
+    "type": "Normal"
+  },
+  {
+    "apiVersion": "v1",
+    "count": 1,
+    "eventTime": null,
+    "firstTimestamp": "2026-11-04T10:20:22Z",
+    "involvedObject": {
+      "apiVersion": "v1",
+      "kind": "Pod",
+      "name": "cvk-stdrevoke-fixture-54f957567f-r7dz2",
+      "namespace": "cvk-stdrevoke-apps-20261104",
+      "resourceVersion": "1281",
+      "uid": "76fe65c6-860d-4b61-b55c-ec72adab9bde"
+    },
+    "kind": "Event",
+    "lastTimestamp": "2026-11-04T10:20:22Z",
+    "message": "Update pod in provider successfully",
+    "metadata": {
+      "creationTimestamp": "2026-11-04T10:20:22Z",
+      "name": "cvk-stdrevoke-fixture-54f957567f-r7dz2.18e4d056c53be0fd",
+      "namespace": "cvk-stdrevoke-apps-20261104",
+      "resourceVersion": "1297",
+      "uid": "9871723d-1f41-4e8d-a43e-b29da836f1b6"
+    },
+    "reason": "ProviderUpdateSuccess",
+    "reportingComponent": "c9k-stdrevoke-20261104/pod-controller",
+    "reportingInstance": "",
+    "source": {
+      "component": "c9k-stdrevoke-20261104/pod-controller"
+    },
+    "type": "Normal"
+  },
+  {
+    "apiVersion": "v1",
+    "count": 2,
+    "eventTime": null,
+    "firstTimestamp": "2026-11-04T10:21:50Z",
+    "involvedObject": {
+      "apiVersion": "v1",
+      "kind": "Pod",
+      "name": "cvk-stdrevoke-fixture-54f957567f-r7dz2",
+      "namespace": "cvk-stdrevoke-apps-20261104",
+      "resourceVersion": "1374",
+      "uid": "76fe65c6-860d-4b61-b55c-ec72adab9bde"
+    },
+    "kind": "Event",
+    "lastTimestamp": "2026-11-04T10:22:20Z",
+    "message": "Delete pod in provider successfully",
+    "metadata": {
+      "creationTimestamp": "2026-11-04T10:21:50Z",
+      "name": "cvk-stdrevoke-fixture-54f957567f-r7dz2.18e4d06b1b7ce447",
+      "namespace": "cvk-stdrevoke-apps-20261104",
+      "resourceVersion": "1451",
+      "uid": "5d3996ab-019a-42a7-a690-6eda474f68fe"
+    },
+    "reason": "ProviderDeleteSuccess",
+    "reportingComponent": "c9k-stdrevoke-20261104/pod-controller",
+    "reportingInstance": "",
+    "source": {
+      "component": "c9k-stdrevoke-20261104/pod-controller"
+    },
+    "type": "Normal"
+  },
+  {
+    "apiVersion": "v1",
+    "count": 1,
+    "eventTime": null,
+    "firstTimestamp": "2026-11-04T10:19:54Z",
+    "involvedObject": {
+      "apiVersion": "apps/v1",
+      "kind": "ReplicaSet",
+      "name": "cvk-stdrevoke-fixture-54f957567f",
+      "namespace": "cvk-stdrevoke-apps-20261104",
+      "resourceVersion": "1244",
+      "uid": "2abf3c57-70df-4c9e-9ae7-180b1a08f6c9"
+    },
+    "kind": "Event",
+    "lastTimestamp": "2026-11-04T10:19:54Z",
+    "message": "Created pod: cvk-stdrevoke-fixture-54f957567f-r7dz2",
+    "metadata": {
+      "creationTimestamp": "2026-11-04T10:19:54Z",
+      "name": "cvk-stdrevoke-fixture-54f957567f.18e4d0503fc53bf5",
+      "namespace": "cvk-stdrevoke-apps-20261104",
+      "resourceVersion": "1248",
+      "uid": "ea30a076-67a6-4e8d-953d-9edbc1d3ae82"
+    },
+    "reason": "SuccessfulCreate",
+    "reportingComponent": "replicaset-controller",
+    "reportingInstance": "",
+    "source": {
+      "component": "replicaset-controller"
+    },
+    "type": "Normal"
+  },
+  {
+    "apiVersion": "v1",
+    "count": 1,
+    "eventTime": null,
+    "firstTimestamp": "2026-11-04T10:21:28Z",
+    "involvedObject": {
+      "apiVersion": "apps/v1",
+      "kind": "ReplicaSet",
+      "name": "cvk-stdrevoke-fixture-54f957567f",
+      "namespace": "cvk-stdrevoke-apps-20261104",
+      "resourceVersion": "1372",
+      "uid": "2abf3c57-70df-4c9e-9ae7-180b1a08f6c9"
+    },
+    "kind": "Event",
+    "lastTimestamp": "2026-11-04T10:21:28Z",
+    "message": "Deleted pod: cvk-stdrevoke-fixture-54f957567f-r7dz2",
+    "metadata": {
+      "creationTimestamp": "2026-11-04T10:21:28Z",
+      "name": "cvk-stdrevoke-fixture-54f957567f.18e4d066014a5e78",
+      "namespace": "cvk-stdrevoke-apps-20261104",
+      "resourceVersion": "1376",
+      "uid": "a89f41a9-a1fe-4840-8f5c-6bcecac0cd19"
+    },
+    "reason": "SuccessfulDelete",
+    "reportingComponent": "replicaset-controller",
+    "reportingInstance": "",
+    "source": {
+      "component": "replicaset-controller"
+    },
+    "type": "Normal"
+  },
+  {
+    "action": "Binding",
+    "apiVersion": "v1",
+    "eventTime": "2026-11-04T10:17:34.566601Z",
+    "firstTimestamp": null,
+    "involvedObject": {
+      "apiVersion": "v1",
+      "kind": "Pod",
+      "name": "cvk-stdrevoke-fixture-8499f4fc96-qtqcl",
+      "namespace": "cvk-stdrevoke-apps-20261104",
+      "resourceVersion": "1038",
+      "uid": "83358eff-01a1-4aeb-9d9f-037f46292209"
+    },
+    "kind": "Event",
+    "lastTimestamp": null,
+    "message": "Successfully assigned cvk-stdrevoke-apps-20261104/cvk-stdrevoke-fixture-8499f4fc96-qtqcl to c9k-stdrevoke-20261104",
+    "metadata": {
+      "creationTimestamp": "2026-11-04T10:17:34Z",
+      "name": "cvk-stdrevoke-fixture-8499f4fc96-qtqcl.18e4d02f9ffea43a",
+      "namespace": "cvk-stdrevoke-apps-20261104",
+      "resourceVersion": "1042",
+      "uid": "5afdb7d1-3076-457d-bf6a-9229177fc336"
+    },
+    "reason": "Scheduled",
+    "reportingComponent": "default-scheduler",
+    "reportingInstance": "default-scheduler-f580bf984f85",
+    "source": {},
+    "type": "Normal"
+  },
+  {
+    "apiVersion": "v1",
+    "count": 1,
+    "eventTime": null,
+    "firstTimestamp": "2026-11-04T10:17:35Z",
+    "involvedObject": {
+      "apiVersion": "v1",
+      "kind": "Pod",
+      "name": "cvk-stdrevoke-fixture-8499f4fc96-qtqcl",
+      "namespace": "cvk-stdrevoke-apps-20261104",
+      "resourceVersion": "1040",
+      "uid": "83358eff-01a1-4aeb-9d9f-037f46292209"
+    },
+    "kind": "Event",
+    "lastTimestamp": "2026-11-04T10:17:35Z",
+    "message": "Pulling image https://192.168.129.111:18460/valid-leaf-agent-a.tar",
+    "metadata": {
+      "creationTimestamp": "2026-11-04T10:17:35Z",
+      "name": "cvk-stdrevoke-fixture-8499f4fc96-qtqcl.18e4d02fbe6c7b83",
+      "namespace": "cvk-stdrevoke-apps-20261104",
+      "resourceVersion": "1049",
+      "uid": "b009ba9a-995b-4fd2-bfcd-ed4d0446e605"
+    },
+    "reason": "Pulling",
+    "reportingComponent": "cisco-virtual-kubelet",
+    "reportingInstance": "",
+    "source": {
+      "component": "cisco-virtual-kubelet"
+    },
+    "type": "Normal"
+  },
+  {
+    "apiVersion": "v1",
+    "count": 1,
+    "eventTime": null,
+    "firstTimestamp": "2026-11-04T10:17:59Z",
+    "involvedObject": {
+      "apiVersion": "v1",
+      "kind": "Pod",
+      "name": "cvk-stdrevoke-fixture-8499f4fc96-qtqcl",
+      "namespace": "cvk-stdrevoke-apps-20261104",
+      "resourceVersion": "1040",
+      "uid": "83358eff-01a1-4aeb-9d9f-037f46292209"
+    },
+    "kind": "Event",
+    "lastTimestamp": "2026-11-04T10:17:59Z",
+    "message": "Create pod in provider successfully",
+    "metadata": {
+      "creationTimestamp": "2026-11-04T10:17:59Z",
+      "name": "cvk-stdrevoke-fixture-8499f4fc96-qtqcl.18e4d03578a1b344",
+      "namespace": "cvk-stdrevoke-apps-20261104",
+      "resourceVersion": "1077",
+      "uid": "33900479-8890-4fe9-a0f0-13dbcd89764f"
+    },
+    "reason": "ProviderCreateSuccess",
+    "reportingComponent": "c9k-stdrevoke-20261104/pod-controller",
+    "reportingInstance": "",
+    "source": {
+      "component": "c9k-stdrevoke-20261104/pod-controller"
+    },
+    "type": "Normal"
+  },
+  {
+    "apiVersion": "v1",
+    "count": 1,
+    "eventTime": null,
+    "firstTimestamp": "2026-11-04T10:18:00Z",
+    "involvedObject": {
+      "apiVersion": "v1",
+      "kind": "Pod",
+      "name": "cvk-stdrevoke-fixture-8499f4fc96-qtqcl",
+      "namespace": "cvk-stdrevoke-apps-20261104",
+      "resourceVersion": "1069",
+      "uid": "83358eff-01a1-4aeb-9d9f-037f46292209"
+    },
+    "kind": "Event",
+    "lastTimestamp": "2026-11-04T10:18:00Z",
+    "message": "Update pod in provider successfully",
+    "metadata": {
+      "creationTimestamp": "2026-11-04T10:18:00Z",
+      "name": "cvk-stdrevoke-fixture-8499f4fc96-qtqcl.18e4d035b0ce5b91",
+      "namespace": "cvk-stdrevoke-apps-20261104",
+      "resourceVersion": "1088",
+      "uid": "8900881b-fa19-40e5-99c7-ddeb7867586f"
+    },
+    "reason": "ProviderUpdateSuccess",
+    "reportingComponent": "c9k-stdrevoke-20261104/pod-controller",
+    "reportingInstance": "",
+    "source": {
+      "component": "c9k-stdrevoke-20261104/pod-controller"
+    },
+    "type": "Normal"
+  },
+  {
+    "apiVersion": "v1",
+    "count": 2,
+    "eventTime": null,
+    "firstTimestamp": "2026-11-04T10:19:22Z",
+    "involvedObject": {
+      "apiVersion": "v1",
+      "kind": "Pod",
+      "name": "cvk-stdrevoke-fixture-8499f4fc96-qtqcl",
+      "namespace": "cvk-stdrevoke-apps-20261104",
+      "resourceVersion": "1164",
+      "uid": "83358eff-01a1-4aeb-9d9f-037f46292209"
+    },
+    "kind": "Event",
+    "lastTimestamp": "2026-11-04T10:19:53Z",
+    "message": "Delete pod in provider successfully",
+    "metadata": {
+      "creationTimestamp": "2026-11-04T10:19:22Z",
+      "name": "cvk-stdrevoke-fixture-8499f4fc96-qtqcl.18e4d048d19f1d80",
+      "namespace": "cvk-stdrevoke-apps-20261104",
+      "resourceVersion": "1238",
+      "uid": "f89845a3-e2ff-4550-8fc8-bcad68309e63"
+    },
+    "reason": "ProviderDeleteSuccess",
+    "reportingComponent": "c9k-stdrevoke-20261104/pod-controller",
+    "reportingInstance": "",
+    "source": {
+      "component": "c9k-stdrevoke-20261104/pod-controller"
+    },
+    "type": "Normal"
+  },
+  {
+    "apiVersion": "v1",
+    "count": 1,
+    "eventTime": null,
+    "firstTimestamp": "2026-11-04T10:17:34Z",
+    "involvedObject": {
+      "apiVersion": "apps/v1",
+      "kind": "ReplicaSet",
+      "name": "cvk-stdrevoke-fixture-8499f4fc96",
+      "namespace": "cvk-stdrevoke-apps-20261104",
+      "resourceVersion": "1035",
+      "uid": "4ce13ea6-ac59-428e-8c31-12e4121276da"
+    },
+    "kind": "Event",
+    "lastTimestamp": "2026-11-04T10:17:34Z",
+    "message": "Created pod: cvk-stdrevoke-fixture-8499f4fc96-qtqcl",
+    "metadata": {
+      "creationTimestamp": "2026-11-04T10:17:34Z",
+      "name": "cvk-stdrevoke-fixture-8499f4fc96.18e4d02f9fc395cb",
+      "namespace": "cvk-stdrevoke-apps-20261104",
+      "resourceVersion": "1039",
+      "uid": "acfcbdb5-d1f6-4f96-befd-301db084fd18"
+    },
+    "reason": "SuccessfulCreate",
+    "reportingComponent": "replicaset-controller",
+    "reportingInstance": "",
+    "source": {
+      "component": "replicaset-controller"
+    },
+    "type": "Normal"
+  },
+  {
+    "apiVersion": "v1",
+    "count": 1,
+    "eventTime": null,
+    "firstTimestamp": "2026-11-04T10:19:00Z",
+    "involvedObject": {
+      "apiVersion": "apps/v1",
+      "kind": "ReplicaSet",
+      "name": "cvk-stdrevoke-fixture-8499f4fc96",
+      "namespace": "cvk-stdrevoke-apps-20261104",
+      "resourceVersion": "1161",
+      "uid": "4ce13ea6-ac59-428e-8c31-12e4121276da"
+    },
+    "kind": "Event",
+    "lastTimestamp": "2026-11-04T10:19:00Z",
+    "message": "Deleted pod: cvk-stdrevoke-fixture-8499f4fc96-qtqcl",
+    "metadata": {
+      "creationTimestamp": "2026-11-04T10:19:00Z",
+      "name": "cvk-stdrevoke-fixture-8499f4fc96.18e4d043acc15b85",
+      "namespace": "cvk-stdrevoke-apps-20261104",
+      "resourceVersion": "1165",
+      "uid": "98bbb57f-6a1c-4c94-9de0-f280ce26e9cd"
+    },
+    "reason": "SuccessfulDelete",
+    "reportingComponent": "replicaset-controller",
+    "reportingInstance": "",
+    "source": {
+      "component": "replicaset-controller"
+    },
+    "type": "Normal"
+  },
+  {
+    "action": "Binding",
+    "apiVersion": "v1",
+    "eventTime": "2026-11-04T10:22:24.268291Z",
+    "firstTimestamp": null,
+    "involvedObject": {
+      "apiVersion": "v1",
+      "kind": "Pod",
+      "name": "cvk-stdrevoke-fixture-dd7dc5bfb-pcbdg",
+      "namespace": "cvk-stdrevoke-apps-20261104",
+      "resourceVersion": "1466",
+      "uid": "74ea96d3-da94-46ac-bf09-d1112a6c0be2"
+    },
+    "kind": "Event",
+    "lastTimestamp": null,
+    "message": "Successfully assigned cvk-stdrevoke-apps-20261104/cvk-stdrevoke-fixture-dd7dc5bfb-pcbdg to c9k-stdrevoke-20261104",
+    "metadata": {
+      "creationTimestamp": "2026-11-04T10:22:24Z",
+      "name": "cvk-stdrevoke-fixture-dd7dc5bfb-pcbdg.18e4d073138fb118",
+      "namespace": "cvk-stdrevoke-apps-20261104",
+      "resourceVersion": "1470",
+      "uid": "3f3fb134-7252-41bf-9537-d543d9091cd7"
+    },
+    "reason": "Scheduled",
+    "reportingComponent": "default-scheduler",
+    "reportingInstance": "default-scheduler-f580bf984f85",
+    "source": {},
+    "type": "Normal"
+  },
+  {
+    "apiVersion": "v1",
+    "count": 1,
+    "eventTime": null,
+    "firstTimestamp": "2026-11-04T10:22:24Z",
+    "involvedObject": {
+      "apiVersion": "v1",
+      "kind": "Pod",
+      "name": "cvk-stdrevoke-fixture-dd7dc5bfb-pcbdg",
+      "namespace": "cvk-stdrevoke-apps-20261104",
+      "resourceVersion": "1468",
+      "uid": "74ea96d3-da94-46ac-bf09-d1112a6c0be2"
+    },
+    "kind": "Event",
+    "lastTimestamp": "2026-11-04T10:22:24Z",
+    "message": "Pulling image https://192.168.129.111:18459/disabled-agent-a.tar",
+    "metadata": {
+      "creationTimestamp": "2026-11-04T10:22:24Z",
+      "name": "cvk-stdrevoke-fixture-dd7dc5bfb-pcbdg.18e4d0732f24a39d",
+      "namespace": "cvk-stdrevoke-apps-20261104",
+      "resourceVersion": "1476",
+      "uid": "d9b7d03e-9e4a-4c29-9eab-1e610425dd45"
+    },
+    "reason": "Pulling",
+    "reportingComponent": "cisco-virtual-kubelet",
+    "reportingInstance": "",
+    "source": {
+      "component": "cisco-virtual-kubelet"
+    },
+    "type": "Normal"
+  },
+  {
+    "apiVersion": "v1",
+    "count": 1,
+    "eventTime": null,
+    "firstTimestamp": "2026-11-04T10:22:24Z",
+    "involvedObject": {
+      "apiVersion": "apps/v1",
+      "kind": "ReplicaSet",
+      "name": "cvk-stdrevoke-fixture-dd7dc5bfb",
+      "namespace": "cvk-stdrevoke-apps-20261104",
+      "resourceVersion": "1463",
+      "uid": "9ee387dc-4092-428e-b6e4-c35e48bc4107"
+    },
+    "kind": "Event",
+    "lastTimestamp": "2026-11-04T10:22:24Z",
+    "message": "Created pod: cvk-stdrevoke-fixture-dd7dc5bfb-pcbdg",
+    "metadata": {
+      "creationTimestamp": "2026-11-04T10:22:24Z",
+      "name": "cvk-stdrevoke-fixture-dd7dc5bfb.18e4d073133a6d5a",
+      "namespace": "cvk-stdrevoke-apps-20261104",
+      "resourceVersion": "1467",
+      "uid": "e7f01f99-6b0c-4f68-9aa4-3b5a285e7a17"
+    },
+    "reason": "SuccessfulCreate",
+    "reportingComponent": "replicaset-controller",
+    "reportingInstance": "",
+    "source": {
+      "component": "replicaset-controller"
+    },
+    "type": "Normal"
+  },
+  {
+    "apiVersion": "v1",
+    "count": 1,
+    "eventTime": null,
+    "firstTimestamp": "2026-11-04T10:17:34Z",
+    "involvedObject": {
+      "apiVersion": "apps/v1",
+      "kind": "Deployment",
+      "name": "cvk-stdrevoke-fixture",
+      "namespace": "cvk-stdrevoke-apps-20261104",
+      "resourceVersion": "1034",
+      "uid": "51467f81-0e7c-47fc-81fd-1e5ca3dcb416"
+    },
+    "kind": "Event",
+    "lastTimestamp": "2026-11-04T10:17:34Z",
+    "message": "Scaled up replica set cvk-stdrevoke-fixture-8499f4fc96 from 0 to 1",
+    "metadata": {
+      "creationTimestamp": "2026-11-04T10:17:34Z",
+      "name": "cvk-stdrevoke-fixture.18e4d02f9f695708",
+      "namespace": "cvk-stdrevoke-apps-20261104",
+      "resourceVersion": "1036",
+      "uid": "3dc72c45-9cbd-4db6-86af-5e1a66850a27"
+    },
+    "reason": "ScalingReplicaSet",
+    "reportingComponent": "deployment-controller",
+    "reportingInstance": "",
+    "source": {
+      "component": "deployment-controller"
+    },
+    "type": "Normal"
+  },
+  {
+    "apiVersion": "v1",
+    "count": 1,
+    "eventTime": null,
+    "firstTimestamp": "2026-11-04T10:19:00Z",
+    "involvedObject": {
+      "apiVersion": "apps/v1",
+      "kind": "Deployment",
+      "name": "cvk-stdrevoke-fixture",
+      "namespace": "cvk-stdrevoke-apps-20261104",
+      "resourceVersion": "1160",
+      "uid": "51467f81-0e7c-47fc-81fd-1e5ca3dcb416"
+    },
+    "kind": "Event",
+    "lastTimestamp": "2026-11-04T10:19:00Z",
+    "message": "Scaled down replica set cvk-stdrevoke-fixture-8499f4fc96 from 1 to 0",
+    "metadata": {
+      "creationTimestamp": "2026-11-04T10:19:00Z",
+      "name": "cvk-stdrevoke-fixture.18e4d043ac694c60",
+      "namespace": "cvk-stdrevoke-apps-20261104",
+      "resourceVersion": "1162",
+      "uid": "5029e429-1068-4ee8-bc19-dec978adb6dc"
+    },
+    "reason": "ScalingReplicaSet",
+    "reportingComponent": "deployment-controller",
+    "reportingInstance": "",
+    "source": {
+      "component": "deployment-controller"
+    },
+    "type": "Normal"
+  },
+  {
+    "apiVersion": "v1",
+    "count": 1,
+    "eventTime": null,
+    "firstTimestamp": "2026-11-04T10:19:54Z",
+    "involvedObject": {
+      "apiVersion": "apps/v1",
+      "kind": "Deployment",
+      "name": "cvk-stdrevoke-fixture",
+      "namespace": "cvk-stdrevoke-apps-20261104",
+      "resourceVersion": "1243",
+      "uid": "51467f81-0e7c-47fc-81fd-1e5ca3dcb416"
+    },
+    "kind": "Event",
+    "lastTimestamp": "2026-11-04T10:19:54Z",
+    "message": "Scaled up replica set cvk-stdrevoke-fixture-54f957567f from 0 to 1",
+    "metadata": {
+      "creationTimestamp": "2026-11-04T10:19:54Z",
+      "name": "cvk-stdrevoke-fixture.18e4d0503f6fdc82",
+      "namespace": "cvk-stdrevoke-apps-20261104",
+      "resourceVersion": "1245",
+      "uid": "1d0599bd-9f45-4419-bf58-395e523458e6"
+    },
+    "reason": "ScalingReplicaSet",
+    "reportingComponent": "deployment-controller",
+    "reportingInstance": "",
+    "source": {
+      "component": "deployment-controller"
+    },
+    "type": "Normal"
+  },
+  {
+    "apiVersion": "v1",
+    "count": 1,
+    "eventTime": null,
+    "firstTimestamp": "2026-11-04T10:21:28Z",
+    "involvedObject": {
+      "apiVersion": "apps/v1",
+      "kind": "Deployment",
+      "name": "cvk-stdrevoke-fixture",
+      "namespace": "cvk-stdrevoke-apps-20261104",
+      "resourceVersion": "1371",
+      "uid": "51467f81-0e7c-47fc-81fd-1e5ca3dcb416"
+    },
+    "kind": "Event",
+    "lastTimestamp": "2026-11-04T10:21:28Z",
+    "message": "Scaled down replica set cvk-stdrevoke-fixture-54f957567f from 1 to 0",
+    "metadata": {
+      "creationTimestamp": "2026-11-04T10:21:28Z",
+      "name": "cvk-stdrevoke-fixture.18e4d06600ee7dc3",
+      "namespace": "cvk-stdrevoke-apps-20261104",
+      "resourceVersion": "1373",
+      "uid": "f557c332-ffc0-4f54-8977-c77b09bcce82"
+    },
+    "reason": "ScalingReplicaSet",
+    "reportingComponent": "deployment-controller",
+    "reportingInstance": "",
+    "source": {
+      "component": "deployment-controller"
+    },
+    "type": "Normal"
+  },
+  {
+    "apiVersion": "v1",
+    "count": 1,
+    "eventTime": null,
+    "firstTimestamp": "2026-11-04T10:22:24Z",
+    "involvedObject": {
+      "apiVersion": "apps/v1",
+      "kind": "Deployment",
+      "name": "cvk-stdrevoke-fixture",
+      "namespace": "cvk-stdrevoke-apps-20261104",
+      "resourceVersion": "1462",
+      "uid": "51467f81-0e7c-47fc-81fd-1e5ca3dcb416"
+    },
+    "kind": "Event",
+    "lastTimestamp": "2026-11-04T10:22:24Z",
+    "message": "Scaled up replica set cvk-stdrevoke-fixture-dd7dc5bfb from 0 to 1",
+    "metadata": {
+      "creationTimestamp": "2026-11-04T10:22:24Z",
+      "name": "cvk-stdrevoke-fixture.18e4d07312a3d3c2",
+      "namespace": "cvk-stdrevoke-apps-20261104",
+      "resourceVersion": "1464",
+      "uid": "8ba8e343-187c-4f70-8aa7-44ca69c57f80"
+    },
+    "reason": "ScalingReplicaSet",
+    "reportingComponent": "deployment-controller",
+    "reportingInstance": "",
+    "source": {
+      "component": "deployment-controller"
+    },
+    "type": "Normal"
+  }
+]

@@ -1,0 +1,12 @@
+{
+  "atUTC": "2026-11-03T14:54:51.480030+00:00",
+  "origin": "https://192.168.129.111:18448",
+  "testClient": "ux-agx Python SSL, not the C9K installer",
+  "trustedOriginProbe": true,
+  "wrongHostnameRejected": true,
+  "originCA_PEM_SHA256": "f1bdce86ee8489afbf68fe5d28d2124d2b479ec11cefa95267ceff318ee8a9d9",
+  "originLeaf_PEM_SHA256": "6a690dbcc65e0f38b027bf8239c8a2c5140b6102320268f771ed749aaf380f61",
+  "serverMinimumTLS": "1.2",
+  "artifactMetadataAPI": false,
+  "c9kInvalidCertificateTestsExecuted": false
+}

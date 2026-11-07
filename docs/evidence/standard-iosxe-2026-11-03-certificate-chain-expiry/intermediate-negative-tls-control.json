@@ -1,0 +1,9 @@
+{
+  "atUTC": "2026-11-04T06:51:27.179178+00:00",
+  "case": "intermediate",
+  "accepted": false,
+  "verificationCode": 10,
+  "verificationMessage": "certificate has expired",
+  "rootCertificate": "intermediate-root",
+  "deviceClockChanged": false
+}

@@ -1,0 +1,11 @@
+import pathlib,json,subprocess,datetime,sys
+r=pathlib.Path('/tmp/cvk-verified-qual-20261102');label=sys.argv[1];release=sys.argv[2].upper();s=json.loads((r/('snapshot-'+label+'.json')).read_text());assert s['assertions']['passed']
+expected=next(x for x in json.loads((r/'releases.json').read_text()) if x['release']==release);uids=set(s['assertions']['podUIDs']);records=[json.loads(v) for j in s['journals'] for v in (j.get('data') or {}).values() if json.loads(v).get('podUID') in uids];assert len(records)==1;rec=records[0]
+sha=expected.get('sha512') or expected.get('packageSHA512');
+if not sha:
+ import hashlib
+ sha=hashlib.sha512((r/('release-'+release.lower()+'-final')/'package.tar').read_bytes()).hexdigest()
+a=subprocess.run([str(r/'checksum-probe'),'-path',rec['stagedPath'],'-size',str(expected['package']['sizeBytes']),'-sha512',sha],text=True,capture_output=True)
+report={'collectedAtUTC':datetime.datetime.now(datetime.timezone.utc).isoformat(),'case':label,'exitCode':a.returncode,'result':json.loads(a.stdout),'stderr':a.stderr};(r/('checksum-'+label+'.json')).write_text(json.dumps(report,indent=2)+'\n');assert a.returncode==0,report
+k=['kubectl','--kubeconfig',str(r/'kubeconfig')];lease=json.loads(subprocess.check_output(k+['-n','cvk-qual-20261102','get','lease','cvk-device-77c5286ea9b30e32-device-disruptive-mutation-a553792b','-o','json'],text=True));(r/('lease-'+label+'.json')).write_text(json.dumps(lease,indent=2)+'\n');assert not lease.get('spec',{}).get('holderIdentity'),lease.get('spec')
+print(label,'exact native SHA512 and size confirmed; mutation lease released',flush=True)

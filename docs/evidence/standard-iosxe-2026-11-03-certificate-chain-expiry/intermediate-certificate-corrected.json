@@ -1,0 +1,14 @@
+{
+  "atUTC": "2026-11-04T06:56:39.338809+00:00",
+  "case": "intermediate",
+  "onlyCACertificateChanged": true,
+  "leafCertificateChanged": false,
+  "CAKeyOrSubjectChanged": false,
+  "deviceTrustCertificateReplaced": false,
+  "serverChainCertificateReplaced": true,
+  "packageURLChanged": false,
+  "payloadChanged": false,
+  "newMode": "intermediate-renewed",
+  "independentTLSProbePassed": true,
+  "leaseManuallyModified": false
+}

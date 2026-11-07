@@ -1,0 +1,12 @@
+{
+  "atUTC": "2026-11-04T10:32:30.058489+00:00",
+  "case": "leaf",
+  "classification": "revoked-certificate-rejected",
+  "rejectionObserved": true,
+  "appHealthyUnderRevokedCertificate": false,
+  "packageURL": "https://192.168.129.111:18462/leaf-agent-a.tar",
+  "serverModeAtObservation": "leaf-bad",
+  "deviceRevocationCheck": "crl",
+  "allCertificateDatesValid": true,
+  "artifactConfigurationRequired": false
+}

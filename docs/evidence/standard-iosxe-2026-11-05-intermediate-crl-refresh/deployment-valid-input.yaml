@@ -1,0 +1,45 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    qualification: 20261105-intrefresh
+  name: cvk-intrefresh-fixture
+  namespace: cvk-intrefresh-apps-20261105
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cvk-intrefresh-fixture
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: cvk-intrefresh-fixture
+        cert-case: valid
+        qualification: 20261105-intrefresh
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchFields:
+              - key: metadata.name
+                operator: In
+                values:
+                - c9k-intrefresh-20261105
+      containers:
+      - image: https://192.168.129.111:18472/valid.tar
+        imagePullPolicy: Always
+        name: agent
+        ports:
+        - containerPort: 8080
+        resources:
+          limits:
+            memory: 128Mi
+          requests:
+            memory: 128Mi
+      tolerations:
+      - effect: NoSchedule
+        key: cisco.vk/device
+        operator: Exists

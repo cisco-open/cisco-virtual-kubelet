@@ -1,0 +1,31 @@
+"""Identical package under certificate variants; signed CRLs exposed by exact paths."""
+import pathlib,json,ssl,threading,http.server,datetime,time,hashlib
+R=pathlib.Path('/tmp/cvk-stdrevoke-20261104');P=pathlib.Path('/tmp/cvk-verified-qual-20261102/release-a-final/package.tar');assert hashlib.sha256(P.read_bytes()).hexdigest()=='ed8c257297a526229b154cbaabe1c466de239d4c011e4edfd25c7cb440fa071c';LOCK=threading.Lock();CONTEXT={};CASES=[('disabled',18459),('valid-leaf',18460),('valid-chain',18461),('leaf',18462),('intermediate',18463)];MODES=['disabled-bad','disabled-good','leaf-bad','leaf-good','leaf-control','intermediate-bad','intermediate-good','control-intermediate'];manifest=json.loads((R/'pki-manifest.json').read_text())
+def event(v):
+ v['atUTC']=datetime.datetime.now(datetime.timezone.utc).isoformat()
+ with LOCK:
+  with (R/'server-events.jsonl').open('a') as f:f.write(json.dumps(v)+'\n')
+for case,port in CASES:
+ for mode in MODES:
+  key='intermediate-leaf' if mode.startswith('intermediate-') else 'control-leaf' if mode=='control-intermediate' else mode;ctx=ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER);ctx.minimum_version=ssl.TLSVersion.TLSv1_2;ctx.options|=ssl.OP_NO_TICKET;ctx.num_tickets=0;ctx.set_ciphers('AES256-GCM-SHA384:AES128-GCM-SHA256:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-RSA-AES128-GCM-SHA256');ctx.load_cert_chain(str(R/(mode+'-chain.pem')),str(R/(key+'.key')));ctx.set_servername_callback(lambda sock,name,context:setattr(sock,'_cvk_sni',name));CONTEXT[(case,mode)]=ctx
+class TLSServer(http.server.ThreadingHTTPServer):
+ def get_request(self):
+  raw,peer=self.socket.accept();raw.settimeout(20);mode=json.loads((R/'server-mode.json').read_text())[self.case]
+  try:
+   sock=CONTEXT[(self.case,mode)].wrap_socket(raw,server_side=True);sock._cvk_cert_mode=mode;event({'kind':'tls-established','case':self.case,'port':self.server_port,'certMode':mode,'client':peer[0],'tlsVersion':sock.version(),'cipher':sock.cipher()[0],'sessionReused':sock.session_reused,'sni':getattr(sock,'_cvk_sni',None)});return sock,peer
+  except ssl.SSLError as e:event({'kind':'tls-rejected','case':self.case,'port':self.server_port,'certMode':mode,'client':peer[0],'errorReason':e.reason,'error':str(e)});raw.close();raise
+class Package(http.server.BaseHTTPRequestHandler):
+ def log_message(self,*args):pass
+ def do_GET(self):
+  mode=self.connection._cvk_cert_mode;pkg=self.path=='/'+self.server.case+'-agent-a.tar';status=200 if pkg or self.path=='/_probe' else 404;size=P.stat().st_size if pkg else 0;event({'kind':'http-request','case':self.server.case,'certMode':mode,'port':self.server.server_port,'client':self.client_address[0],'path':self.path,'status':status,'package':pkg,'tlsVersion':self.connection.version(),'cipher':self.connection.cipher()[0]});self.send_response(status);self.send_header('Content-Length',str(size));self.send_header('Content-Type','application/octet-stream');self.end_headers()
+  if pkg:
+   try:self.wfile.write(P.read_bytes());self.wfile.flush();event({'kind':'package-sent','case':self.server.case,'certMode':mode,'client':self.client_address[0],'bytes':size})
+   except OSError as e:event({'kind':'package-write-error','case':self.server.case,'certMode':mode,'client':self.client_address[0],'errorType':type(e).__name__})
+class CRL(http.server.BaseHTTPRequestHandler):
+ def log_message(self,*args):pass
+ def do_GET(self):
+  n=next((n for n in manifest['crls'] if self.path=='/'+n+'.crl'),None);body=(R/(n+'.crl')).read_bytes() if n else b'';self.send_response(200 if n else 404);self.send_header('Content-Length',str(len(body)));self.send_header('Content-Type','application/pkix-crl');self.end_headers();self.wfile.write(body);self.wfile.flush();event({'kind':'crl-served','client':self.client_address[0],'path':self.path,'crl':n,'status':200 if n else 404,'bytes':len(body),'sha256':hashlib.sha256(body).hexdigest() if n else None,'revokedSerialsHex':manifest['crls'][n]['revokedSerialsHex'] if n else []})
+for case,port in CASES:
+ server=TLSServer(('0.0.0.0',port),Package);server.case=case;threading.Thread(target=server.serve_forever,daemon=True).start()
+server=http.server.ThreadingHTTPServer(('0.0.0.0',18464),CRL);threading.Thread(target=server.serve_forever,daemon=True).start();event({'kind':'servers-ready','TLSports':[p for c,p in CASES],'CRLport':18464,'TLSsessionTicketsEnabled':False})
+while True:time.sleep(60)

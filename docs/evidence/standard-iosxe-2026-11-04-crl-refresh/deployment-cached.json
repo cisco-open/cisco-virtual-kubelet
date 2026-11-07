@@ -1,0 +1,122 @@
+{
+  "apiVersion": "apps/v1",
+  "kind": "Deployment",
+  "metadata": {
+    "annotations": {
+      "deployment.kubernetes.io/revision": "2"
+    },
+    "creationTimestamp": "2026-11-04T19:22:21Z",
+    "generation": 5,
+    "labels": {
+      "qualification": "20261104-crlrefresh"
+    },
+    "name": "cvk-crlrefresh-fixture",
+    "namespace": "cvk-crlrefresh-apps-20261104",
+    "resourceVersion": "2642",
+    "uid": "ba62b6b6-4443-43f2-8025-1cb47815a113"
+  },
+  "spec": {
+    "progressDeadlineSeconds": 600,
+    "replicas": 1,
+    "revisionHistoryLimit": 10,
+    "selector": {
+      "matchLabels": {
+        "app": "cvk-crlrefresh-fixture"
+      }
+    },
+    "strategy": {
+      "type": "Recreate"
+    },
+    "template": {
+      "metadata": {
+        "labels": {
+          "app": "cvk-crlrefresh-fixture",
+          "cert-case": "cached",
+          "qualification": "20261104-crlrefresh"
+        }
+      },
+      "spec": {
+        "affinity": {
+          "nodeAffinity": {
+            "requiredDuringSchedulingIgnoredDuringExecution": {
+              "nodeSelectorTerms": [
+                {
+                  "matchFields": [
+                    {
+                      "key": "metadata.name",
+                      "operator": "In",
+                      "values": [
+                        "c9k-crlrefresh-20261104"
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        },
+        "containers": [
+          {
+            "image": "https://192.168.129.111:18469/cached.tar",
+            "imagePullPolicy": "Always",
+            "name": "agent",
+            "ports": [
+              {
+                "containerPort": 8080,
+                "protocol": "TCP"
+              }
+            ],
+            "resources": {
+              "limits": {
+                "memory": "128Mi"
+              },
+              "requests": {
+                "memory": "128Mi"
+              }
+            },
+            "terminationMessagePath": "/dev/termination-log",
+            "terminationMessagePolicy": "File"
+          }
+        ],
+        "dnsPolicy": "ClusterFirst",
+        "restartPolicy": "Always",
+        "schedulerName": "default-scheduler",
+        "securityContext": {},
+        "terminationGracePeriodSeconds": 30,
+        "tolerations": [
+          {
+            "effect": "NoSchedule",
+            "key": "cisco.vk/device",
+            "operator": "Exists"
+          }
+        ]
+      }
+    }
+  },
+  "status": {
+    "availableReplicas": 1,
+    "conditions": [
+      {
+        "lastTransitionTime": "2026-11-04T19:41:22Z",
+        "lastUpdateTime": "2026-11-04T19:41:22Z",
+        "message": "Deployment has minimum availability.",
+        "reason": "MinimumReplicasAvailable",
+        "status": "True",
+        "type": "Available"
+      },
+      {
+        "lastTransitionTime": "2026-11-04T19:22:21Z",
+        "lastUpdateTime": "2026-11-04T19:41:22Z",
+        "message": "ReplicaSet \"cvk-crlrefresh-fixture-5969dbfb56\" has successfully progressed.",
+        "reason": "NewReplicaSetAvailable",
+        "status": "True",
+        "type": "Progressing"
+      }
+    ],
+    "observedGeneration": 5,
+    "readyReplicas": 1,
+    "replicas": 1,
+    "terminatingReplicas": 0,
+    "updatedReplicas": 1
+  }
+}

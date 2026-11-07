@@ -1,0 +1,88 @@
+{
+  "startedAtUTC": "2026-11-03T18:48:04.945512+00:00",
+  "passed": true,
+  "commands": [
+    {
+      "command": "show app-hosting list",
+      "output": "show app-hosting list\nApp id                                   State\n---------------------------------------------------------\niris                                     RUNNING\nc9ktest                                  DEPLOYED\n\nEdge-9K"
+    },
+    {
+      "command": "dir flash:/virtual-kubelet/cvk0000_47f9872bf6614272996148491a4ec4b2.tar",
+      "output": "dir flash:/virtual-kubelet/cvk0000_47f9872bf6614272996148491a4ec4b2.tar\n%Error opening flash:/virtual-kubelet/cvk0000_47f9872bf6614272996148491a4ec4b2.tar (No such file or directory)\nEdge-9K"
+    },
+    {
+      "command": "dir flash:/virtual-kubelet/cvk0000_5532698d00564d6d83f95429697774e0.tar",
+      "output": "dir flash:/virtual-kubelet/cvk0000_5532698d00564d6d83f95429697774e0.tar\n%Error opening flash:/virtual-kubelet/cvk0000_5532698d00564d6d83f95429697774e0.tar (No such file or directory)\nEdge-9K"
+    },
+    {
+      "command": "dir flash:/virtual-kubelet/cvk0000_e49e4cd61cec462b8377e9267d275775.tar",
+      "output": "dir flash:/virtual-kubelet/cvk0000_e49e4cd61cec462b8377e9267d275775.tar\n%Error opening flash:/virtual-kubelet/cvk0000_e49e4cd61cec462b8377e9267d275775.tar (No such file or directory)\nEdge-9K"
+    },
+    {
+      "command": "configure terminal",
+      "output": "configure terminal\nEnter configuration commands, one per line.  End with CNTL/Z.\nEdge-9K(config)"
+    },
+    {
+      "command": "ip http secure-trustpoint TP-self-signed-806566997",
+      "output": "ip http secure-trustpoint TP-self-signed-806566997\nEdge-9K(config)"
+    },
+    {
+      "command": "no crypto pki trustpoint CVK-STDCERT-20261103",
+      "output": "no crypto pki trustpoint CVK-STDCERT-20261103\n% Removing an enrolled trustpoint will destroy all certificates\n received from the related Certificate Authority.\n\nAre you sure you want to do this? [confirmed removal of run-owned public origin CA]\n yes\n% Be sure to ask the CA administrator to revoke your certificates.\n\nEdge-9K(config)"
+    },
+    {
+      "command": "end",
+      "output": "end\nEdge-9K"
+    },
+    {
+      "command": "show ip http server status | include trustpoint",
+      "output": "show ip http server status | include trustpoint\nHTTP secure server trustpoint: TP-self-signed-806566997\nHTTP secure server peer validation trustpoint: \nEdge-9K"
+    },
+    {
+      "command": "show running-config | include ^ip http secure-trustpoint|^ip http client secure-trustpoint|^crypto pki trustpoint CVK-STDCERT-20261103",
+      "output": "show running-config | include ^ip http secure-trustpoint|^ip http client secure-trustpoint|^crypto pki trustpoint CVK-STDCERT-20261103\nip http secure-trustpoint TP-self-signed-806566997\nip http client secure-trustpoint IRIS\nEdge-9K"
+    },
+    {
+      "command": "show app-hosting infra",
+      "output": "show app-hosting infra\nIOX version: 2.13.0\nApp signature verification: disabled\nCAF Health: Stable\nInternal working directory: /vol/usb1/iox\n\nApplication Interface Mapping\nAppGigabitEthernet Port #  Interface Name                 Port Type            Bandwidth  \n           1               AppGigabitEthernet1/0/1        KR Port - Internal   1G\n        \n\nCPU:\n  Quota: 25(Percentage) \n  Available: 23(Percentage)\n  Quota: 7400(Units)\n  Available: 7000(Units)\n\nEdge-9K"
+    },
+    {
+      "command": "dir flash:/virtual-kubelet/cvk0000_47f9872bf6614272996148491a4ec4b2.tar",
+      "output": "dir flash:/virtual-kubelet/cvk0000_47f9872bf6614272996148491a4ec4b2.tar\n%Error opening flash:/virtual-kubelet/cvk0000_47f9872bf6614272996148491a4ec4b2.tar (No such file or directory)\nEdge-9K"
+    },
+    {
+      "command": "dir flash:/virtual-kubelet/cvk0000_5532698d00564d6d83f95429697774e0.tar",
+      "output": "dir flash:/virtual-kubelet/cvk0000_5532698d00564d6d83f95429697774e0.tar\n%Error opening flash:/virtual-kubelet/cvk0000_5532698d00564d6d83f95429697774e0.tar (No such file or directory)\nEdge-9K"
+    },
+    {
+      "command": "dir flash:/virtual-kubelet/cvk0000_e49e4cd61cec462b8377e9267d275775.tar",
+      "output": "dir flash:/virtual-kubelet/cvk0000_e49e4cd61cec462b8377e9267d275775.tar\n%Error opening flash:/virtual-kubelet/cvk0000_e49e4cd61cec462b8377e9267d275775.tar (No such file or directory)\nEdge-9K"
+    }
+  ],
+  "ownedPaths": [
+    "flash:/virtual-kubelet/cvk0000_47f9872bf6614272996148491a4ec4b2.tar",
+    "flash:/virtual-kubelet/cvk0000_5532698d00564d6d83f95429697774e0.tar",
+    "flash:/virtual-kubelet/cvk0000_e49e4cd61cec462b8377e9267d275775.tar"
+  ],
+  "manualLeaseOrJournalEdits": false,
+  "temporaryOriginTrustpoint": "CVK-STDCERT-20261103",
+  "listeners": {
+    "16452": false,
+    "18449": false,
+    "18450": false,
+    "18451": false
+  },
+  "sharedHostNode": {
+    "name": "cisco",
+    "ready": true
+  },
+  "finishedAtUTC": "2026-11-03T18:48:11.128680+00:00",
+  "ephemeralTLSPrivateKeysRemoved": [
+    "trusted-ca.key",
+    "untrusted-ca.key",
+    "valid.key",
+    "untrusted.key",
+    "hostname.key"
+  ],
+  "configurationDelta": "Original explicit self-signed HTTPS selector and IRIS client trustpoint restored. Temporary ordinary origin CA, owned package files, HTTPS server and isolated cluster removed; unrelated apps, native signature policy and CAF health preserved. No artifact journal or grant, relay or injected NAT existed."
+}

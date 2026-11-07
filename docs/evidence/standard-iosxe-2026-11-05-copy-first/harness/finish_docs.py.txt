@@ -1,0 +1,34 @@
+from pathlib import Path
+import json
+r=Path('/private/tmp/cvk-stdcopyfix-20261105');q=json.loads((r/'qualification-assessed.json').read_text());assert q['failedDownloadExecutionBlocked'] and q['baselineCleanupPassed'] and q['samePodRecoveryPassed']
+root=Path('/Users/johalley/Git/cisco-virtual-kubelet')
+addition='''The subsequent [Standard copy-first fix and requalification](evidence/standard-iosxe-2026-11-05-copy-first/README.md)
+changes remote delivery to use the existing synchronous RESTCONF copy RPC before
+app configuration or installation. CVK requires the qualified completion result,
+then installs only from the explicit local path. Failed copies cannot proceed
+through native URL installation, unchecked cache filenames or recovery
+reconciliation. The default staging file is directly under flash, with no new
+directory setup. New Always and IfNotPresent installations require a completed
+copy; existing app reconciliation and preloaded local Never remain supported.
+The final candidate blocked fresh execution after intermediate revocation
+discovery, including across managed worker replacement. Certificate-only repair
+recovered the same Pod and exact requested release after the untouched fence;
+a fresh IfNotPresent deployment and local Never with its origin offline also
+passed, including a local worker restart. The initial missing-parent failure,
+its candidate and natural fence expiry are preserved alongside the final run.
+An admission-blocked harness restart was preserved and resumed through the
+manager; an expired CRL was renewed with the same revoked serial before the
+certificate-only recovery phase.
+The prior stale-runtime failure report remains unchanged. Standard requires no
+artifact metadata or journal; optional Verified still supplies cryptographic
+package identity and durable recovery. Existing running apps are not silently
+reidentified or repaired by upgrading the worker. Governed remains deferred.
+
+'''
+anchor='deferred; unavailable CRLs and cache-policy overrides remain unqualified.\n\n'
+for n in ['verified-iosxe-qualification.md','verified-artifact-preflight.md','app-image-lifecycle-plan.md']:
+ p=root/'docs'/n;s=p.read_text();assert s.count(anchor)==1;s=s.replace(anchor,anchor+addition)
+ if n=='verified-iosxe-qualification.md':
+  lines=s.splitlines(keepends=True);i=next(i for i,l in enumerate(lines) if l.startswith('| Standard intermediate CRL discovery |'));lines.insert(i+1,'| Standard failed-download fix | Use copy before configuration/install, retain old IOx caches, repeat fresh intermediate revocation discovery and replace the managed worker while blocked | Failed copy produces no fixture configuration/runtime/Ready; certificate-only repair recovers same Pod and exact release after untouched fence; fresh IfNotPresent and source-offline local Never/restart pass without artifact metadata or journal |\n');s=''.join(lines)
+ p.write_text(s)
+print('Recorded final candidate separately from immutable prior failure')

@@ -1,0 +1,17 @@
+import pathlib,subprocess,json,yaml,os,time
+R=pathlib.Path('/tmp/cvk-intrefresh-20261105');OLD=pathlib.Path('/tmp/cvk-verified-qual-20261102');K=['kubectl','--kubeconfig',str(R/'kubeconfig')];NS='cvk-intrefresh-20261105'
+def apply(o):
+ q=subprocess.run(K+['apply','-f','-'],input=yaml.safe_dump(o),capture_output=True,text=True);print(q.stdout);assert q.returncode==0,q.stderr
+apply({'apiVersion':'v1','kind':'Namespace','metadata':{'name':NS}})
+apply({'apiVersion':'v1','kind':'Namespace','metadata':{'name':'cvk-intrefresh-apps-20261105'}})
+apply({'apiVersion':'v1','kind':'Secret','metadata':{'name':'c9k-credentials','namespace':NS},'type':'Opaque','stringData':{'username':'cisco','password':os.environ['CVK_QUAL_DEVICE_PASSWORD']}})
+apply({'apiVersion':'v1','kind':'Secret','metadata':{'name':'c9k-ca','namespace':NS},'type':'Opaque','stringData':{'ca.crt':pathlib.Path('/tmp/cvk-verified-qual-20261101/device-ca.crt').read_text()}})
+values=yaml.safe_load((OLD/'values-consistent.yaml').read_text());values['image']={'repository':'cvk-replies-qual','tag':'20261103-529e98f251b3','pullPolicy':'Never'};(R/'values.yaml').write_text(yaml.safe_dump(values))
+with (R/'helm.log').open('w') as out:subprocess.run(['helm','upgrade','--install','cvk-intrefresh',str(OLD/'cisco-virtual-kubelet'),'--kubeconfig',str(R/'kubeconfig'),'-n',NS,'-f',str(R/'values.yaml'),'--wait','--timeout','240s'],stdout=out,stderr=subprocess.STDOUT,check=True)
+device=yaml.safe_load((OLD/'device.yaml').read_text());device['metadata']['name']='c9k-intrefresh-20261105';device['metadata']['namespace']=NS;device['metadata']['labels']['qualification']='20261105-intrefresh';device['spec'].pop('appArtifacts');(R/'device-input.yaml').write_text(yaml.safe_dump(device));apply(device)
+for i in range(90):
+ q=subprocess.run(K+['get','node','c9k-intrefresh-20261105','-o','json'],capture_output=True,text=True)
+ if q.returncode==0 and any(c['type']=='Ready' and c['status']=='True' for c in json.loads(q.stdout)['status'].get('conditions',[])):break
+ time.sleep(3)
+else:raise RuntimeError('Managed virtual node did not become Ready')
+print('PASS strict managed default Standard node Ready',flush=True)

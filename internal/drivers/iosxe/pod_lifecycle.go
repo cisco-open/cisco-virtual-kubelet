@@ -20,6 +20,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cisco/virtual-kubelet-cisco/internal/appartifact"
 	"github.com/cisco/virtual-kubelet-cisco/internal/devicecoordination"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/common"
 	"github.com/cisco/virtual-kubelet-cisco/internal/telemetry/correlation"
@@ -36,6 +37,12 @@ import (
 
 // DeployPod creates and deploys all containers in a pod to the device
 func (d *XEDriver) DeployPod(ctx context.Context, pod *v1.Pod, secretLister corev1listers.SecretNamespaceLister, configMapLister corev1listers.ConfigMapNamespaceLister) error {
+	if d.verifiedMode() {
+		return d.deployVerified(ctx, pod, secretLister, configMapLister)
+	}
+	if err := common.RequireStandardAppArtifacts(d.config); err != nil {
+		return err
+	}
 	log.G(ctx).WithFields(log.Fields{
 		"pod_namespace": pod.Namespace,
 		"pod_name":      pod.Name,
@@ -79,6 +86,12 @@ func (d *XEDriver) UpdatePod(ctx context.Context, pod *v1.Pod) error {
 	if pod.DeletionTimestamp != nil {
 		log.G(ctx).Infof("UpdatePod: pod %s/%s is deleting; driving cleanup instead of redeploy", pod.Namespace, pod.Name)
 		return d.DeletePod(ctx, pod)
+	}
+	if d.verifiedMode() {
+		return d.deployVerified(ctx, pod, nil, nil)
+	}
+	if err := common.RequireStandardAppArtifacts(d.config); err != nil {
+		return err
 	}
 
 	discoveredContainers, err := d.GetPodContainers(ctx, pod)
@@ -284,6 +297,25 @@ func (d *XEDriver) GetPodContainers(ctx context.Context, pod *v1.Pod) (map[strin
 
 // DeletePod removes all containers in a pod from the device
 func (d *XEDriver) DeletePod(ctx context.Context, pod *v1.Pod) error {
+	if d.verifiedMode() && d.verified != nil {
+		d.verified.mu.Lock()
+		defer d.verified.mu.Unlock()
+		for _, appID := range common.GenerateContainerAppIDs(pod) {
+			key := "app-" + appartifact.Digest([]byte(appID))[7:]
+			record, version, err := d.verified.Journal.Load(ctx, key)
+			if err != nil {
+				return err
+			}
+			if record.Identity == "" {
+				record.Identity = "deleted"
+			}
+			record.Phase = "deleted"
+			if err = d.verified.Journal.Save(ctx, key, version, record); err != nil {
+				return err
+			}
+		}
+	}
+
 	log.G(ctx).WithFields(log.Fields{
 		"pod_namespace": pod.Namespace,
 		"pod_name":      pod.Name,
@@ -325,6 +357,9 @@ func (d *XEDriver) DeletePod(ctx context.Context, pod *v1.Pod) error {
 
 // GetPodStatus retrieves the current status of a pod by querying the device
 func (d *XEDriver) GetPodStatus(ctx context.Context, pod *v1.Pod) (*v1.Pod, error) {
+	if d.verifiedMode() && pod.DeletionTimestamp == nil {
+		return d.verifiedPodStatus(ctx, pod)
+	}
 	log.G(ctx).Debug("GetPodStatus request received")
 
 	// While copy-recovery is in progress, return a Waiting status so the VK
@@ -409,7 +444,7 @@ func (d *XEDriver) GetPodStatus(ctx context.Context, pod *v1.Pod) (*v1.Pod, erro
 	if pod.DeletionTimestamp == nil {
 		for containerName, appID := range discoveredContainers {
 			if d.maintenanceMutationGuard != nil {
-				if observed := appOperDataMap[appID]; observed != nil && observed.Details != nil && observed.Details.State != nil && *observed.Details.State == "RUNNING" {
+				if observed := appOperDataMap[appID]; observed != nil && observed.Details != nil && observed.Details.State != nil && *observed.Details.State == "RUNNING" && !d.hasStandardStageCleanup(appID) {
 					continue
 				}
 			}

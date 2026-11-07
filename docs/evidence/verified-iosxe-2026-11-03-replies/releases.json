@@ -1,0 +1,60 @@
+[
+  {
+    "release": "A",
+    "descriptorDigest": "sha256:aa3215da3bc24864581775acbf5e0de9e51dac4816d9a9fcc3f8b8ce1d3c755c",
+    "package": {
+      "digest": "sha256:ed8c257297a526229b154cbaabe1c466de239d4c011e4edfd25c7cb440fa071c",
+      "format": "docker-save-v1",
+      "mediaType": "application/x-tar",
+      "sizeBytes": 5963776
+    },
+    "source": {
+      "configDigest": "sha256:6857d08813f6fb07e59e976a001b5906971416a647bc85c7e614a1e59822d530",
+      "manifestDigest": "sha256:24193e6eae32de28d622fe59cf2c5896b4929f325991ebf405f91c70920ebcd2",
+      "platform": {
+        "architecture": "amd64",
+        "os": "linux"
+      },
+      "registry": "127.0.0.1:15443",
+      "repository": "cvk-qual-20261102/agent",
+      "requestedDigest": "sha256:24193e6eae32de28d622fe59cf2c5896b4929f325991ebf405f91c70920ebcd2"
+    },
+    "producer": {
+      "buildDigest": "sha256:dc75544917ecb246fe4213afffd1466d95834bbf41a41092ad116c23c1f88949",
+      "name": "docker-http-passthrough",
+      "recipeDigest": "sha256:544e16aaa514649a8f17e0483da7760f58234915ac80b1476c16f4bfb037f726",
+      "version": "0.1.0"
+    },
+    "sha512": "e50300677be5f0827b4a7fedc9d317d684a96627f4ea2b3c9a86836e753c671179d85a2bce4360277b7157b684901858402451f85540862d415a8776f1762a2d",
+    "packageURL": "https://192.168.129.111:18443/v1/packages/sha256/ed8c257297a526229b154cbaabe1c466de239d4c011e4edfd25c7cb440fa071c/package.tar"
+  },
+  {
+    "release": "B",
+    "descriptorDigest": "sha256:f688dd0093e5d0abf7db0312ed8fd41b9cb6b10223252dcdd00dc89d25e63b3b",
+    "package": {
+      "digest": "sha256:febf34ebd664bbac03002f67578fbdf5b54c0358d24baa83b6abdb201266892f",
+      "format": "docker-save-v1",
+      "mediaType": "application/x-tar",
+      "sizeBytes": 5963776
+    },
+    "source": {
+      "configDigest": "sha256:f862e7a24ca757f4cb6202e0131eed1c2f54a25a12e723807a68d80b1b3bf5c0",
+      "manifestDigest": "sha256:a2d5775b7d78452bf6cc4b963f627e68948a15fa1a2ffd8ee53f42c7d5021de3",
+      "platform": {
+        "architecture": "amd64",
+        "os": "linux"
+      },
+      "registry": "127.0.0.1:15443",
+      "repository": "cvk-qual-20261102/agent",
+      "requestedDigest": "sha256:a2d5775b7d78452bf6cc4b963f627e68948a15fa1a2ffd8ee53f42c7d5021de3"
+    },
+    "producer": {
+      "buildDigest": "sha256:dc75544917ecb246fe4213afffd1466d95834bbf41a41092ad116c23c1f88949",
+      "name": "docker-http-passthrough",
+      "recipeDigest": "sha256:544e16aaa514649a8f17e0483da7760f58234915ac80b1476c16f4bfb037f726",
+      "version": "0.1.0"
+    },
+    "sha512": "5874e9a274510b0c383de58012b5c62d2bc15ed2331cc85e968cafde5d3e016257a42afc0d3326e9f58a43180150316ea9ed844f2557510ecfb236f3a671f4c5",
+    "packageURL": "https://192.168.129.111:18443/v1/packages/sha256/febf34ebd664bbac03002f67578fbdf5b54c0358d24baa83b6abdb201266892f/package.tar"
+  }
+]

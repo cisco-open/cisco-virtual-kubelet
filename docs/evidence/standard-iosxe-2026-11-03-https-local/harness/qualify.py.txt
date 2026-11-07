@@ -1,0 +1,44 @@
+"""Default Standard HTTPS and preloaded-file controls; no artifact journal."""
+import pathlib,json,subprocess,time,datetime,yaml,ssl,urllib.request,base64,os,socket,re,hashlib
+R=pathlib.Path('/tmp/cvk-stdtls-20261103');exec(compile((R/'control_functions.py').read_text(),'control_functions.py','exec'))
+SOURCE='https://192.168.129.111:18448/standard-agent-a.tar';LOCAL='flash:cvk-stdtls-20261103-a.tar'
+def trace():return [json.loads(l) for l in (R/'store-requests.jsonl').read_text().splitlines()]
+def cli(label,cmds):
+ p=run(['python3',str(R/'device_cli.py')],input=json.dumps(cmds),text=True,capture_output=True);v=json.loads(p.stdout);save(label,v);return v
+
+def deploy(label,image,policy):
+ template={'metadata':{'labels':{'app':NAME,'qualification':'20261103-stdtls'}},'spec':{'affinity':{'nodeAffinity':{'requiredDuringSchedulingIgnoredDuringExecution':{'nodeSelectorTerms':[{'matchFields':[{'key':'metadata.name','operator':'In','values':[DEV]}]}]}}},'tolerations':[{'key':'cisco.vk/device','operator':'Exists','effect':'NoSchedule'}],'containers':[{'name':'agent','image':image,'imagePullPolicy':policy,'ports':[{'containerPort':8080}],'resources':{'requests':{'memory':'128Mi'},'limits':{'memory':'128Mi'}}}]}}
+ obj={'apiVersion':'apps/v1','kind':'Deployment','metadata':{'name':NAME,'namespace':APPS,'labels':{'qualification':'20261103-stdtls'}},'spec':{'replicas':1,'strategy':{'type':'Recreate'},'selector':{'matchLabels':{'app':NAME}},'template':template}};assert not template['metadata'].get('annotations');(R/('deployment-'+label+'-input.yaml')).write_text(yaml.safe_dump(obj));apply(obj)
+def deletion(label):
+ run(K+['-n',APPS,'scale','deployment/'+NAME,'--replicas=0'])
+ for i in range(100):
+  s=snap(label);states=assertBaselineApps(s);controls(label)
+  if not s['pods'] and states=={'iris':'RUNNING','c9ktest':'DEPLOYED'}:break
+  time.sleep(3)
+ else:raise RuntimeError('Normal app deletion not confirmed: '+label)
+ leaseReleased(label)
+def localHash(label):
+ expected=json.loads(pathlib.Path('/tmp/cvk-verified-qual-20261102/releases.json').read_text())[0];v=cli(label,['dir '+LOCAL,'verify /sha512 '+LOCAL]);assert re.search(r'\s'+str(expected['package']['sizeBytes'])+r'\s',v['commands'][0]['output']);assert expected['sha512'].lower() in v['commands'][1]['output'].lower();save(label+'-assessment',{'passed':True,'path':LOCAL,'sizeBytes':expected['package']['sizeBytes'],'sha512':expected['sha512'],'purpose':'Independent qualification evidence; no Verified runtime gate or artifact metadata configured'})
+started=now();apply({'apiVersion':'v1','kind':'Namespace','metadata':{'name':APPS}});controls('baseline')
+deploy('https',SOURCE,'IfNotPresent');https=healthy('https-a','A');uidHTTPS=https['pods'][0]['metadata']['uid'];nativeProof('https-a',https['pods'][0]);leaseReleased('https-a');assert any(x['client']=='10.1.1.1' and x['path']=='/standard-agent-a.tar' and x['status']==200 and x['tlsVersion'] in ['TLSv1.2','TLSv1.3'] for x in trace());save('https-events',https['events']);deletion('https-normal-cleanup')
+# Operator preloads the exact fresh file using the existing native RESTCONF copy.
+leaseReleased('before-preload');v=cli('before-preload',['show app-hosting list','dir '+LOCAL]);assert 'cvk0000_' not in v['commands'][0]['output'] and not re.search(r'\s-rw-\s',v['commands'][1]['output'])
+ctx=ssl.create_default_context(cafile='/tmp/cvk-verified-qual-20261101/device-ca.crt');ctx.verify_flags|=ssl.VERIFY_X509_PARTIAL_CHAIN;body={'Cisco-IOS-XE-rpc:copy':{'source-drop-node-name':SOURCE,'destination-drop-node-name':LOCAL}};request=urllib.request.Request('https://10.1.1.1/restconf/operations/Cisco-IOS-XE-rpc:copy',data=json.dumps(body).encode(),method='POST',headers={'Authorization':'Basic '+base64.b64encode(('cisco:'+os.environ['CVK_QUAL_DEVICE_PASSWORD']).encode()).decode(),'Content-Type':'application/yang-data+json','Accept':'application/yang-data+json'})
+with urllib.request.urlopen(request,context=ctx,timeout=240) as response:raw=response.read();status=response.status
+assert 200<=status<300;save('preload-copy',{'atUTC':now(),'request':body,'status':status,'nativeReply':json.loads(raw),'managementTLSVerified':True,'SCPUsed':False});localHash('preloaded-file')
+# Deliberately unavailable origin establishes local-only installation, not fallback.
+pid=int((R/'store.pid').read_text());proc=pathlib.Path('/proc')/str(pid)/'cmdline';assert proc.exists() and str(R/'store.py') in proc.read_bytes().replace(b'\0',b' ').decode();os.kill(pid,15)
+for i in range(20):
+ sock=socket.socket();sock.settimeout(1);up=sock.connect_ex(('192.168.129.111',18448))==0;sock.close()
+ if not up:break
+ time.sleep(1)
+assert not up;frozen=trace();save('offline-local-controls',{'atUTC':now(),'originStopped':True,'originPort':18448,'originListening':False,'traceLineCount':len(frozen),'packageRequestsFromC9K':sum(x['client']=='10.1.1.1' and x['path']=='/standard-agent-a.tar' for x in frozen),'preloadedPath':LOCAL,'localImagePullPolicy':'Never','artifactConfiguration':False});print('PASS native RESTCONF preload and checksum; ordinary HTTPS origin stopped before local deployment',flush=True)
+deploy('local',LOCAL,'Never');local=healthy('local-a','A');uidLOCAL=local['pods'][0]['metadata']['uid'];assert uidLOCAL!=uidHTTPS;nativeProof('local-a',local['pods'][0]);leaseReleased('local-a');assert trace()==frozen;save('local-events',local['events']);old=local['workers'];assert len(old)==1
+run(K+['-n',NS,'patch','ciscodevice',DEV,'--type=merge','-p',json.dumps({'spec':{'logLevel':'warn'}})],stdout=subprocess.DEVNULL)
+for attempt in range(100):
+ s=snap('replacement-poll-'+str(attempt));controls('replacement-poll-'+str(attempt))
+ if len(s['workers'])==1 and s['workers'][0]['uid']!=old[0]['uid'] and any(c['type']=='Ready' and c['status']=='True' for c in s['workers'][0]['status'].get('conditions',[])) and len(s['pods'])==1 and s['pods'][0]['metadata'].get('annotations',{}).get('topology.cisco.vk/app-worker-pod-uid')==s['workers'][0]['uid']:break
+ time.sleep(2)
+else:raise RuntimeError('Managed local worker replacement binding did not converge')
+new=s['workers'][0];recovered=healthy('local-worker-replacement-a','A');assert recovered['pods'][0]['metadata']['uid']==uidLOCAL and recovered['workers'][0]['uid']==new['uid'];nativeProof('local-worker-replacement-a',recovered['pods'][0]);leaseReleased('local-worker-replacement-a');assert trace()==frozen;localHash('local-file-after-replacement');deletion('normal-cleanup')
+result={'passed':True,'startedAtUTC':started,'finishedAtUTC':now(),'defaultMode':'Standard','governed':'deferred','appArtifactsOmitted':True,'workloadArtifactMetadataOmitted':True,'journalConfigurationOmitted':True,'artifactJournalAndGrantCount':0,'httpsPackageURL':SOURCE,'localImage':LOCAL,'localImagePullPolicy':'Never','podUIDs':{'https':uidHTTPS,'local':uidLOCAL},'oldWorkerUID':old[0]['uid'],'newWorkerUID':new['uid'],'httpsDeployment':True,'preloadedLocalDeployment':True,'localOriginOffline':True,'localWorkerReplacement':True,'traceUnchangedDuringLocalFlow':trace()==frozen,'normalDeletion':True,'nativeSignaturePolicyChanged':False,'artifactServiceUsed':False,'preloadTransport':'existing RESTCONF copy RPC over authenticated management TLS','c9kInvalidCertificateControlsExecuted':False};save('qualification-result',result);print('PASS Standard HTTPS and offline preloaded local image without artifact metadata or journal',flush=True)

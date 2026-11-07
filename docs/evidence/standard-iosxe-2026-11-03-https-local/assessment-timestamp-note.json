@@ -1,0 +1,10 @@
+{
+  "issue": "Initial post-run assessor compared subsecond origin-stop time with second-resolution Kubernetes Pod creationTime using strict less-than.",
+  "originStopUTC": "2026-11-03T14:58:25.025656+00:00",
+  "podCreationUTC": "2026-11-03T14:58:25Z",
+  "correction": "Compare at Kubernetes timestamp precision. Exact ordering is established by sequential harness execution: confirm server port closed, save offline boundary, then apply the local Deployment at replicas=1. Prior Deployment was confirmed scaled to zero with no Pods/native fixture.",
+  "hardwareOrQualificationChanged": false,
+  "faultReinjected": false,
+  "evidenceRewritten": false,
+  "scope": "Post-run observer precision fix only."
+}

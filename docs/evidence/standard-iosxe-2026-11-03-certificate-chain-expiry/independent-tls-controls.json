@@ -1,0 +1,28 @@
+{
+  "atUTC": "2026-11-03T22:51:25.871698+00:00",
+  "testClient": "ux-agx Python SSL; separate from native C9K results",
+  "cases": [
+    {
+      "case": "valid-root",
+      "accepted": true,
+      "rootCertificate": "root-old"
+    },
+    {
+      "case": "valid-intermediate",
+      "accepted": true,
+      "rootCertificate": "intermediate-root"
+    },
+    {
+      "case": "root",
+      "accepted": true,
+      "rootCertificate": "root-old"
+    },
+    {
+      "case": "intermediate",
+      "accepted": false,
+      "verificationCode": 10,
+      "verificationMessage": "certificate has expired",
+      "rootCertificate": "intermediate-root"
+    }
+  ]
+}

@@ -1,0 +1,114 @@
+import pathlib,json,yaml,re,hashlib,shutil
+R=pathlib.Path('/private/tmp/cvk-stdtls-20261103');ROOT=pathlib.Path('/Users/johalley/Git/cisco-virtual-kubelet');OUT=ROOT/'docs/evidence/standard-iosxe-2026-11-03-https-local';q=json.loads((R/'qualification-assessed.json').read_text());assert q['cleanupPassed'];OUT.mkdir(parents=True,exist_ok=True)
+def clean(v):
+ if isinstance(v,list):return [clean(x) for x in v]
+ if isinstance(v,dict):return {k:clean(x) for k,x in v.items() if k not in ['managedFields','kubectl.kubernetes.io/last-applied-configuration']}
+ return v
+names=['device-baseline.json','device-preparation.json','transport-controls.json','origin-tls-controls.json','qualification-result.json','preload-copy.json','preloaded-file.json','preloaded-file-assessment.json','before-preload.json','offline-local-controls.json','local-file-after-replacement.json','local-file-after-replacement-assessment.json','https-events.json','local-events.json','final-cleanup.json','candidate.json','assessment-timestamp-note.json']
+if (R/'automated-checks.json').exists():names.append('automated-checks.json')
+for label in ['https-a','local-a','local-worker-replacement-a']:names += [p+label+'.json' for p in ['snapshot-','controls-','deployment-','native-','leases-']]
+for label in ['baseline','https-normal-cleanup','normal-cleanup']:
+ names.append('controls-'+label+'.json')
+ if label!='baseline':names += ['snapshot-'+label+'.json','leases-'+label+'.json']
+for n in names:
+ x=clean(json.loads((R/n).read_text()))
+ if isinstance(x,dict) and 'devices' in x:
+  for d in x['devices']:
+   if d.get('status'):d['status']={k:v for k,v in d['status'].items() if k in ['phase','conditions','nodeIdentity','workerRevision','networkWorkerRevision','workerCapabilities']}
+  for a in x.get('nativeApps',[]):
+   if not a.get('appID','').startswith('cvk0000_'):a.pop('networkInterfaces',None)
+ (OUT/n).write_text(json.dumps(x,indent=2)+'\n')
+(OUT/'qualification.json').write_text(json.dumps(clean(q),indent=2)+'\n')
+for n in ['store-requests.jsonl']+['wait-'+label+'.jsonl' for label in ['https-a','local-a','local-worker-replacement-a']]:
+ (OUT/n).write_text(''.join(json.dumps(clean(json.loads(l)))+'\n' for l in (R/n).read_text().splitlines()))
+for n in ['device-input.yaml','deployment-https-input.yaml','deployment-local-input.yaml','values.yaml']:
+ v=yaml.safe_load((R/n).read_text());assert 'password' not in json.dumps(v).lower();(OUT/n).write_text(yaml.safe_dump(v))
+shutil.copyfile(R/'qualification.log',OUT/'qualification.log');(OUT/'harness').mkdir(exist_ok=True)
+for n in ['bootstrap','deploy','device_cli','snapshot','control_functions','store','prepare_device','start_services','qualify','cleanup','bundle_evidence','assess','export_evidence']:
+ shutil.copyfile(R/(n+'.py'),OUT/'harness'/(n+'.py.txt'))
+rows='\n'.join('| '+x['case']+' | '+str(x['observations'])+' | Ready, HTTP A, Deployment available |' for x in q['cases'])
+(OUT/'README.md').write_text(f'''# Standard HTTPS and preloaded local images — C9K qualification
+
+Passed on 3 November 2026 on C9300-24UX / IOS-XE 17.18.1 fc2, serial
+FCW2247C1AJ. Standard remains the default; Governed remains deferred.
+No production code change or new Standard artifact requirement was needed.
+
+| Case | Health observations | Result |
+| --- | --- | --- |
+{rows}
+
+The [CiscoDevice input](device-input.yaml) omitted `spec.appArtifacts` entirely.
+The [HTTPS Deployment](deployment-https-input.yaml) used an ordinary HTTPS
+package URL and IfNotPresent. The [local Deployment](deployment-local-input.yaml)
+used `flash:cvk-stdtls-20261103-a.tar` and imagePullPolicy Never. Both Pod templates
+had no annotations, descriptor binding or signature metadata. Live device and
+worker configuration, worker arguments/environment names, and isolated-cluster
+ConfigMap/Role/RoleBinding inventories showed no artifact configuration, artifact
+journal or journal grant before, during or after either control. Normal worker
+configuration and existing mutation Leases remained in use without manual edits.
+
+The ordinary HTTPS source exposed only one package route and a lab TLS probe;
+it had no descriptor/signature/artifact API. A temporary device trustpoint held
+its ordinary public CA, and the existing IRIS HTTP-client identity was preserved.
+The [origin trace](store-requests.jsonl) recorded C9K package GETs over TLS 1.3.
+The HTTPS app reached native RUNNING, Pod Ready, HTTP release A and an Available/
+Progressing Deployment, then was deleted normally. Its
+[captured events](https-events.json) and assessment retain observed fallback
+information rather than inferring native operation counts from GET counts.
+
+The operator then used the existing authenticated RESTCONF copy RPC to preload
+one fresh owned flash path from that HTTPS URL. The
+[copy result](preload-copy.json) and independent native
+[file size/SHA512 check](preloaded-file-assessment.json) establish the retained
+file identity. These checks are qualification evidence, not a required Standard
+runtime gate or artifact contract. No SSH/SCP image transfer was introduced.
+
+The owned HTTPS origin was stopped before the local Pod was created. The
+[offline controls](offline-local-controls.json) record its closed port and the
+request-trace boundary. Kubernetes Pod creation timestamps have second precision;
+the [assessment note](assessment-timestamp-note.json) records the post-run
+comparison adjustment and the sequential harness ordering. The local app reached native RUNNING, Ready and HTTP A
+with Never. Normal CiscoDevice reconciliation replaced its worker, the exact
+workload binding converged, and the same Pod/app remained healthy. The origin
+stayed offline and the request trace did not change. The retained file checksum
+also matched after replacement. This qualifies the existing preloaded-file flow
+without a package-origin dependency during installation or running recovery.
+
+Both cases used the unchanged candidate from the separate
+[Standard HTTP control](../standard-iosxe-2026-11-03/README.md):
+source fingerprint `sha256:{q['candidate']['dirtySourceSHA256']}`,
+binary SHA256 `{q['candidate']['binarySHA256']}`.
+Live manager and worker image IDs matched the recorded corrected image.
+See [candidate identity](candidate.json), [assessment](qualification.json),
+[raw results](qualification-result.json), [validation results](automated-checks.json)
+and the `controls-*.json` files. The production source is unchanged; the prior Go
+race run was not repeated for this documentation/evidence-only qualification.
+
+Normal deletion removed each fixture Pod/native app without an artifact deletion
+journal or tombstone. Final cleanup removed only the owned preloaded/default
+cache paths, temporary origin CA trustpoint, HTTPS source and isolated cluster.
+It restored the original explicit self-signed HTTPS selector and preserved the
+IRIS client trustpoint, native signature policy and unrelated apps: iris RUNNING,
+c9ktest DEPLOYED, CAF Stable. The shared Kubernetes node remained Ready.
+See [cleanup evidence](final-cleanup.json).
+
+This qualifies positive HTTPS delivery to a valid origin certificate with normal
+CA configuration, plus preloaded local installation and running-worker recovery,
+on this device/firmware/Linux-amd64 Docker-save package profile. Invalid CA or
+hostname rejection by the C9K installer was not exercised. The independent
+[wrong-hostname test](origin-tls-controls.json) used the ux-agx Python TLS client;
+it does not establish native-installer certificate rejection. No uninterrupted
+service, stateful migration, Service routing, fleet-wide support, artifact
+producer authentication, lost-reply recovery or specific CVE fix is claimed.
+Native package-signature verification was disabled at baseline and unchanged.
+HTTPS/local image update and history rollback were not repeated here; the
+separate HTTP control records that lifecycle matrix on the same candidate.
+
+Evidence is allowlisted and sanitized. It excludes Secret data, credentials,
+private keys, kubeconfig and unrelated topology/interface observations. Harness
+source is retained under `harness/`; SHA256SUMS covers every exported file.
+''')
+pattern=re.compile(r'^-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----|^\s*client-key-data:\s*[A-Za-z0-9+/]{24,}|password\s*[=:]\s*cisco\b|^Authorization:\s*(?:Basic|Bearer)\s+\S',re.I|re.M)
+for p in OUT.rglob('*'):
+ if p.is_file():assert not pattern.search(p.read_text()),p
+manifest=''.join(hashlib.sha256(p.read_bytes()).hexdigest()+'  '+str(p.relative_to(OUT))+'\n' for p in sorted(OUT.rglob('*')) if p.is_file() and p.name!='SHA256SUMS');(OUT/'SHA256SUMS').write_text(manifest);print('PASS exported',len(manifest.splitlines()),'sanitized HTTPS/local evidence files')

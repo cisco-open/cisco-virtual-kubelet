@@ -1,0 +1,10 @@
+import pathlib,json,subprocess,time,datetime,re
+R=pathlib.Path('/tmp/cvk-pending-20261103');deadline=time.monotonic()+900
+while time.monotonic()<deadline:
+ try:
+  f=json.loads((R/'lost-install-response.json').read_text());break
+ except (OSError,ValueError):time.sleep(2)
+else:raise RuntimeError('No conclusive accepted install event; no SSH observation taken')
+rec=f['pendingBeforeDispatch']['record'];path=rec['stagedPath'];assert re.fullmatch(r'flash:cvk-[a-f0-9]{16}-[a-f0-9]{64}\.tar',path)
+q=subprocess.run(['python3',str(R/'device_cli.py')],input=json.dumps(['show app-hosting list','dir '+path,'verify /sha512 '+path]),capture_output=True,text=True,check=True);d=json.loads(q.stdout);expected=json.loads((R/'releases.json').read_text())[0];assert f['appID'] in d['commands'][0]['output'] and 'DEPLOYED' in d['commands'][0]['output'];assert '= '+expected['sha512'] in d['commands'][2]['output']
+report={'atUTC':datetime.datetime.now(datetime.timezone.utc).isoformat(),'passed':True,'channel':'direct SSH to real C9K using previously approved pinned host key; not through the RESTCONF relay','appID':f['appID'],'journalPhaseAtSuppressedReply':rec['phase'],'expectedSHA512':expected['sha512'],'commands':d['commands']};(R/'pending-native-ssh-observation.json').write_text(json.dumps(report,indent=2)+'\n');print('PASS independent pinned-SSH observation: native DEPLOYED and exact staged SHA512',flush=True)

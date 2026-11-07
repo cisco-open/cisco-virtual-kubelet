@@ -1,0 +1,6 @@
+import pathlib,tarfile,sys
+R=pathlib.Path('/tmp/cvk-crlrefresh-20261104');names=['pki-manifest.json','root.crt','original.crt','replacement.crt','crl-v1.json','crl-v1.crl','crl-v3.json','crl-v3.crl','crl-v4.json','crl-v4.crl','prepublication-rearm.json','initial-stop-and-continuation.json']
+with tarfile.open(fileobj=sys.stdout.buffer,mode='w|') as t:
+ for n in names:t.add(R/n,arcname=n)
+ for p in sorted((R/'prepublication-attempt').iterdir()):
+  assert p.is_file();t.add(p,arcname='prepublication-attempt/'+p.name)

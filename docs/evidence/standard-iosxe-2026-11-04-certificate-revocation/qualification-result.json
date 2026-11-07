@@ -1,0 +1,72 @@
+{
+  "executionComplete": true,
+  "nativeCRLsFetched": [],
+  "CRLProfileRejectionQualified": false,
+  "startedAtUTC": "2026-11-04T10:17:31.882659+00:00",
+  "finishedAtUTC": "2026-11-04T11:21:16.432187+00:00",
+  "defaultMode": "Standard",
+  "governed": "deferred",
+  "cases": [
+    {
+      "case": "disabled",
+      "startedAtUTC": "2026-11-04T10:22:22.286192+00:00",
+      "finishedAtUTC": "2026-11-04T10:27:15.908814+00:00",
+      "classification": "revoked-certificate-accepted-and-app-ran",
+      "revocationCheck": "none",
+      "rejectionObserved": false,
+      "appHealthyUnderRevokedCertificate": true,
+      "postReplacementHealthPassed": true,
+      "freshDeliveryAfterReplacementPassed": true,
+      "normalDeletionPassed": true,
+      "packageURL": "https://192.168.129.111:18459/disabled-agent-a.tar"
+    },
+    {
+      "case": "leaf",
+      "startedAtUTC": "2026-11-04T10:27:15.908936+00:00",
+      "finishedAtUTC": "2026-11-04T11:05:26.245854+00:00",
+      "classification": "revoked-certificate-rejected",
+      "revocationCheck": "crl",
+      "rejectionObserved": true,
+      "appHealthyUnderRevokedCertificate": false,
+      "postReplacementHealthPassed": true,
+      "freshDeliveryAfterReplacementPassed": true,
+      "normalDeletionPassed": true,
+      "packageURL": "https://192.168.129.111:18462/leaf-agent-a.tar"
+    },
+    {
+      "case": "intermediate",
+      "startedAtUTC": "2026-11-04T11:05:26.245975+00:00",
+      "finishedAtUTC": "2026-11-04T11:21:16.431496+00:00",
+      "classification": "inconclusive-no-conclusive-native-revocation-outcome",
+      "revocationCheck": "crl",
+      "rejectionObserved": false,
+      "appHealthyUnderRevokedCertificate": false,
+      "postReplacementHealthPassed": true,
+      "freshDeliveryAfterReplacementPassed": true,
+      "normalDeletionPassed": true,
+      "packageURL": "https://192.168.129.111:18463/intermediate-agent-a.tar"
+    }
+  ],
+  "podUIDs": [
+    "4fc1cad2-a562-45e7-ac14-0220478c4d0e",
+    "6a448bc3-0d5a-4e7b-9cf7-d236a360ae81",
+    "74ea96d3-da94-46ac-bf09-d1112a6c0be2",
+    "76fe65c6-860d-4b61-b55c-ec72adab9bde",
+    "83358eff-01a1-4aeb-9d9f-037f46292209",
+    "8ffd33c1-9cd6-4a7f-abd4-f71f2696aef4",
+    "c5ec61c6-4a27-4caf-9adb-8924a09cea9b",
+    "f2719467-8bc0-4a86-941a-525a150dee9d"
+  ],
+  "positiveControlsPassed": [
+    "valid-leaf",
+    "valid-chain"
+  ],
+  "metadataAndJournalOmitted": true,
+  "artifactJournalAndGrantCount": 0,
+  "manualLeaseOrJournalEdits": false,
+  "CRLCacheManuallyCleared": false,
+  "CRLChangedDuringRecovery": false,
+  "revocationPolicyChangedDuringRecovery": false,
+  "deviceClockChanged": false,
+  "candidateChanged": false
+}

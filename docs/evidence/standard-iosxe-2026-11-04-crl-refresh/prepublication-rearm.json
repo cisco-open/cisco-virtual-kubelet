@@ -1,0 +1,15 @@
+{
+  "atUTC": "2026-11-04T19:38:17.899102+00:00",
+  "reason": "Empty CRL truthiness encoded raw version as null; assertion stopped before revocation publication",
+  "earlierPodUIDs": [
+    "354497f3-07ed-4e59-a7c1-6745a03a7151"
+  ],
+  "initialCRLExpiredNaturally": true,
+  "newUnrevokedCRLNumber": 3,
+  "newRevokedCRLNumber": 4,
+  "sameRootAndLeafPreserved": true,
+  "manualCRLRefreshOrFlush": false,
+  "rawTraceRewritten": false,
+  "preservedDirectory": "prepublication-attempt",
+  "discoverySourceSHA256": "b62ab15c8ff5da46d3026a1a32e2cf5b063c3d70ea7cc2763433d3ce8c4005d1"
+}

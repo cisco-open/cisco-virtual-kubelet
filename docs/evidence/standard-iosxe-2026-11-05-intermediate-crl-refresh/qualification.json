@@ -1,0 +1,69 @@
+{
+  "status": "intermediate-revocation-discovered-but-fresh-execution-not-qualified",
+  "executionComplete": true,
+  "revocationDiscoveryQualified": false,
+  "revocationDiscoveryObserved": true,
+  "transportRevocationRejectionObserved": true,
+  "freshExecutionBlockingQualified": false,
+  "actualStaleRuntimeReleases": [
+    "CRL-REFRESH-REFRESH-20261104-a674b004ffa2"
+  ],
+  "expectedRelease": "INT-REFRESH-REFRESH-20261105-4cd216c69bce",
+  "copyFallbackExercised": false,
+  "rawActorRevocationDiscoveryQualified": false,
+  "rawActorClassification": "revocation-discovered-but-stale-release-executed-without-new-package-transfer",
+  "nativeSerialSpecificPKIRejections": [
+    "2026-11-05T06:49:57.030000+00:00"
+  ],
+  "firstNativePKIRejectionUTC": "2026-11-05T06:49:57.030000+00:00",
+  "firstOriginTLSAlertUTC": null,
+  "publicationToFirstNativePKIRejectionSeconds": 524.245856,
+  "originMissedFirstClientValidationFailure": true,
+  "cacheWindowAcceptanceObserved": true,
+  "cacheWindowOutcome": "fresh-image-accepted-using-cached-unrevoked-CRL",
+  "publicationUTC": "2026-11-05T06:41:12.784144+00:00",
+  "originalCRLNextUpdateUTC": "2026-11-05T06:49:48+00:00",
+  "initialCRLNumber": 1,
+  "revokedCRLNumber": 2,
+  "firstRevokedCRLNativeFetchUTC": "2026-11-05T06:49:57.020857+00:00",
+  "publicationToNativeFetchSeconds": 524.236713,
+  "originalNextUpdateToNativeFetchSeconds": 9.020857,
+  "publicationToFirstOriginTLSAlertSeconds": null,
+  "freshImageAcceptedDuringCachedWindow": true,
+  "freshPackageTransferBlockedAfterDiscovery": true,
+  "desiredImageExecutionBeforeRepairObserved": false,
+  "staleRuntimeObserved": true,
+  "releaseBeforeReplacement": [],
+  "releaseAfterReplacement": [
+    {
+      "appID": "cvk0000_635c7b93fadf4f698335fafe65ce40aa",
+      "release": "CRL-REFRESH-REFRESH-20261104-a674b004ffa2",
+      "ip": "192.168.129.242"
+    }
+  ],
+  "runningReleaseAfterPublication": [
+    {
+      "appID": "cvk0000_713b810b0a454dea9fabc5f8e26bbd31",
+      "release": "INT-REFRESH-VALID-20261105-4cd216c69bce",
+      "ip": "192.168.129.238"
+    }
+  ],
+  "samePodRecoveryPassed": false,
+  "freshDeploymentAndDeletionPassed": true,
+  "invalidObservations": 3,
+  "guardedObservations": 0,
+  "canonicalMutationLeaseUID": "e0f1a8dc-c2ff-40a9-b3d3-84701161c143",
+  "manualLeaseOrJournalChanges": false,
+  "forcedCRLRefreshOrFlushDuringQualification": false,
+  "defaultCachePolicyUnchanged": true,
+  "baselineCleanupPassed": true,
+  "earlierEvidencePreserved": true,
+  "defaultMode": "Standard",
+  "governed": "deferred",
+  "startedAtUTC": "2026-11-05T06:39:48.541983+00:00",
+  "finishedAtUTC": "2026-11-05T06:56:41.437029+00:00",
+  "rootLeafAndIntermediateCRLUnchangedDuringRepair": true,
+  "intermediateReplacementSameSubjectAndKey": true,
+  "nativeCacheMechanismEstablished": false,
+  "scope": "C9300-24UX / IOS-XE 17.18.1 fc2; valid root/intermediate/leaf chain, HTTP CDP, initial 10-minute CRL and reachable newly published CRL; excludes unavailable/stale CRLs, leaf-only discovery in this run, OCSP and optional cache-policy overrides"
+}

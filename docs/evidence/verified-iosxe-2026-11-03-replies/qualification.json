@@ -1,0 +1,78 @@
+{
+  "status": "lost-activation-and-start-replies-qualified",
+  "dateUTC": "2026-11-03",
+  "defaultMode": "Standard",
+  "governed": "deferred",
+  "target": {
+    "model": "C9300-24UX",
+    "serial": "FCW2247C1AJ",
+    "iosXeVersion": "17.18.1 RELEASE fc2"
+  },
+  "candidate": {
+    "atUTC": "2026-11-03T08:45:28.205503+00:00",
+    "baseCommit": "1791a7e1634961936233ee94170f1c63cea1b64c",
+    "branch": "pr/johalley/verified-app-artifacts",
+    "dirtySourceSHA256": "d07b6ea671fb9508e3eb648014e642eabf845d5fe45d1bd339557cf8b0c098ac",
+    "sourceFiles": 1555,
+    "binarySHA256": "529e98f251b320567712d7077dcf9b54e5d93737e36100252cf809b2b6db2040",
+    "standardDefault": true,
+    "governed": "deferred",
+    "dockerConfigID": "sha256:6d5cda316de797b803829a9ae9ac9302ea2eda984c40ecf7e2878a3be9b2527d",
+    "imageTag": "cvk-replies-qual:20261103-529e98f251b3",
+    "containerdManifestDigest": "sha256:2dd4dc81a1f4c6ca3b3360ba7ce5cdd025819000938d261d1f79d9474f898dfe",
+    "chartMatchesCurrentSource": true
+  },
+  "cases": [
+    {
+      "operation": "activate",
+      "fencedSamples": 113,
+      "nativeTarget": "ACTIVATED",
+      "forwarded": {
+        "copy": 1,
+        "configuration": 1,
+        "install": 1,
+        "activate": 1,
+        "start": 1
+      },
+      "topLevelFailureTextCleared": true,
+      "podUID": "1d31f788-3bae-4871-9593-8903667a6db1",
+      "journalUID": "48532744-e5b4-4310-947c-185e680c398f",
+      "oldWorkerUID": "637e7e53-1541-4734-82e6-4df52ef1fa3e",
+      "newWorkerUID": "fb00b681-4a62-4988-81ab-e48a57181241",
+      "httpHealthyWhilePending": false
+    },
+    {
+      "operation": "start",
+      "fencedSamples": 112,
+      "nativeTarget": "RUNNING",
+      "forwarded": {
+        "copy": 1,
+        "configuration": 1,
+        "install": 1,
+        "activate": 1,
+        "start": 1
+      },
+      "topLevelFailureTextCleared": true,
+      "podUID": "6d1d044f-83c4-4a26-b1f0-d2d099671f9b",
+      "journalUID": "48532744-e5b4-4310-947c-185e680c398f",
+      "oldWorkerUID": "fb00b681-4a62-4988-81ab-e48a57181241",
+      "newWorkerUID": "51155ba3-6f1d-4695-b6be-a5bb3f39838f",
+      "httpHealthyWhilePending": true
+    }
+  ],
+  "leaseObjectUID": "8747f5e7-f7c2-4127-bb36-63dd0a87374b",
+  "journalObjectUID": "48532744-e5b4-4310-947c-185e680c398f",
+  "manualLeaseOrJournalMutation": false,
+  "staleStatusFixed": true,
+  "cleanupPassed": true,
+  "scope": "Two independent accepted replies suppressed before downstream headers/body; native target observed; managed worker replacement; untouched original lease expires naturally; recovery observes without replay.",
+  "limits": [
+    "One physical device/firmware and Linux/amd64 fixture; no fleet-wide qualification.",
+    "Existing Standard behavior covered by automated tests; separate physical Standard control not run.",
+    "One-replica Recreate; no uninterrupted service or stateful migration claim.",
+    "Native package-signature verification disabled at baseline and preserved.",
+    "One forwarded CVK request measured; native installer-internal counters unavailable.",
+    "Retained SHA512 measures staged package, not running root filesystem; no specific CVE fix claim."
+  ],
+  "finishedAtUTC": "2026-11-03T13:25:13.176502+00:00"
+}

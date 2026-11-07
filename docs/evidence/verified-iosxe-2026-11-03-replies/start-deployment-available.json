@@ -1,0 +1,125 @@
+{
+  "apiVersion": "apps/v1",
+  "kind": "Deployment",
+  "metadata": {
+    "annotations": {
+      "deployment.kubernetes.io/revision": "1"
+    },
+    "creationTimestamp": "2026-11-03T08:49:20Z",
+    "generation": 3,
+    "labels": {
+      "qualification": "20261103"
+    },
+    "name": "cvk-verified-fixture",
+    "namespace": "cvk-replies-apps-20261103",
+    "resourceVersion": "6975",
+    "uid": "a06f3a2a-481e-4a33-9341-458cc1452e20"
+  },
+  "spec": {
+    "progressDeadlineSeconds": 600,
+    "replicas": 1,
+    "revisionHistoryLimit": 10,
+    "selector": {
+      "matchLabels": {
+        "app": "cvk-verified-fixture"
+      }
+    },
+    "strategy": {
+      "type": "Recreate"
+    },
+    "template": {
+      "metadata": {
+        "annotations": {
+          "cisco.io/apphost-artifacts": "{\"agent\": {\"descriptorDigest\": \"sha256:aa3215da3bc24864581775acbf5e0de9e51dac4816d9a9fcc3f8b8ce1d3c755c\"}}",
+          "cisco.io/apphost-package-timeout": "300s"
+        },
+        "labels": {
+          "app": "cvk-verified-fixture",
+          "qualification": "20261103"
+        }
+      },
+      "spec": {
+        "affinity": {
+          "nodeAffinity": {
+            "requiredDuringSchedulingIgnoredDuringExecution": {
+              "nodeSelectorTerms": [
+                {
+                  "matchFields": [
+                    {
+                      "key": "metadata.name",
+                      "operator": "In",
+                      "values": [
+                        "c9k-pending-20261103"
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        },
+        "containers": [
+          {
+            "image": "https://192.168.129.111:18443/v1/packages/sha256/ed8c257297a526229b154cbaabe1c466de239d4c011e4edfd25c7cb440fa071c/package.tar",
+            "imagePullPolicy": "IfNotPresent",
+            "name": "agent",
+            "ports": [
+              {
+                "containerPort": 8080,
+                "protocol": "TCP"
+              }
+            ],
+            "resources": {
+              "limits": {
+                "memory": "128Mi"
+              },
+              "requests": {
+                "memory": "128Mi"
+              }
+            },
+            "terminationMessagePath": "/dev/termination-log",
+            "terminationMessagePolicy": "File"
+          }
+        ],
+        "dnsPolicy": "ClusterFirst",
+        "restartPolicy": "Always",
+        "schedulerName": "default-scheduler",
+        "securityContext": {},
+        "terminationGracePeriodSeconds": 30,
+        "tolerations": [
+          {
+            "effect": "NoSchedule",
+            "key": "cisco.vk/device",
+            "operator": "Exists"
+          }
+        ]
+      }
+    }
+  },
+  "status": {
+    "availableReplicas": 1,
+    "conditions": [
+      {
+        "lastTransitionTime": "2026-11-03T09:20:39Z",
+        "lastUpdateTime": "2026-11-03T09:20:39Z",
+        "message": "ReplicaSet \"cvk-verified-fixture-6f55bc5cd8\" has successfully progressed.",
+        "reason": "NewReplicaSetAvailable",
+        "status": "True",
+        "type": "Progressing"
+      },
+      {
+        "lastTransitionTime": "2026-11-03T09:53:50Z",
+        "lastUpdateTime": "2026-11-03T09:53:50Z",
+        "message": "Deployment has minimum availability.",
+        "reason": "MinimumReplicasAvailable",
+        "status": "True",
+        "type": "Available"
+      }
+    ],
+    "observedGeneration": 3,
+    "readyReplicas": 1,
+    "replicas": 1,
+    "terminatingReplicas": 0,
+    "updatedReplicas": 1
+  }
+}

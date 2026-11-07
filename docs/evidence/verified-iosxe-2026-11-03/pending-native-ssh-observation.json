@@ -1,0 +1,22 @@
+{
+  "atUTC": "2026-11-03T05:51:07.655544+00:00",
+  "passed": true,
+  "channel": "direct SSH to real C9K using previously approved pinned host key; not through the RESTCONF relay",
+  "appID": "cvk0000_e0b0e50daabc4e7a861cc2ba72bad946",
+  "journalPhaseAtSuppressedReply": "installPending",
+  "expectedSHA512": "e50300677be5f0827b4a7fedc9d317d684a96627f4ea2b3c9a86836e753c671179d85a2bce4360277b7157b684901858402451f85540862d415a8776f1762a2d",
+  "commands": [
+    {
+      "command": "show app-hosting list",
+      "output": "show app-hosting list\nApp id                                   State\n---------------------------------------------------------\niris                                     RUNNING\nc9ktest                                  DEPLOYED\ncvk0000_e0b0e50daabc4e7a861cc2ba72bad946 DEPLOYED\n\nEdge-9K"
+    },
+    {
+      "command": "dir flash:cvk-041c58924410df47-ed8c257297a526229b154cbaabe1c466de239d4c011e4edfd25c7cb440fa071c.tar",
+      "output": "dir flash:cvk-041c58924410df47-ed8c257297a526229b154cbaabe1c466de239d4c011e4edfd25c7cb440fa071c.tar\nDirectory of flash:/cvk-041c58924410df47-ed8c257297a526229b154cbaabe1c466de239d4c011e4edfd25c7cb440fa071c.tar\n\n254040  -rw-          5963776   Nov 3 2026 05:50:58 +00:00  cvk-041c58924410df47-ed8c257297a526229b154cbaabe1c466de239d4c011e4edfd25c7cb440fa071c.tar\n\n11353194496 bytes total (5392535552 bytes free)\nEdge-9K"
+    },
+    {
+      "command": "verify /sha512 flash:cvk-041c58924410df47-ed8c257297a526229b154cbaabe1c466de239d4c011e4edfd25c7cb440fa071c.tar",
+      "output": "verify /sha512 flash:cvk-041c58924410df47-ed8c257297a526229b154cbaabe1c466de239d4c011e4edfd25c7cb440fa071c.tar\n...........................................................................................Done!\nverify /sha512 (flash:cvk-041c58924410df47-ed8c257297a526229b154cbaabe1c466de239d4c011e4edfd25c7cb440fa071c.tar) = e50300677be5f0827b4a7fedc9d317d684a96627f4ea2b3c9a86836e753c671179d85a2bce4360277b7157b684901858402451f85540862d415a8776f1762a2d\n\n\nEdge-9K"
+    }
+  ]
+}

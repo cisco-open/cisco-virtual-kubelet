@@ -1,0 +1,57 @@
+{
+  "collectedAt": "2026-10-31T22:31:59.257475+00:00",
+  "status": "BLOCKED",
+  "reason": "The historical IOS-XE lab control plane rejects the configured SSH authentication; no live IOS-XE target was discovered on the alternate reachable clusters.",
+  "attempts": [
+    {
+      "route": "configured ubuntu16 SSH alias",
+      "action": "hostname and kubectl get nodes",
+      "exitCode": 255,
+      "result": "Permission denied (publickey,password).",
+      "inventoryObtained": false
+    },
+    {
+      "route": "configured ubuntu17 SSH alias",
+      "action": "hostname and kubectl get nodes -o wide",
+      "exitCode": 0,
+      "result": "Reached Ubuntu17 Kubernetes cluster; observed IOS-XR, NX-OS, ACI, FMC, FTD, ISE, SONiC and its control-plane node; no IOS-XE node.",
+      "iosxeTargetFound": false
+    },
+    {
+      "route": "configured ubuntu12 SSH alias",
+      "action": "hostname and kubectl get nodes -o wide",
+      "exitCode": 0,
+      "result": "Reached Ubuntu12 Kubernetes cluster; only its control-plane node was listed.",
+      "iosxeTargetFound": false
+    },
+    {
+      "route": "ubuntu17 to historical IOS-XE control plane, first attempt",
+      "action": "strict SSH host verification",
+      "exitCode": 255,
+      "result": "Host key verification failed; no host-key exception was made.",
+      "inventoryObtained": false
+    },
+    {
+      "route": "ubuntu17 to historical IOS-XE control plane, workstation pin via stdin",
+      "action": "strict SSH host verification",
+      "exitCode": 255,
+      "result": "Known-host input was not reusable for verification; failed closed.",
+      "inventoryObtained": false
+    },
+    {
+      "route": "ubuntu17 to historical IOS-XE control plane, workstation pin in temporary known-hosts file",
+      "action": "verified-host SSH authentication, then read-only inventory if authenticated",
+      "exitCode": 255,
+      "result": "Permission denied (publickey,password). Temporary public-key pin file removed.",
+      "inventoryObtained": false
+    }
+  ],
+  "deviceChangesMade": false,
+  "clusterDeploymentsMade": false,
+  "hostKeyVerificationBypassed": false,
+  "missingInputs": [
+    "Working lab SSH alias or kubeconfig for the IOS-XE cluster",
+    "Available target CiscoDevice namespace/name and current identity"
+  ],
+  "timeNote": "This is the collection timestamp; per-attempt timestamps were not captured and are not reconstructed."
+}

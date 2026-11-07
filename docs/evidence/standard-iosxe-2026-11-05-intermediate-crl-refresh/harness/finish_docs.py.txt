@@ -1,0 +1,31 @@
+from pathlib import Path
+import json
+root=Path('/Users/johalley/Git/cisco-virtual-kubelet');R=Path('/private/tmp/cvk-intrefresh-20261105');q=json.loads((R/'qualification-assessed.json').read_text());assert q['revocationDiscoveryObserved'] and not q['freshExecutionBlockingQualified'];seconds=round(q['publicationToNativeFetchSeconds'],1);gap=round(q['originalNextUpdateToNativeFetchSeconds'],1)
+addition=f'''The [intermediate revocation-discovery follow-up](evidence/standard-iosxe-2026-11-05-intermediate-crl-refresh/README.md)
+observed CRL refresh and a serial-specific native revocation error, but did
+**not qualify fresh execution blocking**. A new root/intermediate/leaf hierarchy
+and three different image configurations/layers excluded prior valid chains and
+preloaded target images. A fresh image ran during the old CRL cache window.
+After natural expiry, the C9K fetched the root-issued revocation list {seconds}
+seconds after publication ({gap} seconds after NextUpdate, including the next
+validation gap). No refresh-image GET followed, yet the new Pod became Ready
+and its endpoint reported the previous day's leaf-test release. Native RUNNING
+predated intermediate replacement; the first HTTP release proof came afterward,
+with no intervening package transfer. The internal reuse mechanism is unproven.
+The worker treated installation as successful, so copy fallback was not invoked.
+Certificate-only replacement did not repair the already-running stale release;
+normal deletion and a new Pod under the corrected chain finally delivered and
+ran the requested image. All evidence and the failed outcome are retained.
+This demonstrates that Pod Ready and TLS revocation do not establish successful
+image replacement. No production change, cache prune, Lease/journal reset or
+mandatory artifact mode was introduced. Standard remains default and Governed
+deferred; unavailable CRLs and cache-policy overrides remain unqualified.
+
+'''
+for n in ['verified-iosxe-qualification.md','verified-artifact-preflight.md','app-image-lifecycle-plan.md']:
+ p=root/'docs'/n;s=p.read_text();old='Intermediate\ndiscovery, unavailable CRLs and cache-policy overrides remain unqualified.';assert old in s;s=s.replace(old,'Intermediate\ndiscovery and its failed fresh-execution result are covered below; unavailable\nCRLs and cache-policy overrides remain unqualified.')
+ anchor='Standard remains the default without artifact metadata or journals; Governed\nremains deferred.\n\n';assert s.count(anchor)==1;s=s.replace(anchor,anchor+addition)
+ if n=='verified-iosxe-qualification.md':
+  s=s.replace('| Standard CRL discovery |','| Standard leaf CRL discovery |');lines=s.splitlines(keepends=True);i=next(i for i,l in enumerate(lines) if l.startswith('| Standard leaf CRL discovery |'));lines.insert(i+1,'| Standard intermediate CRL discovery | Prime a valid chain and empty root-issued CRL; publish intermediate revocation at the same CDP; retain default cache policy and use fresh image identities | Measure signed-list retrieval and serial-specific native error, verify actual runtime even when no GET occurs; preserve stale-image execution and false Ready outcomes; verify normal deletion and corrected-chain fresh delivery; no artifact journal |\n');s=''.join(lines)
+ p.write_text(s)
+print('PASS current guidance records transport discovery and failed fresh-execution qualification; historical reports preserved')

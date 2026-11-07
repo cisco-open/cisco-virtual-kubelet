@@ -1,0 +1,77 @@
+"""Fresh image and fresh CA chain: observe releases before and after serial replacement."""
+import pathlib,json,datetime,time,subprocess,os,ssl,urllib.request,yaml
+R=pathlib.Path('/tmp/cvk-stdrevoke-20261104/cold');exec(compile((R/'control_functions.py').read_text(),'cold-control-functions','exec'));P=json.loads((R/'payload-provenance.json').read_text());EXPECTED=P['fixtureRelease'];SEEN=set();IPS={'10.1.1.1','192.168.129.2'}
+def events(case=None):
+ return [e for l in (R/'server-events.jsonl').read_text().splitlines() if (e:=json.loads(l)).get('client') in IPS and (case is None or e.get('case')==case)]
+def lease():return next((x for x in get(['-n',NS,'get','leases','-o','json'])['items'] if x.get('metadata',{}).get('labels',{}).get('cisco.vk/family')=='device-disruptive-mutation'),None)
+def expiry(l):
+ if not l or not l.get('spec',{}).get('holderIdentity'):return None
+ return datetime.datetime.fromisoformat(l['spec']['renewTime'].replace('Z','+00:00'))+datetime.timedelta(seconds=l['spec']['leaseDurationSeconds'])
+def observe(label):
+ s=snap(label);controls(label);assertBaselineApps(s);SEEN.update(p['metadata']['uid'] for p in s['pods']);return s
+def releases(s):
+ out=[]
+ for p in s['probes']:
+  if p.get('status')==200:
+   try:out.append({'appID':p['appID'],'release':json.loads(p['body']).get('release'),'ip':p['ip']})
+   except ValueError:pass
+ return out
+def pki(label):run(['python3',str(R/'check_pki.py'),label])
+def deploy(case):
+ port=18465 if case=='control' else 18467;image='https://192.168.129.111:'+str(port)+'/'+case+'-agent.tar';template={'metadata':{'labels':{'app':NAME,'qualification':'20261104-stdrevoke-cold','cert-case':case}},'spec':{'affinity':{'nodeAffinity':{'requiredDuringSchedulingIgnoredDuringExecution':{'nodeSelectorTerms':[{'matchFields':[{'key':'metadata.name','operator':'In','values':[DEV]}]}]}}},'tolerations':[{'key':'cisco.vk/device','operator':'Exists','effect':'NoSchedule'}],'containers':[{'name':'agent','image':image,'imagePullPolicy':'Always','ports':[{'containerPort':8080}],'resources':{'requests':{'memory':'128Mi'},'limits':{'memory':'128Mi'}}}]}};obj={'apiVersion':'apps/v1','kind':'Deployment','metadata':{'name':NAME,'namespace':APPS,'labels':{'qualification':'20261104-stdrevoke-cold'}},'spec':{'replicas':1,'strategy':{'type':'Recreate'},'selector':{'matchLabels':{'app':NAME}},'template':template}};(R/('deployment-'+case+'-input.yaml')).write_text(yaml.safe_dump(obj));apply(obj);return image
+def health(label,release):
+ s=healthy(label,release);SEEN.update(p['metadata']['uid'] for p in s['pods']);nativeProof(label,s['pods'][0]);leaseReleased(label);return s
+def deletion(label):
+ run(K+['-n',APPS,'scale','deployment/'+NAME,'--replicas=0']);deadline=time.monotonic()+3000;i=0
+ while time.monotonic()<deadline:
+  s=observe(label+'-normal-cleanup')
+  if not s['pods'] and {a['appID']:a['details'].get('state') for a in s['nativeApps']}=={'iris':'RUNNING','c9ktest':'DEPLOYED'}:leaseReleased(label+'-normal-cleanup');return
+  if i%4==0:print(now(),label,'normal deletion pending',str(expiry(lease())),flush=True)
+  i+=1;time.sleep(10)
+ raise RuntimeError('Cold normal deletion timeout; no Lease reset allowed')
+def waitGuard():
+ deadline=time.monotonic()+3300;i=0
+ while time.monotonic()<deadline:
+  l=lease();end=expiry(l)
+  if not end or datetime.datetime.now(datetime.timezone.utc)>=end:return
+  s=observe('cold-guard-'+str(i));row={'atUTC':now(),'leaseUID':l['metadata']['uid'],'holder':l['spec'].get('holderIdentity'),'renewTime':l['spec'].get('renewTime'),'expiryUTC':end.isoformat(),'podUIDs':[p['metadata']['uid'] for p in s['pods']],'ready':any(ready(p) for p in s['pods']),'actualReleases':releases(s),'artifactJournals':len(s['journals'])}
+  with (R/'guarded-observations.jsonl').open('a') as f:f.write(json.dumps(row)+'\n')
+  if i%4==0:print(now(),'cold waiting for normal fence',end.isoformat(),flush=True)
+  i+=1;time.sleep(min(15,max(1,(end-datetime.datetime.now(datetime.timezone.utc)).total_seconds())))
+ raise RuntimeError('Cold fence timeout; never clear Lease')
+started=now();original=json.loads((R.parent/'qualification-result.json').read_text());assert original['executionComplete'];s=observe('baseline');assert not s['pods'] and {a['appID']:a['details'].get('state') for a in s['nativeApps']}=={'iris':'RUNNING','c9ktest':'DEPLOYED'};pki('baseline');assert not any(e['kind']=='package-sent' for e in events('cold'))
+deploy('control');control=health('valid-control','A');pki('valid-control');assert any(e['kind']=='package-sent' for e in events('control'));deletion('control');assert not any(e['kind']=='package-sent' for e in events('cold'));save('unprimed-image-boundary',{'atUTC':now(),'passed':True,'coldPackageSentToC9KBeforeNegative':False,'expectedRelease':EXPECTED,'dockerConfigID':P['dockerConfigID'],'layerDiffID':P['layerDiffID'],'packageSHA256':P['packageSHA256'],'priorControlRelease':'A','priorControlPayloadDifferent':True})
+pki('before');url=deploy('cold');start=time.monotonic();classification=None;i=0
+while time.monotonic()-start<720:
+ s=observe('invalid-poll-'+str(i));mode=json.loads((R/'server-mode.json').read_text())['cold'];assert mode=='bad';gets=[e for e in events('cold') if e['kind']=='http-request' and e.get('package')];alerts=[e for e in events('cold') if e['kind']=='tls-rejected'];l=lease();end=expiry(l);age=(datetime.datetime.now(datetime.timezone.utc)-datetime.datetime.fromisoformat(l['spec']['renewTime'].replace('Z','+00:00'))).total_seconds() if end else None;actual=releases(s);running=any(a['appID'].startswith('cvk0000_') and a['details'].get('state')=='RUNNING' for a in s['nativeApps']);row={'atUTC':now(),'serverMode':mode,'podUIDs':[p['metadata']['uid'] for p in s['pods']],'ready':any(ready(p) for p in s['pods']),'nativeRunning':running,'actualReleases':actual,'expectedRelease':EXPECTED,'TLSRejections':len(alerts),'packageRequests':len(gets),'leaseRenewAgeSeconds':age,'leaseExpiresUTC':end.isoformat() if end else None,'artifactJournals':len(s['journals'])}
+ with (R/'invalid-observations.jsonl').open('a') as f:f.write(json.dumps(row)+'\n')
+ if i%4==0:print(json.dumps(row),flush=True)
+ if gets:classification='revoked-chain-accepted-for-fresh-download';bad=s;break
+ if running and actual:classification='runtime-started-without-cold-package-download';bad=s;break
+ if time.monotonic()-start>=300 and alerts and not row['ready'] and not running and (end is None or age>=90):classification='revoked-intermediate-rejected-for-uncached-image';bad=s;break
+ i+=1;time.sleep(10)
+if classification is None:classification='inconclusive';bad=s
+if classification=='revoked-chain-accepted-for-fresh-download':
+ # Preserve the bad chain while observing the actual runtime release.
+ deadline=time.monotonic()+180
+ while time.monotonic()<deadline:
+  bad=observe('accepted-download-before-replacement-'+str(i))
+  if releases(bad):break
+  i+=1;time.sleep(10)
+pki('boundary');save('snapshot-invalid-boundary',bad);save('invalid-lease',lease());save('invalid-server-events',events('cold'));save('release-before-replacement',{'atUTC':now(),'expectedRelease':EXPECTED,'actualReleases':releases(bad),'nativeStates':{a['appID']:a['details'].get('state') for a in bad['nativeApps']},'podUIDs':[p['metadata']['uid'] for p in bad['pods']],'classification':classification,'packageRequests':sum(e['kind']=='http-request' and e.get('package',False) for e in events('cold'))});diag=[]
+for w in bad['workers']:
+ out=subprocess.check_output(K+['-n',NS,'logs',w['name'],'--tail=2000'],text=True);needles=[p['metadata']['uid'].replace('-','') for p in bad['pods']]+[p['metadata']['name'] for p in bad['pods']]+['cold-agent.tar'];diag.extend(l for l in out.splitlines() if any(n in l for n in needles))
+save('worker-diagnostics',{'atUTC':now(),'lines':diag});print(now(),'SEALED BEFORE REPLACEMENT',classification,releases(bad),flush=True)
+m=json.loads((R/'server-mode.json').read_text());assert m['cold']=='bad';m['cold']='good';tmp=R/'mode-next.json';tmp.write_text(json.dumps(m));os.replace(tmp,R/'server-mode.json');ctx=ssl.create_default_context(cafile=str(R/'root-with-crls.pem'));ctx.verify_flags|=ssl.VERIFY_CRL_CHECK_CHAIN
+with urllib.request.urlopen('https://192.168.129.111:18467/_probe',context=ctx,timeout=15) as response:assert response.status==200
+save('certificate-replaced',{'atUTC':now(),'onlyIntermediateCertificateSerialReplaced':True,'rootOrLeafChanged':False,'CRLChanged':False,'revokedSerialRemoved':False,'revocationPolicyChanged':False,'URLChanged':False,'payloadChanged':False,'independentCRLCheckingTLSProbePassed':True});pki('after-repair');waitGuard();samePodRecovered=False;recovery=None
+if classification!='runtime-started-without-cold-package-download':
+ recovery=health('corrected-recovery',EXPECTED);samePodRecovered=True
+else:
+ # Observe existing runtime after certificate-only repair before normal redeployment.
+ for i in range(12):
+  recovery=observe('existing-runtime-after-repair-'+str(i))
+  if any(x['release']==EXPECTED for x in releases(recovery)):samePodRecovered=True;break
+  time.sleep(10)
+ if samePodRecovered:recovery=health('corrected-recovery',EXPECTED)
+save('release-after-certificate-only-replacement',{'atUTC':now(),'expectedRelease':EXPECTED,'actualReleases':releases(recovery),'podUIDs':[p['metadata']['uid'] for p in recovery['pods']],'samePodExpectedReleasePassed':samePodRecovered});deletion('recovery');beforeCount=sum(e['kind']=='package-sent' for e in events('cold'));deploy('cold');fresh=health('fresh-replacement',EXPECTED);afterCount=sum(e['kind']=='package-sent' for e in events('cold'));assert afterCount>beforeCount;save('release-after-fresh-deployment',{'atUTC':now(),'passed':True,'expectedRelease':EXPECTED,'actualReleases':releases(fresh),'podUIDs':[p['metadata']['uid'] for p in fresh['pods']],'transfersBefore':beforeCount,'transfersAfter':afterCount});deletion('fresh');pki('complete');result={'executionComplete':True,'startedAtUTC':started,'finishedAtUTC':now(),'classification':classification,'uncachedImageRejectionQualified':classification=='revoked-intermediate-rejected-for-uncached-image','expectedRelease':EXPECTED,'beforeReplacement':releases(bad),'samePodReleaseAfterReplacementPassed':samePodRecovered,'samePodRetained':{p['metadata']['uid'] for p in bad['pods']}=={p['metadata']['uid'] for p in recovery['pods']},'freshDeploymentReleasePassed':True,'normalDeletionPassed':True,'imageWasUnprimedBeforeNegative':True,'packageURL':url,'podUIDs':sorted(SEEN),'defaultMode':'Standard','governed':'deferred','metadataAndJournalOmitted':True,'manualLeaseOrJournalEdits':False,'CRLOrPolicyChangedDuringRecovery':False};save('qualification-result',result);print('COMPLETE cold repeat:',json.dumps(result),flush=True)

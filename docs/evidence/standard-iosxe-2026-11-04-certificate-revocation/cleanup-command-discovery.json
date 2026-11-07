@@ -1,0 +1,18 @@
+{
+  "atUTC": "2026-11-04T18:02:37.362289+00:00",
+  "readOnly": true,
+  "commands": [
+    {
+      "command": "clear crypto pki ?",
+      "output": "clear crypto pki ?\n  benchmarks  Clear PKI Benchmark Data\n  counters    Clear PKI Counters\n  crl         Clear CRL(s)\n\nEdge-9K#clear crypto pki \nEdge-9K"
+    },
+    {
+      "command": "crypto pki crl ?",
+      "output": "crypto pki crl ?\n  refresh-cache  refresh the crl in cache\n  request        Requests a current CRL\n\nEdge-9K#crypto pki crl \nEdge-9K"
+    },
+    {
+      "command": "show running-config all | include crl.*cache",
+      "output": "show running-config all | include crl.*cache\ncrypto pki crl cache size 64\nEdge-9K"
+    }
+  ]
+}

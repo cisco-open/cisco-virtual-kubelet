@@ -1,0 +1,38 @@
+{
+  "label": "baseline",
+  "case": null,
+  "atUTC": "2026-11-03T22:52:07.604597+00:00",
+  "hostBeforeUTC": "2026-11-03T22:52:06.623568+00:00",
+  "hostAfterUTC": "2026-11-03T22:52:07.604597+00:00",
+  "deviceUTC": "2026-11-03T22:52:07.445000+00:00",
+  "deviceTimeSource": "NTP",
+  "clockChanged": false,
+  "clockWithinMeasurementMargin": true,
+  "certificateStatusesAtDeviceTime": {
+    "root-old": "valid",
+    "root-renewed": "valid",
+    "intermediate-root": "valid",
+    "intermediate-expired": "expired",
+    "intermediate-renewed": "valid",
+    "control-intermediate": "valid",
+    "root-leaf": "valid",
+    "intermediate-leaf": "valid",
+    "control-leaf": "valid"
+  },
+  "deviceRootCertificate": "root-old",
+  "endpointCertificateModes": {
+    "valid-root": "root-old",
+    "valid-intermediate": "control-intermediate",
+    "root": "root-old",
+    "intermediate": "intermediate-expired"
+  },
+  "nativeClockEvidence": {
+    "collectedAtUTC": "2026-11-03T22:52:07.589045+00:00",
+    "commands": [
+      {
+        "command": "show clock detail",
+        "output": "show clock detail\n22:52:07.445 UTC Tue Nov 3 2026\nTime source is NTP\nEdge-9K"
+      }
+    ]
+  }
+}

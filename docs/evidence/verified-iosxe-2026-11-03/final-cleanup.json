@@ -1,0 +1,79 @@
+{
+  "startedAtUTC": "2026-11-03T06:24:06.834194+00:00",
+  "passed": true,
+  "fixturePodUID": "e0b0e50d-aabc-4e7a-861c-c2ba72bad946",
+  "fixtureAppID": "cvk0000_e0b0e50daabc4e7a861cc2ba72bad946",
+  "ownedFlashPath": "flash:cvk-041c58924410df47-ed8c257297a526229b154cbaabe1c466de239d4c011e4edfd25c7cb440fa071c.tar",
+  "normalDeletionAndTombstone": true,
+  "leaseManuallyModified": false,
+  "commands": [
+    {
+      "command": "show app-hosting list",
+      "output": "show app-hosting list\nApp id                                   State\n---------------------------------------------------------\niris                                     RUNNING\nc9ktest                                  DEPLOYED\n\nEdge-9K"
+    },
+    {
+      "command": "dir flash:cvk-041c58924410df47-ed8c257297a526229b154cbaabe1c466de239d4c011e4edfd25c7cb440fa071c.tar",
+      "output": "dir flash:cvk-041c58924410df47-ed8c257297a526229b154cbaabe1c466de239d4c011e4edfd25c7cb440fa071c.tar\nDirectory of flash:/cvk-041c58924410df47-ed8c257297a526229b154cbaabe1c466de239d4c011e4edfd25c7cb440fa071c.tar\n\n254040  -rw-          5963776   Nov 3 2026 05:50:58 +00:00  cvk-041c58924410df47-ed8c257297a526229b154cbaabe1c466de239d4c011e4edfd25c7cb440fa071c.tar\n\n11353194496 bytes total (5392539648 bytes free)\nEdge-9K"
+    },
+    {
+      "command": "delete /force flash:cvk-041c58924410df47-ed8c257297a526229b154cbaabe1c466de239d4c011e4edfd25c7cb440fa071c.tar",
+      "output": "delete /force flash:cvk-041c58924410df47-ed8c257297a526229b154cbaabe1c466de239d4c011e4edfd25c7cb440fa071c.tar\nEdge-9K"
+    },
+    {
+      "command": "configure terminal",
+      "output": "configure terminal\nEnter configuration commands, one per line.  End with CNTL/Z.\nEdge-9K(config)"
+    },
+    {
+      "command": "ip http secure-trustpoint TP-self-signed-806566997",
+      "output": "ip http secure-trustpoint TP-self-signed-806566997\nEdge-9K(config)"
+    },
+    {
+      "command": "no crypto pki trustpoint CVK-QUAL-20261103",
+      "output": "no crypto pki trustpoint CVK-QUAL-20261103\n% Removing an enrolled trustpoint will destroy all certificates\n received from the related Certificate Authority.\n\nAre you sure you want to do this? [confirmed run-owned trustpoint removal]\n yes\n% Be sure to ask the CA administrator to revoke your certificates.\n\nEdge-9K(config)"
+    },
+    {
+      "command": "end",
+      "output": "end\nEdge-9K"
+    },
+    {
+      "command": "show ip http server status | include trustpoint",
+      "output": "show ip http server status | include trustpoint\nHTTP secure server trustpoint: TP-self-signed-806566997\nHTTP secure server peer validation trustpoint: \nEdge-9K"
+    },
+    {
+      "command": "show running-config | include ^ip http secure-trustpoint|^ip http client secure-trustpoint|^crypto pki trustpoint CVK-QUAL-20261103",
+      "output": "show running-config | include ^ip http secure-trustpoint|^ip http client secure-trustpoint|^crypto pki trustpoint CVK-QUAL-20261103\nip http secure-trustpoint TP-self-signed-806566997\nip http client secure-trustpoint IRIS\nEdge-9K"
+    },
+    {
+      "command": "show app-hosting infra",
+      "output": "show app-hosting infra\nIOX version: 2.13.0\nApp signature verification: disabled\nCAF Health: Stable\nInternal working directory: /vol/usb1/iox\n\nApplication Interface Mapping\nAppGigabitEthernet Port #  Interface Name                 Port Type            Bandwidth  \n           1               AppGigabitEthernet1/0/1        KR Port - Internal   1G\n        \n\nCPU:\n  Quota: 25(Percentage) \n  Available: 23(Percentage)\n  Quota: 7400(Units)\n  Available: 7000(Units)\n\nEdge-9K"
+    },
+    {
+      "command": "dir flash:cvk-041c58924410df47-ed8c257297a526229b154cbaabe1c466de239d4c011e4edfd25c7cb440fa071c.tar",
+      "output": "dir flash:cvk-041c58924410df47-ed8c257297a526229b154cbaabe1c466de239d4c011e4edfd25c7cb440fa071c.tar\n%Error opening flash:/cvk-041c58924410df47-ed8c257297a526229b154cbaabe1c466de239d4c011e4edfd25c7cb440fa071c.tar (No such file or directory)\nEdge-9K"
+    }
+  ],
+  "services": [
+    {
+      "name": "relay",
+      "pid": 901837,
+      "stopped": true
+    },
+    {
+      "name": "store",
+      "pid": 890802,
+      "stopped": true
+    }
+  ],
+  "listeners": {
+    "16448": false,
+    "18443": false,
+    "18445": false
+  },
+  "sharedHostNode": {
+    "name": "cisco",
+    "ready": true,
+    "version": "v1.34.5+k3s1"
+  },
+  "finishedAtUTC": "2026-11-03T06:24:38.863865+00:00",
+  "configurationDelta": "None relative to this run baseline: original explicit self-signed HTTPS selector, IRIS client trustpoint and signature policy restored. Isolated namespace NAT disappears with the owned container; no manual relay rules were added to the host; Docker removes its owned published API port with the container."
+}

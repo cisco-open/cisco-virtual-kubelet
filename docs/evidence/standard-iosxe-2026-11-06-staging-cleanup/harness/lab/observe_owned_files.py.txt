@@ -1,0 +1,19 @@
+"""Read-only observation of allocated staging files, independent of worker cleanup."""
+from pathlib import Path
+import subprocess,json,time,datetime,re,os
+R=Path('/tmp/cvk-stdgc-20261106');exec(compile((R/'gc_checks.py').read_text(),'gc_checks.py','exec'));K=['kubectl','--kubeconfig',str(R/'kubeconfig')];deadline=time.monotonic()+7200;last={}
+while time.monotonic()<deadline and not (R/'qualification-result.json').exists():
+ try:
+  pods=json.loads(subprocess.check_output(K+['-n','cvk-stdgc-20261106','get','pods','-o','json'],text=True))['items'];lines=[]
+  for p in pods:
+   if p['metadata']['name'].startswith('c9k-stdgc-20261106-vk-'):lines.extend(subprocess.check_output(K+['-n','cvk-stdgc-20261106','logs',p['metadata']['name'],'--tail=10000'],text=True).splitlines())
+  paths={m.group(0) for line in lines if 'Starting copy operation' in line for m in re.finditer(r'flash:/cvk-stage-[a-f0-9]{32}\.tar',line)}
+  for file in sorted(paths):
+   stat=fileStat(file);key=json.dumps(stat,sort_keys=True)
+   if last.get(file)!=key:
+    last[file]=key
+    with (R/'owned-file-observations.jsonl').open('a') as f:f.write(json.dumps({'atUTC':datetime.datetime.now(datetime.timezone.utc).isoformat(),'path':file,'stat':stat,'readOnly':True})+'\n')
+ except Exception as e:
+  with (R/'owned-file-observer-errors.jsonl').open('a') as f:f.write(json.dumps({'atUTC':datetime.datetime.now(datetime.timezone.utc).isoformat(),'errorType':type(e).__name__,'readOnly':True})+'\n')
+ time.sleep(3)
+(R/'owned-file-observer-finished.json').write_text(json.dumps({'atUTC':datetime.datetime.now(datetime.timezone.utc).isoformat(),'readOnly':True,'pathsObserved':sorted(last),'qualificationComplete':(R/'qualification-result.json').exists()},indent=2)+'\n')

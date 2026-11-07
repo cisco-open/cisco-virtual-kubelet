@@ -1,0 +1,66 @@
+deployment.apps/cvk-stdgc-fixture created
+{"atUTC": "2026-11-06T10:30:50.236382+00:00", "label": "preloaded-before", "release": "STD-GC-A-20261106-a85d9b305139", "podUIDs": ["f6bceeb3-c299-4ef2-b4b1-458e2fc39173"], "nativeStates": {"iris": "RUNNING", "c9ktest": "DEPLOYED", "cvk0000_f6bceeb3c2994ef2b4b1458e2fc39173": "INSTALLING"}, "ready": false, "httpReleaseConfirmed": false, "oldNativeAppsAbsent": true, "artifactJournalCount": 0}
+{"atUTC": "2026-11-06T10:31:17.385329+00:00", "label": "preloaded-before", "release": "STD-GC-A-20261106-a85d9b305139", "podUIDs": ["f6bceeb3-c299-4ef2-b4b1-458e2fc39173"], "nativeStates": {"iris": "RUNNING", "c9ktest": "DEPLOYED", "cvk0000_f6bceeb3c2994ef2b4b1458e2fc39173": "RUNNING"}, "ready": true, "httpReleaseConfirmed": false, "oldNativeAppsAbsent": true, "artifactJournalCount": 0}
+PASS preloaded-before Ready/HTTP STD-GC-A-20261106-a85d9b305139 without artifacts or journal
+deployment.apps/cvk-stdgc-fixture configured
+{"atUTC": "2026-11-06T10:32:32.068109+00:00", "label": "initial-a", "release": "STD-GC-A-20261106-a85d9b305139", "podUIDs": ["c5263495-106e-4a95-b8e3-ca83815a6a8b"], "nativeStates": {"iris": "RUNNING", "c9ktest": "DEPLOYED", "cvk0000_c5263495106e4a95b8e3ca83815a6a8b": "INSTALLING"}, "ready": false, "httpReleaseConfirmed": false, "oldNativeAppsAbsent": true, "artifactJournalCount": 0}
+{"atUTC": "2026-11-06T10:32:59.055186+00:00", "label": "initial-a", "release": "STD-GC-A-20261106-a85d9b305139", "podUIDs": ["c5263495-106e-4a95-b8e3-ca83815a6a8b"], "nativeStates": {"iris": "RUNNING", "c9ktest": "DEPLOYED", "cvk0000_c5263495106e4a95b8e3ca83815a6a8b": "RUNNING"}, "ready": true, "httpReleaseConfirmed": false, "oldNativeAppsAbsent": true, "artifactJournalCount": 0}
+{"atUTC": "2026-11-06T10:33:26.300207+00:00", "label": "initial-a", "release": "STD-GC-A-20261106-a85d9b305139", "podUIDs": ["c5263495-106e-4a95-b8e3-ca83815a6a8b"], "nativeStates": {"iris": "RUNNING", "c9ktest": "DEPLOYED", "cvk0000_c5263495106e4a95b8e3ca83815a6a8b": "RUNNING"}, "ready": true, "httpReleaseConfirmed": false, "oldNativeAppsAbsent": true, "artifactJournalCount": 0}
+{"atUTC": "2026-11-06T10:33:53.359344+00:00", "label": "initial-a", "release": "STD-GC-A-20261106-a85d9b305139", "podUIDs": ["c5263495-106e-4a95-b8e3-ca83815a6a8b"], "nativeStates": {"iris": "RUNNING", "c9ktest": "DEPLOYED", "cvk0000_c5263495106e4a95b8e3ca83815a6a8b": "RUNNING"}, "ready": true, "httpReleaseConfirmed": false, "oldNativeAppsAbsent": true, "artifactJournalCount": 0}
+PASS initial-a Ready/HTTP STD-GC-A-20261106-a85d9b305139 without artifacts or journal
+deployment.apps/cvk-stdgc-fixture configured
+{"atUTC": "2026-11-06T10:35:01.854340+00:00", "label": "upgrade-b", "release": "STD-GC-B-20261106-a85d9b305139", "podUIDs": ["0a02d83d-8af5-4b7a-9a31-22844cb36cec"], "nativeStates": {"iris": "RUNNING", "c9ktest": "DEPLOYED", "cvk0000_0a02d83d8af54b7a9a3122844cb36cec": "INSTALLING"}, "ready": false, "httpReleaseConfirmed": false, "oldNativeAppsAbsent": true, "artifactJournalCount": 0}
+{"atUTC": "2026-11-06T10:35:29.687558+00:00", "label": "upgrade-b", "release": "STD-GC-B-20261106-a85d9b305139", "podUIDs": ["0a02d83d-8af5-4b7a-9a31-22844cb36cec"], "nativeStates": {"iris": "RUNNING", "c9ktest": "DEPLOYED", "cvk0000_0a02d83d8af54b7a9a3122844cb36cec": "RUNNING"}, "ready": true, "httpReleaseConfirmed": false, "oldNativeAppsAbsent": true, "artifactJournalCount": 0}
+{"atUTC": "2026-11-06T10:35:57.120029+00:00", "label": "upgrade-b", "release": "STD-GC-B-20261106-a85d9b305139", "podUIDs": ["0a02d83d-8af5-4b7a-9a31-22844cb36cec"], "nativeStates": {"iris": "RUNNING", "c9ktest": "DEPLOYED", "cvk0000_0a02d83d8af54b7a9a3122844cb36cec": "RUNNING"}, "ready": true, "httpReleaseConfirmed": false, "oldNativeAppsAbsent": true, "artifactJournalCount": 0}
+{"atUTC": "2026-11-06T10:36:24.505080+00:00", "label": "upgrade-b", "release": "STD-GC-B-20261106-a85d9b305139", "podUIDs": ["0a02d83d-8af5-4b7a-9a31-22844cb36cec"], "nativeStates": {"iris": "RUNNING", "c9ktest": "DEPLOYED", "cvk0000_0a02d83d8af54b7a9a3122844cb36cec": "RUNNING"}, "ready": true, "httpReleaseConfirmed": true, "oldNativeAppsAbsent": true, "artifactJournalCount": 0}
+PASS upgrade-b Ready/HTTP STD-GC-B-20261106-a85d9b305139 without artifacts or journal
+deployment.apps/cvk-stdgc-fixture rolled back
+{"atUTC": "2026-11-06T10:37:25.936865+00:00", "label": "rollback-a", "release": "STD-GC-A-20261106-a85d9b305139", "podUIDs": ["cbd4447b-726d-4fc4-ba94-3df35ffaeacc"], "nativeStates": {"iris": "RUNNING", "c9ktest": "DEPLOYED", "cvk0000_cbd4447b726d4fc4ba943df35ffaeacc": "INSTALLING"}, "ready": false, "httpReleaseConfirmed": false, "oldNativeAppsAbsent": true, "artifactJournalCount": 0}
+{"atUTC": "2026-11-06T10:37:53.287324+00:00", "label": "rollback-a", "release": "STD-GC-A-20261106-a85d9b305139", "podUIDs": ["cbd4447b-726d-4fc4-ba94-3df35ffaeacc"], "nativeStates": {"iris": "RUNNING", "c9ktest": "DEPLOYED", "cvk0000_cbd4447b726d4fc4ba943df35ffaeacc": "RUNNING"}, "ready": true, "httpReleaseConfirmed": false, "oldNativeAppsAbsent": true, "artifactJournalCount": 0}
+{"atUTC": "2026-11-06T10:38:20.494042+00:00", "label": "rollback-a", "release": "STD-GC-A-20261106-a85d9b305139", "podUIDs": ["cbd4447b-726d-4fc4-ba94-3df35ffaeacc"], "nativeStates": {"iris": "RUNNING", "c9ktest": "DEPLOYED", "cvk0000_cbd4447b726d4fc4ba943df35ffaeacc": "RUNNING"}, "ready": true, "httpReleaseConfirmed": false, "oldNativeAppsAbsent": true, "artifactJournalCount": 0}
+{"atUTC": "2026-11-06T10:38:47.570155+00:00", "label": "rollback-a", "release": "STD-GC-A-20261106-a85d9b305139", "podUIDs": ["cbd4447b-726d-4fc4-ba94-3df35ffaeacc"], "nativeStates": {"iris": "RUNNING", "c9ktest": "DEPLOYED", "cvk0000_cbd4447b726d4fc4ba943df35ffaeacc": "RUNNING"}, "ready": true, "httpReleaseConfirmed": true, "oldNativeAppsAbsent": true, "artifactJournalCount": 0}
+PASS rollback-a Ready/HTTP STD-GC-A-20261106-a85d9b305139 without artifacts or journal
+deployment.apps/cvk-stdgc-fixture configured
+FAILED UPGRADE {"atUTC": "2026-11-06T10:39:48.657400+00:00", "podUIDs": ["1ee05639-4038-46d1-8ef6-cc748677da83"], "ready": false, "nativeStates": {"iris": "RUNNING", "c9ktest": "DEPLOYED"}, "actualReleases": [], "leaseUID": "3f70b86b-784c-4a43-9a07-078e3634ebc0", "leaseExpiresUTC": "2026-11-06T11:10:44.005660+00:00"}
+FAILED UPGRADE {"atUTC": "2026-11-06T10:40:48.359293+00:00", "podUIDs": ["1ee05639-4038-46d1-8ef6-cc748677da83"], "ready": false, "nativeStates": {"iris": "RUNNING", "c9ktest": "DEPLOYED"}, "actualReleases": [], "leaseUID": "3f70b86b-784c-4a43-9a07-078e3634ebc0", "leaseExpiresUTC": "2026-11-06T11:10:44.005660+00:00"}
+FAILED UPGRADE {"atUTC": "2026-11-06T10:41:47.991196+00:00", "podUIDs": ["1ee05639-4038-46d1-8ef6-cc748677da83"], "ready": false, "nativeStates": {"iris": "RUNNING", "c9ktest": "DEPLOYED"}, "actualReleases": [], "leaseUID": "3f70b86b-784c-4a43-9a07-078e3634ebc0", "leaseExpiresUTC": "2026-11-06T11:10:44.005660+00:00"}
+FAILED UPGRADE {"atUTC": "2026-11-06T10:42:47.343185+00:00", "podUIDs": ["1ee05639-4038-46d1-8ef6-cc748677da83"], "ready": false, "nativeStates": {"iris": "RUNNING", "c9ktest": "DEPLOYED"}, "actualReleases": [], "leaseUID": "3f70b86b-784c-4a43-9a07-078e3634ebc0", "leaseExpiresUTC": "2026-11-06T11:10:44.005660+00:00"}
+FAILED UPGRADE {"atUTC": "2026-11-06T10:43:46.623795+00:00", "podUIDs": ["1ee05639-4038-46d1-8ef6-cc748677da83"], "ready": false, "nativeStates": {"iris": "RUNNING", "c9ktest": "DEPLOYED"}, "actualReleases": [], "leaseUID": "3f70b86b-784c-4a43-9a07-078e3634ebc0", "leaseExpiresUTC": "2026-11-06T11:10:44.005660+00:00"}
+FAILED UPGRADE {"atUTC": "2026-11-06T10:44:46.268505+00:00", "podUIDs": ["1ee05639-4038-46d1-8ef6-cc748677da83"], "ready": false, "nativeStates": {"iris": "RUNNING", "c9ktest": "DEPLOYED"}, "actualReleases": [], "leaseUID": "3f70b86b-784c-4a43-9a07-078e3634ebc0", "leaseExpiresUTC": "2026-11-06T11:10:44.005660+00:00"}
+deployment.apps/cvk-stdgc-fixture rolled back
+2026-11-06T10:45:03.168698+00:00 rollback respects natural fence 2026-11-06T11:10:44.005660+00:00
+2026-11-06T10:46:11.098928+00:00 rollback respects natural fence 2026-11-06T11:10:44.005660+00:00
+2026-11-06T10:47:18.492645+00:00 rollback respects natural fence 2026-11-06T11:10:44.005660+00:00
+2026-11-06T10:48:25.976871+00:00 rollback respects natural fence 2026-11-06T11:10:44.005660+00:00
+2026-11-06T10:49:33.486244+00:00 rollback respects natural fence 2026-11-06T11:10:44.005660+00:00
+2026-11-06T10:50:41.064014+00:00 rollback respects natural fence 2026-11-06T11:10:44.005660+00:00
+2026-11-06T10:51:49.144317+00:00 rollback respects natural fence 2026-11-06T11:10:44.005660+00:00
+2026-11-06T10:52:56.650072+00:00 rollback respects natural fence 2026-11-06T11:10:44.005660+00:00
+2026-11-06T10:54:04.171506+00:00 rollback respects natural fence 2026-11-06T11:10:44.005660+00:00
+2026-11-06T10:55:11.681533+00:00 rollback respects natural fence 2026-11-06T11:10:44.005660+00:00
+2026-11-06T10:56:19.412037+00:00 rollback respects natural fence 2026-11-06T11:10:44.005660+00:00
+2026-11-06T10:57:27.503018+00:00 rollback respects natural fence 2026-11-06T11:10:44.005660+00:00
+2026-11-06T10:58:35.149551+00:00 rollback respects natural fence 2026-11-06T11:10:44.005660+00:00
+2026-11-06T10:59:42.720632+00:00 rollback respects natural fence 2026-11-06T11:10:44.005660+00:00
+2026-11-06T11:00:50.244296+00:00 rollback respects natural fence 2026-11-06T11:10:44.005660+00:00
+2026-11-06T11:01:57.896887+00:00 rollback respects natural fence 2026-11-06T11:10:44.005660+00:00
+2026-11-06T11:03:05.781689+00:00 rollback respects natural fence 2026-11-06T11:10:44.005660+00:00
+2026-11-06T11:04:13.570973+00:00 rollback respects natural fence 2026-11-06T11:10:44.005660+00:00
+2026-11-06T11:05:21.264039+00:00 rollback respects natural fence 2026-11-06T11:10:44.005660+00:00
+2026-11-06T11:06:28.716673+00:00 rollback respects natural fence 2026-11-06T11:10:44.005660+00:00
+2026-11-06T11:07:36.354883+00:00 rollback respects natural fence 2026-11-06T11:10:44.005660+00:00
+2026-11-06T11:08:44.017359+00:00 rollback respects natural fence 2026-11-06T11:10:44.005660+00:00
+2026-11-06T11:09:51.494649+00:00 rollback respects natural fence 2026-11-06T11:10:44.005660+00:00
+{"atUTC": "2026-11-06T11:10:47.769228+00:00", "label": "failed-upgrade-rollback-a", "release": "STD-GC-A-20261106-a85d9b305139", "podUIDs": ["428e7765-56b4-4b6c-91da-23691cfc809e"], "nativeStates": {"iris": "RUNNING", "c9ktest": "DEPLOYED"}, "ready": false, "httpReleaseConfirmed": false, "oldNativeAppsAbsent": false, "artifactJournalCount": 0}
+{"atUTC": "2026-11-06T11:11:14.990471+00:00", "label": "failed-upgrade-rollback-a", "release": "STD-GC-A-20261106-a85d9b305139", "podUIDs": ["428e7765-56b4-4b6c-91da-23691cfc809e"], "nativeStates": {"iris": "RUNNING", "c9ktest": "DEPLOYED", "cvk0000_428e776556b44b6c91da23691cfc809e": "ACTIVATED"}, "ready": false, "httpReleaseConfirmed": false, "oldNativeAppsAbsent": true, "artifactJournalCount": 0}
+{"atUTC": "2026-11-06T11:11:42.243788+00:00", "label": "failed-upgrade-rollback-a", "release": "STD-GC-A-20261106-a85d9b305139", "podUIDs": ["428e7765-56b4-4b6c-91da-23691cfc809e"], "nativeStates": {"iris": "RUNNING", "c9ktest": "DEPLOYED", "cvk0000_428e776556b44b6c91da23691cfc809e": "ACTIVATED"}, "ready": false, "httpReleaseConfirmed": false, "oldNativeAppsAbsent": true, "artifactJournalCount": 0}
+{"atUTC": "2026-11-06T11:12:09.399733+00:00", "label": "failed-upgrade-rollback-a", "release": "STD-GC-A-20261106-a85d9b305139", "podUIDs": ["428e7765-56b4-4b6c-91da-23691cfc809e"], "nativeStates": {"iris": "RUNNING", "c9ktest": "DEPLOYED", "cvk0000_428e776556b44b6c91da23691cfc809e": "ACTIVATED"}, "ready": false, "httpReleaseConfirmed": false, "oldNativeAppsAbsent": true, "artifactJournalCount": 0}
+PASS failed-upgrade-rollback-a Ready/HTTP STD-GC-A-20261106-a85d9b305139 without artifacts or journal
+Traceback (most recent call last):
+  File "/tmp/cvk-stdgc-20261106/qualify.py", line 103, in <module>
+    a3,ca3=health('failed-upgrade-rollback-a','a',{c['podUID'] for c in CASES}|{bad['metadata']['uid']});assertNewTransfer('a',t0);assert ca3['podUID']!=bad['metadata']['uid']
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/cvk-stdgc-20261106/qualify.py", line 44, in health
+    copied=[i for i,v in enumerate(lines) if 'Copy operation completed successfully' in v];assert copied and min(copied)<min(installed)
+                                                                                                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError

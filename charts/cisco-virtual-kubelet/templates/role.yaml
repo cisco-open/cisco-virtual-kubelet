@@ -173,6 +173,14 @@ rules:
   - watch
 - apiGroups:
   - rbac.authorization.k8s.io
+  resources:
+  - clusterroles
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - rbac.authorization.k8s.io
   resourceNames:
   - cisco-virtual-kubelet
   - cisco-virtual-kubelet-app-hosting-device-read
@@ -199,15 +207,6 @@ rules:
 - apiGroups:
   - rbac.authorization.k8s.io
   resources:
-  - clusterroles
-  - roles
-  verbs:
-  - get
-  - list
-  - watch
-- apiGroups:
-  - rbac.authorization.k8s.io
-  resources:
   - rolebindings
   verbs:
   - create
@@ -216,4 +215,13 @@ rules:
   - list
   - patch
   - update
+  - watch
+- apiGroups:
+  - rbac.authorization.k8s.io
+  resources:
+  - roles
+  verbs:
+  - create
+  - get
+  - list
   - watch

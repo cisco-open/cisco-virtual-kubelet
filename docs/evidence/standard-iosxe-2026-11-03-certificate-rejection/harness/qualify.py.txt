@@ -1,0 +1,90 @@
+"""Measure actual Standard TLS rejection; record acceptance as a failed qualification."""
+import pathlib,json,subprocess,time,datetime,yaml,ssl,urllib.request,os,re
+R=pathlib.Path('/tmp/cvk-stdcert-20261103');exec(compile((R/'control_functions.py').read_text(),'control_functions.py','exec'));PORTS={'valid':18449,'untrusted':18450,'hostname':18451};SEEN=set()
+def events(case=None):
+ p=R/'server-events.jsonl';out=[]
+ if p.exists():
+  for l in p.read_text().splitlines():
+   try:e=json.loads(l)
+   except ValueError:continue
+   if e.get('client')=='10.1.1.1' and (case is None or e.get('case')==case):out.append(e)
+ return out
+def mutationLease():
+ return next((x for x in get(['-n',NS,'get','leases','-o','json'])['items'] if x.get('metadata',{}).get('labels',{}).get('cisco.vk/family')=='device-disruptive-mutation'),None)
+def leaseExpiry(l):
+ if not l or not l.get('spec',{}).get('holderIdentity'):return None
+ return datetime.datetime.fromisoformat(l['spec']['renewTime'].replace('Z','+00:00'))+datetime.timedelta(seconds=l['spec']['leaseDurationSeconds'])
+def observe(label):
+ s=snap(label);controls(label);assertBaselineApps(s)
+ for p in s['pods']:SEEN.add(p['metadata']['uid'])
+ return s
+
+def deploy(case):
+ image='https://192.168.129.111:'+str(PORTS[case])+'/'+case+'-agent-a.tar';template={'metadata':{'labels':{'app':NAME,'qualification':'20261103-stdcert','cert-case':case}},'spec':{'affinity':{'nodeAffinity':{'requiredDuringSchedulingIgnoredDuringExecution':{'nodeSelectorTerms':[{'matchFields':[{'key':'metadata.name','operator':'In','values':[DEV]}]}]}}},'tolerations':[{'key':'cisco.vk/device','operator':'Exists','effect':'NoSchedule'}],'containers':[{'name':'agent','image':image,'imagePullPolicy':'Always','ports':[{'containerPort':8080}],'resources':{'requests':{'memory':'128Mi'},'limits':{'memory':'128Mi'}}}]}}
+ o={'apiVersion':'apps/v1','kind':'Deployment','metadata':{'name':NAME,'namespace':APPS,'labels':{'qualification':'20261103-stdcert'}},'spec':{'replicas':1,'strategy':{'type':'Recreate'},'selector':{'matchLabels':{'app':NAME}},'template':template}};(R/('deployment-'+case+'-input.yaml')).write_text(yaml.safe_dump(o));apply(o);return image
+
+def validRepair(case):
+ p=R/'server-mode.json';m=json.loads(p.read_text());assert m[case]==case;m[case]='valid';tmp=R/'server-mode-next.json';tmp.write_text(json.dumps(m));os.replace(tmp,p)
+ ctx=ssl.create_default_context(cafile=str(R/'trusted-ca.crt'))
+ with urllib.request.urlopen('https://192.168.129.111:'+str(PORTS[case])+'/_probe',context=ctx,timeout=15) as resp:assert resp.status==200
+ save(case+'-certificate-corrected',{'atUTC':now(),'case':case,'onlyCertificateChanged':True,'packageURLChanged':False,'payloadChanged':False,'newMode':'valid','independentTLSProbePassed':True,'leaseManuallyModified':False});print(now(),case,'test certificate corrected; normal guarded recovery only',flush=True)
+
+def waitGuard(case,deadlineSeconds=3300):
+ deadline=time.monotonic()+deadlineSeconds;i=0
+ while time.monotonic()<deadline:
+  l=mutationLease();expiry=leaseExpiry(l)
+  if not expiry or datetime.datetime.now(datetime.timezone.utc)>=expiry:break
+  s=observe(case+'-guarded-recovery-'+str(i));summary={'atUTC':now(),'case':case,'leaseUID':l['metadata']['uid'],'holder':l['spec'].get('holderIdentity'),'renewTime':l['spec'].get('renewTime'),'expiryUTC':expiry.isoformat(),'podUIDs':[p['metadata']['uid'] for p in s['pods']],'ready':any(ready(p) for p in s['pods']),'nativeStates':{a['appID']:a['details'].get('state') for a in s['nativeApps']},'artifactJournals':len(s['journals'])}
+  with (R/(case+'-guarded-observations.jsonl')).open('a') as f:f.write(json.dumps(summary)+'\n')
+  if i%4==0:print(now(),case,'waiting for existing mutation guard',expiry.isoformat(),flush=True)
+  i+=1;time.sleep(min(15,max(1,(expiry-datetime.datetime.now(datetime.timezone.utc)).total_seconds())))
+ else:raise RuntimeError('Mutation guard did not settle; no manual lease edits permitted')
+
+def deletion(case):
+ run(K+['-n',APPS,'scale','deployment/'+NAME,'--replicas=0']);deadline=time.monotonic()+3000;i=0
+ while time.monotonic()<deadline:
+  s=observe(case+'-normal-cleanup');states={a['appID']:a['details'].get('state') for a in s['nativeApps']}
+  if not s['pods'] and states=={'iris':'RUNNING','c9ktest':'DEPLOYED'}:
+   leaseReleased(case+'-normal-cleanup');break
+  if i%4==0:print(now(),case,'normal deletion pending; guard',str(leaseExpiry(mutationLease())),flush=True)
+  i+=1;time.sleep(10)
+ else:raise RuntimeError('Normal deletion did not complete; retain owned lab for inspection')
+
+def captureWorkerDiagnostics(case,s):
+ out=[]
+ for w in s['workers']:
+  q=subprocess.run(K+['-n',NS,'logs',w['name'],'--tail=1500'],capture_output=True,text=True,timeout=30)
+  needles=[p['metadata']['uid'].replace('-','') for p in s['pods']]+[p['metadata']['name'] for p in s['pods']]+[case+'-agent-a.tar']
+  out.extend(l for l in q.stdout.splitlines() if any(n in l for n in needles))
+ save(case+'-worker-diagnostics',{'atUTC':now(),'scope':'Owned fixture IDs/URL only','lines':out})
+started=now();apply({'apiVersion':'v1','kind':'Namespace','metadata':{'name':APPS}});controls('baseline');url=deploy('valid');valid=healthy('valid-control','A');SEEN.update(p['metadata']['uid'] for p in valid['pods']);nativeProof('valid-control',valid['pods'][0]);leaseReleased('valid-control');assert any(x.get('kind')=='package-sent' and x.get('certMode')=='valid' for x in events('valid'));deletion('valid')
+results=[]
+for case in ['untrusted','hostname']:
+ startedCase=now();image=deploy(case);startedMono=time.monotonic();classification=None;bad=None;iteration=0
+ while time.monotonic()-startedMono<720:
+  s=observe(case+'-invalid-poll-'+str(iteration));e=events(case);gets=[x for x in e if x['kind']=='http-request' and x.get('package')];tlsFailures=[x for x in e if x['kind']=='tls-rejected'];pods=[p for p in s['pods'] if not p['metadata'].get('deletionTimestamp')];isReady=any(ready(p) for p in pods);running=any(a['appID'].startswith('cvk0000_') and a['details'].get('state')=='RUNNING' for a in s['nativeApps']);l=mutationLease();expiry=leaseExpiry(l);renewAge=(datetime.datetime.now(datetime.timezone.utc)-datetime.datetime.fromisoformat(l['spec']['renewTime'].replace('Z','+00:00'))).total_seconds() if expiry else None
+  summary={'atUTC':now(),'case':case,'invalidCertificateMode':json.loads((R/'server-mode.json').read_text())[case],'podUIDs':[p['metadata']['uid'] for p in pods],'ready':isReady,'nativeRunning':running,'tlsRejections':len(tlsFailures),'packageHTTPRequests':len(gets),'leaseRenewAgeSeconds':renewAge,'leaseExpiresUTC':expiry.isoformat() if expiry else None,'artifactJournals':len(s['journals'])}
+  with (R/(case+'-invalid-observations.jsonl')).open('a') as f:f.write(json.dumps(summary)+'\n')
+  assert summary['invalidCertificateMode']==case
+  if iteration%4==0:print(json.dumps(summary),flush=True)
+  if gets:
+   classification='invalid-certificate-accepted-for-package-download';bad=s;break
+  if time.monotonic()-startedMono>=300 and tlsFailures and not isReady and not running and (expiry is None or renewAge>=90):
+   classification='invalid-certificate-rejected';bad=s;break
+  iteration+=1;time.sleep(10)
+ if classification is None:classification='inconclusive-no-conclusive-device-certificate-outcome';bad=s
+ save('snapshot-'+case+'-invalid-boundary',bad);save(case+'-invalid-server-events',events(case));save(case+'-invalid-lease',mutationLease());captureWorkerDiagnostics(case,bad);save(case+'-invalid-events',bad.get('events',[]));rejected=classification=='invalid-certificate-rejected';invalidHealthy=False
+ if classification=='invalid-certificate-accepted-for-package-download':
+  try:
+   a=healthy(case+'-invalid-accepted','A');SEEN.update(p['metadata']['uid'] for p in a['pods']);nativeProof(case+'-invalid-accepted',a['pods'][0]);leaseReleased(case+'-invalid-accepted');invalidHealthy=True;classification='invalid-certificate-accepted-and-app-ran'
+  except (RuntimeError,subprocess.SubprocessError) as err:save(case+'-accepted-health-failure',{'atUTC':now(),'errorType':type(err).__name__,'message':str(err)})
+ # Seal evidence under the invalid leaf before changing any certificate.
+ save(case+'-invalid-outcome',{'atUTC':now(),'case':case,'classification':classification,'rejectionQualified':rejected,'appHealthyUnderInvalidCertificate':invalidHealthy,'packageURL':image,'serverModeAtObservation':case,'packagePayloadSameAsValidControl':True,'artifactConfigurationRequired':False})
+ validRepair(case)
+ if not invalidHealthy:
+  waitGuard(case);recovery=healthy(case+'-corrected-recovery','A');SEEN.update(p['metadata']['uid'] for p in recovery['pods']);nativeProof(case+'-corrected-recovery',recovery['pods'][0]);leaseReleased(case+'-corrected-recovery')
+ else:
+  recovery=healthy(case+'-corrected-recovery','A');SEEN.update(p['metadata']['uid'] for p in recovery['pods']);leaseReleased(case+'-corrected-recovery')
+ save(case+'-recovery-result',{'atUTC':now(),'passed':True,'packageURLUnchanged':True,'podUIDs':[p['metadata']['uid'] for p in recovery['pods']],'mode':'valid','artifactJournals':len(recovery['journals'])});deletion(case)
+ results.append({'case':case,'startedAtUTC':startedCase,'finishedAtUTC':now(),'classification':classification,'rejectionQualified':rejected,'appHealthyUnderInvalidCertificate':invalidHealthy,'recoveryPassed':True,'normalDeletionPassed':True,'packageURL':image});print(now(),'CASE RESULT',json.dumps(results[-1]),flush=True)
+result={'executionComplete':True,'rejectionQualified':all(r['rejectionQualified'] for r in results),'startedAtUTC':started,'finishedAtUTC':now(),'defaultMode':'Standard','governed':'deferred','cases':results,'podUIDs':sorted(SEEN),'positiveControlPassed':True,'metadataAndJournalOmitted':True,'artifactJournalAndGrantCount':0,'manualLeaseOrJournalEdits':False,'candidateChanged':False};save('qualification-result',result);print('COMPLETE actual Standard invalid-certificate qualification:',result['rejectionQualified'],flush=True)

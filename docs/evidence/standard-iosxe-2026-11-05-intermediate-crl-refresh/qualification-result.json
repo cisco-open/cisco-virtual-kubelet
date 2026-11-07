@@ -1,0 +1,31 @@
+{
+  "executionComplete": true,
+  "startedAtUTC": "2026-11-05T06:39:48.541983+00:00",
+  "finishedAtUTC": "2026-11-05T06:55:26.902065+00:00",
+  "classification": "revocation-discovered-but-stale-release-executed-without-new-package-transfer",
+  "cacheWindowOutcome": "fresh-image-accepted-using-cached-unrevoked-CRL",
+  "revocationDiscoveryObserved": true,
+  "transportRevocationRejectionObserved": true,
+  "revocationDiscoveryQualified": false,
+  "freshExecutionBlockingQualified": false,
+  "publicationUTC": "2026-11-05T06:41:12.784144+00:00",
+  "originalCRLNextUpdateUTC": "2026-11-05T06:49:48+00:00",
+  "firstVersion2NativeFetchUTC": "2026-11-05T06:49:57.020857+00:00",
+  "samePodRecoveryPassed": false,
+  "freshDeploymentPassed": true,
+  "normalDeletionPassed": true,
+  "podUIDs": [
+    "24a38429-fdef-486a-bf48-9f4598dce7a0",
+    "635c7b93-fadf-4f69-8335-fafe65ce40aa",
+    "713b810b-0a45-4dea-9fab-c5f8e26bbd31",
+    "801668b5-dee9-49d0-986e-5c9a887f59d9"
+  ],
+  "defaultMode": "Standard",
+  "governed": "deferred",
+  "metadataAndJournalOmitted": true,
+  "manualLeaseOrJournalChanges": false,
+  "forcedCRLRefreshOrFlushDuringQualification": false,
+  "cachePolicyChanged": false,
+  "clockChanged": false,
+  "unexpectedRuntimePreserved": true
+}

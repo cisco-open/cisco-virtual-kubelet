@@ -1,0 +1,365 @@
+{
+  "atUTC": "2026-11-06T09:10:27.197799+00:00",
+  "deployment": {
+    "apiVersion": "apps/v1",
+    "kind": "Deployment",
+    "metadata": {
+      "annotations": {
+        "deployment.kubernetes.io/revision": "6"
+      },
+      "creationTimestamp": "2026-11-06T08:28:17Z",
+      "generation": 6,
+      "labels": {
+        "qualification": "20261106-stdupgrade"
+      },
+      "name": "cvk-stdupgrade-fixture",
+      "namespace": "cvk-stdupgrade-apps-20261106",
+      "resourceVersion": "4093",
+      "uid": "6d61f17e-a446-4456-8bee-163e6dec33b0"
+    },
+    "spec": {
+      "progressDeadlineSeconds": 600,
+      "replicas": 1,
+      "revisionHistoryLimit": 10,
+      "selector": {
+        "matchLabels": {
+          "app": "cvk-stdupgrade-fixture"
+        }
+      },
+      "strategy": {
+        "type": "Recreate"
+      },
+      "template": {
+        "metadata": {
+          "labels": {
+            "app": "cvk-stdupgrade-fixture",
+            "qualification": "20261106-stdupgrade",
+            "release": "b"
+          }
+        },
+        "spec": {
+          "affinity": {
+            "nodeAffinity": {
+              "requiredDuringSchedulingIgnoredDuringExecution": {
+                "nodeSelectorTerms": [
+                  {
+                    "matchFields": [
+                      {
+                        "key": "metadata.name",
+                        "operator": "In",
+                        "values": [
+                          "c9k-stdupgrade-20261106"
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          },
+          "containers": [
+            {
+              "image": "https://192.168.129.111:18479/b.tar",
+              "imagePullPolicy": "Always",
+              "name": "agent",
+              "ports": [
+                {
+                  "containerPort": 8080,
+                  "protocol": "TCP"
+                }
+              ],
+              "resources": {
+                "limits": {
+                  "memory": "128Mi"
+                },
+                "requests": {
+                  "memory": "128Mi"
+                }
+              },
+              "terminationMessagePath": "/dev/termination-log",
+              "terminationMessagePolicy": "File"
+            }
+          ],
+          "dnsPolicy": "ClusterFirst",
+          "restartPolicy": "Always",
+          "schedulerName": "default-scheduler",
+          "securityContext": {},
+          "terminationGracePeriodSeconds": 30,
+          "tolerations": [
+            {
+              "effect": "NoSchedule",
+              "key": "cisco.vk/device",
+              "operator": "Exists"
+            }
+          ]
+        }
+      }
+    },
+    "status": {
+      "availableReplicas": 1,
+      "conditions": [
+        {
+          "lastTransitionTime": "2026-11-06T08:28:17Z",
+          "lastUpdateTime": "2026-11-06T08:30:57Z",
+          "message": "ReplicaSet \"cvk-stdupgrade-fixture-5f7df79d84\" has successfully progressed.",
+          "reason": "NewReplicaSetAvailable",
+          "status": "True",
+          "type": "Progressing"
+        },
+        {
+          "lastTransitionTime": "2026-11-06T09:09:15Z",
+          "lastUpdateTime": "2026-11-06T09:09:15Z",
+          "message": "Deployment has minimum availability.",
+          "reason": "MinimumReplicasAvailable",
+          "status": "True",
+          "type": "Available"
+        }
+      ],
+      "observedGeneration": 6,
+      "readyReplicas": 1,
+      "replicas": 1,
+      "terminatingReplicas": 0,
+      "updatedReplicas": 1
+    }
+  },
+  "replicaSets": {
+    "apiVersion": "v1",
+    "items": [
+      {
+        "apiVersion": "apps/v1",
+        "kind": "ReplicaSet",
+        "metadata": {
+          "annotations": {
+            "deployment.kubernetes.io/desired-replicas": "1",
+            "deployment.kubernetes.io/max-replicas": "1",
+            "deployment.kubernetes.io/revision": "5",
+            "deployment.kubernetes.io/revision-history": "1,3"
+          },
+          "creationTimestamp": "2026-11-06T08:28:17Z",
+          "generation": 6,
+          "labels": {
+            "app": "cvk-stdupgrade-fixture",
+            "pod-template-hash": "5dfc97b84d",
+            "qualification": "20261106-stdupgrade",
+            "release": "a"
+          },
+          "name": "cvk-stdupgrade-fixture-5dfc97b84d",
+          "namespace": "cvk-stdupgrade-apps-20261106",
+          "ownerReferences": [
+            {
+              "apiVersion": "apps/v1",
+              "blockOwnerDeletion": true,
+              "controller": true,
+              "kind": "Deployment",
+              "name": "cvk-stdupgrade-fixture",
+              "uid": "6d61f17e-a446-4456-8bee-163e6dec33b0"
+            }
+          ],
+          "resourceVersion": "4030",
+          "uid": "1ff2742a-2429-45c8-9192-90e8c6cad703"
+        },
+        "spec": {
+          "replicas": 0,
+          "selector": {
+            "matchLabels": {
+              "app": "cvk-stdupgrade-fixture",
+              "pod-template-hash": "5dfc97b84d"
+            }
+          },
+          "template": {
+            "metadata": {
+              "labels": {
+                "app": "cvk-stdupgrade-fixture",
+                "pod-template-hash": "5dfc97b84d",
+                "qualification": "20261106-stdupgrade",
+                "release": "a"
+              }
+            },
+            "spec": {
+              "affinity": {
+                "nodeAffinity": {
+                  "requiredDuringSchedulingIgnoredDuringExecution": {
+                    "nodeSelectorTerms": [
+                      {
+                        "matchFields": [
+                          {
+                            "key": "metadata.name",
+                            "operator": "In",
+                            "values": [
+                              "c9k-stdupgrade-20261106"
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                }
+              },
+              "containers": [
+                {
+                  "image": "https://192.168.129.111:18479/a.tar",
+                  "imagePullPolicy": "Always",
+                  "name": "agent",
+                  "ports": [
+                    {
+                      "containerPort": 8080,
+                      "protocol": "TCP"
+                    }
+                  ],
+                  "resources": {
+                    "limits": {
+                      "memory": "128Mi"
+                    },
+                    "requests": {
+                      "memory": "128Mi"
+                    }
+                  },
+                  "terminationMessagePath": "/dev/termination-log",
+                  "terminationMessagePolicy": "File"
+                }
+              ],
+              "dnsPolicy": "ClusterFirst",
+              "restartPolicy": "Always",
+              "schedulerName": "default-scheduler",
+              "securityContext": {},
+              "terminationGracePeriodSeconds": 30,
+              "tolerations": [
+                {
+                  "effect": "NoSchedule",
+                  "key": "cisco.vk/device",
+                  "operator": "Exists"
+                }
+              ]
+            }
+          }
+        },
+        "status": {
+          "observedGeneration": 6,
+          "replicas": 0,
+          "terminatingReplicas": 0
+        }
+      },
+      {
+        "apiVersion": "apps/v1",
+        "kind": "ReplicaSet",
+        "metadata": {
+          "annotations": {
+            "deployment.kubernetes.io/desired-replicas": "1",
+            "deployment.kubernetes.io/max-replicas": "1",
+            "deployment.kubernetes.io/revision": "6",
+            "deployment.kubernetes.io/revision-history": "2,4"
+          },
+          "creationTimestamp": "2026-11-06T08:30:31Z",
+          "generation": 5,
+          "labels": {
+            "app": "cvk-stdupgrade-fixture",
+            "pod-template-hash": "5f7df79d84",
+            "qualification": "20261106-stdupgrade",
+            "release": "b"
+          },
+          "name": "cvk-stdupgrade-fixture-5f7df79d84",
+          "namespace": "cvk-stdupgrade-apps-20261106",
+          "ownerReferences": [
+            {
+              "apiVersion": "apps/v1",
+              "blockOwnerDeletion": true,
+              "controller": true,
+              "kind": "Deployment",
+              "name": "cvk-stdupgrade-fixture",
+              "uid": "6d61f17e-a446-4456-8bee-163e6dec33b0"
+            }
+          ],
+          "resourceVersion": "4092",
+          "uid": "9e5b19e9-7349-4600-b05d-185abc2c43f4"
+        },
+        "spec": {
+          "replicas": 1,
+          "selector": {
+            "matchLabels": {
+              "app": "cvk-stdupgrade-fixture",
+              "pod-template-hash": "5f7df79d84"
+            }
+          },
+          "template": {
+            "metadata": {
+              "labels": {
+                "app": "cvk-stdupgrade-fixture",
+                "pod-template-hash": "5f7df79d84",
+                "qualification": "20261106-stdupgrade",
+                "release": "b"
+              }
+            },
+            "spec": {
+              "affinity": {
+                "nodeAffinity": {
+                  "requiredDuringSchedulingIgnoredDuringExecution": {
+                    "nodeSelectorTerms": [
+                      {
+                        "matchFields": [
+                          {
+                            "key": "metadata.name",
+                            "operator": "In",
+                            "values": [
+                              "c9k-stdupgrade-20261106"
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                }
+              },
+              "containers": [
+                {
+                  "image": "https://192.168.129.111:18479/b.tar",
+                  "imagePullPolicy": "Always",
+                  "name": "agent",
+                  "ports": [
+                    {
+                      "containerPort": 8080,
+                      "protocol": "TCP"
+                    }
+                  ],
+                  "resources": {
+                    "limits": {
+                      "memory": "128Mi"
+                    },
+                    "requests": {
+                      "memory": "128Mi"
+                    }
+                  },
+                  "terminationMessagePath": "/dev/termination-log",
+                  "terminationMessagePolicy": "File"
+                }
+              ],
+              "dnsPolicy": "ClusterFirst",
+              "restartPolicy": "Always",
+              "schedulerName": "default-scheduler",
+              "securityContext": {},
+              "terminationGracePeriodSeconds": 30,
+              "tolerations": [
+                {
+                  "effect": "NoSchedule",
+                  "key": "cisco.vk/device",
+                  "operator": "Exists"
+                }
+              ]
+            }
+          }
+        },
+        "status": {
+          "availableReplicas": 1,
+          "fullyLabeledReplicas": 1,
+          "observedGeneration": 5,
+          "readyReplicas": 1,
+          "replicas": 1,
+          "terminatingReplicas": 0
+        }
+      }
+    ],
+    "kind": "List",
+    "metadata": {
+      "resourceVersion": ""
+    }
+  }
+}

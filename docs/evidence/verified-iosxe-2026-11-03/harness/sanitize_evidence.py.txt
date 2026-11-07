@@ -1,0 +1,18 @@
+"""Allowlisted lab evidence export; never export Secrets or kubeconfig."""
+import pathlib,json,re,sys
+SRC=pathlib.Path('/private/tmp/cvk-pending-20261103');OUT=pathlib.Path('/Users/johalley/Git/cisco-virtual-kubelet/docs/evidence/verified-iosxe-2026-11-03')
+def clean(v):
+ if isinstance(v,list):return [clean(x) for x in v]
+ if isinstance(v,dict):return {k:clean(x) for k,x in v.items() if k not in ['managedFields','kubectl.kubernetes.io/last-applied-configuration']}
+ return v
+def export(name):
+ d=clean(json.loads((SRC/name).read_text()))
+ if isinstance(d,dict) and 'devices' in d:
+  for device in d['devices']:
+   if device.get('status'):
+    device['status']={k:v for k,v in device['status'].items() if k in ['phase','conditions','nodeIdentity','workerRevision','networkWorkerRevision','workerCapabilities']}
+  for a in d.get('nativeApps',[]):
+   if not a.get('appID','').startswith('cvk0000_'):a.pop('networkInterfaces',None)
+ text=json.dumps(d,indent=2)+'\n';assert not re.search(r'-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----|client-key-data|password[=:\s]+cisco|Authorization:\s*(?:Basic|Bearer)',text,re.I),name
+ (OUT/name).write_text(text)
+for name in sys.argv[1:]:export(name)

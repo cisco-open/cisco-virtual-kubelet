@@ -31,6 +31,38 @@ type MutationGuard = func(context.Context) (context.Context, func(error), error)
 // function returns normally. A panic must not release uncertain device work.
 var ErrMutationIncomplete = errors.New("device mutation did not return normally")
 
+// NoDeviceMutation marks a failure detected before any device mutation was
+// attempted within the guarded operation. Only trusted preflight code may use
+// this classification; an RPC timeout, cancellation or failed transfer is not
+// evidence that the device did nothing.
+func NoDeviceMutation(err error) error {
+	if err == nil {
+		return nil
+	}
+	return noDeviceMutationError{err}
+}
+
+type noDeviceMutationError struct{ error }
+
+func (e noDeviceMutationError) Unwrap() error { return e.error }
+
+func IsNoDeviceMutation(err error) bool {
+	// Virtual-kubelet's invalid-input wrapper exposes Cause rather than
+	// Unwrap. Preserve the typed outcome across that boundary as well as Go
+	// wrappers. Bound traversal so a broken legacy wrapper cannot loop forever.
+	for depth := 0; err != nil && depth < 32; depth++ {
+		if _, rejected := err.(noDeviceMutationError); rejected {
+			return true
+		}
+		if cause, ok := err.(interface{ Cause() error }); ok {
+			err = cause.Cause()
+		} else {
+			err = errors.Unwrap(err)
+		}
+	}
+	return false
+}
+
 type mutationGuardKey struct{}
 
 // WithMutationGuard makes a guard available during driver construction, before

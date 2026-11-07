@@ -1,0 +1,27 @@
+{
+  "generatedAtUTC": "2026-11-06T08:27:18.772406+00:00",
+  "nonce": "f5ec3ffe5700",
+  "certificates": {
+    "root": {
+      "sha256": "d2933a515b3278e4e46cfc9bb60bad980a0dcc16d9201e57d6bab7c7fb8d9240",
+      "serialHex": "240d11699380c99ac0d44f9151f5a70d8d596b30",
+      "subject": "CN=CVK Standard upgrade root f5ec3ffe5700",
+      "issuer": "CN=CVK Standard upgrade root f5ec3ffe5700",
+      "validFromUTC": "2026-11-05T08:27:18+00:00",
+      "validUntilUTC": "2026-11-13T08:27:18+00:00"
+    },
+    "leaf": {
+      "sha256": "7a5746f4a1a5e19716bb73f7c2f4e063118e1009cc2188e41d11e88a887a44ab",
+      "serialHex": "4644ae61f391b5e51bd68d7006d1c531eb7c99fc",
+      "subject": "CN=192.168.129.111",
+      "issuer": "CN=CVK Standard upgrade root f5ec3ffe5700",
+      "validFromUTC": "2026-11-05T08:27:18+00:00",
+      "validUntilUTC": "2026-11-13T08:27:18+00:00"
+    }
+  },
+  "ephemeralPrivateKeys": [
+    "root.key",
+    "leaf.key"
+  ],
+  "purpose": "Ordinary valid HTTPS origin; failure injection is HTTP 404, not certificate rejection"
+}

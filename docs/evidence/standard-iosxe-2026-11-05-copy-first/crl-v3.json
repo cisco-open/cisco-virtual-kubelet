@@ -1,0 +1,14 @@
+{
+  "publishedAtUTC": "2026-11-06T07:14:11.444380+00:00",
+  "version": 3,
+  "sha256": "6bd93ea7b492a0cdc2ca2ee8abfb372d91b1a75ec55e034c2b4b2827f76ea070",
+  "bytes": 487,
+  "lastUpdateUTC": "2026-11-06T07:14:06+00:00",
+  "nextUpdateUTC": "2026-11-07T07:14:11+00:00",
+  "revokedSerialsHex": [
+    "ccc3b327a765a1c5a667f0b1d535f8028e4f879"
+  ],
+  "certificateOrPolicyChanged": false,
+  "manualRefreshOrFlushIssued": false,
+  "reason": "Renewal after preserved admission-stop pause; same revoked intermediate serial"
+}

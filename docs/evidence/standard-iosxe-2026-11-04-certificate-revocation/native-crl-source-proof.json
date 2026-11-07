@@ -1,0 +1,24 @@
+{
+  "collectedAtUTC": "2026-11-04T10:19:13.556319+00:00",
+  "commands": [
+    {
+      "command": "show ip interface brief | include 192.168.129.2",
+      "output": "show ip interface brief | include 192.168.129.2\nVlan129                192.168.129.2   YES NVRAM  up                    up      \nEdge-9K"
+    },
+    {
+      "command": "show ip route 192.168.129.111",
+      "output": "show ip route 192.168.129.111\nRouting entry for 192.168.129.0/24\n  Known via \"connected\", distance 0, metric 0 (connected, via interface)\n  Routing Descriptor Blocks:\n  * directly connected, via Vlan129\n      Route metric is 0, traffic share count is 1\nEdge-9K"
+    },
+    {
+      "command": "show crypto pki crls",
+      "output": "show crypto pki crls\nCRL Issuer Name: \n    cn=CVK revoke leaf-root 4723f9294e02\n    LastUpdate: 10:11:33 UTC Nov 4 2026\n    NextUpdate: 10:16:33 UTC Nov 6 2026\n\n    CRL downloaded at: 10:17:36 UTC Nov 4 2026\n\n    Retrieved from CRL Distribution Point: \n      http://192.168.129.111:18464/leaf-root.crl\n\n CRL DER is 481 bytes\n CRL is stored in parsed CRL cache\n\n\nParsed CRL cache current size is 481 bytes\nParsed CRL cache maximum size is 65536 bytes\n\nEdge-9K"
+    }
+  ],
+  "attribution": {
+    "packageSourceIPv4": "10.1.1.1",
+    "CRLSourceIPv4": "192.168.129.2",
+    "CRLInterface": "Vlan129",
+    "samePinnedC9K": true,
+    "readOnly": true
+  }
+}

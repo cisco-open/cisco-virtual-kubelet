@@ -1,0 +1,22 @@
+{
+  "atUTC": "2026-11-03T19:22:17.060332+00:00",
+  "testClient": "ux-agx Python SSL; separate from C9K results",
+  "cases": [
+    {
+      "case": "valid",
+      "accepted": true
+    },
+    {
+      "case": "expired",
+      "accepted": false,
+      "verificationCode": 10,
+      "verificationMessage": "certificate has expired"
+    },
+    {
+      "case": "future",
+      "accepted": false,
+      "verificationCode": 9,
+      "verificationMessage": "certificate is not yet valid"
+    }
+  ]
+}

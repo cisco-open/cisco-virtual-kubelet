@@ -1,0 +1,9 @@
+{
+  "atUTC": "2026-11-04T11:05:28.009021+00:00",
+  "case": "intermediate",
+  "accepted": false,
+  "CRLChecking": true,
+  "verificationCode": 23,
+  "verificationMessage": "certificate revoked",
+  "rootCertificate": "chain-root"
+}

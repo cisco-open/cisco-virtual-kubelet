@@ -1,0 +1,49 @@
+{
+  "collectedAtUTC": "2026-11-02T22:22:02.670144+00:00",
+  "commands": [
+    {
+      "command": "configure terminal",
+      "output": "configure terminal\nEnter configuration commands, one per line.  End with CNTL/Z.\nEdge-9K(config)"
+    },
+    {
+      "command": "ip http secure-trustpoint TP-self-signed-806566997",
+      "output": "ip http secure-trustpoint TP-self-signed-806566997\nEdge-9K(config)"
+    },
+    {
+      "command": "no ip http secure-server",
+      "output": "no ip http secure-server\nEdge-9K(config)"
+    },
+    {
+      "command": "ip http secure-server",
+      "output": "ip http secure-server\nEdge-9K(config)"
+    },
+    {
+      "command": "end",
+      "output": "end\nEdge-9K"
+    },
+    {
+      "command": "show ip http server status | include trustpoint|secure server status",
+      "output": "show ip http server status | include trustpoint|secure server status\nHTTP secure server status: Enabled\nHTTP secure server trustpoint: TP-self-signed-806566997\nHTTP secure server peer validation trustpoint: \nEdge-9K"
+    },
+    {
+      "command": "configure terminal",
+      "output": "configure terminal\nEnter configuration commands, one per line.  End with CNTL/Z.\nEdge-9K(config)"
+    },
+    {
+      "command": "no ip http secure-trustpoint TP-self-signed-806566997",
+      "output": "no ip http secure-trustpoint TP-self-signed-806566997\nEdge-9K(config)"
+    },
+    {
+      "command": "end",
+      "output": "end\nEdge-9K"
+    },
+    {
+      "command": "show ip http server status | include trustpoint|secure server status",
+      "output": "show ip http server status | include trustpoint|secure server status\nHTTP secure server status: Enabled\nHTTP secure server trustpoint: cvk-gnoi-20260904\nHTTP secure server peer validation trustpoint: \nEdge-9K"
+    },
+    {
+      "command": "show running-config | include ^ip http secure-trustpoint|^ip http client secure-trustpoint",
+      "output": "show running-config | include ^ip http secure-trustpoint|^ip http client secure-trustpoint\nip http client secure-trustpoint IRIS\nEdge-9K"
+    }
+  ]
+}

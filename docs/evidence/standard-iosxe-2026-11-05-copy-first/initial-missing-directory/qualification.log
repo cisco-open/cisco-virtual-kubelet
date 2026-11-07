@@ -1,0 +1,7 @@
+PUBLISHED CRL {"publishedAtUTC": "2026-11-05T20:19:04.898271+00:00", "version": 1, "sha256": "4d37741f5a3db22dc626992d5e6ba18c8ec7de6557bd47b5112cc71aab784dc1", "bytes": 432, "lastUpdateUTC": "2026-11-05T20:18:59+00:00", "nextUpdateUTC": "2026-11-05T20:29:04+00:00", "revokedSerialsHex": [], "certificateOrPolicyChanged": false, "manualRefreshOrFlushIssued": false}
+PASS offline chain controls v 1
+PASS read-only native PKI baseline published 1
+deployment.apps/cvk-stdcopyfix-fixture created
+{"atUTC": "2026-11-05T20:19:10.386785+00:00", "label": "valid", "release": "STD-COPYFIX-VALID-20261105-0609ed4e6d25", "podUIDs": ["b8f0baed-b618-4126-912c-87e96d318700"], "nativeStates": {"iris": "RUNNING", "c9ktest": "DEPLOYED"}, "ready": false, "httpReleaseConfirmed": false, "oldNativeAppsAbsent": false, "artifactJournalCount": 0}
+{"atUTC": "2026-11-05T20:19:37.630447+00:00", "label": "valid", "release": "STD-COPYFIX-VALID-20261105-0609ed4e6d25", "podUIDs": ["b8f0baed-b618-4126-912c-87e96d318700"], "nativeStates": {"iris": "RUNNING", "c9ktest": "DEPLOYED"}, "ready": false, "httpReleaseConfirmed": false, "oldNativeAppsAbsent": false, "artifactJournalCount": 0}
+{"atUTC": "2026-11-05T20:20:04.619529+00:00", "label": "valid", "release": "STD-COPYFIX-VALID-20261105-0609ed4e6d25", "podUIDs": ["b8f0baed-b618-4126-912c-87e96d318700"], "nativeStates": {"iris": "RUNNING", "c9ktest": "DEPLOYED"}, "ready": false, "httpReleaseConfirmed": false, "oldNativeAppsAbsent": false, "artifactJournalCount": 0}

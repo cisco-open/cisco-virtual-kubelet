@@ -1,0 +1,49 @@
+{
+  "atUTC": "2026-11-05T20:06:25.338962+00:00",
+  "testOnly": true,
+  "installsIssued": 0,
+  "destination": "flash:cvkstd-copy-probe-20261105.tar",
+  "managementSelectorRestored": true,
+  "commands": [
+    {
+      "command": "terminal length 0",
+      "output": "terminal length 0\nEdge-9K"
+    },
+    {
+      "command": "terminal width 511",
+      "output": "terminal width 511\nEdge-9K"
+    },
+    {
+      "command": "show app-hosting list",
+      "output": "show app-hosting list\nApp id                                   State\n---------------------------------------------------------\niris                                     RUNNING\nc9ktest                                  DEPLOYED\n\nEdge-9K"
+    },
+    {
+      "command": "show ip http server status | include trustpoint",
+      "output": "show ip http server status | include trustpoint\nHTTP secure server trustpoint: TP-self-signed-806566997\nHTTP secure server peer validation trustpoint: \nEdge-9K"
+    },
+    {
+      "command": "configure terminal",
+      "output": "configure terminal\nEnter configuration commands, one per line.  End with CNTL/Z.\nEdge-9K(config)"
+    },
+    {
+      "command": "ip http secure-trustpoint cvk-gnoi-20260904",
+      "output": "ip http secure-trustpoint cvk-gnoi-20260904\nEdge-9K(config)"
+    },
+    {
+      "command": "end",
+      "output": "end\nEdge-9K"
+    },
+    {
+      "command": "configure terminal",
+      "output": "configure terminal\nEnter configuration commands, one per line.  End with CNTL/Z.\nEdge-9K(config)"
+    },
+    {
+      "command": "ip http secure-trustpoint TP-self-signed-806566997",
+      "output": "ip http secure-trustpoint TP-self-signed-806566997\nEdge-9K(config)"
+    },
+    {
+      "command": "end",
+      "output": "end\nEdge-9K"
+    }
+  ]
+}

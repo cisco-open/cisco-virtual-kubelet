@@ -1,0 +1,94 @@
+{
+  "executionComplete": true,
+  "passed": true,
+  "startedAtUTC": "2026-11-06T08:28:14.516515+00:00",
+  "finishedAtUTC": "2026-11-06T09:13:56.377856+00:00",
+  "initialDeploymentA": true,
+  "upgradeAToB": true,
+  "historyRollbackBToA": true,
+  "failedUpgradeDownloadBlocked": true,
+  "historyRollbackAfterFailedUpgrade": true,
+  "retryUpgradeAfterSourceRepair": true,
+  "finalHistoryRollbackA": true,
+  "normalDeletionPassed": true,
+  "deploymentUID": "6d61f17e-a446-4456-8bee-163e6dec33b0",
+  "cases": [
+    {
+      "label": "initial-a",
+      "phase": "a",
+      "release": "STD-UPGRADE-A-20261106-8f0d26f6c543",
+      "podUID": "257e4a85-d38b-4f10-b308-625b1e837360",
+      "revision": "1",
+      "deploymentUID": "6d61f17e-a446-4456-8bee-163e6dec33b0",
+      "generation": 1,
+      "atUTC": "2026-11-06T08:29:38.543044+00:00"
+    },
+    {
+      "label": "upgrade-b",
+      "phase": "b",
+      "release": "STD-UPGRADE-B-20261106-8f0d26f6c543",
+      "podUID": "92d6c115-029f-423e-b178-0e7e78c01f5b",
+      "revision": "2",
+      "deploymentUID": "6d61f17e-a446-4456-8bee-163e6dec33b0",
+      "generation": 2,
+      "atUTC": "2026-11-06T08:32:06.291770+00:00"
+    },
+    {
+      "label": "rollback-a",
+      "phase": "a",
+      "release": "STD-UPGRADE-A-20261106-8f0d26f6c543",
+      "podUID": "5d78c63f-63ba-45a0-9f57-c732e3cd8549",
+      "revision": "3",
+      "deploymentUID": "6d61f17e-a446-4456-8bee-163e6dec33b0",
+      "generation": 3,
+      "atUTC": "2026-11-06T08:34:26.954467+00:00"
+    },
+    {
+      "label": "failed-upgrade-rollback-a",
+      "phase": "a",
+      "release": "STD-UPGRADE-A-20261106-8f0d26f6c543",
+      "podUID": "cc21816b-03f5-4484-8fd2-56056836cbd4",
+      "revision": "5",
+      "deploymentUID": "6d61f17e-a446-4456-8bee-163e6dec33b0",
+      "generation": 5,
+      "atUTC": "2026-11-06T09:07:57.080356+00:00"
+    },
+    {
+      "label": "retry-upgrade-b",
+      "phase": "b",
+      "release": "STD-UPGRADE-B-20261106-8f0d26f6c543",
+      "podUID": "593bc867-5856-4688-8003-bb8cae0b7ada",
+      "revision": "6",
+      "deploymentUID": "6d61f17e-a446-4456-8bee-163e6dec33b0",
+      "generation": 6,
+      "atUTC": "2026-11-06T09:10:27.368912+00:00"
+    },
+    {
+      "label": "final-rollback-a",
+      "phase": "a",
+      "release": "STD-UPGRADE-A-20261106-8f0d26f6c543",
+      "podUID": "351ffc54-c05c-4c97-b55b-c8d445f019ac",
+      "revision": "7",
+      "deploymentUID": "6d61f17e-a446-4456-8bee-163e6dec33b0",
+      "generation": 7,
+      "atUTC": "2026-11-06T09:13:02.149336+00:00"
+    }
+  ],
+  "failedPodUID": "667ca5e8-001e-4cf6-8b65-484ddedf68e4",
+  "podUIDs": [
+    "257e4a85-d38b-4f10-b308-625b1e837360",
+    "351ffc54-c05c-4c97-b55b-c8d445f019ac",
+    "593bc867-5856-4688-8003-bb8cae0b7ada",
+    "5d78c63f-63ba-45a0-9f57-c732e3cd8549",
+    "667ca5e8-001e-4cf6-8b65-484ddedf68e4",
+    "92d6c115-029f-423e-b178-0e7e78c01f5b",
+    "cc21816b-03f5-4484-8fd2-56056836cbd4"
+  ],
+  "manualLeaseOrJournalChanges": false,
+  "globalImageCachePruned": false,
+  "artifactMetadataAndJournalOmitted": true,
+  "defaultMode": "Standard",
+  "governed": "deferred",
+  "strategy": "Recreate",
+  "baselineApplicationPreservationRequired": true
+}

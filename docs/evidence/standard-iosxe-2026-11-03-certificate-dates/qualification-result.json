@@ -1,0 +1,42 @@
+{
+  "executionComplete": true,
+  "rejectionQualified": true,
+  "startedAtUTC": "2026-11-03T19:34:39.896050+00:00",
+  "finishedAtUTC": "2026-11-03T20:48:42.144558+00:00",
+  "defaultMode": "Standard",
+  "governed": "deferred",
+  "cases": [
+    {
+      "case": "expired",
+      "startedAtUTC": "2026-11-03T19:37:07.927979+00:00",
+      "finishedAtUTC": "2026-11-03T20:12:55.267600+00:00",
+      "classification": "invalid-certificate-rejected",
+      "rejectionQualified": true,
+      "appHealthyUnderInvalidCertificate": false,
+      "recoveryPassed": true,
+      "normalDeletionPassed": true,
+      "packageURL": "https://192.168.129.111:18453/expired-agent-a.tar"
+    },
+    {
+      "case": "future",
+      "startedAtUTC": "2026-11-03T20:12:55.267724+00:00",
+      "finishedAtUTC": "2026-11-03T20:48:42.144484+00:00",
+      "classification": "invalid-certificate-rejected",
+      "rejectionQualified": true,
+      "appHealthyUnderInvalidCertificate": false,
+      "recoveryPassed": true,
+      "normalDeletionPassed": true,
+      "packageURL": "https://192.168.129.111:18454/future-agent-a.tar"
+    }
+  ],
+  "podUIDs": [
+    "03217f41-a16c-406d-987d-3b1841b4a05a",
+    "57adb179-a514-4f23-a632-a9681801aa5d",
+    "7371b2b7-d5ae-42aa-a6f5-a39e1741bd1a"
+  ],
+  "positiveControlPassed": true,
+  "metadataAndJournalOmitted": true,
+  "artifactJournalAndGrantCount": 0,
+  "manualLeaseOrJournalEdits": false,
+  "candidateChanged": false
+}

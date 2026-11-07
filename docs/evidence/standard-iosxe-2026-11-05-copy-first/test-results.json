@@ -1,0 +1,10 @@
+{
+  "passed": true,
+  "command": "go test -race ./...",
+  "packagesPassed": 62,
+  "logFile": "race-root-path.log",
+  "logSHA256": "f92b003bf44192bab074387efde0faf940d4763f207a02a46998c6b830447383",
+  "linuxBuildPassed": true,
+  "binarySHA256": "b55c3b3f6aedaa331a4431b47edc49546cc4e4b19f6541d3a0af1cf67e2037c5",
+  "atUTC": "2026-11-05T20:22:06.281874+00:00"
+}

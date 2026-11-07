@@ -1,0 +1,42 @@
+import pathlib,subprocess,json,time,datetime,os,re,hashlib,pexpect,socket
+R=pathlib.Path('/tmp/cvk-replies-20261103');K=['kubectl','--kubeconfig',str(R/'kubeconfig')];NS='cvk-replies-20261103'
+result=json.loads((R/'qualification-result.json').read_text());assert result['passed'] and len(result['cases'])==2
+final=json.loads((R/'snapshot-start-normal-cleanup.json').read_text());assert not final['pods'];records=[json.loads(v) for j in final['journals'] for v in j.get('data',{}).values()];assert len(records)==2 and all(r['phase']=='deleted' for r in records);assert {r['podUID'] for r in records}=={c['podUID'] for c in result['cases']};paths=[r['stagedPath'] for r in records]
+leases=json.loads(subprocess.check_output(K+['-n',NS,'get','leases','-o','json'],text=True));assert all(not x.get('spec',{}).get('holderIdentity') for x in leases['items'] if x.get('metadata',{}).get('labels',{}).get('cisco.vk/family')=='device-disruptive-mutation');(R/'lease-after-normal-cleanup.json').write_text(json.dumps(leases,indent=2)+'\n')
+report={'startedAtUTC':datetime.datetime.now(datetime.timezone.utc).isoformat(),'passed':False,'fixturePodUIDs':[c['podUID'] for c in result['cases']],'ownedFlashPaths':paths,'normalDeletionAndTombstone':True,'leaseManuallyModified':False,'commands':[]}
+name='cvk-replies-k3s-20261103';d=json.loads(subprocess.check_output(['docker','inspect',name],text=True))[0];assert d['Config']['Labels'].get('apphosting.cisco.com/qualification')=='20261103-replies';subprocess.run(['docker','stop','--time','60',name],check=True,capture_output=True)
+p=pexpect.spawn('ssh',['-o','StrictHostKeyChecking=yes','-o','UserKnownHostsFile=/tmp/cvk-verified-qual-20261101/switch_known_hosts','-o','GlobalKnownHostsFile=/dev/null','-o','HostKeyAlgorithms=rsa-sha2-512,rsa-sha2-256','cisco@10.1.1.1'],encoding='utf-8',timeout=120)
+try:
+ p.expect('(?i)password:');p.sendline(os.environ['CVK_QUAL_DEVICE_PASSWORD']);p.expect(r'[>#] ?$')
+ for c in ['terminal length 0','terminal width 511']:p.sendline(c);p.expect(r'[>#] ?$')
+ def cli(c,confirmation=False):
+  p.sendline(c)
+  if confirmation:
+   i=p.expect([r'(?i)\[yes/no\]\s*:',r'[>#] ?$']);output=p.before
+   if i==0:p.sendline('yes');p.expect(r'[>#] ?$');output+='[confirmed run-owned trustpoint removal]\n'+p.before
+  else:p.expect(r'[>#] ?$');output=p.before
+  output=output.replace('\r','');report['commands'].append({'command':c,'output':output});(R/'cleanup-progress.json').write_text(json.dumps(report,indent=2)+'\n');return output
+ inventory=cli('show app-hosting list');assert 'cvk0000_' not in inventory and re.search(r'^iris\s+RUNNING\s*$',inventory,re.M) and re.search(r'^c9ktest\s+DEPLOYED\s*$',inventory,re.M)
+ for path in paths:
+  assert re.fullmatch(r'flash:cvk-[a-f0-9]{16}-[a-f0-9]{64}\.tar',path)
+  listing=cli('dir '+path)
+  if re.search(r'\s-rw-\s',listing):cli('delete /force '+path)
+ for c in ['configure terminal','ip http secure-trustpoint TP-self-signed-806566997']:cli(c)
+ cli('no crypto pki trustpoint CVK-REPLIES-20261103',True);cli('end')
+ v=cli('show ip http server status | include trustpoint');assert 'TP-self-signed-806566997' in v
+ v=cli('show running-config | include ^ip http secure-trustpoint|^ip http client secure-trustpoint|^crypto pki trustpoint CVK-REPLIES-20261103');assert 'ip http secure-trustpoint TP-self-signed-806566997' in v and 'ip http client secure-trustpoint IRIS' in v and not re.search(r'^crypto pki trustpoint CVK-REPLIES-20261103',v,re.M)
+ v=cli('show app-hosting infra');assert 'CAF Health: Stable' in v and 'App signature verification: disabled' in v
+ for path in paths:
+  v=cli('dir '+path);assert not re.search(r'\s-rw-\s',v)
+ p.sendline('exit')
+finally:p.close(force=True)
+report['services']=[]
+for n in ['relay','store']:
+ pid=int((R/(n+'.pid')).read_text());p=pathlib.Path('/proc')/str(pid)/'cmdline'
+ if p.exists():assert str(R/(n+'.py')) in p.read_bytes().replace(b'\0',b' ').decode();os.kill(pid,15)
+ report['services'].append({'name':n,'pid':pid,'stopped':True})
+subprocess.run(['docker','rm',name],check=True,capture_output=True);time.sleep(1)
+report['listeners']={}
+for port in [16449,18443,18446]:
+ s=socket.socket();s.settimeout(1);host='172.17.0.1' if port==18446 else '127.0.0.1';report['listeners'][str(port)]=s.connect_ex((host,port))==0;s.close()
+assert not any(report['listeners'].values());node=next(n for n in json.loads(subprocess.check_output(['kubectl','get','nodes','-o','json'],text=True))['items'] if n['metadata']['name']=='cisco');assert any(c['type']=='Ready' and c['status']=='True' for c in node['status']['conditions']);report['sharedHostNode']={'name':'cisco','ready':True,'version':node['status']['nodeInfo']['kubeletVersion']};report['finishedAtUTC']=datetime.datetime.now(datetime.timezone.utc).isoformat();report['passed']=True;report['configurationDelta']='None relative to this run baseline: original explicit self-signed HTTPS selector, IRIS client trustpoint and signature policy restored. Isolated namespace NAT disappears with the owned container; no manual relay rules were added to the host; Docker removes its owned published API port with the container.';(R/'final-cleanup.json').write_text(json.dumps(report,indent=2)+'\n');print('PASS normal deletion, tombstone, lease release and complete baseline cleanup',flush=True)

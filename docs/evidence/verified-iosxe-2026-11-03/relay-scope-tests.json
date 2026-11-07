@@ -1,0 +1,46 @@
+{
+  "passed": true,
+  "cases": [
+    {
+      "case": "valid-install",
+      "passed": true
+    },
+    {
+      "case": "wrong-app",
+      "passed": true
+    },
+    {
+      "case": "global-policy",
+      "passed": true
+    },
+    {
+      "case": "valid-copy",
+      "passed": true
+    },
+    {
+      "case": "wrong-copy-target",
+      "passed": true
+    },
+    {
+      "case": "valid-config",
+      "passed": true
+    },
+    {
+      "case": "other-config",
+      "passed": true
+    },
+    {
+      "case": "multiple-config",
+      "passed": true
+    },
+    {
+      "case": "delete-other",
+      "passed": true
+    },
+    {
+      "case": "platform-write",
+      "passed": true
+    }
+  ],
+  "deviceRequestsSent": 0
+}

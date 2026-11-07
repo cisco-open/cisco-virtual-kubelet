@@ -1,0 +1,35 @@
+{
+  "createdAtUTC": "2026-11-04T19:13:22.328610+00:00",
+  "sourceSHA256": "bf62a13f8e3ce71cc3a1202f667cdd784ccb0df0376136c062a0d5d473fae4b1",
+  "compiler": "go version go1.26.7 darwin/arm64",
+  "phases": {
+    "valid": {
+      "release": "CRL-REFRESH-VALID-20261104-a674b004ffa2",
+      "repoTag": "cvk-crlrefresh-20261104/valid:a674b004ffa2",
+      "dockerConfigID": "sha256:566136233224ebd19be26097f714c608f87a9f1883d86d6f08a514840960244d",
+      "layerDiffID": "sha256:a82c55f1cbd185063600b52f0e50ef73637fd7a19009c588752defba1218cb41",
+      "binarySHA256": "52a0ddb2e956d9334ba5d90dbb75f57b1d77d0d0211ce94de55275e05ff654f9",
+      "packageSHA256": "65a25e7e47843a006247b3693aa510a1f835013c862c0de17a06e566d54b80e6",
+      "packageBytes": 5959680
+    },
+    "cached": {
+      "release": "CRL-REFRESH-CACHED-20261104-a674b004ffa2",
+      "repoTag": "cvk-crlrefresh-20261104/cached:a674b004ffa2",
+      "dockerConfigID": "sha256:97ef5fad6e24392f917b1edc4cc13db74bbabfc81c45dae05e2f1b75f64d6a66",
+      "layerDiffID": "sha256:3a3eb56ea37098cf24bb07f5ee48a75925b92e5ef56e4522d24f54b933ca3b03",
+      "binarySHA256": "b967debf0b04f5c478373ccfe1ba349bf52d87b5a1c0dbd64f57407d22d4eda6",
+      "packageSHA256": "4d5128dc9058b0ef82c9a903e9aee2cc3ed96e02e20c6eef998b945686125922",
+      "packageBytes": 5959680
+    },
+    "refresh": {
+      "release": "CRL-REFRESH-REFRESH-20261104-a674b004ffa2",
+      "repoTag": "cvk-crlrefresh-20261104/refresh:a674b004ffa2",
+      "dockerConfigID": "sha256:39643121a920aa28ee5c43cfb01986ecb3f2281f269b2eb0cbd10c1b0ce71972",
+      "layerDiffID": "sha256:bd59654f9c413a47229cfc48be9911c3ec5b6a91b76fb144fc18834b73855964",
+      "binarySHA256": "406060c4d355c065d585a51649df7d002dcbdb45a7bf758ab637020481064dec",
+      "packageSHA256": "0245198321583608464bf1bde4df461d73a16b81109de258127f9891100ae7d9",
+      "packageBytes": 5959680
+    }
+  },
+  "independentConfigAndLayerPerPhase": true
+}

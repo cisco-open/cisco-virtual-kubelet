@@ -1,0 +1,79 @@
+{
+  "atUTC": "2026-11-04T17:20:24.830249+00:00",
+  "commands": [
+    {
+      "command": "terminal length 0",
+      "output": "terminal length 0\nEdge-9K"
+    },
+    {
+      "command": "terminal width 511",
+      "output": "terminal width 511\nEdge-9K"
+    },
+    {
+      "command": "show app-hosting list",
+      "output": "show app-hosting list\nApp id                                   State\n---------------------------------------------------------\niris                                     RUNNING\nc9ktest                                  DEPLOYED\n\nEdge-9K"
+    },
+    {
+      "command": "show running-config all | section ^crypto pki trustpoint CVK-STDREVOKE",
+      "output": "show running-config all | section ^crypto pki trustpoint CVK-STDREVOKE\ncrypto pki trustpoint CVK-STDREVOKE-NONE-20261104\n enrollment retry count 999\n enrollment retry period 1\n enrollment terminal pem\n revocation-check none\n authorization username subjectname  \n authorization username subjectname  secondary\n hash sha512\ncrypto pki trustpoint CVK-STDREVOKE-LEAF-20261104\n enrollment retry count 999\n enrollment retry period 1\n enrollment terminal pem\n revocation-check crl\n authorization username subjectname  \n authorization username subjectname  secondary\n hash sha512\ncrypto pki trustpoint CVK-STDREVOKE-CHAIN-20261104\n enrollment retry count 999\n enrollment retry period 1\n enrollment terminal pem\n revocation-check crl\n authorization username subjectname  \n authorization username subjectname  secondary\n hash sha512\nEdge-9K"
+    },
+    {
+      "command": "configure terminal",
+      "output": "configure terminal\nEnter configuration commands, one per line.  End with CNTL/Z.\nEdge-9K(config)"
+    },
+    {
+      "command": "crypto pki trustpoint CVK-STDREVOKE-COLD-20261104",
+      "output": "crypto pki trustpoint CVK-STDREVOKE-COLD-20261104\nEdge-9K(ca-trustpoint)"
+    },
+    {
+      "command": "enrollment terminal pem",
+      "output": "enrollment terminal pem\nEdge-9K(ca-trustpoint)"
+    },
+    {
+      "command": "revocation-check none",
+      "output": "revocation-check none\nEdge-9K(ca-trustpoint)"
+    },
+    {
+      "command": "exit",
+      "output": "exit\nEdge-9K(config)"
+    },
+    {
+      "command": "authenticate CVK-STDREVOKE-COLD-20261104 using cold-root.crt",
+      "output": "crypto pki authenticate CVK-STDREVOKE-COLD-20261104\n\nEnter the base\n 64 encoded CA certificate.\nEnd with a blank line or the word \"quit\" on a line by itself\n\n-----BEGIN CERTIFICATE-----\nMIIDTDCCAjSgAwIBAgIUNw6VfKc5DVFQwW/hSPwLVXDbYHowDQYJKoZIhvcNAQEL\nBQAwLDEqMCgGA1UEAwwhQ1ZLIHJldm9rZSBjb2xkLXJvb3QgMDY3NzUzNDgxNjc0\nMB4XDTI2MTEwMzE3MjAxOFoXDTI2MTIwNDE3MjAxOFowLDEqMCgGA1UEAwwhQ1ZL\nIHJldm9rZSBjb2xkLXJvb3QgMDY3NzUzNDgxNjc0MIIBIjANBgkqhkiG9w0BAQEF\nAAOCAQ8AMIIBCgKCAQEA+22ddJzEJF/YCu9yWYJ60njaswQMqGqSbyKDiP1Y+guI\nvQH6NX/yDw351Cc496zEt2p34r9jFCaasJY+Z6sqrDFiufnwD4cDIsYcWPudSo6O\n/7y2GITxA4woWwAlscU6udXpGMGCii2Vh6x1FyF/07X9j81cCc+ftees9U8nGdvp\nJyC8XZl6xU8oQ8xL8yP/NYem9EvGAc/DqMdvlg265af27Zd371WtQzh2aHq15PmR\nOJhAhIwBBqAhhoA56pSQPGCCdqz3Lva75wLAi/WwIGADOUA04Z4YCMDocKcDGbl8\noUlyIxMQU2jLczrxRoebiRaM6F6R9IWVvSyxcPo3AQIDAQABo2YwZDASBgNVHRMB\nAf8ECDAGAQH/AgEBMB0GA1UdDgQWBBTlkYHMFL+Ye1s43RX6AjES9ESOhDAfBgNV\nHSMEGDAWgBTlkYHMFL+Ye1s43RX6AjES9ESOhDAOBgNVHQ8BAf8EBAMCAQYwDQYJ\nKoZIhvcNAQELBQADggEBAAIQCuRvEl1hr4mUWA1w7kXyPuIgjPuHbfrMZd4d6+a+\n9RRnjXLjgqUugLg1m9jFqySTFEe0TdjLDRb1OaGKEa45xzk1caMfF2K4SHeeBbv5\nCVV4VklT+Zk1Lm27win0vxLI853cCBbXSXu/9HAYrGy/EC/0leVFGs/I2sBg6FPY\nrINvNadDI0iXpeAUusKIxk7oUmHI9is8AgfsJxgtq8lnD2WQdiUlCVsJIyi5RoVb\n5OspVpVOrZNO6fk93iQeDsN4/mG60iXF/LNi/CzaBzqGNy+4A3kTymQL4c6jkC+i\nFJ20Qu6SgW9K2omhJscIg+2kfDNSqPBGecS2Xv1LR7E=\n-----END CERTIFICATE-----\nquit\nCertificate has the following attributes:\n       Fingerprint MD5: 9FD2E6AD 195E7249 F1E1B503 E4854D60 \n      Fingerprint SHA1: 80D80E67 0901D80B 0A168A4F B92755B7 D6FA11FA \n\n% Do you accept this certificate? [yes/no]:\n[accepted run-owned CA import/overwrite]\n yes\nTrustpoint CA certificate accepted.\n% Certificate successfully imported\n\nEdge-9K(config)#"
+    },
+    {
+      "command": "crypto pki trustpoint CVK-STDREVOKE-COLD-20261104",
+      "output": "crypto pki trustpoint CVK-STDREVOKE-COLD-20261104\nEdge-9K(ca-trustpoint)"
+    },
+    {
+      "command": "revocation-check crl",
+      "output": "revocation-check crl\nEdge-9K(ca-trustpoint)"
+    },
+    {
+      "command": "exit",
+      "output": "exit\nEdge-9K(config)"
+    },
+    {
+      "command": "end",
+      "output": "end\nEdge-9K"
+    },
+    {
+      "command": "show crypto pki certificates pem CVK-STDREVOKE-COLD-20261104",
+      "output": "show crypto pki certificates pem CVK-STDREVOKE-COLD-20261104\n------Trustpoint: CVK-STDREVOKE-COLD-20261104------\n% The specified trustpoint is not enrolled (CVK-STDREVOKE-COLD-20261104).\n% Only export the CA certificate in PEM format.\n% CA certificate:\n-----BEGIN CERTIFICATE-----\nMIIDTDCCAjSgAwIBAgIUNw6VfKc5DVFQwW/hSPwLVXDbYHowDQYJKoZIhvcNAQEL\nBQAwLDEqMCgGA1UEAwwhQ1ZLIHJldm9rZSBjb2xkLXJvb3QgMDY3NzUzNDgxNjc0\nMB4XDTI2MTEwMzE3MjAxOFoXDTI2MTIwNDE3MjAxOFowLDEqMCgGA1UEAwwhQ1ZL\nIHJldm9rZSBjb2xkLXJvb3QgMDY3NzUzNDgxNjc0MIIBIjANBgkqhkiG9w0BAQEF\nAAOCAQ8AMIIBCgKCAQEA+22ddJzEJF/YCu9yWYJ60njaswQMqGqSbyKDiP1Y+guI\nvQH6NX/yDw351Cc496zEt2p34r9jFCaasJY+Z6sqrDFiufnwD4cDIsYcWPudSo6O\n/7y2GITxA4woWwAlscU6udXpGMGCii2Vh6x1FyF/07X9j81cCc+ftees9U8nGdvp\nJyC8XZl6xU8oQ8xL8yP/NYem9EvGAc/DqMdvlg265af27Zd371WtQzh2aHq15PmR\nOJhAhIwBBqAhhoA56pSQPGCCdqz3Lva75wLAi/WwIGADOUA04Z4YCMDocKcDGbl8\noUlyIxMQU2jLczrxRoebiRaM6F6R9IWVvSyxcPo3AQIDAQABo2YwZDASBgNVHRMB\nAf8ECDAGAQH/AgEBMB0GA1UdDgQWBBTlkYHMFL+Ye1s43RX6AjES9ESOhDAfBgNV\nHSMEGDAWgBTlkYHMFL+Ye1s43RX6AjES9ESOhDAOBgNVHQ8BAf8EBAMCAQYwDQYJ\nKoZIhvcNAQELBQADggEBAAIQCuRvEl1hr4mUWA1w7kXyPuIgjPuHbfrMZd4d6+a+\n9RRnjXLjgqUugLg1m9jFqySTFEe0TdjLDRb1OaGKEa45xzk1caMfF2K4SHeeBbv5\nCVV4VklT+Zk1Lm27win0vxLI853cCBbXSXu/9HAYrGy/EC/0leVFGs/I2sBg6FPY\nrINvNadDI0iXpeAUusKIxk7oUmHI9is8AgfsJxgtq8lnD2WQdiUlCVsJIyi5RoVb\n5OspVpVOrZNO6fk93iQeDsN4/mG60iXF/LNi/CzaBzqGNy+4A3kTymQL4c6jkC+i\nFJ20Qu6SgW9K2omhJscIg+2kfDNSqPBGecS2Xv1LR7E=\n-----END CERTIFICATE-----\n\nEdge-9K"
+    },
+    {
+      "command": "show running-config all | section ^crypto pki trustpoint CVK-STDREVOKE",
+      "output": "show running-config all | section ^crypto pki trustpoint CVK-STDREVOKE\ncrypto pki trustpoint CVK-STDREVOKE-NONE-20261104\n enrollment retry count 999\n enrollment retry period 1\n enrollment terminal pem\n revocation-check none\n authorization username subjectname  \n authorization username subjectname  secondary\n hash sha512\ncrypto pki trustpoint CVK-STDREVOKE-LEAF-20261104\n enrollment retry count 999\n enrollment retry period 1\n enrollment terminal pem\n revocation-check crl\n authorization username subjectname  \n authorization username subjectname  secondary\n hash sha512\ncrypto pki trustpoint CVK-STDREVOKE-CHAIN-20261104\n enrollment retry count 999\n enrollment retry period 1\n enrollment terminal pem\n revocation-check crl\n authorization username subjectname  \n authorization username subjectname  secondary\n hash sha512\ncrypto pki trustpoint CVK-STDREVOKE-COLD-20261104\n enrollment retry count 999\n enrollment retry period 1\n enrollment terminal pem\n revocation-check crl\n hash sha512\nEdge-9K"
+    }
+  ],
+  "certificateProof": {
+    "trustpoint": "CVK-STDREVOKE-COLD-20261104",
+    "certificate": "cold-root",
+    "sha256": "d89351b734c50d7c6f67dc7b95430d3c2edeb4d90cd3b98c05513e81e0d69567",
+    "nativeCertificateMatched": true
+  },
+  "rootOnlyImported": true,
+  "CRLCacheCleared": false,
+  "existingTrustpointsChanged": false,
+  "clockChanged": false
+}

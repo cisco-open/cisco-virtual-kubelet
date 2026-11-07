@@ -1,0 +1,37 @@
+"""Run only after normal workload deletion; remove exclusively owned resources."""
+import pathlib,subprocess,json,time,datetime,os,re,socket,pexpect
+R=pathlib.Path('/tmp/cvk-stdupgrade-20261106');q=json.loads((R/'qualification-result.json').read_text());assert q['executionComplete'] and q['normalDeletionPassed'];s=json.loads((R/'snapshot-final-normal-cleanup.json').read_text());assert not s['pods'] and not s['journals'] and {a['appID']:a['details'].get('state') for a in s['nativeApps']}=={'iris':'RUNNING','c9ktest':'DEPLOYED'}
+K=['kubectl','--kubeconfig',str(R/'kubeconfig')];ls=json.loads(subprocess.check_output(K+['-n','cvk-stdupgrade-20261106','get','leases','-o','json'],text=True));assert all(not v['spec'].get('holderIdentity') for v in ls['items'] if v.get('metadata',{}).get('labels',{}).get('cisco.vk/family')=='device-disruptive-mutation')
+name='cvk-stdupgrade-k3s-20261106';d=json.loads(subprocess.check_output(['docker','inspect',name],text=True))[0];assert d['Config']['Labels']['apphosting.cisco.com/qualification']=='20261106-stdupgrade';subprocess.run(['docker','stop','--time','60',name],check=True,capture_output=True)
+paths=['flash:/cvk-cvk0000_'+u.replace('-','')+'.tar' for u in q['podUIDs']];report={'startedAtUTC':datetime.datetime.now(datetime.timezone.utc).isoformat(),'passed':False,'commands':[],'ownedPaths':paths,'manualLeaseOrJournalChanges':False,'globalImageCachePruned':False};p=pexpect.spawn('ssh',['-o','StrictHostKeyChecking=yes','-o','UserKnownHostsFile=/tmp/cvk-verified-qual-20261101/switch_known_hosts','-o','GlobalKnownHostsFile=/dev/null','-o','HostKeyAlgorithms=rsa-sha2-512,rsa-sha2-256','cisco@10.1.1.1'],encoding='utf-8',timeout=120)
+try:
+ p.expect('(?i)password:');p.sendline(os.environ['CVK_QUAL_DEVICE_PASSWORD']);p.expect(r'[>#] ?$')
+ def cli(c,confirm=False):
+  p.sendline(c)
+  if confirm:
+   i=p.expect([r'(?i)\[yes/no\]\s*:',r'(?i)\[confirm\]',r'[>#] ?$']);v=p.before
+   if i in [0,1]:p.sendline('yes' if i==0 else '');p.expect(r'[>#] ?$');v+='[confirmed owned cleanup]\n'+p.before
+  else:p.expect(r'[>#] ?$');v=p.before
+  v=v.replace('\r','');report['commands'].append({'command':c,'output':v});(R/'cleanup-progress.json').write_text(json.dumps(report,indent=2)+'\n');assert '% Invalid' not in v,v;return v
+ cli('terminal length 0');cli('terminal width 511');v=cli('show app-hosting list');assert 'cvk0000_' not in v and re.search(r'^iris\s+RUNNING\s*$',v,re.M) and re.search(r'^c9ktest\s+DEPLOYED\s*$',v,re.M)
+ for path in paths:
+  assert re.fullmatch(r'flash:/cvk-cvk0000_[a-f0-9]{32}\.tar',path)
+  if re.search(r'\s-rw-\s',cli('dir '+path)):cli('delete /force '+path)
+ cli('configure terminal');cli('ip http secure-trustpoint TP-self-signed-806566997');cli('no crypto pki trustpoint CVK-STDUPGRADE-20261106',True);cli('end');v=cli('show ip http server status | include trustpoint');assert 'HTTP secure server trustpoint: TP-self-signed-806566997' in v;v=cli('show running-config | include ^ip http secure-trustpoint|^ip http client secure-trustpoint|^crypto pki trustpoint CVK-STDUPGRADE');assert 'ip http secure-trustpoint TP-self-signed-806566997' in v and 'ip http client secure-trustpoint IRIS' in v and not re.search(r'^crypto pki trustpoint CVK-STDUPGRADE',v,re.M)
+ report['CRLCacheManuallyCleared']=False
+ v=cli('show app-hosting list');assert 'cvk0000_' not in v and re.search(r'^iris\s+RUNNING\s*$',v,re.M) and re.search(r'^c9ktest\s+DEPLOYED\s*$',v,re.M);v=cli('show app-hosting infra');assert 'CAF Health: Stable' in v and 'App signature verification: disabled' in v
+ for path in paths:assert not re.search(r'\s-rw-\s',cli('dir '+path))
+ p.sendline('exit')
+finally:p.close(force=True)
+pid=int((R/'servers.pid').read_text());proc=pathlib.Path('/proc')/str(pid)/'cmdline'
+if proc.exists():assert str(R/'servers.py') in proc.read_bytes().replace(b'\0',b' ').decode();os.kill(pid,15)
+report['originImagesRemoved']=[]
+for phase,payload in json.loads((R/'payload-provenance.json').read_text())['phases'].items():
+ d=json.loads(subprocess.check_output(['docker','image','inspect',payload['repoTag']],text=True))[0];assert d['Id']==payload['dockerConfigID'] and d['Config']['Labels']['apphosting.cisco.com/qualification']=='20261106-stdupgrade';subprocess.run(['docker','image','rm',payload['repoTag']],check=True,capture_output=True);report['originImagesRemoved'].append(payload['repoTag'])
+subprocess.run(['docker','rm',name],check=True,capture_output=True);time.sleep(1);report['listeners']={}
+for port in [16459,18479,18480]:
+ sock=socket.socket();sock.settimeout(1);report['listeners'][str(port)]=sock.connect_ex(('127.0.0.1',port))==0;sock.close()
+assert not any(report['listeners'].values());node=next(n for n in json.loads(subprocess.check_output(['kubectl','get','nodes','-o','json'],text=True))['items'] if n['metadata']['name']=='cisco');assert any(v['type']=='Ready' and v['status']=='True' for v in node['status']['conditions']);report['sharedHostNodeReady']=True;report['ephemeralPrivateKeysRemoved']=[]
+for name in json.loads((R/'pki-manifest.json').read_text())['ephemeralPrivateKeys']:
+ assert '/' not in name and name.endswith('.key');(R/name).unlink();report['ephemeralPrivateKeysRemoved'].append(name)
+report['passed']=True;report['finishedAtUTC']=datetime.datetime.now(datetime.timezone.utc).isoformat();(R/'final-cleanup.json').write_text(json.dumps(report,indent=2)+'\n');print('PASS upgrade and rollback qualification cleanup')

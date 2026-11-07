@@ -1,0 +1,31 @@
+/private/tmp/cvk-verified-device-probe/probe: go1.26.7
+	path	github.com/cisco/virtual-kubelet-cisco/qualification
+	mod	github.com/cisco/virtual-kubelet-cisco/qualification	(devel)	
+	dep	github.com/beorn7/perks	v1.0.1	h1:VlbKKnNfV8bJzeqoa4cOKqO6bYr3WgKZxO8Z16+hsOM=
+	dep	github.com/cespare/xxhash/v2	v2.3.0	h1:UL815xU9SqsFlibzuggzjXhog7bL6oX9BbNZnL2UFvs=
+	dep	github.com/cisco/virtual-kubelet-cisco	v0.0.0
+	=>	/Users/johalley/Git/cisco-virtual-kubelet	(devel)	
+	
+	dep	github.com/munnerz/goautoneg	v0.0.0-20191010083416-a7dc8b61c822	h1:C3w9PqII01/Oq1c1nUAm88MOHcQC9l5mIlSMApZMrHA=
+	dep	github.com/openconfig/bootz	v0.6.1	h1:1jfSYgc9i0lLrrjVLYTmtcalL4RCozdaMP/ESTF4X+w=
+	dep	github.com/openconfig/gnmi	v0.14.1	h1:qKMuFvhIRR2/xxCOsStPQ25aKpbMDdWr3kI+nP9bhMs=
+	dep	github.com/openconfig/gnoi	v0.8.0	h1:fwZm4zlwoY5i7KALTpVhpAv53Y3YskleoTpg1IUCa+c=
+	dep	github.com/openconfig/gnsi	v1.9.0	h1:DokjN2rvzrP9/sMexBtigq6XkeKO8cPzzQmF8HQcVLQ=
+	dep	github.com/prometheus/client_golang	v1.23.2	h1:Je96obch5RDVy3FDMndoUsjAhG5Edi49h0RJWRi/o0o=
+	dep	github.com/prometheus/client_model	v0.6.2	h1:oBsgwpGs7iVziMvrGhE53c/GrLUsZdHnqNwqPLxwZyk=
+	dep	github.com/prometheus/common	v0.67.4	h1:yR3NqWO1/UyO1w2PhUvXlGQs/PtFmoveVO0KZ4+Lvsc=
+	dep	github.com/prometheus/procfs	v0.16.1	h1:hZ15bTNuirocR6u0JZ6BAHHmwS1p8B4P6MRqxtzMyRg=
+	dep	go.yaml.in/yaml/v2	v2.4.3	h1:6gvOSjQoTB3vt1l+CU+tSyi/HOjfOjRLJ4YwYZGwRO0=
+	dep	golang.org/x/net	v0.58.0	h1:ynWG7rqYi4ccpTEuPZ2QGWHktVEM9DMCj9yzDE0Q7To=
+	dep	golang.org/x/sys	v0.47.0	h1:o7XGOvZQCADBQQ4Y7VNq2dRWQR7JmOUW8Kxx4ZsNgWs=
+	dep	golang.org/x/text	v0.41.0	h1:vz/seA0lnX87Othu2f/0L24RcgrXD9/YFTSuGjj3rH8=
+	dep	google.golang.org/genproto/googleapis/rpc	v0.0.0-20260819154853-08b0e4226688	h1:cYNAzI2sUwhmCcoj9TxvihSrqsxt6uIkj3rDRhSDmW4=
+	dep	google.golang.org/grpc	v1.83.2	h1:EManeRomTObA0BU7I8vXgg/78uE5MJ9M8B39EX2WscU=
+	dep	google.golang.org/protobuf	v1.36.12	h1:pJOKDDOyeXErUroCihFAd5LQuwXBSpVnKGrj5o/fwxc=
+	build	-buildmode=exe
+	build	-compiler=gc
+	build	-trimpath=true
+	build	CGO_ENABLED=0
+	build	GOARCH=amd64
+	build	GOOS=linux
+	build	GOAMD64=v1

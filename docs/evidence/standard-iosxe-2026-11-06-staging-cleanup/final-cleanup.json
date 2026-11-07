@@ -1,0 +1,167 @@
+{
+  "startedAtUTC": "2026-11-06T12:00:45.938856+00:00",
+  "passed": true,
+  "commands": [
+    {
+      "command": "terminal length 0",
+      "output": "terminal length 0\nEdge-9K"
+    },
+    {
+      "command": "terminal width 511",
+      "output": "terminal width 511\nEdge-9K"
+    },
+    {
+      "command": "show app-hosting list",
+      "output": "show app-hosting list\nApp id                                   State\n---------------------------------------------------------\niris                                     RUNNING\nc9ktest                                  DEPLOYED\n\nEdge-9K"
+    },
+    {
+      "command": "dir flash:/cvk-stage-2554f120d741402c8a19dcc9e5755582.tar",
+      "output": "dir flash:/cvk-stage-2554f120d741402c8a19dcc9e5755582.tar\n%Error opening flash:/cvk-stage-2554f120d741402c8a19dcc9e5755582.tar (No such file or directory)\nEdge-9K"
+    },
+    {
+      "command": "dir flash:/cvk-stage-68387df409b64d80959b581082f67139.tar",
+      "output": "dir flash:/cvk-stage-68387df409b64d80959b581082f67139.tar\n%Error opening flash:/cvk-stage-68387df409b64d80959b581082f67139.tar (No such file or directory)\nEdge-9K"
+    },
+    {
+      "command": "dir flash:/cvk-stage-d08ff7931f14474d94c6bb02eb603fd4.tar",
+      "output": "dir flash:/cvk-stage-d08ff7931f14474d94c6bb02eb603fd4.tar\n%Error opening flash:/cvk-stage-d08ff7931f14474d94c6bb02eb603fd4.tar (No such file or directory)\nEdge-9K"
+    },
+    {
+      "command": "dir flash:/cvk-stage-afde99a205384e5b9da8a4f34930af75.tar",
+      "output": "dir flash:/cvk-stage-afde99a205384e5b9da8a4f34930af75.tar\n%Error opening flash:/cvk-stage-afde99a205384e5b9da8a4f34930af75.tar (No such file or directory)\nEdge-9K"
+    },
+    {
+      "command": "dir flash:/cvk-stage-99508ac6bf6b4e2caf786283a513a0e9.tar",
+      "output": "dir flash:/cvk-stage-99508ac6bf6b4e2caf786283a513a0e9.tar\n%Error opening flash:/cvk-stage-99508ac6bf6b4e2caf786283a513a0e9.tar (No such file or directory)\nEdge-9K"
+    },
+    {
+      "command": "dir flash:/cvk-stage-20a78343233a42b0b54422b4cfc91ba4.tar",
+      "output": "dir flash:/cvk-stage-20a78343233a42b0b54422b4cfc91ba4.tar\n%Error opening flash:/cvk-stage-20a78343233a42b0b54422b4cfc91ba4.tar (No such file or directory)\nEdge-9K"
+    },
+    {
+      "command": "dir flash:/cvk-stage-151a5d41f06c42c69937948d7e775094.tar",
+      "output": "dir flash:/cvk-stage-151a5d41f06c42c69937948d7e775094.tar\n%Error opening flash:/cvk-stage-151a5d41f06c42c69937948d7e775094.tar (No such file or directory)\nEdge-9K"
+    },
+    {
+      "command": "verify /sha512 flash:/cvk-stage-cdab804e32744611b282036c11686f66.tar",
+      "output": "verify /sha512 flash:/cvk-stage-cdab804e32744611b282036c11686f66.tar\n...........................................................................................Done!\nverify /sha512 (flash:/cvk-stage-cdab804e32744611b282036c11686f66.tar) = aa8f88fcfdd7a18c271cb136561cfca76ee8ff8893a40eb2c9b999f908551de6919d9148afa2c8be54569372dadd56d9e9b8d1cc8d711b688341e6bfea897e26\n\n\nEdge-9K"
+    },
+    {
+      "command": "delete /force flash:/cvk-stage-cdab804e32744611b282036c11686f66.tar",
+      "output": "delete /force flash:/cvk-stage-cdab804e32744611b282036c11686f66.tar\nEdge-9K"
+    },
+    {
+      "command": "dir flash:/cvk-stage-cdab804e32744611b282036c11686f66.tar",
+      "output": "dir flash:/cvk-stage-cdab804e32744611b282036c11686f66.tar\n%Error opening flash:/cvk-stage-cdab804e32744611b282036c11686f66.tar (No such file or directory)\nEdge-9K"
+    },
+    {
+      "command": "dir flash:/*.tar",
+      "output": "dir flash:/*.tar\nDirectory of flash:/*.tar\n\nDirectory of flash:/\n\n254029  -rw-     7656448  Jan 15 2026 20:44:10 +00:00  alpine_3.18.tar\n254030  -rw-     8731136  Jan 15 2026 20:44:32 +00:00  alpine_latest.tar\n254031  -rw-   164293120  Jan 15 2026 20:47:07 +00:00  nginx_latest.tar\n254023  -rw-   147760640   May 6 2026 18:56:15 +00:00  flow-compare-amd64.tar\n254025  -rw-   463042048   May 6 2026 20:56:37 +00:00  ray-worker-min-2.55.1-py311-amd64.tar\n254034  -rw-   465949696   May 6 2026 21:40:06 +00:00  ray-worker-min-2.55.1-py311.11-amd64.tar\n254033  -rw-     4669440  Jun 14 2026 15:45:18 +00:00  hello-app-private-test-20260614152501.tar\n254038  -rw-     4669440  Jun 14 2026 15:59:14 +00:00  hello-app-registry2-private-test-20260614152501.tar\n254039  -rw-     4669440  Jun 14 2026 16:11:04 +00:00  hello-app-url-registry2-private-test-20260614152501.tar\n254035  -rw-   109895680  Jul 14 2026 11:40:00 +00:00  iris.tar\n254041  -rw-   109906432   Aug 3 2026 07:46:07 +00:00  iris-amd64.tar\n11353194496 bytes total (5398515712 bytes free)\nEdge-9K"
+    },
+    {
+      "command": "configure terminal",
+      "output": "configure terminal\nEnter configuration commands, one per line.  End with CNTL/Z.\nEdge-9K(config)"
+    },
+    {
+      "command": "ip http secure-trustpoint TP-self-signed-806566997",
+      "output": "ip http secure-trustpoint TP-self-signed-806566997\nEdge-9K(config)"
+    },
+    {
+      "command": "no crypto pki trustpoint CVK-STDGC-20261106",
+      "output": "no crypto pki trustpoint CVK-STDGC-20261106\n% Removing an enrolled trustpoint will destroy all certificates\n received from the related Certificate Authority.\n\nAre you sure you want to do this? [confirmed owned cleanup]\n yes\n% Be sure to ask the CA administrator to revoke your certificates.\n\nEdge-9K(config)"
+    },
+    {
+      "command": "end",
+      "output": "end\nEdge-9K"
+    },
+    {
+      "command": "show ip http server status | include trustpoint",
+      "output": "show ip http server status | include trustpoint\nHTTP secure server trustpoint: TP-self-signed-806566997\nHTTP secure server peer validation trustpoint: \nEdge-9K"
+    },
+    {
+      "command": "show running-config | include ^ip http secure-trustpoint|^ip http client secure-trustpoint|^crypto pki trustpoint CVK-STDGC",
+      "output": "show running-config | include ^ip http secure-trustpoint|^ip http client secure-trustpoint|^crypto pki trustpoint CVK-STDGC\nip http secure-trustpoint TP-self-signed-806566997\nip http client secure-trustpoint IRIS\nEdge-9K"
+    },
+    {
+      "command": "show app-hosting list",
+      "output": "show app-hosting list\nApp id                                   State\n---------------------------------------------------------\niris                                     RUNNING\nc9ktest                                  DEPLOYED\n\nEdge-9K"
+    },
+    {
+      "command": "show app-hosting infra",
+      "output": "show app-hosting infra\nIOX version: 2.13.0\nApp signature verification: disabled\nCAF Health: Stable\nInternal working directory: /vol/usb1/iox\n\nApplication Interface Mapping\nAppGigabitEthernet Port #  Interface Name                 Port Type            Bandwidth  \n           1               AppGigabitEthernet1/0/1        KR Port - Internal   1G\n        \n\nCPU:\n  Quota: 25(Percentage) \n  Available: 23(Percentage)\n  Quota: 7400(Units)\n  Available: 7000(Units)\n\nEdge-9K"
+    },
+    {
+      "command": "dir flash:/cvk-stage-2554f120d741402c8a19dcc9e5755582.tar",
+      "output": "dir flash:/cvk-stage-2554f120d741402c8a19dcc9e5755582.tar\n%Error opening flash:/cvk-stage-2554f120d741402c8a19dcc9e5755582.tar (No such file or directory)\nEdge-9K"
+    },
+    {
+      "command": "dir flash:/cvk-stage-68387df409b64d80959b581082f67139.tar",
+      "output": "dir flash:/cvk-stage-68387df409b64d80959b581082f67139.tar\n%Error opening flash:/cvk-stage-68387df409b64d80959b581082f67139.tar (No such file or directory)\nEdge-9K"
+    },
+    {
+      "command": "dir flash:/cvk-stage-d08ff7931f14474d94c6bb02eb603fd4.tar",
+      "output": "dir flash:/cvk-stage-d08ff7931f14474d94c6bb02eb603fd4.tar\n%Error opening flash:/cvk-stage-d08ff7931f14474d94c6bb02eb603fd4.tar (No such file or directory)\nEdge-9K"
+    },
+    {
+      "command": "dir flash:/cvk-stage-afde99a205384e5b9da8a4f34930af75.tar",
+      "output": "dir flash:/cvk-stage-afde99a205384e5b9da8a4f34930af75.tar\n%Error opening flash:/cvk-stage-afde99a205384e5b9da8a4f34930af75.tar (No such file or directory)\nEdge-9K"
+    },
+    {
+      "command": "dir flash:/cvk-stage-99508ac6bf6b4e2caf786283a513a0e9.tar",
+      "output": "dir flash:/cvk-stage-99508ac6bf6b4e2caf786283a513a0e9.tar\n%Error opening flash:/cvk-stage-99508ac6bf6b4e2caf786283a513a0e9.tar (No such file or directory)\nEdge-9K"
+    },
+    {
+      "command": "dir flash:/cvk-stage-20a78343233a42b0b54422b4cfc91ba4.tar",
+      "output": "dir flash:/cvk-stage-20a78343233a42b0b54422b4cfc91ba4.tar\n%Error opening flash:/cvk-stage-20a78343233a42b0b54422b4cfc91ba4.tar (No such file or directory)\nEdge-9K"
+    },
+    {
+      "command": "dir flash:/cvk-stage-151a5d41f06c42c69937948d7e775094.tar",
+      "output": "dir flash:/cvk-stage-151a5d41f06c42c69937948d7e775094.tar\n%Error opening flash:/cvk-stage-151a5d41f06c42c69937948d7e775094.tar (No such file or directory)\nEdge-9K"
+    }
+  ],
+  "ownedPaths": [
+    "flash:/cvk-stage-2554f120d741402c8a19dcc9e5755582.tar",
+    "flash:/cvk-stage-68387df409b64d80959b581082f67139.tar",
+    "flash:/cvk-stage-d08ff7931f14474d94c6bb02eb603fd4.tar",
+    "flash:/cvk-stage-afde99a205384e5b9da8a4f34930af75.tar",
+    "flash:/cvk-stage-99508ac6bf6b4e2caf786283a513a0e9.tar",
+    "flash:/cvk-stage-20a78343233a42b0b54422b4cfc91ba4.tar",
+    "flash:/cvk-stage-151a5d41f06c42c69937948d7e775094.tar"
+  ],
+  "manualLeaseOrJournalChanges": false,
+  "globalImageCachePruned": false,
+  "preloadedPreservedThroughAllFlows": true,
+  "preloadedPath": "flash:/cvk-stage-cdab804e32744611b282036c11686f66.tar",
+  "preexistingTarInventoryPreserved": true,
+  "preexistingTarInventory": {
+    "alpine_3.18.tar": 7656448,
+    "alpine_latest.tar": 8731136,
+    "nginx_latest.tar": 164293120,
+    "flow-compare-amd64.tar": 147760640,
+    "ray-worker-min-2.55.1-py311-amd64.tar": 463042048,
+    "ray-worker-min-2.55.1-py311.11-amd64.tar": 465949696,
+    "hello-app-private-test-20260614152501.tar": 4669440,
+    "hello-app-registry2-private-test-20260614152501.tar": 4669440,
+    "hello-app-url-registry2-private-test-20260614152501.tar": 4669440,
+    "iris.tar": 109895680,
+    "iris-amd64.tar": 109906432
+  },
+  "testOwnedPreloadedCanaryRemovedAfterProof": true,
+  "automaticCleanupPathsManuallyDeleted": false,
+  "CRLCacheManuallyCleared": false,
+  "originImagesRemoved": [
+    "cvk-stdgc-20261106/a:a85d9b305139",
+    "cvk-stdgc-20261106/b:a85d9b305139"
+  ],
+  "listeners": {
+    "16460": false,
+    "18482": false,
+    "18483": false
+  },
+  "sharedHostNodeReady": true,
+  "ephemeralPrivateKeysRemoved": [
+    "root.key",
+    "leaf.key"
+  ],
+  "finishedAtUTC": "2026-11-06T12:00:54.068600+00:00"
+}

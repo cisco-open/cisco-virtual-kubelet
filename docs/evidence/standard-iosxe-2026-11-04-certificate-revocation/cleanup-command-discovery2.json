@@ -1,0 +1,6 @@
+{
+  "atUTC": "2026-11-04T18:02:48.641961+00:00",
+  "readOnly": true,
+  "command": "clear crypto pki crl ?",
+  "output": "clear crypto pki crl ?\n  <cr>  <cr>\n\nEdge-9K#clear crypto pki crl \nEdge-9K"
+}

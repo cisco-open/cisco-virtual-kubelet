@@ -4,3 +4,14 @@
 docs/MKDOCS_THIRD_PARTY_LICENSES.txt -whitespace
 docs/website/public/THIRD_PARTY_LICENSES.txt -whitespace
 third_party/mkdocs-material/*/MERMAID_RUNTIME_LICENSES.txt -whitespace
+
+# Immutable image-lifecycle qualification records retain captured tool output
+# and patch context verbatim. Their SHA256SUMS files bind the original bytes.
+docs/evidence/standard-iosxe-2026-11-05-copy-first/implementation.patch -whitespace
+docs/evidence/standard-iosxe-2026-11-06-staging-cleanup/lab-setup.log -whitespace
+docs/evidence/verified-iosxe-2026-11-01/device-probe-build.txt -whitespace
+docs/evidence/verified-iosxe-2026-11-03-replies/harness/relay.py.txt -whitespace
+docs/evidence/verified-iosxe-2026-11-03-replies/qualification.log -whitespace
+docs/evidence/verified-iosxe-2026-11-03/binding-window-qualify.log -whitespace
+docs/evidence/verified-iosxe-2026-11-03/harness/relay.py.txt -whitespace
+docs/evidence/verified-iosxe-2026-11-03/preparation-attempt-qualify.log -whitespace

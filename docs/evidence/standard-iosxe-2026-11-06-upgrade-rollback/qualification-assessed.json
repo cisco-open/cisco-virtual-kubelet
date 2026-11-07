@@ -1,0 +1,91 @@
+{
+  "status": "standard-copy-first-upgrade-and-history-rollback-qualified",
+  "executionComplete": true,
+  "passed": true,
+  "upgradeAToB": true,
+  "historyRollbackBToA": true,
+  "failedHTTPS404UpgradeBlocked": true,
+  "bothImagesPreviouslyExecuted": true,
+  "deviceImageCacheNotPruned": true,
+  "privateNativeCacheContentsInspected": false,
+  "failedUpgradeNoConfigurationRuntimeOrReady": true,
+  "rollbackAfterFailedUpgradeRespectedOriginalFence": true,
+  "retryUpgradeAfterSourceRepair": true,
+  "finalHistoryRollbackA": true,
+  "deploymentUID": "6d61f17e-a446-4456-8bee-163e6dec33b0",
+  "canonicalLeaseUID": "c9fd5046-4992-4028-90c6-c38fa4f83b5e",
+  "caseReleases": [
+    {
+      "label": "initial-a",
+      "release": "STD-UPGRADE-A-20261106-8f0d26f6c543",
+      "podUID": "257e4a85-d38b-4f10-b308-625b1e837360",
+      "revision": "1"
+    },
+    {
+      "label": "upgrade-b",
+      "release": "STD-UPGRADE-B-20261106-8f0d26f6c543",
+      "podUID": "92d6c115-029f-423e-b178-0e7e78c01f5b",
+      "revision": "2"
+    },
+    {
+      "label": "rollback-a",
+      "release": "STD-UPGRADE-A-20261106-8f0d26f6c543",
+      "podUID": "5d78c63f-63ba-45a0-9f57-c732e3cd8549",
+      "revision": "3"
+    },
+    {
+      "label": "failed-upgrade-rollback-a",
+      "release": "STD-UPGRADE-A-20261106-8f0d26f6c543",
+      "podUID": "cc21816b-03f5-4484-8fd2-56056836cbd4",
+      "revision": "5"
+    },
+    {
+      "label": "retry-upgrade-b",
+      "release": "STD-UPGRADE-B-20261106-8f0d26f6c543",
+      "podUID": "593bc867-5856-4688-8003-bb8cae0b7ada",
+      "revision": "6"
+    },
+    {
+      "label": "final-rollback-a",
+      "release": "STD-UPGRADE-A-20261106-8f0d26f6c543",
+      "podUID": "351ffc54-c05c-4c97-b55b-c8d445f019ac",
+      "revision": "7"
+    }
+  ],
+  "failedPodUID": "667ca5e8-001e-4cf6-8b65-484ddedf68e4",
+  "negativeWindowSeconds": 311.9487791545689,
+  "rollbackRequestedUTC": "2026-11-06T08:40:33.654857+00:00",
+  "naturalFenceExpiryUTC": "2026-11-06T09:06:15.551917+00:00",
+  "failedUpgradeRollbackHealthyUTC": "2026-11-06T09:07:57.080356+00:00",
+  "rollbackRequestToHealthySeconds": 1643.425499,
+  "guardedObservations": 92,
+  "earlierEvidencePreserved": true,
+  "earlierRawFilesVerified": 2790,
+  "productionSourceUnchanged": true,
+  "candidateSourceSHA256": "f31b516f5dafd468c2dee968cd62e68dfd366344924876834500e2a9b18f81ab",
+  "normalDeletionAndBaselineCleanupPassed": true,
+  "retiredStagingFilesRetainedAfterNativeAppDeletion": [
+    {
+      "path": "flash:/cvk-cvk0000_257e4a85d38b4f10b308625b1e837360.tar",
+      "bytes": 5959680
+    },
+    {
+      "path": "flash:/cvk-cvk0000_92d6c115029f423eb1780e7e78c01f5b.tar",
+      "bytes": 5959680
+    },
+    {
+      "path": "flash:/cvk-cvk0000_5d78c63f63ba45a09f57c732e3cd8549.tar",
+      "bytes": 5959680
+    }
+  ],
+  "automaticFlashGarbageCollectionQualified": false,
+  "retiredStagingFilesRemovedByLabCleanup": true,
+  "artifactMetadataOrJournalRequired": false,
+  "defaultMode": "Standard",
+  "governed": "deferred",
+  "strategy": "Recreate, one fixture slot; old healthy fixture is removed before the replacement. Failed upgrade and retained fence therefore cause an availability gap.",
+  "zeroDowntimeQualified": false,
+  "scope": "C9300-24UX / IOS-XE 17.18.1 fc2; direct HTTPS DockerResource packages A/B with immutable per-release bytes; actual Deployment history undo; HTTP 404 injection under valid TLS; no forced Lease or journal changes, image cache pruning, device clock changes or new transport. RollingUpdate/capacity and automatic vulnerability selection are outside this run.",
+  "startedAtUTC": "2026-11-06T08:28:14.516515+00:00",
+  "finishedAtUTC": "2026-11-06T09:14:28.386979+00:00"
+}

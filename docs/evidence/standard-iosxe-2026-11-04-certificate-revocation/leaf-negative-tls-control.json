@@ -1,0 +1,9 @@
+{
+  "atUTC": "2026-11-04T10:27:17.610327+00:00",
+  "case": "leaf",
+  "accepted": false,
+  "CRLChecking": true,
+  "verificationCode": 23,
+  "verificationMessage": "certificate revoked",
+  "rootCertificate": "leaf-root"
+}

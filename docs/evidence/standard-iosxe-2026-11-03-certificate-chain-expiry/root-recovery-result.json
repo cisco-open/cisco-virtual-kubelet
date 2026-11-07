@@ -1,0 +1,12 @@
+{
+  "atUTC": "2026-11-04T06:48:05.462283+00:00",
+  "passed": true,
+  "recoveryRequired": true,
+  "resumedAfterCAReplacementHarnessFailure": true,
+  "packageURLUnchanged": true,
+  "podUIDs": [
+    "cd3e421f-5d68-4846-ae96-953b4d37f18a"
+  ],
+  "mode": "root-renewed",
+  "artifactJournals": 0
+}

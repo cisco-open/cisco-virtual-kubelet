@@ -1,0 +1,125 @@
+{
+  "startedAtUTC": "2026-11-04T09:49:55.118544+00:00",
+  "passed": true,
+  "commands": [
+    {
+      "command": "show app-hosting list",
+      "output": "show app-hosting list\nApp id                                   State\n---------------------------------------------------------\niris                                     RUNNING\nc9ktest                                  DEPLOYED\n\nEdge-9K"
+    },
+    {
+      "command": "dir flash:/virtual-kubelet/cvk0000_4a4fad834b464fa7a54b1ff0d0758d83.tar",
+      "output": "dir flash:/virtual-kubelet/cvk0000_4a4fad834b464fa7a54b1ff0d0758d83.tar\n%Error opening flash:/virtual-kubelet/cvk0000_4a4fad834b464fa7a54b1ff0d0758d83.tar (No such file or directory)\nEdge-9K"
+    },
+    {
+      "command": "dir flash:/virtual-kubelet/cvk0000_4de45663cb764d78a53f7a871f988d17.tar",
+      "output": "dir flash:/virtual-kubelet/cvk0000_4de45663cb764d78a53f7a871f988d17.tar\n%Error opening flash:/virtual-kubelet/cvk0000_4de45663cb764d78a53f7a871f988d17.tar (No such file or directory)\nEdge-9K"
+    },
+    {
+      "command": "dir flash:/virtual-kubelet/cvk0000_51617da9c86141a69b4c103166a492fc.tar",
+      "output": "dir flash:/virtual-kubelet/cvk0000_51617da9c86141a69b4c103166a492fc.tar\n%Error opening flash:/virtual-kubelet/cvk0000_51617da9c86141a69b4c103166a492fc.tar (No such file or directory)\nEdge-9K"
+    },
+    {
+      "command": "dir flash:/virtual-kubelet/cvk0000_56048d565f5040a3bc99c2f6041a09ff.tar",
+      "output": "dir flash:/virtual-kubelet/cvk0000_56048d565f5040a3bc99c2f6041a09ff.tar\n%Error opening flash:/virtual-kubelet/cvk0000_56048d565f5040a3bc99c2f6041a09ff.tar (No such file or directory)\nEdge-9K"
+    },
+    {
+      "command": "dir flash:/virtual-kubelet/cvk0000_cd3e421f5d684846ae96953b4d37f18a.tar",
+      "output": "dir flash:/virtual-kubelet/cvk0000_cd3e421f5d684846ae96953b4d37f18a.tar\n%Error opening flash:/virtual-kubelet/cvk0000_cd3e421f5d684846ae96953b4d37f18a.tar (No such file or directory)\nEdge-9K"
+    },
+    {
+      "command": "dir flash:/virtual-kubelet/cvk0000_de95a383b1f0488a8021a68ca416a222.tar",
+      "output": "dir flash:/virtual-kubelet/cvk0000_de95a383b1f0488a8021a68ca416a222.tar\n%Error opening flash:/virtual-kubelet/cvk0000_de95a383b1f0488a8021a68ca416a222.tar (No such file or directory)\nEdge-9K"
+    },
+    {
+      "command": "configure terminal",
+      "output": "configure terminal\nEnter configuration commands, one per line.  End with CNTL/Z.\nEdge-9K(config)"
+    },
+    {
+      "command": "ip http secure-trustpoint TP-self-signed-806566997",
+      "output": "ip http secure-trustpoint TP-self-signed-806566997\nEdge-9K(config)"
+    },
+    {
+      "command": "no crypto pki trustpoint CVK-STDCHAIN-ROOT-20261103",
+      "output": "no crypto pki trustpoint CVK-STDCHAIN-ROOT-20261103\n% Removing an enrolled trustpoint will destroy all certificates\n received from the related Certificate Authority.\n\nAre you sure you want to do this? [confirmed removal of run-owned public origin CA]\n yes\n% Be sure to ask the CA administrator to revoke your certificates.\n\nEdge-9K(config)"
+    },
+    {
+      "command": "no crypto pki trustpoint CVK-STDCHAIN-INTROOT-20261103",
+      "output": "no crypto pki trustpoint CVK-STDCHAIN-INTROOT-20261103\n% Removing an enrolled trustpoint will destroy all certificates\n received from the related Certificate Authority.\n\nAre you sure you want to do this? [confirmed removal of run-owned public origin CA]\n yes\n% Be sure to ask the CA administrator to revoke your certificates.\n\nEdge-9K(config)"
+    },
+    {
+      "command": "end",
+      "output": "end\nEdge-9K"
+    },
+    {
+      "command": "show ip http server status | include trustpoint",
+      "output": "show ip http server status | include trustpoint\nHTTP secure server trustpoint: TP-self-signed-806566997\nHTTP secure server peer validation trustpoint: \nEdge-9K"
+    },
+    {
+      "command": "show running-config | include ^ip http secure-trustpoint|^ip http client secure-trustpoint|^crypto pki trustpoint CVK-STDCHAIN",
+      "output": "show running-config | include ^ip http secure-trustpoint|^ip http client secure-trustpoint|^crypto pki trustpoint CVK-STDCHAIN\nip http secure-trustpoint TP-self-signed-806566997\nip http client secure-trustpoint IRIS\nEdge-9K"
+    },
+    {
+      "command": "show app-hosting infra",
+      "output": "show app-hosting infra\nIOX version: 2.13.0\nApp signature verification: disabled\nCAF Health: Stable\nInternal working directory: /vol/usb1/iox\n\nApplication Interface Mapping\nAppGigabitEthernet Port #  Interface Name                 Port Type            Bandwidth  \n           1               AppGigabitEthernet1/0/1        KR Port - Internal   1G\n        \n\nCPU:\n  Quota: 25(Percentage) \n  Available: 23(Percentage)\n  Quota: 7400(Units)\n  Available: 7000(Units)\n\nEdge-9K"
+    },
+    {
+      "command": "dir flash:/virtual-kubelet/cvk0000_4a4fad834b464fa7a54b1ff0d0758d83.tar",
+      "output": "dir flash:/virtual-kubelet/cvk0000_4a4fad834b464fa7a54b1ff0d0758d83.tar\n%Error opening flash:/virtual-kubelet/cvk0000_4a4fad834b464fa7a54b1ff0d0758d83.tar (No such file or directory)\nEdge-9K"
+    },
+    {
+      "command": "dir flash:/virtual-kubelet/cvk0000_4de45663cb764d78a53f7a871f988d17.tar",
+      "output": "dir flash:/virtual-kubelet/cvk0000_4de45663cb764d78a53f7a871f988d17.tar\n%Error opening flash:/virtual-kubelet/cvk0000_4de45663cb764d78a53f7a871f988d17.tar (No such file or directory)\nEdge-9K"
+    },
+    {
+      "command": "dir flash:/virtual-kubelet/cvk0000_51617da9c86141a69b4c103166a492fc.tar",
+      "output": "dir flash:/virtual-kubelet/cvk0000_51617da9c86141a69b4c103166a492fc.tar\n%Error opening flash:/virtual-kubelet/cvk0000_51617da9c86141a69b4c103166a492fc.tar (No such file or directory)\nEdge-9K"
+    },
+    {
+      "command": "dir flash:/virtual-kubelet/cvk0000_56048d565f5040a3bc99c2f6041a09ff.tar",
+      "output": "dir flash:/virtual-kubelet/cvk0000_56048d565f5040a3bc99c2f6041a09ff.tar\n%Error opening flash:/virtual-kubelet/cvk0000_56048d565f5040a3bc99c2f6041a09ff.tar (No such file or directory)\nEdge-9K"
+    },
+    {
+      "command": "dir flash:/virtual-kubelet/cvk0000_cd3e421f5d684846ae96953b4d37f18a.tar",
+      "output": "dir flash:/virtual-kubelet/cvk0000_cd3e421f5d684846ae96953b4d37f18a.tar\n%Error opening flash:/virtual-kubelet/cvk0000_cd3e421f5d684846ae96953b4d37f18a.tar (No such file or directory)\nEdge-9K"
+    },
+    {
+      "command": "dir flash:/virtual-kubelet/cvk0000_de95a383b1f0488a8021a68ca416a222.tar",
+      "output": "dir flash:/virtual-kubelet/cvk0000_de95a383b1f0488a8021a68ca416a222.tar\n%Error opening flash:/virtual-kubelet/cvk0000_de95a383b1f0488a8021a68ca416a222.tar (No such file or directory)\nEdge-9K"
+    }
+  ],
+  "ownedPaths": [
+    "flash:/virtual-kubelet/cvk0000_4a4fad834b464fa7a54b1ff0d0758d83.tar",
+    "flash:/virtual-kubelet/cvk0000_4de45663cb764d78a53f7a871f988d17.tar",
+    "flash:/virtual-kubelet/cvk0000_51617da9c86141a69b4c103166a492fc.tar",
+    "flash:/virtual-kubelet/cvk0000_56048d565f5040a3bc99c2f6041a09ff.tar",
+    "flash:/virtual-kubelet/cvk0000_cd3e421f5d684846ae96953b4d37f18a.tar",
+    "flash:/virtual-kubelet/cvk0000_de95a383b1f0488a8021a68ca416a222.tar"
+  ],
+  "manualLeaseOrJournalEdits": false,
+  "temporaryOriginTrustpoints": [
+    "CVK-STDCHAIN-ROOT-20261103",
+    "CVK-STDCHAIN-INTROOT-20261103"
+  ],
+  "listeners": {
+    "16454": false,
+    "18455": false,
+    "18456": false,
+    "18457": false,
+    "18458": false
+  },
+  "sharedHostNode": {
+    "name": "cisco",
+    "ready": true
+  },
+  "finishedAtUTC": "2026-11-04T09:50:01.670453+00:00",
+  "ephemeralTLSPrivateKeysRemoved": [
+    "root-ca.key",
+    "intermediate-root.key",
+    "intermediate-ca.key",
+    "root-leaf.key",
+    "intermediate-leaf.key",
+    "control-intermediate.key",
+    "control-leaf.key"
+  ],
+  "configurationDelta": "Original explicit self-signed HTTPS selector and IRIS client trustpoint restored. Two temporary ordinary origin CAs, owned package files, HTTPS server and isolated cluster removed; unrelated apps, native signature policy and CAF health preserved. No artifact journal or grant, relay or injected NAT existed."
+}

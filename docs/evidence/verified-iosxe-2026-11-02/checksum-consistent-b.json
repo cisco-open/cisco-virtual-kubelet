@@ -1,0 +1,13 @@
+{
+  "collectedAtUTC": "2026-11-02T22:08:37.594199+00:00",
+  "case": "consistent-b",
+  "exitCode": 0,
+  "result": {
+    "expectedBytes": 5963776,
+    "expectedSHA512": "5874e9a274510b0c383de58012b5c62d2bc15ed2331cc85e968cafde5d3e016257a42afc0d3326e9f58a43180150316ea9ed844f2557510ecfb236f3a671f4c5",
+    "hostKeyPinned": true,
+    "path": "flash:cvk-63332312914165f0-febf34ebd664bbac03002f67578fbdf5b54c0358d24baa83b6abdb201266892f.tar",
+    "success": true
+  },
+  "stderr": ""
+}

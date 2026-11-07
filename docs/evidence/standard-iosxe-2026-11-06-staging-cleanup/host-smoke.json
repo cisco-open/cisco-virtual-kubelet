@@ -1,0 +1,20 @@
+{
+  "atUTC": "2026-11-06T10:29:35.864414+00:00",
+  "passed": true,
+  "loopbackOnly": true,
+  "C9KImagesPrimed": false,
+  "checks": [
+    {
+      "phase": "a",
+      "expectedRelease": "STD-GC-A-20261106-a85d9b305139",
+      "actualRelease": "STD-GC-A-20261106-a85d9b305139",
+      "dockerConfigID": "sha256:d74f237810173c8f4bf221232804e1dabb62521f163f548db89c87003fff0ffc"
+    },
+    {
+      "phase": "b",
+      "expectedRelease": "STD-GC-B-20261106-a85d9b305139",
+      "actualRelease": "STD-GC-B-20261106-a85d9b305139",
+      "dockerConfigID": "sha256:6e03538116aba6521553b7e58ca8323bef517d32ba87accb204799708b3c32e8"
+    }
+  ]
+}

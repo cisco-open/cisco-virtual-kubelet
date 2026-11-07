@@ -1,0 +1,61 @@
+{
+  "collectedAtUTC": "2026-11-01T06:02:23.282570+00:00",
+  "host": "ux-agx",
+  "target": "10.1.1.1",
+  "targetIdentityStatus": "AWAITING_SSH_HOST_KEY_CONFIRMATION",
+  "switchCredentialsSent": false,
+  "switchChangesMade": false,
+  "candidateBinarySHA256": "d26123fe5c99a0df3574f776da33a00305544efd7613c0076f573a7e40103f3e",
+  "chartBundleSHA256": "fc6c46bc731670f3ffc4aae51decca280d667545db3960570059b1ef7ee13b84",
+  "candidateVersion": {
+    "exitCode": 0,
+    "stdout": "cisco-vk verified-qual-20261101-dirty (commit=1791a7e1634961936233ee94170f1c63cea1b64c, built=unknown)\n",
+    "stderr": ""
+  },
+  "candidateImage": {
+    "exitCode": 0,
+    "stdout": "sha256:25e80e21508d30273e4eb69ff44cb4b6625676a76d9e3e69e6bdc7237417c553\n",
+    "stderr": ""
+  },
+  "existingCluster": {
+    "exitCode": 0,
+    "stdout": "NAME    VERSION\ncisco   v1.34.5+k3s1\n",
+    "stderr": ""
+  },
+  "clusterName": "cvk-verified-qual-20261101",
+  "isolationKubeconfigPresent": false,
+  "kindTool": {
+    "version": "v0.33.0",
+    "url": "https://github.com/kubernetes-sigs/kind/releases/download/v0.33.0/kind-linux-amd64",
+    "sha256": "sha256:aee6151561422756b764a4ae28e7f44cda5af5a9eead3cc9985112b1de8d8e0d"
+  },
+  "fixtures": [
+    {
+      "release": "A",
+      "image": "cvk-verified-fixture-20261101:a",
+      "imageConfigDigest": "sha256:6857d08813f6fb07e59e976a001b5906971416a647bc85c7e614a1e59822d530",
+      "architecture": "amd64",
+      "os": "linux",
+      "binarySHA256": "5988d80f51015bd0bad02afb6cb1aa82a4e5dc16e188bbe04266d59a74cf325d"
+    },
+    {
+      "release": "B",
+      "image": "cvk-verified-fixture-20261101:b",
+      "imageConfigDigest": "sha256:f862e7a24ca757f4cb6202e0131eed1c2f54a25a12e723807a68d80b1b3bf5c0",
+      "architecture": "amd64",
+      "os": "linux",
+      "binarySHA256": "69077938a73f134bf7e3d81b85b72ebc85a8a66e446cf192b97985a675b70e2b"
+    }
+  ],
+  "physicalCasesRun": 0,
+  "isolationStartupTail": [
+    "Creating cluster \"cvk-verified-qual-20261101\" ...",
+    " \u2022 Ensuring node image (kindest/node:v1.35.8) \ud83d\uddbc\ufe0f  ...",
+    " \u2713 Ensuring node image (kindest/node:v1.35.8) \ud83d\uddbc\ufe0f",
+    " \u2022 Preparing nodes \ud83d\udce6   ...",
+    " \u2713 Preparing nodes \ud83d\udce6 ",
+    " \u2022 Writing configuration \ud83d\udcdc  ...",
+    " \u2713 Writing configuration \ud83d\udcdc",
+    " \u2022 Starting control-plane \ud83d\udd79\ufe0f  ..."
+  ]
+}

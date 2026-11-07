@@ -1,0 +1,62 @@
+{
+  "generatedAtUTC": "2026-11-05T20:50:18.770147+00:00",
+  "nonce": "717eb0f2c8b8",
+  "certificates": {
+    "root": {
+      "sha256": "8b1eb985383e01fe8880d8e67fee68c0d272235026469c30eb914e950f3fa693",
+      "SPKISHA256": "74c47a6543c17a6fb8f70c050a48279179b889a8ddef7034a1218b36c8e235dc",
+      "serialHex": "748467951cf9e7711fcec8f370d4aac991699ced",
+      "subject": "CN=CVK Standard copy fix root 717eb0f2c8b8",
+      "issuer": "CN=CVK Standard copy fix root 717eb0f2c8b8",
+      "validFromUTC": "2026-11-04T20:50:18+00:00",
+      "validUntilUTC": "2026-11-12T20:50:18+00:00",
+      "ca": true
+    },
+    "original": {
+      "sha256": "2d77df86f656f01c62cb2d9be97eab10fe29128fe6544429b350b9fd8bfd2f97",
+      "SPKISHA256": "ee2e775f3fb31bd4817ba5709b6fd9b8fa385f1ffa184cd341df86240fb1345a",
+      "serialHex": "ccc3b327a765a1c5a667f0b1d535f8028e4f879",
+      "subject": "CN=CVK Standard copy fix intermediate 717eb0f2c8b8",
+      "issuer": "CN=CVK Standard copy fix root 717eb0f2c8b8",
+      "validFromUTC": "2026-11-04T20:50:18+00:00",
+      "validUntilUTC": "2026-11-12T20:50:18+00:00",
+      "ca": true
+    },
+    "replacement": {
+      "sha256": "95ea1275576bd25f1da71f8e648397b9e0e84c209eb808435b74d5b91a59b975",
+      "SPKISHA256": "ee2e775f3fb31bd4817ba5709b6fd9b8fa385f1ffa184cd341df86240fb1345a",
+      "serialHex": "6d5525f8b371492c0abe51870d3cb909f1d9451a",
+      "subject": "CN=CVK Standard copy fix intermediate 717eb0f2c8b8",
+      "issuer": "CN=CVK Standard copy fix root 717eb0f2c8b8",
+      "validFromUTC": "2026-11-04T20:50:18+00:00",
+      "validUntilUTC": "2026-11-12T20:50:18+00:00",
+      "ca": true
+    },
+    "leaf": {
+      "sha256": "b84c543ccb125b0aebd4533795675d93a9f3110f495f32065d9485b9b3cc0036",
+      "SPKISHA256": "9845b58f7b6ee5bbd4f158dba11adf04e7338af26cc505f82252b97ded9653a5",
+      "serialHex": "40b756f8bfb9c875311c965e7aba738d90aad455",
+      "subject": "CN=192.168.129.111",
+      "issuer": "CN=CVK Standard copy fix intermediate 717eb0f2c8b8",
+      "validFromUTC": "2026-11-04T20:50:18+00:00",
+      "validUntilUTC": "2026-11-12T20:50:18+00:00",
+      "ca": false
+    }
+  },
+  "ephemeralPrivateKeys": [
+    "root.key",
+    "intermediate.key",
+    "leaf.key"
+  ],
+  "revocationTrustpoint": "CVK-STDCOPYFIX-20261105",
+  "CDP": "http://192.168.129.111:18476/issuer.crl",
+  "intermediateCDP": "http://192.168.129.111:18476/intermediate.crl",
+  "intermediateCRL": {
+    "sha256": "a79e778ff527c0812b6770308cdafc148c39c2fc746fc0b5a4f78731221ec0ab",
+    "bytes": 440,
+    "lastUpdateUTC": "2026-11-05T20:45:18+00:00",
+    "nextUpdateUTC": "2026-11-06T20:50:18+00:00",
+    "revokedSerialsHex": []
+  },
+  "replacementSemantics": "same intermediate subject/key, new unrevoked serial; supersession, not CA-key compromise"
+}

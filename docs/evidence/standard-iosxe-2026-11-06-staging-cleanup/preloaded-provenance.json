@@ -1,0 +1,17 @@
+{
+  "atUTC": "2026-11-06T10:30:45.354411+00:00",
+  "path": "flash:/cvk-stage-cdab804e32744611b282036c11686f66.tar",
+  "creationResponse": {
+    "status": 200,
+    "body": {
+      "Cisco-IOS-XE-rpc:output": {
+        "result": "RPC request successful"
+      }
+    }
+  },
+  "packageSHA512": "aa8f88fcfdd7a18c271cb136561cfca76ee8ff8893a40eb2c9b999f908551de6919d9148afa2c8be54569372dadd56d9e9b8d1cc8d711b688341e6bfea897e26",
+  "packageSHA256": "de3fa32182f1aec9d07786f002067dfb8ff0b54b012657344e957f6debbf79c2",
+  "packageBytes": 5959680,
+  "ownedBy": "qualification caller; never adopted by worker cleanup",
+  "resemblesManagedStagingFilename": true
+}

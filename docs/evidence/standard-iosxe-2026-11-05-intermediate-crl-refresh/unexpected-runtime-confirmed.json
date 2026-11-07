@@ -1,0 +1,18 @@
+{
+  "atUTC": "2026-11-05T06:52:03.024857+00:00",
+  "actualReleases": [
+    {
+      "appID": "cvk0000_635c7b93fadf4f698335fafe65ce40aa",
+      "release": "CRL-REFRESH-REFRESH-20261104-a674b004ffa2",
+      "ip": "192.168.129.242"
+    }
+  ],
+  "expectedRelease": "INT-REFRESH-REFRESH-20261105-4cd216c69bce",
+  "samePodCertificateReplacementRecoveredExpectedRelease": false,
+  "originRefreshPackageGETsBeforeDeletion": 0,
+  "nativeRunningBeforeCertificateReplacement": true,
+  "firstHTTPReleaseObservedAfterCertificateReplacement": true,
+  "rawActorLogSHA256": "ba874a23fa8a3ce9b8d7dc97ae2615b0135cefb83a3edfcfbfc9359355a6cfb1",
+  "actorStoppedBeforeRepeatingOrForcingRecovery": true,
+  "nativeCacheMechanismEstablished": false
+}

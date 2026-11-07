@@ -1,0 +1,8 @@
+"""Renew only the run-owned short-root CA; retain same subject/key and leaf."""
+import pathlib,json,datetime,os
+R=pathlib.Path('/tmp/cvk-stdchain-20261103');exec(compile((R/'pki_io.py').read_text(),'pki_io.py','exec'));m=json.loads((R/'pki-manifest.json').read_text());assert datetime.datetime.now(datetime.timezone.utc)>datetime.datetime.fromisoformat(m['rootExpiresAtUTC']);assert json.loads((R/'device-root-mode.json').read_text())['mode']=='root-old';p=CLI()
+try:
+ old=p.proof(ROOT_TP,'root-old');p.cmd('configure terminal');p.authenticate(ROOT_TP,'root-renewed');p.cmd('end');new=p.proof(ROOT_TP,'root-renewed');other=p.proof(INT_TP,'intermediate-root')
+finally:
+ (R/'root-native-certificate-replacement.json').write_text(json.dumps({'atUTC':datetime.datetime.now(datetime.timezone.utc).isoformat(),'commands':p.records,'scope':'Only run-owned short-root CA authentication; no clock, leaf, payload, Pod, URL, client identity or verification policy change'},indent=2)+'\n');p.close()
+tmp=R/'device-root-mode-next.json';tmp.write_text(json.dumps({'mode':'root-renewed'}));os.replace(tmp,R/'device-root-mode.json');print('PASS run-owned root certificate renewed and native PEM fingerprint verified',flush=True)

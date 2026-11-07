@@ -1,0 +1,38 @@
+{
+  "label": "leaf-before",
+  "atUTC": "2026-11-04T10:27:17.587849+00:00",
+  "hostBeforeUTC": "2026-11-04T10:27:15.955647+00:00",
+  "hostAfterUTC": "2026-11-04T10:27:17.587849+00:00",
+  "deviceUTC": "2026-11-04T10:27:16.732000+00:00",
+  "deviceTimeSource": "NTP",
+  "clockChanged": false,
+  "deviceWritesIssued": 0,
+  "allCertificatesCurrentlyValid": true,
+  "allCRLsCurrentlyFresh": true,
+  "CRLBytesUnchanged": true,
+  "policiesUnchanged": true,
+  "serverModes": {
+    "disabled": "disabled-good",
+    "valid-leaf": "leaf-control",
+    "valid-chain": "control-intermediate",
+    "leaf": "leaf-bad",
+    "intermediate": "intermediate-bad"
+  },
+  "nativeEvidence": {
+    "collectedAtUTC": "2026-11-04T10:27:17.568767+00:00",
+    "commands": [
+      {
+        "command": "show clock detail",
+        "output": "show clock detail\n10:27:16.732 UTC Wed Nov 4 2026\nTime source is NTP\nEdge-9K"
+      },
+      {
+        "command": "show running-config all | section ^crypto pki trustpoint CVK-STDREVOKE",
+        "output": "show running-config all | section ^crypto pki trustpoint CVK-STDREVOKE\ncrypto pki trustpoint CVK-STDREVOKE-NONE-20261104\n enrollment retry count 999\n enrollment retry period 1\n enrollment terminal pem\n revocation-check none\n authorization username subjectname  \n authorization username subjectname  secondary\n hash sha512\ncrypto pki trustpoint CVK-STDREVOKE-LEAF-20261104\n enrollment retry count 999\n enrollment retry period 1\n enrollment terminal pem\n revocation-check crl\n authorization username subjectname  \n authorization username subjectname  secondary\n hash sha512\ncrypto pki trustpoint CVK-STDREVOKE-CHAIN-20261104\n enrollment retry count 999\n enrollment retry period 1\n enrollment terminal pem\n revocation-check crl\n authorization username subjectname  \n authorization username subjectname  secondary\n hash sha512\nEdge-9K"
+      },
+      {
+        "command": "show crypto pki crls",
+        "output": "CRL Issuer Name: \n    cn=CVK revoke control-intermediate 4723f9294e02\n    LastUpdate: 10:11:33 UTC Nov 4 2026\n    NextUpdate: 10:16:33 UTC Nov 6 2026\n\n    CRL downloaded at: 10:19:55 UTC Nov 4 2026\n\n    Retrieved from CRL Distribution Point: \n      http://192.168.129.111:18464/control-intermediate.crl\n\n CRL DER is 437 bytes\n CRL is stored in parsed CRL cache\n\n\n\nCRL Issuer Name: \n    cn=CVK revoke chain-root 4723f9294e02\n    LastUpdate: 10:11:33 UTC Nov 4 2026\n    NextUpdate: 10:16:33 UTC Nov 6 2026\n\n    CRL downloaded at: 10:19:55 UTC Nov 4 2026\n\n    Retrieved from CRL Distribution Point: \n      http://192.168.129.111:18464/chain-root.crl\n\n CRL DER is 482 bytes\n CRL is stored in parsed CRL cache\n\n\n\nCRL Issuer Name: \n    cn=CVK revoke leaf-root 4723f9294e02\n    LastUpdate: 10:11:33 UTC Nov 4 2026\n    NextUpdate: 10:16:33 UTC Nov 6 2026\n\n    CRL downloaded at: 10:17:36 UTC Nov 4 2026\n\n    Retrieved from CRL Distribution Point: \n      http://192.168.129.111:18464/leaf-root.crl\n\n CRL DER is 481 bytes\n CRL is stored in parsed CRL cache\n\n\nParsed CRL cache current size is 1400 bytes\nParsed CRL cache maximum size is 65536 bytes\n\nEdge-9K"
+      }
+    ]
+  }
+}

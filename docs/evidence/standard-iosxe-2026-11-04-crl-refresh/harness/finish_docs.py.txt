@@ -1,0 +1,28 @@
+from pathlib import Path
+import json
+root=Path('/Users/johalley/Git/cisco-virtual-kubelet');R=Path('/private/tmp/cvk-crlrefresh-20261104');q=json.loads((R/'qualification-assessed.json').read_text());assert q['revocationDiscoveryQualified'];seconds=round(q['publicationToNativeFetchSeconds'],1);gap=round(q['originalNextUpdateToNativeFetchSeconds'],1)
+addition=f'''The separate [leaf revocation-discovery run](evidence/standard-iosxe-2026-11-04-crl-refresh/README.md)
+started with an unrevoked certificate and cached empty CRL, then published its
+revocation at the same CDP. A fresh image still ran during the old CRL's valid
+cache window. After natural expiry, the next application validation retrieved
+the new signed CRL and rejected fresh delivery through native pull and fallback.
+Publication to native retrieval was {seconds} seconds; retrieval occurred {gap}
+seconds after NextUpdate, including the gap before the next connection. These
+are measured times for the fixture's ten-minute initial CRL, not a universal
+refresh deadline. Replacing only the leaf certificate/key recovered the same
+Pod after normal fence expiry; the actual release, fresh delivery and normal
+deletion passed. Two serial-specific native PKI errors establish rejection; the origin recorded
+only the fallback alert, and its stricter raw result is preserved. Initial
+prepublication harness stops and raw observer evidence are also preserved. No cache policy, clock, Lease or journal was reset. Intermediate
+discovery, unavailable CRLs and cache-policy overrides remain unqualified.
+Standard remains the default without artifact metadata or journals; Governed
+remains deferred.
+
+'''
+for n in ['verified-iosxe-qualification.md','verified-artifact-preflight.md','app-image-lifecycle-plan.md']:
+ p=root/'docs'/n;s=p.read_text();old='revocation discovery/cache-refresh latency remains unqualified.';assert old in s;s=s.replace(old,'leaf revocation discovery/cache refresh is covered by the separate run below.')
+ anchor='metadata or journal was required; Standard remains the default and Governed\nremains deferred.\n\n';assert s.count(anchor)==1;s=s.replace(anchor,anchor+addition)
+ if n=='verified-iosxe-qualification.md':
+  lines=s.splitlines(keepends=True);i=next(i for i,l in enumerate(lines) if l.startswith('| Standard CRL revocation |'));lines.insert(i+1,'| Standard CRL discovery | Cache an empty current CRL while a valid app runs, then publish its revocation at the same CDP; retain default cache policy and use fresh image identities | Measure publication, cache expiry, native new-CRL retrieval and TLS rejection; characterize cached-window acceptance; verify exact release after same-Pod certificate-only recovery and fresh delivery/deletion; preserve earlier attempts; no artifact journal |\n');s=''.join(lines)
+ p.write_text(s)
+print('PASS current guidance updated; historical reports unchanged')

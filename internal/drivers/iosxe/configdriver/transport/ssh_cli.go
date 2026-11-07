@@ -16,6 +16,7 @@ package transport
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io"
 	"net"
@@ -77,6 +78,10 @@ type sshCLIConfig struct {
 //     return everything between the command echo and the prompt.
 //   - Final "exit" closes the session.
 func runShowCommandsViaSSH(cfg sshCLIConfig, commands []string) ([]CommandResult, error) {
+	return runCommandsViaSSHContext(context.Background(), cfg, commands)
+}
+
+func runCommandsViaSSHContext(ctx context.Context, cfg sshCLIConfig, commands []string) ([]CommandResult, error) {
 	if cfg.Address == "" {
 		return nil, fmt.Errorf("ssh-cli: empty Address")
 	}
@@ -100,10 +105,23 @@ func runShowCommandsViaSSH(cfg sshCLIConfig, commands []string) ([]CommandResult
 		Timeout:         timeout,
 	}
 	addr := net.JoinHostPort(cfg.Address, strconv.Itoa(port))
-	client, err := ssh.Dial("tcp", addr, clientCfg)
+	// DialContext also bounds connection establishment for checksum operations.
+	dialCtx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
+	conn, err := (&net.Dialer{}).DialContext(dialCtx, "tcp", addr)
 	if err != nil {
 		return nil, fmt.Errorf("ssh-cli: dial %s: %w", addr, err)
 	}
+	_ = conn.SetDeadline(time.Now().Add(timeout))
+	stopDial := context.AfterFunc(ctx, func() { _ = conn.Close() })
+	defer stopDial()
+	cc, chans, reqs, err := ssh.NewClientConn(conn, addr, clientCfg)
+	if err != nil {
+		_ = conn.Close()
+		return nil, fmt.Errorf("ssh-cli: dial %s: %w", addr, err)
+	}
+	_ = conn.SetDeadline(time.Time{})
+	client := ssh.NewClient(cc, chans, reqs)
 	defer client.Close()
 
 	session, err := client.NewSession()

@@ -1,0 +1,162 @@
+{
+  "atUTC": "2026-11-03T22:51:17.086120+00:00",
+  "passed": true,
+  "deviceClockOrTrustChanged": false,
+  "cases": [
+    {
+      "case": "separate-control-intermediate",
+      "command": [
+        "openssl",
+        "verify",
+        "-CAfile",
+        "/tmp/cvk-stdchain-20261103/intermediate-root.crt",
+        "-purpose",
+        "sslserver",
+        "-verify_ip",
+        "192.168.129.111",
+        "-attime",
+        "1793746277",
+        "-untrusted",
+        "/tmp/cvk-stdchain-20261103/control-intermediate.crt",
+        "/tmp/cvk-stdchain-20261103/control-leaf.crt"
+      ],
+      "verificationEpochUTC": "2026-11-03T22:51:17.086120+00:00",
+      "expectedSuccess": true,
+      "exitCode": 0,
+      "stdout": "/tmp/cvk-stdchain-20261103/control-leaf.crt: OK\n",
+      "stderr": ""
+    },
+    {
+      "case": "root-before-expiry",
+      "command": [
+        "openssl",
+        "verify",
+        "-CAfile",
+        "/tmp/cvk-stdchain-20261103/root-old.crt",
+        "-purpose",
+        "sslserver",
+        "-verify_ip",
+        "192.168.129.111",
+        "-attime",
+        "1793746277",
+        "/tmp/cvk-stdchain-20261103/root-leaf.crt"
+      ],
+      "verificationEpochUTC": "2026-11-03T22:51:17.086120+00:00",
+      "expectedSuccess": true,
+      "exitCode": 0,
+      "stdout": "/tmp/cvk-stdchain-20261103/root-leaf.crt: OK\n",
+      "stderr": ""
+    },
+    {
+      "case": "root-after-expiry",
+      "command": [
+        "openssl",
+        "verify",
+        "-CAfile",
+        "/tmp/cvk-stdchain-20261103/root-old.crt",
+        "-purpose",
+        "sslserver",
+        "-verify_ip",
+        "192.168.129.111",
+        "-attime",
+        "1793747294",
+        "/tmp/cvk-stdchain-20261103/root-leaf.crt"
+      ],
+      "verificationEpochUTC": "2026-11-03T23:08:14+00:00",
+      "expectedSuccess": false,
+      "exitCode": 2,
+      "stdout": "",
+      "stderr": "CN = CVK chain short-root b26747ac1b54\nerror 10 at 1 depth lookup: certificate has expired\nerror /tmp/cvk-stdchain-20261103/root-leaf.crt: verification failed\n"
+    },
+    {
+      "case": "root-renewed-after-expiry",
+      "command": [
+        "openssl",
+        "verify",
+        "-CAfile",
+        "/tmp/cvk-stdchain-20261103/root-renewed.crt",
+        "-purpose",
+        "sslserver",
+        "-verify_ip",
+        "192.168.129.111",
+        "-attime",
+        "1793747294",
+        "/tmp/cvk-stdchain-20261103/root-leaf.crt"
+      ],
+      "verificationEpochUTC": "2026-11-03T23:08:14+00:00",
+      "expectedSuccess": true,
+      "exitCode": 0,
+      "stdout": "/tmp/cvk-stdchain-20261103/root-leaf.crt: OK\n",
+      "stderr": ""
+    },
+    {
+      "case": "intermediate-expired-now",
+      "command": [
+        "openssl",
+        "verify",
+        "-CAfile",
+        "/tmp/cvk-stdchain-20261103/intermediate-root.crt",
+        "-purpose",
+        "sslserver",
+        "-verify_ip",
+        "192.168.129.111",
+        "-attime",
+        "1793746277",
+        "-untrusted",
+        "/tmp/cvk-stdchain-20261103/intermediate-expired.crt",
+        "/tmp/cvk-stdchain-20261103/intermediate-leaf.crt"
+      ],
+      "verificationEpochUTC": "2026-11-03T22:51:17.086120+00:00",
+      "expectedSuccess": false,
+      "exitCode": 2,
+      "stdout": "",
+      "stderr": "CN = CVK chain intermediate b26747ac1b54\nerror 10 at 1 depth lookup: certificate has expired\nerror /tmp/cvk-stdchain-20261103/intermediate-leaf.crt: verification failed\n"
+    },
+    {
+      "case": "intermediate-renewed-now",
+      "command": [
+        "openssl",
+        "verify",
+        "-CAfile",
+        "/tmp/cvk-stdchain-20261103/intermediate-root.crt",
+        "-purpose",
+        "sslserver",
+        "-verify_ip",
+        "192.168.129.111",
+        "-attime",
+        "1793746277",
+        "-untrusted",
+        "/tmp/cvk-stdchain-20261103/intermediate-renewed.crt",
+        "/tmp/cvk-stdchain-20261103/intermediate-leaf.crt"
+      ],
+      "verificationEpochUTC": "2026-11-03T22:51:17.086120+00:00",
+      "expectedSuccess": true,
+      "exitCode": 0,
+      "stdout": "/tmp/cvk-stdchain-20261103/intermediate-leaf.crt: OK\n",
+      "stderr": ""
+    },
+    {
+      "case": "intermediate-before-expiry",
+      "command": [
+        "openssl",
+        "verify",
+        "-CAfile",
+        "/tmp/cvk-stdchain-20261103/intermediate-root.crt",
+        "-purpose",
+        "sslserver",
+        "-verify_ip",
+        "192.168.129.111",
+        "-attime",
+        "1793487077",
+        "-untrusted",
+        "/tmp/cvk-stdchain-20261103/intermediate-expired.crt",
+        "/tmp/cvk-stdchain-20261103/intermediate-leaf.crt"
+      ],
+      "verificationEpochUTC": "2026-10-31T22:51:17.086120+00:00",
+      "expectedSuccess": true,
+      "exitCode": 0,
+      "stdout": "/tmp/cvk-stdchain-20261103/intermediate-leaf.crt: OK\n",
+      "stderr": ""
+    }
+  ]
+}

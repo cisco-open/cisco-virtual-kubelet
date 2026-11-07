@@ -1,0 +1,25 @@
+import pathlib,subprocess,json,datetime,ssl,urllib.request,base64,os,re,time
+R=pathlib.Path('/tmp/cvk-intrefresh-20261105');exec(compile((R/'pki_io.py').read_text(),'pki_io.py','exec'))
+q=subprocess.run(['python3',str(R/'device_cli.py')],input=json.dumps(['show version | include Version|Model Number|System Serial','show app-hosting list','show app-hosting infra','show ip http server status | include trustpoint','show running-config | include ^ip http secure-trustpoint|^ip http client secure-trustpoint|^crypto pki trustpoint CVK-INTREFRESH','show clock detail','show crypto pki crls']),text=True,capture_output=True,check=True);b=json.loads(q.stdout);t=json.dumps(b);assert 'FCW2247C1AJ' in t and 'C9300-24UX' in t and 'cvk0000_' not in t and 'CAF Health: Stable' in t and 'App signature verification: disabled' in t and 'HTTP secure server trustpoint: TP-self-signed-806566997' in t;assert not re.search(r'^crypto pki trustpoint CVK-INTREFRESH',b['commands'][4]['output'],re.M);(R/'device-baseline.json').write_text(json.dumps(b,indent=2)+'\n');p=CLI();proofs=[]
+try:
+ p.cmd('configure terminal');p.cmd('ip http secure-trustpoint cvk-gnoi-20260904')
+ for case,root in [('intermediate','root')]:
+  tp=TPS[case];p.cmd('crypto pki trustpoint '+tp);p.cmd('enrollment terminal pem');p.cmd('revocation-check none');p.cmd('exit');p.authenticate(tp,root)
+  if case!='disabled':p.cmd('crypto pki trustpoint '+tp);p.cmd('revocation-check crl');p.cmd('exit')
+ p.cmd('end')
+ for case,root in [('intermediate','root')]:proofs.append(p.proof(TPS[case],root))
+ config=p.cmd('show running-config all | section ^crypto pki trustpoint CVK-INTREFRESH');blocks=re.split(r'(?m)(?=^crypto pki trustpoint )',config);policies={}
+ for case,tp in TPS.items():
+  block=next(x for x in blocks if x.startswith('crypto pki trustpoint '+tp+'\n'));want='none' if case=='disabled' else 'crl';assert re.search(r'^ revocation-check '+want+r'\s*$',block,re.M),block;assert not re.search(r'^ match certificate .*skip revocation-check',block,re.M);policies[case]={'trustpoint':tp,'revocationCheck':want,'noneFallback':case=='disabled','runningConfig':block}
+ (R/'pki-policy.json').write_text(json.dumps({'atUTC':datetime.datetime.now(datetime.timezone.utc).isoformat(),'passed':True,'policies':policies,'globalPolicyChanged':False,'CRLCacheManuallyCleared':False},indent=2)+'\n')
+finally:
+ (R/'device-preparation.json').write_text(json.dumps({'atUTC':datetime.datetime.now(datetime.timezone.utc).isoformat(),'commands':p.records,'certificateProofs':proofs,'onlyRootsTrusted':True,'intermediateExplicitlyTrusted':False,'clockChanged':False},indent=2)+'\n');p.close()
+ctx=ssl.create_default_context(cafile='/tmp/cvk-verified-qual-20261101/device-ca.crt');ctx.verify_flags|=ssl.VERIFY_X509_PARTIAL_CHAIN
+for i in range(20):
+ try:
+  req=urllib.request.Request('https://10.1.1.1/restconf/data/Cisco-IOS-XE-native:native/hostname',headers={'Authorization':'Basic '+base64.b64encode(('cisco:'+os.environ['CVK_QUAL_DEVICE_PASSWORD']).encode()).decode(),'Accept':'application/yang-data+json'})
+  with urllib.request.urlopen(req,context=ctx,timeout=10) as res:assert res.status==200 and 'Edge-9K' in res.read().decode()
+  break
+ except OSError:time.sleep(2)
+else:raise RuntimeError('Authenticated direct RESTCONF unavailable')
+(R/'transport-controls.json').write_text(json.dumps({'atUTC':datetime.datetime.now(datetime.timezone.utc).isoformat(),'directRESTCONF':True,'managementTLSVerified':True,'relayUsed':False,'NATInjected':False,'ordinaryOriginTrustpoints':list(TPS.values()),'clientIdentityTrustpointPreserved':'IRIS','nativeSignaturePolicyChanged':False,'verifiedConfigurationRequired':False,'deviceClockChanged':False},indent=2)+'\n');print('PASS baseline and one root with CRL checking and default cache policy',flush=True)

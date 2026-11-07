@@ -1,0 +1,21 @@
+"""Public certificates and explicit safe result files only; never keys or Secrets."""
+import pathlib,json,tarfile,sys
+R=pathlib.Path('/tmp/cvk-stdcert-20261103');assert json.loads((R/'qualification-result.json').read_text())['executionComplete'];assert json.loads((R/'final-cleanup.json').read_text())['passed']
+names=['device-baseline.json','device-preparation.json','transport-controls.json','pki-manifest.json','independent-tls-controls.json','offline-certificate-controls.json','qualification-result.json','qualification.log','server-events.jsonl','device-input.yaml','deployment-valid-input.yaml','deployment-untrusted-input.yaml','deployment-hostname-input.yaml','values.yaml','final-cleanup.json','trusted-ca.crt','untrusted-ca.crt','valid.crt','untrusted.crt','hostname.crt']
+for label in ['valid-control']:
+ names += [p+label+'.json' for p in ['snapshot-','controls-','deployment-','native-','leases-']]+['wait-'+label+'.jsonl']
+for case in ['untrusted','hostname']:
+ names += [case+'-'+x+'.json' for x in ['invalid-server-events','invalid-lease','worker-diagnostics','invalid-events','invalid-outcome','certificate-corrected','recovery-result']]
+ names += ['snapshot-'+case+'-invalid-boundary.json',case+'-invalid-observations.jsonl']
+ for suffix in ['invalid-accepted','corrected-recovery']:
+  for prefix,ext in [('snapshot-','.json'),('controls-','.json'),('deployment-','.json'),('native-','.json'),('leases-','.json'),('wait-','.jsonl')]:
+   n=prefix+case+'-'+suffix+ext
+   if (R/n).exists():names.append(n)
+ n=case+'-guarded-observations.jsonl'
+ if (R/n).exists():names.append(n)
+for label in ['baseline','valid-normal-cleanup','untrusted-normal-cleanup','hostname-normal-cleanup']:
+ names.append('controls-'+label+'.json')
+ if label!='baseline':names+=['snapshot-'+label+'.json','leases-'+label+'.json']
+with tarfile.open(fileobj=sys.stdout.buffer,mode='w|') as t:
+ for n in names:
+  assert (R/n).is_file(),n;t.add(R/n,arcname=n)

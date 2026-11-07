@@ -1,0 +1,12 @@
+{
+  "atUTC": "2026-11-04T10:23:53.534270+00:00",
+  "case": "disabled",
+  "classification": "revoked-certificate-accepted-and-app-ran",
+  "rejectionObserved": false,
+  "appHealthyUnderRevokedCertificate": true,
+  "packageURL": "https://192.168.129.111:18459/disabled-agent-a.tar",
+  "serverModeAtObservation": "disabled-bad",
+  "deviceRevocationCheck": "none",
+  "allCertificateDatesValid": true,
+  "artifactConfigurationRequired": false
+}

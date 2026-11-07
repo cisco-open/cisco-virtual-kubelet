@@ -1,0 +1,18 @@
+{
+  "atUTC": "2026-11-06T11:56:55.755977+00:00",
+  "podUID": "e76fde1b-9ce6-4aba-9534-43582e126577",
+  "podIP": "192.168.129.137",
+  "sourceSnapshot": "snapshot-final-rollback-a-poll-30.json",
+  "readOnly": true,
+  "status": 200,
+  "body": "{\"fixture\":\"cvk-staging-cleanup-qualification\",\"release\":\"STD-GC-A-20261106-a85d9b305139\"}\n",
+  "nativeARP": {
+    "collectedAtUTC": "2026-11-06T11:56:56.783996+00:00",
+    "commands": [
+      {
+        "command": "show ip arp 192.168.129.137",
+        "output": "show ip arp 192.168.129.137\nProtocol  Address          Age (min)  Hardware Addr   Type   Interface\nInternet  192.168.129.137         3   5254.ddae.9994  ARPA   Vlan129\nEdge-9K"
+      }
+    ]
+  }
+}

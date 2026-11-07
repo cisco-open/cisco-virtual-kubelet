@@ -1,0 +1,22 @@
+import pathlib,json,ssl,threading,http.server,datetime,time,hashlib
+R=pathlib.Path('/tmp/cvk-stdgc-20261106');P=json.loads((R/'payload-provenance.json').read_text());LOCK=threading.Lock()
+def event(v):
+ v['atUTC']=datetime.datetime.now(datetime.timezone.utc).isoformat()
+ with LOCK:
+  with (R/'server-events.jsonl').open('a') as f:f.write(json.dumps(v)+'\n')
+for phase,p in P['phases'].items():assert hashlib.sha256((R/phase/'package.tar').read_bytes()).hexdigest()==p['packageSHA256']
+class TLS(http.server.ThreadingHTTPServer):
+ def get_request(self):
+  raw,peer=self.socket.accept();raw.settimeout(20)
+  try:s=CTX.wrap_socket(raw,server_side=True);event({'kind':'tls-established','client':peer[0],'sessionReused':s.session_reused,'tlsVersion':s.version()});return s,peer
+  except ssl.SSLError as e:event({'kind':'tls-rejected','client':peer[0],'reason':e.reason});raw.close();raise
+class Package(http.server.BaseHTTPRequestHandler):
+ def log_message(self,*args):pass
+ def do_GET(self):
+  phase=next((n for n in P['phases'] if self.path=='/'+n+'.tar'),None);mode=json.loads((R/'server-mode.json').read_text());truncated=phase=='b' and mode.get('truncateB',False);blocked=phase=='b' and not mode['bAvailable'] and not truncated;package=phase is not None and not blocked;body=(R/phase/'package.tar').read_bytes() if package else b'';status=200 if package or self.path=='/_probe' else 404;event({'kind':'http-request','phase':phase,'client':self.client_address[0],'path':self.path,'status':status,'package':package,'bAvailable':mode['bAvailable'],'truncated':truncated});self.send_response(status);self.send_header('Content-Length',str(len(body)));self.end_headers()
+  if truncated:
+   self.wfile.write(body[:4096]);self.wfile.flush();self.close_connection=True;event({'kind':'truncated-package-sent','phase':phase,'client':self.client_address[0],'bytesSent':4096,'declaredBytes':len(body)});return
+  if package:
+   try:self.wfile.write(body);self.wfile.flush();event({'kind':'package-sent','phase':phase,'client':self.client_address[0],'bytes':len(body),'sha256':hashlib.sha256(body).hexdigest()})
+   except OSError as e:event({'kind':'package-write-error','phase':phase,'client':self.client_address[0],'errorType':type(e).__name__})
+CTX=ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER);CTX.minimum_version=ssl.TLSVersion.TLSv1_2;CTX.options|=ssl.OP_NO_TICKET;CTX.num_tickets=0;CTX.load_cert_chain(str(R/'origin-chain.pem'),str(R/'leaf.key'));server=TLS(('0.0.0.0',18482),Package);event({'kind':'servers-ready','TLSport':18482});server.serve_forever()

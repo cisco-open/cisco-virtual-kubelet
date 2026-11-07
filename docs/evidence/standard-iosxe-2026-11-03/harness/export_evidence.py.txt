@@ -1,0 +1,109 @@
+import pathlib,json,re,yaml,shutil,hashlib,subprocess
+R=pathlib.Path('/private/tmp/cvk-standard-20261103');ROOT=pathlib.Path('/Users/johalley/Git/cisco-virtual-kubelet');OUT=ROOT/'docs/evidence/standard-iosxe-2026-11-03';q=json.loads((R/'qualification-assessed.json').read_text());assert q['status']=='standard-control-qualified' and q['cleanupPassed'];OUT.mkdir(parents=True,exist_ok=True)
+def clean(v):
+ if isinstance(v,list):return [clean(x) for x in v]
+ if isinstance(v,dict):return {k:clean(x) for k,x in v.items() if k not in ['managedFields','kubectl.kubernetes.io/last-applied-configuration']}
+ return v
+names=['device-baseline.json','device-preparation.json','transport-controls.json','qualification-result.json','worker-replacement-result.json','snapshot-normal-cleanup.json','controls-baseline.json','controls-normal-cleanup.json','leases-normal-cleanup.json','final-cleanup.json','candidate.json','automated-checks.json']
+for label in ['initial-a','worker-replacement-a','updated-b','rollback-a']:names += [prefix+label+'.json' for prefix in ['snapshot-','controls-','leases-','deployment-','native-']]
+for n in names:
+ x=clean(json.loads((R/n).read_text()))
+ if isinstance(x,dict) and 'devices' in x:
+  for d in x['devices']:
+   if d.get('status'):d['status']={k:v for k,v in d['status'].items() if k in ['phase','conditions','nodeIdentity','workerRevision','networkWorkerRevision','workerCapabilities']}
+  for a in x.get('nativeApps',[]):
+   if not a.get('appID','').startswith('cvk0000_'):a.pop('networkInterfaces',None)
+ (OUT/n).write_text(json.dumps(x,indent=2)+'\n')
+(OUT/'qualification.json').write_text(json.dumps(clean(q),indent=2)+'\n')
+for n in ['store-requests.jsonl']+['wait-'+label+'.jsonl' for label in ['initial-a','worker-replacement-a','updated-b','rollback-a']]:
+ (OUT/n).write_text(''.join(json.dumps(clean(json.loads(l)))+'\n' for l in (R/n).read_text().splitlines()))
+for n in ['device-input.yaml','deployment-input.yaml','values.yaml']:
+ x=yaml.safe_load((R/n).read_text());assert 'password' not in json.dumps(x).lower();(OUT/n).write_text(yaml.safe_dump(x))
+(OUT/'harness').mkdir(exist_ok=True)
+for n in ['bootstrap','device_cli','deploy','snapshot','store','prepare_device','qualify','cleanup','bundle_evidence','assess','export_evidence']:
+ shutil.copyfile(R/(n+'.py'),OUT/'harness'/(n+'.py.txt'))
+rows='\n'.join('| '+x['case']+' | '+x['release']+' | '+str(x['observations'])+' | Ready, HTTP '+x['httpRelease']+', Deployment available |' for x in q['cases'])
+(OUT/'README.md').write_text(f'''# Standard app-hosting control — C9K qualification
+
+Passed on 3 November 2026 on C9300-24UX / IOS-XE 17.18.1 fc2, serial
+FCW2247C1AJ. Standard remains the default; Governed remains deferred.
+No production code change or additional Standard requirement was needed.
+
+| Case | Release | Observations | Result |
+| --- | --- | --- | --- |
+{rows}
+
+The managed [CiscoDevice input](device-input.yaml) omitted `spec.appArtifacts`
+entirely. The [Deployment input](deployment-input.yaml) had no Pod-template
+annotations, descriptor digest, signature or artifact binding. It used an
+ordinary package URL, normal resources and the existing managed-node scheduling
+settings. The HTTP fixture origin served only `/standard-agent-a.tar` and
+`/standard-agent-b.tar`; it had no descriptor, signature or artifact API.
+It supplied the normal external package source, not a new CVK service requirement.
+
+Live controls checked the actual CiscoDevice and generated worker config,
+worker arguments/environment names, workload metadata, and ConfigMap/Role/
+RoleBinding inventory across the isolated cluster. No appArtifacts configuration,
+artifact journal or journal grant was present before deployment, at each health
+observation, after worker replacement/update/rollback, or during normal cleanup.
+Ordinary worker configuration and existing mutation Leases remained in use;
+no Lease was manually cleared or edited.
+
+Initial A reached native RUNNING, Pod Ready, HTTP release A and an Available/
+Progressing Deployment. Manager reconciliation replaced the worker through a
+CiscoDevice log-level change. The same workload Pod/app survived, its exact
+worker binding converged, and the package request count remained one.
+Changing the Deployment image to B created a fresh Pod/app and produced HTTP B.
+`kubectl rollout undo --to-revision={q['workerReplacement'].get('revision','1')}`
+restored the original A template with another fresh Pod/app and HTTP A.
+Old fixture apps were absent at each successful replacement endpoint.
+
+The [origin request trace](store-requests.jsonl) records exactly three successful
+GETs from the C9K at 10.1.1.1: A, B, A. The ordinary Standard HTTP URL flow worked;
+copy fallback was not separately injected or qualified. Direct RESTCONF TLS was
+authenticated.
+No relay, injected NAT, artifact CA trustpoint or Verified checksum configuration
+was used. SSH was used for independent native observations and lab certificate
+selection/restoration, not image transfer.
+
+The candidate is unchanged from the
+[lost-reply qualification](../verified-iosxe-2026-11-03-replies/README.md):
+source fingerprint `sha256:{q['candidate']['dirtySourceSHA256']}`,
+binary SHA256 `{q['candidate']['binarySHA256']}`.
+Live manager and worker image IDs matched the recorded corrected image.
+See [candidate identity](candidate.json), [assessment](qualification.json),
+[raw result](qualification-result.json), the `controls-*.json` files and
+[worker replacement result](worker-replacement-result.json).
+[Validation results](automated-checks.json) record documentation checks and the
+unchanged production source; the prior Go race run was not repeated for this
+documentation/evidence-only qualification.
+
+Normal scaling to zero removed the final fixture Pod and native app without an
+artifact deletion journal or tombstone. Final cleanup removed the owned isolated
+cluster and ordinary HTTP source, checked the three owned default cache paths,
+and restored the original explicit self-signed HTTPS selector. IRIS client trust,
+native signature policy and unrelated apps were preserved: iris RUNNING,
+c9ktest DEPLOYED, CAF Stable. The shared Kubernetes node remained Ready.
+See [cleanup evidence](final-cleanup.json).
+
+Before any fixture existed, automatic approval review failed or timed out for
+SCP staging. After explicit user approval, direct SSH execution of the prepared
+script passed automatic review and completed the cases and cleanup. No approval
+check was bypassed. Those tooling interruptions were not application failures.
+
+This is an ordinary HTTP package control on one device/firmware/package profile.
+HTTPS package delivery and device-local preloaded files were not exercised here.
+No lost reply, pending-operation fault, uninterrupted availability, stateful
+migration, fleet-wide compatibility, artifact authenticity/checksum gate or
+specific CVE remediation is claimed. Native package-signature verification was
+disabled at baseline and unchanged. Standard users can opt into Verified
+separately when its integrity and durable recovery guarantees are needed.
+
+Evidence is allowlisted and sanitized. It excludes Secret data, credentials,
+private keys, kubeconfig and unrelated topology/interface observations. Harness
+source is retained under `harness/`. SHA256SUMS covers every evidence file.
+''')
+pattern=re.compile(r'^-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----|^\s*client-key-data:\s*[A-Za-z0-9+/]{24,}|password\s*[=:]\s*cisco\b|^Authorization:\s*(?:Basic|Bearer)\s+\S',re.I|re.M)
+for p in OUT.rglob('*'):
+ if p.is_file():assert not pattern.search(p.read_text()),p
+manifest=''.join(hashlib.sha256(p.read_bytes()).hexdigest()+'  '+str(p.relative_to(OUT))+'\n' for p in sorted(OUT.rglob('*')) if p.is_file() and p.name!='SHA256SUMS');(OUT/'SHA256SUMS').write_text(manifest);print('PASS exported',len(manifest.splitlines()),'sanitized Standard evidence files')

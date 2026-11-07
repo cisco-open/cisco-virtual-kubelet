@@ -1,0 +1,10 @@
+{
+  "atUTC": "2026-11-06T07:27:47.609363+00:00",
+  "passed": true,
+  "samePodUID": "302b286a-f469-4fe7-92a4-2d963d266570",
+  "currentCRLversion": 3,
+  "nativeCurrentCRLRetrievalConfirmed": true,
+  "nativeRevokedSerialConfirmed": true,
+  "noPackageGET": true,
+  "noConfigurationOrRuntime": true
+}

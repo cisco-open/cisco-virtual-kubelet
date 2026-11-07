@@ -1,0 +1,45 @@
+{
+  "atUTC": "2026-11-04T18:03:43.244272+00:00",
+  "productionSourceUnchanged": true,
+  "dirtySourceSHA256": "d07b6ea671fb9508e3eb648014e642eabf845d5fe45d1bd339557cf8b0c098ac",
+  "sourceFiles": 1555,
+  "historicalEvidenceUnchanged": true,
+  "historicalManifests": [
+    {
+      "directory": "standard-iosxe-2026-11-03",
+      "verifiedFiles": 53
+    },
+    {
+      "directory": "standard-iosxe-2026-11-03-certificate-chain-expiry",
+      "verifiedFiles": 154
+    },
+    {
+      "directory": "standard-iosxe-2026-11-03-certificate-dates",
+      "verifiedFiles": 100
+    },
+    {
+      "directory": "standard-iosxe-2026-11-03-certificate-rejection",
+      "verifiedFiles": 87
+    },
+    {
+      "directory": "standard-iosxe-2026-11-03-https-local",
+      "verifiedFiles": 64
+    },
+    {
+      "directory": "topology-2026-10-01",
+      "verifiedFiles": 529
+    },
+    {
+      "directory": "verified-iosxe-2026-11-02",
+      "verifiedFiles": 47
+    },
+    {
+      "directory": "verified-iosxe-2026-11-03",
+      "verifiedFiles": 57
+    },
+    {
+      "directory": "verified-iosxe-2026-11-03-replies",
+      "verifiedFiles": 69
+    }
+  ]
+}

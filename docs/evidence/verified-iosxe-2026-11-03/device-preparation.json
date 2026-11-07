@@ -1,0 +1,57 @@
+{
+  "atUTC": "2026-11-03T05:14:33.624218+00:00",
+  "commands": [
+    {
+      "command": "terminal length 0",
+      "output": "terminal length 0\nEdge-9K"
+    },
+    {
+      "command": "terminal width 511",
+      "output": "terminal width 511\nEdge-9K"
+    },
+    {
+      "command": "show app-hosting list",
+      "output": "show app-hosting list\nApp id                                   State\n---------------------------------------------------------\niris                                     RUNNING\nc9ktest                                  DEPLOYED\n\nEdge-9K"
+    },
+    {
+      "command": "configure terminal",
+      "output": "configure terminal\nEnter configuration commands, one per line.  End with CNTL/Z.\nEdge-9K(config)"
+    },
+    {
+      "command": "ip http secure-trustpoint cvk-gnoi-20260904",
+      "output": "ip http secure-trustpoint cvk-gnoi-20260904\nEdge-9K(config)"
+    },
+    {
+      "command": "crypto pki trustpoint CVK-QUAL-20261103",
+      "output": "crypto pki trustpoint CVK-QUAL-20261103\nEdge-9K(ca-trustpoint)"
+    },
+    {
+      "command": "enrollment terminal",
+      "output": "enrollment terminal\nEdge-9K(ca-trustpoint)"
+    },
+    {
+      "command": "revocation-check none",
+      "output": "revocation-check none\nEdge-9K(ca-trustpoint)"
+    },
+    {
+      "command": "exit",
+      "output": "exit\nEdge-9K(config)"
+    },
+    {
+      "command": "authenticate run-owned trustpoint with public artifact-store CA",
+      "output": " yes\nTrustpoint CA certificate accepted.\n% Certificate successfully imported\n\nEdge-9K(config)"
+    },
+    {
+      "command": "end",
+      "output": "end\nEdge-9K"
+    },
+    {
+      "command": "show ip http server status | include trustpoint",
+      "output": "show ip http server status | include trustpoint\nHTTP secure server trustpoint: cvk-gnoi-20260904\nHTTP secure server peer validation trustpoint: \nEdge-9K"
+    },
+    {
+      "command": "show running-config | include ^ip http client secure-trustpoint",
+      "output": "show running-config | include ^ip http client secure-trustpoint\nip http client secure-trustpoint IRIS\nEdge-9K"
+    }
+  ]
+}

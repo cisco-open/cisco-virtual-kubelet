@@ -42,7 +42,8 @@ func newMaintenanceCoordinator(cfg *rest.Config, identity workerRuntimeIdentity,
 	// Every managed worker needs the Kubernetes-side write fence, including
 	// drivers without gNOI lifecycle controllers. Standalone workers retain the
 	// historical opt-in construction tied to IOS-XE mutation support.
-	if !identity.ManagedTopology && !maintenanceEnabled(opts) {
+	verified := opts.Spec != nil && string(opts.Spec.AppArtifacts.EffectiveMode()) == "Verified"
+	if !identity.ManagedTopology && !maintenanceEnabled(opts) && !verified {
 		return nil, nil
 	}
 	if err := identity.validate(); err != nil {
@@ -91,6 +92,6 @@ func newMaintenanceCoordinator(cfg *rest.Config, identity workerRuntimeIdentity,
 		ExpectedWorkerUsername: identity.WorkerUsername,
 		WorkerPodName:          identity.WorkerPodName,
 		WorkerPodUID:           identity.WorkerPodUID,
-		MutationsEnabled:       (opts.softwareUpgradeEnabled() || opts.writeClassGNOIEnabled()) && !envEnabled(gNOIDisabledEnv),
+		MutationsEnabled:       (verified || opts.softwareUpgradeEnabled() || opts.writeClassGNOIEnabled()) && !envEnabled(gNOIDisabledEnv),
 	}, nil
 }

@@ -1,0 +1,11 @@
+[
+  {
+    "Config": "fb0f4dd6b1012b3e626e42fa64f4fb98bcd5feeba40c34f5c812c4598be2046a.json",
+    "Layers": [
+      "dc78be3c3975209b7a2b8d5170dcd7dd6274ec1b72134883d23c9b3265b8f00c/layer.tar"
+    ],
+    "RepoTags": [
+      "cvk-stdrevoke-20261104/cold:35d8a9c90cb2"
+    ]
+  }
+]

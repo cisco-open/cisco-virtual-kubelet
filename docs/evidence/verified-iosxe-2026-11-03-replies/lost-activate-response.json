@@ -1,0 +1,36 @@
+{
+  "atUTC": "2026-11-03T08:49:36.083956+00:00",
+  "operation": "activate",
+  "appID": "cvk0000_1d31f7883bae487195938903667a6db1",
+  "upstreamStatus": 200,
+  "nativeReply": {
+    "Cisco-IOS-XE-rpc:output": {
+      "result": "cvk0000_1d31f7883bae487195938903667a6db1 activated successfullyCurrent state is: ACTIVATED"
+    }
+  },
+  "nativeState": "ACTIVATED",
+  "pendingBeforeDispatch": {
+    "journalName": "cvk-artifacts-1ebb96da741e8be78dc2028b",
+    "journalUID": "48532744-e5b4-4310-947c-185e680c398f",
+    "resourceVersion": "1020",
+    "record": {
+      "sourceImage": "127.0.0.1:15443/cvk-qual-20261102/agent@sha256:24193e6eae32de28d622fe59cf2c5896b4929f325991ebf405f91c70920ebcd2",
+      "version": 1,
+      "device": "10.1.1.1",
+      "podUID": "1d31f788-3bae-4871-9593-8903667a6db1",
+      "appID": "cvk0000_1d31f7883bae487195938903667a6db1",
+      "descriptorDigest": "sha256:aa3215da3bc24864581775acbf5e0de9e51dac4816d9a9fcc3f8b8ce1d3c755c",
+      "packageDigest": "sha256:ed8c257297a526229b154cbaabe1c466de239d4c011e4edfd25c7cb440fa071c",
+      "stagedPath": "flash:cvk-ba5843daec00214a-ed8c257297a526229b154cbaabe1c466de239d4c011e4edfd25c7cb440fa071c.tar",
+      "configDigest": "sha256:9988a90241aeabb03ad8c3b297ff8b206c6c6d7c4849fddf7561a60f9f9d8cae",
+      "identity": "sha256:a17266e0331e56f95b30f706ac1249657a7bb5ffdf7e61cc9f75bb9c4098109b",
+      "phase": "activatePending"
+    }
+  },
+  "upstreamTLSVerified": true,
+  "upstreamServerName": "10.1.1.1",
+  "clientResponseHeadersSent": false,
+  "clientResponseBodyBytesSent": 0,
+  "responseSHA256": "24ae679c278da558753800c5e1f5eead27039b3a737e486eccad2291a495691b",
+  "responseBytes": 146
+}

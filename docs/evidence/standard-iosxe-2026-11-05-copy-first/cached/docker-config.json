@@ -1,0 +1,31 @@
+{
+  "architecture": "amd64",
+  "os": "linux",
+  "created": "2026-11-05T20:13:41.532043+00:00",
+  "config": {
+    "User": "65532:65532",
+    "ExposedPorts": {
+      "8080/tcp": {}
+    },
+    "Entrypoint": [
+      "/app"
+    ],
+    "WorkingDir": "/",
+    "Labels": {
+      "apphosting.cisco.com/qualification": "20261105-stdcopyfix",
+      "apphosting.cisco.com/release": "STD-COPYFIX-CACHED-20261105-0609ed4e6d25"
+    }
+  },
+  "rootfs": {
+    "type": "layers",
+    "diff_ids": [
+      "sha256:dfcbca02222e6b685c837db5d06cc3d4aacc5661891fc9f174e02996effc262d"
+    ]
+  },
+  "history": [
+    {
+      "created": "2026-11-05T20:13:41.532043+00:00",
+      "created_by": "Run-owned CRL refresh fixture"
+    }
+  ]
+}

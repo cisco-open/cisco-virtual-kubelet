@@ -1,0 +1,39 @@
+{
+  "atUTC": "2026-11-05T20:54:18.978096+00:00",
+  "deviceUTC": "2026-11-05T20:54:17+00:00",
+  "deviceTimeSource": "NTP",
+  "allCertificatesCurrentlyValid": true,
+  "publishedCRLCurrentlyValid": true,
+  "publishedCRLversion": 2,
+  "publishedCRLSHA256": "bc89e9b28d5b38aa37aeec073ec5996ee38272873d0a5a51696440432e11650f",
+  "defaultCachePolicyUnchanged": true,
+  "revocationCheckCRLUnchanged": true,
+  "deviceWritesIssued": 0,
+  "clockChanged": false,
+  "nativeEvidence": {
+    "collectedAtUTC": "2026-11-05T20:54:18.953234+00:00",
+    "commands": [
+      {
+        "command": "show clock detail",
+        "output": "show clock detail\n20:54:17.593 UTC Thu Nov 5 2026\nTime source is NTP\nEdge-9K"
+      },
+      {
+        "command": "show running-config all | section ^crypto pki trustpoint CVK-STDCOPYFIX",
+        "output": "show running-config all | section ^crypto pki trustpoint CVK-STDCOPYFIX\ncrypto pki trustpoint CVK-STDCOPYFIX-20261105\n enrollment retry count 999\n enrollment retry period 1\n enrollment terminal pem\n revocation-check crl\n authorization username subjectname  \n authorization username subjectname  secondary\n hash sha512\nEdge-9K"
+      },
+      {
+        "command": "show crypto pki crls",
+        "output": "show crypto pki crls\nCRL Issuer Name: \n    cn=CVK Standard copy fix intermediate 717eb0f2c8b8\n    LastUpdate: 20:45:18 UTC Nov 5 2026\n    NextUpdate: 20:50:18 UTC Nov 6 2026\n\n    CRL downloaded at: 20:50:33 UTC Nov 5 2026\n\n    Retrieved from CRL Distribution Point: \n      http://192.168.129.111:18476/intermediate.crl\n\n CRL DER is 440 bytes\n CRL is stored in parsed CRL cache\n\nCRL Issuer Name: \n    cn=CVK Standard copy fix root 717eb0f2c8b8\n    LastUpdate: 20:50:23 UTC Nov 5 2026\n    NextUpdate: 21:00:28 UTC Nov 5 2026\n\n    CRL downloaded at: 20:50:33 UTC Nov 5 2026\n\n    Retrieved from CRL Distribution Point: \n      http://192.168.129.111:18476/issuer.crl\n\n CRL DER is 432 bytes\n CRL is stored in parsed CRL cache\n\nCRL Issuer Name: \n    cn=CVK Standard copy fix intermediate 3bb47dd5c618\n    LastUpdate: 20:12:13 UTC Nov 5 2026\n    NextUpdate: 20:17:13 UTC Nov 6 2026\n\n    CRL downloaded at: 20:19:08 UTC Nov 5 2026\n\n    Retrieved from CRL Distribution Point: \n      http://192.168.129.111:18476/intermediate.crl\n\n CRL DER is 440 bytes\n CRL is stored in parsed CRL cache\n\n\nParsed CRL cache current size is 1312 bytes\nParsed CRL cache maximum size is 65536 bytes\n\nEdge-9K"
+      },
+      {
+        "command": "show ip interface brief | include ^Vlan129",
+        "output": "show ip interface brief | include ^Vlan129\nVlan129                192.168.129.2   YES NVRAM  up                    up      \nEdge-9K"
+      },
+      {
+        "command": "show running-config | include ^ip http secure-trustpoint|^ip http client secure-trustpoint",
+        "output": "show running-config | include ^ip http secure-trustpoint|^ip http client secure-trustpoint\nip http secure-trustpoint cvk-gnoi-20260904\nip http client secure-trustpoint IRIS\nEdge-9K"
+      }
+    ]
+  },
+  "runIssuerInCache": true
+}

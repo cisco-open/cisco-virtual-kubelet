@@ -1,0 +1,164 @@
+[
+  {
+    "kind": "tls-established",
+    "certMode": "original",
+    "client": "10.1.1.1",
+    "clientPort": 29399,
+    "sessionReused": false,
+    "tlsVersion": "TLSv1.3",
+    "atUTC": "2026-11-05T20:50:33.652711+00:00"
+  },
+  {
+    "kind": "crl-served",
+    "crl": "issuer",
+    "client": "192.168.129.2",
+    "clientPort": 53392,
+    "path": "/issuer.crl",
+    "status": 200,
+    "sha256": "b8ccba97b4c905a31ae763da5b16b866c6b0e3b8d0cb838407f7f08de3d60ce3",
+    "bytes": 432,
+    "version": 1,
+    "revokedSerialsHex": [],
+    "atUTC": "2026-11-05T20:50:33.658380+00:00"
+  },
+  {
+    "kind": "crl-served",
+    "crl": "intermediate",
+    "client": "192.168.129.2",
+    "clientPort": 37042,
+    "path": "/intermediate.crl",
+    "status": 200,
+    "sha256": "a79e778ff527c0812b6770308cdafc148c39c2fc746fc0b5a4f78731221ec0ab",
+    "bytes": 440,
+    "version": 1,
+    "revokedSerialsHex": [],
+    "atUTC": "2026-11-05T20:50:33.664855+00:00"
+  },
+  {
+    "kind": "http-request",
+    "phase": "valid",
+    "certMode": "original",
+    "client": "10.1.1.1",
+    "clientPort": 29399,
+    "path": "/valid.tar",
+    "status": 200,
+    "package": true,
+    "atUTC": "2026-11-05T20:50:33.698200+00:00"
+  },
+  {
+    "kind": "tls-established",
+    "certMode": "original",
+    "client": "10.1.1.1",
+    "clientPort": 47389,
+    "sessionReused": false,
+    "tlsVersion": "TLSv1.3",
+    "atUTC": "2026-11-05T20:50:33.779741+00:00"
+  },
+  {
+    "kind": "http-request",
+    "phase": "valid",
+    "certMode": "original",
+    "client": "10.1.1.1",
+    "clientPort": 47389,
+    "path": "/valid.tar",
+    "status": 200,
+    "package": true,
+    "atUTC": "2026-11-05T20:50:33.825241+00:00"
+  },
+  {
+    "kind": "package-write-error",
+    "phase": "valid",
+    "client": "10.1.1.1",
+    "errorType": "SSLEOFError",
+    "atUTC": "2026-11-05T20:50:33.924214+00:00"
+  },
+  {
+    "kind": "package-sent",
+    "phase": "valid",
+    "certMode": "original",
+    "client": "10.1.1.1",
+    "bytes": 5959680,
+    "sha256": "39f2a66c48e9b403b194dacfe8a87c10789514c19e77b6e7318feb2e5d1ef379",
+    "atUTC": "2026-11-05T20:50:36.884078+00:00"
+  },
+  {
+    "kind": "tls-established",
+    "certMode": "original",
+    "client": "10.1.1.1",
+    "clientPort": 50216,
+    "sessionReused": false,
+    "tlsVersion": "TLSv1.3",
+    "atUTC": "2026-11-05T20:52:47.675765+00:00"
+  },
+  {
+    "kind": "http-request",
+    "phase": "cached",
+    "certMode": "original",
+    "client": "10.1.1.1",
+    "clientPort": 50216,
+    "path": "/cached.tar",
+    "status": 200,
+    "package": true,
+    "atUTC": "2026-11-05T20:52:47.718498+00:00"
+  },
+  {
+    "kind": "tls-established",
+    "certMode": "original",
+    "client": "10.1.1.1",
+    "clientPort": 27746,
+    "sessionReused": false,
+    "tlsVersion": "TLSv1.3",
+    "atUTC": "2026-11-05T20:52:47.795760+00:00"
+  },
+  {
+    "kind": "http-request",
+    "phase": "cached",
+    "certMode": "original",
+    "client": "10.1.1.1",
+    "clientPort": 27746,
+    "path": "/cached.tar",
+    "status": 200,
+    "package": true,
+    "atUTC": "2026-11-05T20:52:47.838512+00:00"
+  },
+  {
+    "kind": "package-write-error",
+    "phase": "cached",
+    "client": "10.1.1.1",
+    "errorType": "SSLEOFError",
+    "atUTC": "2026-11-05T20:52:47.942028+00:00"
+  },
+  {
+    "kind": "package-sent",
+    "phase": "cached",
+    "certMode": "original",
+    "client": "10.1.1.1",
+    "bytes": 5959680,
+    "sha256": "1b1b8a8291f571106573ed16ff38811e1dfb847dc0a7372a21bb6a0536a71365",
+    "atUTC": "2026-11-05T20:52:50.971697+00:00"
+  },
+  {
+    "kind": "tls-established",
+    "certMode": "original",
+    "client": "10.1.1.1",
+    "clientPort": 42505,
+    "sessionReused": false,
+    "tlsVersion": "TLSv1.3",
+    "atUTC": "2026-11-05T21:00:36.425223+00:00"
+  },
+  {
+    "kind": "crl-served",
+    "crl": "issuer",
+    "client": "192.168.129.2",
+    "clientPort": 25979,
+    "path": "/issuer.crl",
+    "status": 200,
+    "sha256": "bc89e9b28d5b38aa37aeec073ec5996ee38272873d0a5a51696440432e11650f",
+    "bytes": 487,
+    "version": 2,
+    "revokedSerialsHex": [
+      "ccc3b327a765a1c5a667f0b1d535f8028e4f879"
+    ],
+    "atUTC": "2026-11-05T21:00:36.426890+00:00"
+  }
+]

@@ -1,0 +1,18 @@
+from pathlib import Path
+import shutil,json
+r=Path('/private/tmp/cvk-stdgc-20261106');old=Path('/private/tmp/cvk-stdupgrade-20261106')
+subs=[('cvk-stdupgrade','cvk-stdgc'),('c9k-stdupgrade','c9k-stdgc'),('CVK-STDUPGRADE','CVK-STDGC'),('20261106-stdupgrade','20261106-stdgc'),('16459','16460'),('18479','18482'),('18480','18483'),('10.80.0.0','10.82.0.0'),('10.81.0.0','10.83.0.0'),('STD-UPGRADE-','STD-GC-')]
+for name in ['bootstrap','deploy','device_cli','control_functions','snapshot','smoke_host','pki_io','verify_earlier','build_payloads','generate_pki','prepare_device','servers','qualify','cleanup','bundle_remote','setup']:
+ s=(old/(name+'.py')).read_text()
+ for a,b in subs:s=s.replace(a,b)
+ if name=='bootstrap':s=s.replace('/tmp/cvk-stdcopyfix-20261105/image.tar','/tmp/cvk-stdgc-20261106/image.tar')
+ if name=='deploy':s=s.replace("values['image']={'repository':'cvk-stdcopyfix-qual','tag':'20261105-b55c3b3f6aed','pullPolicy':'Never'}", "candidate=json.loads((R/'candidate.json').read_text());repo,tag=candidate['imageTag'].rsplit(':',1);values['image']={'repository':repo,'tag':tag,'pullPolicy':'Never'}")
+ if name=='setup':s=s.replace("'/tmp/cvk-stdcopyfix-20261105/initial-missing-directory']", "'/tmp/cvk-stdcopyfix-20261105/initial-missing-directory','/tmp/cvk-stdupgrade-20261106','/tmp/cvk-stdgc-20261106-probe','/tmp/cvk-stdgc-20261106-probe2','/tmp/cvk-stdgc-20261106-probe3','/tmp/cvk-stdgc-20261106-probe4','/tmp/cvk-stdgc-20261106-probe5']")
+ if name=='smoke_host':s=s.replace('three fresh','two fresh')
+ (r/(name+'.py')).write_text(s)
+(r/'main.go').write_text((old/'main.go').read_text().replace('upgrade-rollback','staging-cleanup'))
+# Public historical evidence must remain byte-for-byte unchanged.
+root=Path('/Users/johalley/Git/cisco-virtual-kubelet');import hashlib
+files={str(p.relative_to(root)):hashlib.sha256(p.read_bytes()).hexdigest() for p in (root/'docs/evidence').rglob('*') if p.is_file()}
+(r/'earlier-local-hashes.json').write_text(json.dumps(files,indent=2)+'\n')
+shutil.copytree(root/'charts/cisco-virtual-kubelet',r/'chart',dirs_exist_ok=True)

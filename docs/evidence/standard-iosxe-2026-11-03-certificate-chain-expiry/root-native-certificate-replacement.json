@@ -1,0 +1,60 @@
+{
+  "atUTC": "2026-11-04T06:04:11.108558+00:00",
+  "commands": [
+    {
+      "command": "terminal length 0",
+      "output": "terminal length 0\nEdge-9K"
+    },
+    {
+      "command": "terminal width 511",
+      "output": "terminal width 511\nEdge-9K"
+    },
+    {
+      "command": "show crypto pki certificates pem CVK-STDCHAIN-ROOT-20261103",
+      "output": "show crypto pki certificates pem CVK-STDCHAIN-ROOT-20261103\n------Trustpoint: CVK-STDCHAIN-ROOT-20261103------\n% The specified trustpoint is not enrolled (CVK-STDCHAIN-ROOT-20261103).\n% Only export the CA certificate in PEM format.\n% CA certificate:\n-----BEGIN CERTIFICATE-----\nMIIDTDCCAjSgAwIBAgIUXVYpr1rkvI1E0m2kt0ky2CZOKgEwDQYJKoZIhvcNAQEL\nBQAwLDEqMCgGA1UEAwwhQ1ZLIGNoYWluIHNob3J0LXJvb3QgYjI2NzQ3YWMxYjU0\nMB4XDTI2MTAwNDIyNTExNFoXDTI2MTEwMzIzMDYxNFowLDEqMCgGA1UEAwwhQ1ZL\nIGNoYWluIHNob3J0LXJvb3QgYjI2NzQ3YWMxYjU0MIIBIjANBgkqhkiG9w0BAQEF\nAAOCAQ8AMIIBCgKCAQEAw6nUSs1Bx7Pj//ft6X+h71w6WMG3ME3sA5la56eNIGTS\nmuHUzA4yCB1otvgQKP8ctyjH6NU+J/mlgB5xRy7lTom4GkS6JNZvokUopOe+Iv0I\nwqpj4nTSlN2tlaVaxB21OVHmC+66IcAEHnQvzT3lvbq/YJ8X2w15OFEu+2KTFb67\nqG/oyG4qeP4gqvz3BV1TLAKdiXBtRKhcp0zoAUdQ5XpCJ4ezYsKb55xo0QcTWKcR\nBUlVmyGTpv0sgYfTEUkeCsOO+pNLMim9rqit8j23q09LsP9G9EQzx5WDq2TB2V6d\nR8pkaTDIk4bovCaBO5u6+z3Gu7rIaW69KlpyUJgPzQIDAQABo2YwZDASBgNVHRMB\nAf8ECDAGAQH/AgEAMB0GA1UdDgQWBBTkChPN5PBA1LXRt5fSd1s6fTL9yjAfBgNV\nHSMEGDAWgBTkChPN5PBA1LXRt5fSd1s6fTL9yjAOBgNVHQ8BAf8EBAMCAQYwDQYJ\nKoZIhvcNAQELBQADggEBABUp46lKDGhMnPqRG0OEnsNE+18+WxTbQ/EiKcx1Gzn8\nMlr+jbNgjisQsYRYPWwq8XeuWCAKP9aNMc/ClVrk58GT9W4alo2YELIZ3RSlaYDY\nOovGz5IT1LRt7yvxTg/p/n2UNM5dzOq3FilHP32+bnZv1WWUpeNr6kICE6RQErX+\nYpKCS3u2cfQK9RZRNDxscWdfHlIQ2b4jHCiznuAm3kRV8yqJywKIXHr4FcAPFfx1\nwQksjQId1zehnXVzzxd1y0PDG8f5G18Gd1m/woN+wE51EAWMLxwCQdVlQ1m3FxiQ\nFNT6M8I3xmenDSDP+vnyVVP4qvfhl9CD+AFrGkHaxiM=\n-----END CERTIFICATE-----\n\nEdge-9K"
+    },
+    {
+      "command": "configure terminal",
+      "output": "configure terminal\nEnter configuration commands, one per line.  End with CNTL/Z.\nEdge-9K(config)"
+    },
+    {
+      "command": "no crypto pki trustpoint CVK-STDCHAIN-ROOT-20261103",
+      "output": "no crypto pki trustpoint CVK-STDCHAIN-ROOT-20261103\n% Removing an enrolled trustpoint will destroy all certificates\n received from the related Certificate Authority.\n\nAre you sure you want to do this? [confirmed removal of run-owned public CA trustpoint]\n yes\n% Be sure to ask the CA administrator to revoke your certificates.\n\nEdge-9K(config)"
+    },
+    {
+      "command": "crypto pki trustpoint CVK-STDCHAIN-ROOT-20261103",
+      "output": "crypto pki trustpoint CVK-STDCHAIN-ROOT-20261103\nEdge-9K(ca-trustpoint)"
+    },
+    {
+      "command": "enrollment terminal pem",
+      "output": "enrollment terminal pem\nEdge-9K(ca-trustpoint)"
+    },
+    {
+      "command": "revocation-check none",
+      "output": "revocation-check none\nEdge-9K(ca-trustpoint)"
+    },
+    {
+      "command": "exit",
+      "output": "exit\nEdge-9K(config)"
+    },
+    {
+      "command": "authenticate CVK-STDCHAIN-ROOT-20261103 using root-renewed.crt",
+      "output": "crypto pki authenticate CVK-STDCHAIN-ROOT-20261103\n\nEnter the base\n 64 encoded CA certificate.\nEnd with a blank line or the word \"quit\" on a line by itself\n\n-----BEGIN CERTIFICATE-----\nMIIDTDCCAjSgAwIBAgIUF/Nj7eS19sT1sTzb4Se1+dbwzJIwDQYJKoZIhvcNAQEL\nBQAwLDEqMCgGA1UEAwwhQ1ZLIGNoYWluIHNob3J0LXJvb3QgYjI2NzQ3YWMxYjU0\nMB4XDTI2MTAwNDIyNTExNFoXDTI2MTIwMzIyNTExNFowLDEqMCgGA1UEAwwhQ1ZL\nIGNoYWluIHNob3J0LXJvb3QgYjI2NzQ3YWMxYjU0MIIBIjANBgkqhkiG9w0BAQEF\nAAOCAQ8AMIIBCgKCAQEAw6nUSs1Bx7Pj//ft6X+h71w6WMG3ME3sA5la56eNIGTS\nmuHUzA4yCB1otvgQKP8ctyjH6NU+J/mlgB5xRy7lTom4GkS6JNZvokUopOe+Iv0I\nwqpj4nTSlN2tlaVaxB21OVHmC+66IcAEHnQvzT3lvbq/YJ8X2w15OFEu+2KTFb67\nqG/oyG4qeP4gqvz3BV1TLAKdiXBtRKhcp0zoAUdQ5XpCJ4ezYsKb55xo0QcTWKcR\nBUlVmyGTpv0sgYfTEUkeCsOO+pNLMim9rqit8j23q09LsP9G9EQzx5WDq2TB2V6d\nR8pkaTDIk4bovCaBO5u6+z3Gu7rIaW69KlpyUJgPzQIDAQABo2YwZDASBgNVHRMB\nAf8ECDAGAQH/AgEAMB0GA1UdDgQWBBTkChPN5PBA1LXRt5fSd1s6fTL9yjAfBgNV\nHSMEGDAWgBTkChPN5PBA1LXRt5fSd1s6fTL9yjAOBgNVHQ8BAf8EBAMCAQYwDQYJ\nKoZIhvcNAQELBQADggEBAIuPQL5ATFy7mt4zVOSLsWnOxY0y3pgl0U2yoCXNfPf3\nlo6ooJLp/pjw8V2TCdmp9eBHVW5vklBQTLlNIClbu/GpCtDQD9TQIsv0WHCra06y\nzNLyShJ9d33k1f/YXqvZlloY5HjpDuA47o4B9ptC5+6d5Rv37SBq+tew2pdGmttX\nMBpAQzy65F/S3pdR/0Pi/Kjf/xsWkXpX/m8XTlPfVpvu4N5C1XNMSBpLQ3m4Kf92\nFph+QMXSH90qpLzFFCPgkS4ezARMqXi9/DAksxux2kgdUcqTt330LrUyzGshRzZT\n9TlQUBKvGIv6Mqpkl3JGWCJBisvpcMHxO6o9aq3x+fA=\n-----END CERTIFICATE-----\nquit\nCertificate has the following attributes:\n       Fingerprint MD5: FE6A84EF 23D8B5BD 7D7161F5 BC86F4C2 \n      Fingerprint SHA1: A19CC374 855D2B8F 9213CC25 15BE2D30 4CAC7D86 \n\n% Do you accept this certificate? [yes/no]:\n[accepted run-owned CA import/overwrite]\n yes\nTrustpoint CA certificate accepted.\n% Certificate successfully imported\n\nEdge-9K(config)#"
+    },
+    {
+      "command": "end",
+      "output": "end\nEdge-9K"
+    },
+    {
+      "command": "show crypto pki certificates pem CVK-STDCHAIN-ROOT-20261103",
+      "output": "show crypto pki certificates pem CVK-STDCHAIN-ROOT-20261103\n------Trustpoint: CVK-STDCHAIN-ROOT-20261103------\n% The specified trustpoint is not enrolled (CVK-STDCHAIN-ROOT-20261103).\n% Only export the CA certificate in PEM format.\n% CA certificate:\n-----BEGIN CERTIFICATE-----\nMIIDTDCCAjSgAwIBAgIUF/Nj7eS19sT1sTzb4Se1+dbwzJIwDQYJKoZIhvcNAQEL\nBQAwLDEqMCgGA1UEAwwhQ1ZLIGNoYWluIHNob3J0LXJvb3QgYjI2NzQ3YWMxYjU0\nMB4XDTI2MTAwNDIyNTExNFoXDTI2MTIwMzIyNTExNFowLDEqMCgGA1UEAwwhQ1ZL\nIGNoYWluIHNob3J0LXJvb3QgYjI2NzQ3YWMxYjU0MIIBIjANBgkqhkiG9w0BAQEF\nAAOCAQ8AMIIBCgKCAQEAw6nUSs1Bx7Pj//ft6X+h71w6WMG3ME3sA5la56eNIGTS\nmuHUzA4yCB1otvgQKP8ctyjH6NU+J/mlgB5xRy7lTom4GkS6JNZvokUopOe+Iv0I\nwqpj4nTSlN2tlaVaxB21OVHmC+66IcAEHnQvzT3lvbq/YJ8X2w15OFEu+2KTFb67\nqG/oyG4qeP4gqvz3BV1TLAKdiXBtRKhcp0zoAUdQ5XpCJ4ezYsKb55xo0QcTWKcR\nBUlVmyGTpv0sgYfTEUkeCsOO+pNLMim9rqit8j23q09LsP9G9EQzx5WDq2TB2V6d\nR8pkaTDIk4bovCaBO5u6+z3Gu7rIaW69KlpyUJgPzQIDAQABo2YwZDASBgNVHRMB\nAf8ECDAGAQH/AgEAMB0GA1UdDgQWBBTkChPN5PBA1LXRt5fSd1s6fTL9yjAfBgNV\nHSMEGDAWgBTkChPN5PBA1LXRt5fSd1s6fTL9yjAOBgNVHQ8BAf8EBAMCAQYwDQYJ\nKoZIhvcNAQELBQADggEBAIuPQL5ATFy7mt4zVOSLsWnOxY0y3pgl0U2yoCXNfPf3\nlo6ooJLp/pjw8V2TCdmp9eBHVW5vklBQTLlNIClbu/GpCtDQD9TQIsv0WHCra06y\nzNLyShJ9d33k1f/YXqvZlloY5HjpDuA47o4B9ptC5+6d5Rv37SBq+tew2pdGmttX\nMBpAQzy65F/S3pdR/0Pi/Kjf/xsWkXpX/m8XTlPfVpvu4N5C1XNMSBpLQ3m4Kf92\nFph+QMXSH90qpLzFFCPgkS4ezARMqXi9/DAksxux2kgdUcqTt330LrUyzGshRzZT\n9TlQUBKvGIv6Mqpkl3JGWCJBisvpcMHxO6o9aq3x+fA=\n-----END CERTIFICATE-----\n\nEdge-9K"
+    },
+    {
+      "command": "show crypto pki certificates pem CVK-STDCHAIN-INTROOT-20261103",
+      "output": "show crypto pki certificates pem CVK-STDCHAIN-INTROOT-20261103\n------Trustpoint: CVK-STDCHAIN-INTROOT-20261103------\n% The specified trustpoint is not enrolled (CVK-STDCHAIN-INTROOT-20261103).\n% Only export the CA certificate in PEM format.\n% CA certificate:\n-----BEGIN CERTIFICATE-----\nMIIDWjCCAkKgAwIBAgIUQIfckCI/xRo5zgPXhNtbT0Tkyz4wDQYJKoZIhvcNAQEL\nBQAwMzExMC8GA1UEAwwoQ1ZLIGNoYWluIGludGVybWVkaWF0ZS1yb290IGIyNjc0\nN2FjMWI1NDAeFw0yNjEwMDQyMjUxMTRaFw0yNjEyMDMyMjUxMTRaMDMxMTAvBgNV\nBAMMKENWSyBjaGFpbiBpbnRlcm1lZGlhdGUtcm9vdCBiMjY3NDdhYzFiNTQwggEi\nMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQDe9lqF2vGh5xzbaaykFy22oqN8\nt+6gDEScG9C1XVsuW2A29Y26XFG7d7Sq31mVgz0xjR6uTSz7YkdJ4lrrEzeFmLDf\n7SyWtw8JEdFVYzZxXet06mJrMjRTBU96StKdtfACJFzn0r0vbPaCV8EbuB3k4nth\nKW/DP8mFqZes9hUhb6gd4r13sCwsdWgvVdBJ4xiVVWKu0yMoefPBenvIVT30xvgq\n4qCKHX2GCgfP0R09fytyA1AFn/gtjDF5yCe0h+/vmUR1Z5VgOwbNkh/r5QfEdANu\nE3biqu0+z+/MjBJra/3gacc1EsaLuZnTEqlL+USxra+A+vXJ00uDo3M2l7b1AgMB\nAAGjZjBkMBIGA1UdEwEB/wQIMAYBAf8CAQEwHQYDVR0OBBYEFPR19geMAOJ7Ym9w\nBI5d0Q3k69oxMB8GA1UdIwQYMBaAFPR19geMAOJ7Ym9wBI5d0Q3k69oxMA4GA1Ud\nDwEB/wQEAwIBBjANBgkqhkiG9w0BAQsFAAOCAQEA1i9aqw973VTQstLG0Qw6+tBw\nLyh2w+v6feaT7CsKhw9BfX07Z4ppHmHLWU5YB7+QJw5Ny08gS51BbGP4l/Wxr2/4\nyVfaZaJcDQDXroVgZ7zwPYLsoBlBnrO6gyW5hz64BOgsaTNloLZ0W5JfmQ81abrN\n4A4xkp6YxKW/BmzJOrkQVCPZnHtmOfo2jkJU/RGnQwd8GLCsuIJRNze3JyGRsHYo\nrAqxyNzUWDZbGU4CMDL5beIoRn/fR4ik/PUxigM5I/sTR4NeURIYGlNVUXfuyQSK\ni4AZqhopdK4dibHmQul5F1OAFM38jX1GFEYGZcKqyMM/a7M3zjq2y8ATq6Rxgw==\n-----END CERTIFICATE-----\n\nEdge-9K"
+    }
+  ],
+  "rootTrustpointRecreated": true,
+  "mutationLeaseRecreated": false,
+  "scope": "Only run-owned short-root CA trustpoint recreated with identical configuration and renewed CA; no clock, leaf, payload, Pod, URL, client identity or verification policy change"
+}

@@ -17,6 +17,7 @@ package maintenance
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 	"testing"
 	"time"
@@ -294,5 +295,55 @@ func TestLegacyMutationBlocksOrdinaryWrites(t *testing.T) {
 	}
 	if _, _, err := c.AcquireWrite(context.Background()); err == nil || !strings.Contains(err.Error(), "legacy") {
 		t.Fatalf("legacy dispatched upgrade did not block ordinary write: %v", err)
+	}
+}
+
+func TestReadOnlyRejectionReleasesWriteFenceButTextAndUnknownOutcomesDoNot(t *testing.T) {
+	for _, tc := range []struct {
+		name     string
+		outcome  error
+		released bool
+	}{
+		{"typed preflight rejection", devicecoordination.NoDeviceMutation(errors.New("descriptor mismatch")), true},
+		{"wrapped preflight rejection", fmt.Errorf("deploy: %w", devicecoordination.NoDeviceMutation(errors.New("descriptor mismatch"))), true},
+		{"untrusted error text", errors.New("NoDeviceMutation descriptor mismatch"), false},
+		{"transfer failed", errors.New("copy response lost"), false},
+		{"incomplete", devicecoordination.ErrMutationIncomplete, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			c := testCoordinator(t)
+			_, finish, err := c.AcquireWrite(context.Background())
+			if err != nil {
+				t.Fatal(err)
+			}
+			finish(tc.outcome)
+			var lease coordv1.Lease
+			err = c.Client.Get(context.Background(), c.leaseKey(), &lease)
+			if apierrors.IsNotFound(err) != tc.released {
+				t.Fatalf("released=%v err=%v lease=%+v", tc.released, err, lease.Spec)
+			}
+		})
+	}
+}
+
+func TestCancelledReadOnlyRejectionCanReleaseButJoinedUncertaintyCannot(t *testing.T) {
+	for _, joined := range []bool{false, true} {
+		c := testCoordinator(t)
+		ctx, cancel := context.WithCancel(context.Background())
+		_, finish, err := c.AcquireWrite(ctx)
+		if err != nil {
+			t.Fatal(err)
+		}
+		cancel()
+		outcome := devicecoordination.NoDeviceMutation(errors.New("metadata request cancelled before dispatch"))
+		if joined {
+			outcome = errors.Join(outcome, errors.New("unknown device write"))
+		}
+		finish(outcome)
+		var lease coordv1.Lease
+		err = c.Client.Get(context.Background(), c.leaseKey(), &lease)
+		if apierrors.IsNotFound(err) == joined {
+			t.Fatalf("joined=%v incorrectly released/retained fence: %v", joined, err)
+		}
 	}
 }

@@ -1,0 +1,66 @@
+"""Physical Standard control: no artifact metadata, trust API or journal setup."""
+import pathlib,json,subprocess,time,datetime,yaml
+R=pathlib.Path('/tmp/cvk-intrefresh-20261105');K=['kubectl','--kubeconfig','/tmp/cvk-intrefresh-20261105/kubeconfig'];NS='cvk-intrefresh-20261105';APPS='cvk-intrefresh-apps-20261105';DEV='c9k-intrefresh-20261105';NAME='cvk-intrefresh-fixture';IMAGE='sha256:6d5cda316de797b803829a9ae9ac9302ea2eda984c40ecf7e2878a3be9b2527d'
+def now():return datetime.datetime.now(datetime.timezone.utc).isoformat()
+def save(n,v): (R/(n+'.json')).write_text(json.dumps(v,indent=2)+'\n')
+def get(a):return json.loads(subprocess.check_output(K+a,text=True,stderr=subprocess.DEVNULL,timeout=30))
+def run(a,**kw):return subprocess.run(a,check=True,**kw)
+def apply(v):run(K+['apply','-f','-'],input=yaml.safe_dump(v),text=True)
+def ready(p):return p.get('status',{}).get('phase')=='Running' and any(c['type']=='Ready' and c['status']=='True' for c in p.get('status',{}).get('conditions',[]))
+def metadata_only(o):return {k:o.get('metadata',{}).get(k) for k in ['name','namespace','uid','annotations']}
+def controls(label):
+ d=get(['-n',NS,'get','ciscodevice',DEV,'-o','json']);assert 'appArtifacts' not in d['spec'],d['spec'].get('appArtifacts')
+ inventories={};found=[]
+ for kind in ['configmaps','roles','rolebindings']:
+  objects=get(['get',kind,'-A','-o','json'])['items'];inventories[kind]=[metadata_only(x) for x in objects];found.extend(x for x in objects if x['metadata']['name'].startswith('cvk-artifacts-') or x['metadata'].get('annotations',{}).get('apphosting.cisco.com/journal')=='v1')
+ assert not found,'Unexpected artifact journal/grant'
+ cm=get(['-n',NS,'get','configmap',DEV+'-config','-o','json']);configs=[yaml.safe_load(v) for v in cm.get('data',{}).values()];parsed=next(c for c in configs if isinstance(c,dict) and 'device' in c);assert 'appArtifacts' not in parsed['device']
+ worker=get(['-n',NS,'get','deployment',DEV+'-vk','-o','json']);spec=worker['spec']['template']['spec'];tokens=[]
+ for c in spec['containers']:
+  tokens.extend(c.get('command',[])+c.get('args',[]));tokens.extend(e['name'] for e in c.get('env',[]))
+ assert not any('artifact' in t.lower() or 'journal' in t.lower() for t in tokens),tokens
+ pods=get(['-n',APPS,'get','pods','-o','json'])['items']
+ for p in pods:assert not p['metadata'].get('annotations',{}).get('cisco.io/apphost-artifacts') and all(not k.startswith('apphosting.cisco.com/') for k in p['metadata'].get('annotations',{}));assert len(p['spec']['containers'])==1
+ live=get(['-n',NS,'get','pods','-o','json'])['items'];live_images=[{'pod':p['metadata']['name'],'uid':p['metadata']['uid'],'images':[c.get('imageID') for c in p.get('status',{}).get('containerStatuses',[])]} for p in live]
+ for p in live_images:assert all(i==IMAGE for i in p['images'] if i)
+ report={'atUTC':now(),'label':label,'passed':True,'deviceName':DEV,'deviceUID':d['metadata']['uid'],'deviceAppArtifactsPresent':False,'workerConfigName':cm['metadata']['name'],'workerConfigUID':cm['metadata']['uid'],'workerAppArtifactsPresent':False,'effectiveMode':'Standard (omitted configuration)','artifactJournalAndGrantCount':len(found),'workerArtifactRuntimeOptionsPresent':False,'workloadArtifactBindingsPresent':False,'resourceInventory':inventories,'liveImages':live_images};save('controls-'+label,report);return report
+
+def snap(label):
+ run(['python3',str(R/'snapshot.py'),label],stdout=subprocess.DEVNULL);return json.loads((R/('snapshot-'+label+'.json')).read_text())
+def assertBaselineApps(s):
+ states={a['appID']:a['details'].get('state') for a in s['nativeApps']};assert states.get('iris')=='RUNNING' and states.get('c9ktest')=='DEPLOYED',states;return states
+
+def healthy(label,release):
+ deadline=time.monotonic()+900;iteration=0
+ while time.monotonic()<deadline:
+  s=snap(label+'-poll-'+str(iteration));states=assertBaselineApps(s);pods=[p for p in s['pods'] if not p['metadata'].get('deletionTimestamp')];uids={p['metadata']['uid'] for p in pods};ids={'cvk0000_'+u.replace('-','') for u in uids};native={a for a in states if a.startswith('cvk0000_')};health=[]
+  for probe in s['probes']:
+   if probe['appID'] in ids and probe.get('status')==200:
+    try:
+     if json.loads(probe['body']).get('release')==release:health.append(probe)
+    except (ValueError,KeyError):pass
+  ok=len(pods)==1 and ready(pods[0]) and native==ids and all(states[a]=='RUNNING' for a in ids) and bool(health)
+  checks=controls(label+'-poll-'+str(iteration));summary={'atUTC':now(),'label':label,'release':release,'podUIDs':list(uids),'nativeStates':states,'ready':len(pods)==1 and ready(pods[0]),'httpReleaseConfirmed':bool(health),'oldNativeAppsAbsent':native==ids,'artifactJournalCount':checks['artifactJournalAndGrantCount']}
+  with (R/('wait-'+label+'.jsonl')).open('a') as f:f.write(json.dumps(summary)+'\n')
+  if iteration%4==0:print(json.dumps(summary),flush=True)
+  if ok:
+   for i in range(60):
+    dep=get(['-n',APPS,'get','deployment',NAME,'-o','json']);st=dep.get('status',{})
+    if st.get('availableReplicas')==1 and st.get('readyReplicas')==1 and all(any(c['type']==t and c['status']=='True' for c in st.get('conditions',[])) for t in ['Available','Progressing']):break
+    time.sleep(1)
+   else:raise RuntimeError('Deployment did not converge')
+   s['assertions']=summary;s['assertions']['passed']=True;save('snapshot-'+label,s);save('deployment-'+label,dep);controls(label);print('PASS',label,'Ready/HTTP',release,'without artifacts or journal',flush=True);return s
+  iteration+=1;time.sleep(5)
+ raise RuntimeError('Health timeout '+label+'; retained failed observations')
+def leaseReleased(label):
+ for i in range(60):
+  leases=get(['-n',NS,'get','leases','-o','json']);own=[l for l in leases['items'] if l.get('metadata',{}).get('labels',{}).get('cisco.vk/family')=='device-disruptive-mutation']
+  if all(not l.get('spec',{}).get('holderIdentity') for l in own):break
+  time.sleep(1)
+ else:raise RuntimeError('Normal mutation lease still held; do not manually clear')
+ save('leases-'+label,leases)
+def nativeProof(label,pod):
+ aid='cvk0000_'+pod['metadata']['uid'].replace('-','');commands=['show app-hosting list','show app-hosting detail appid '+aid]
+ q=run(['python3',str(R/'device_cli.py')],input=json.dumps(commands),text=True,capture_output=True);save('native-'+label,json.loads(q.stdout))
+def storeCount():
+ p=R/'store-requests.jsonl';return len(p.read_text().splitlines()) if p.exists() else 0

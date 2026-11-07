@@ -1,0 +1,13 @@
+{
+  "passed": true,
+  "checks": [
+    {
+      "path": "/.well-known/host-meta",
+      "status": 200
+    },
+    {
+      "path": "/restconf/data/Cisco-IOS-XE-app-hosting-oper:app-hosting-oper-data?fields=app",
+      "status": 200
+    }
+  ]
+}

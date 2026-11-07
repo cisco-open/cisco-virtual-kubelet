@@ -547,6 +547,11 @@ func runVirtualKubelet(cmd *cobra.Command, args []string) error {
 			NumWorkers:     5,
 			TLSConfig:      tlsCfg,
 			Handler:        handlerWrapper,
+			// Verified hashes the exact desired configuration and resolves supported
+			// Secret/ConfigMap references in the driver, including after restart.
+			// Upstream expansion injects service variables and iterates an env map,
+			// so callbacks and informer-based recovery would hash different configs.
+			SkipDownwardAPIResolution: appCfg.Device.AppArtifacts.EffectiveMode() == ciskov1.AppArtifactModeVerified,
 		}),
 	}
 
@@ -619,6 +624,11 @@ func runVirtualKubelet(cmd *cobra.Command, args []string) error {
 		sharedDriver, err := drivers.NewDriver(driverCtx, &appCfg.Device)
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to create device driver: %w", err)
+		}
+		if appCfg.Device.AppArtifacts.EffectiveMode() == ciskov1.AppArtifactModeVerified {
+			if err := configureVerifiedDriver(ctx, sharedDriver, &appCfg.Device, clientset, identity); err != nil {
+				return nil, nil, err
+			}
 		}
 		devicePodLister, drainDevicePodLister = devicePodInventoryListers(sharedDriver)
 

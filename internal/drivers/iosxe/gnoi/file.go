@@ -255,6 +255,9 @@ func (c *Client) Get(ctx context.Context, path string, w io.Writer) (*commonpb.H
 			c.cap.Observe(ServiceFile, err)
 			return serverHash, fmt.Errorf("gnoi File.Get recv: %w", err)
 		}
+		if serverHash != nil {
+			return serverHash, errors.New("gnoi File.Get: response after terminal hash")
+		}
 		if len(resp.GetContents()) > 0 {
 			if _, werr := w.Write(resp.GetContents()); werr != nil {
 				return serverHash, fmt.Errorf("gnoi File.Get write: %w", werr)

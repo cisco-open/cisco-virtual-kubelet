@@ -1,0 +1,135 @@
+import pathlib,json,yaml,re,hashlib,shutil
+R=pathlib.Path('/private/tmp/cvk-stdcert-20261103');ROOT=pathlib.Path('/Users/johalley/Git/cisco-virtual-kubelet');OUT=ROOT/'docs/evidence/standard-iosxe-2026-11-03-certificate-rejection';q=json.loads((R/'qualification-assessed.json').read_text());assert q['executionComplete'] and q['baselineCleanupPassed'];OUT.mkdir(parents=True,exist_ok=True)
+def clean(v):
+ if isinstance(v,list):return [clean(x) for x in v]
+ if isinstance(v,dict):return {k:clean(x) for k,x in v.items() if k not in ['managedFields','kubectl.kubernetes.io/last-applied-configuration']}
+ return v
+names=['device-baseline.json','device-preparation.json','transport-controls.json','pki-manifest.json','independent-tls-controls.json','offline-certificate-controls.json','candidate.json','qualification-result.json','final-cleanup.json']
+if (R/'automated-checks.json').exists():names.append('automated-checks.json')
+names += [p+'valid-control.json' for p in ['snapshot-','controls-','deployment-','native-','leases-']]
+for case in ['untrusted','hostname']:
+ names += [case+'-'+x+'.json' for x in ['invalid-server-events','invalid-lease','worker-diagnostics','invalid-events','invalid-outcome','certificate-corrected','recovery-result']]+['snapshot-'+case+'-invalid-boundary.json']
+ for suffix in ['invalid-accepted','corrected-recovery']:
+  for prefix in ['snapshot-','controls-','deployment-','native-','leases-']:
+   n=prefix+case+'-'+suffix+'.json'
+   if (R/n).exists():names.append(n)
+for label in ['baseline','valid-normal-cleanup','untrusted-normal-cleanup','hostname-normal-cleanup']:
+ names.append('controls-'+label+'.json')
+ if label!='baseline':names+=['snapshot-'+label+'.json','leases-'+label+'.json']
+for n in names:
+ x=clean(json.loads((R/n).read_text()))
+ if isinstance(x,dict) and 'devices' in x:
+  for d in x['devices']:
+   if d.get('status'):d['status']={k:v for k,v in d['status'].items() if k in ['phase','conditions','nodeIdentity','workerRevision','networkWorkerRevision','workerCapabilities']}
+  for a in x.get('nativeApps',[]):
+   if not a.get('appID','').startswith('cvk0000_'):a.pop('networkInterfaces',None)
+ (OUT/n).write_text(json.dumps(x,indent=2)+'\n')
+(OUT/'qualification.json').write_text(json.dumps(clean(q),indent=2)+'\n')
+jsonlines=['server-events.jsonl','wait-valid-control.jsonl']
+for case in ['untrusted','hostname']:
+ jsonlines.append(case+'-invalid-observations.jsonl')
+ for n in [case+'-guarded-observations.jsonl','wait-'+case+'-invalid-accepted.jsonl','wait-'+case+'-corrected-recovery.jsonl']:
+  if (R/n).exists():jsonlines.append(n)
+for n in jsonlines:(OUT/n).write_text(''.join(json.dumps(clean(json.loads(l)))+'\n' for l in (R/n).read_text().splitlines()))
+for n in ['device-input.yaml','deployment-valid-input.yaml','deployment-untrusted-input.yaml','deployment-hostname-input.yaml','values.yaml']:
+ v=yaml.safe_load((R/n).read_text());assert 'password' not in json.dumps(v).lower();(OUT/n).write_text(yaml.safe_dump(v))
+for n in ['trusted-ca.crt','untrusted-ca.crt','valid.crt','untrusted.crt','hostname.crt','qualification.log']:shutil.copyfile(R/n,OUT/n)
+(OUT/'harness').mkdir(exist_ok=True)
+for n in ['bootstrap','deploy','device_cli','snapshot','control_functions','generate_pki','validate_pki','prepare_device','servers','start_services','qualify','cleanup','bundle_evidence','assess','export_evidence']:shutil.copyfile(R/(n+'.py'),OUT/'harness'/(n+'.py.txt'))
+rows='\n'.join('| '+({'untrusted':'Untrusted CA; matching IP SAN','hostname':'Trusted CA; mismatched hostname'}[c['case']])+' | '+('Rejected' if c['rejectionQualified'] else 'NOT qualified: '+c['classification'])+' | '+str(c['deviceTLSRejections'])+' | '+str(c['devicePackageRequestsUnderInvalidCertificate'])+' | '+str(c['invalidPhaseObservations'])+' |' for c in q['cases'])
+headline='Both invalid-certificate rejection cases passed.' if q['rejectionQualified'] else 'Invalid-certificate rejection did not qualify for every case; the observed failures are recorded below.'
+(OUT/'README.md').write_text(f'''# Standard HTTPS certificate rejection — C9K qualification
+
+{headline}
+Tested on 3 November 2026 on C9300-24UX / IOS-XE 17.18.1 fc2, serial
+FCW2247C1AJ. Standard remains the default; Governed remains deferred.
+The production candidate was unchanged throughout this qualification.
+
+| Certificate condition | Actual C9K outcome | TLS rejection alerts | Package GETs while invalid | Invalid-phase observations |
+| --- | --- | --- | --- | --- |
+{rows}
+
+The [CiscoDevice input](device-input.yaml) omitted appArtifacts entirely. All
+[deployment inputs](deployment-valid-input.yaml) omitted Pod-template annotations,
+artifact descriptors and signatures. The cases used ordinary HTTPS image URLs
+and the existing Always pull policy so a cached archive could not conceal the
+certificate condition. Each case had a fresh Pod/app and distinct URL. Live
+configuration, worker options and isolated ConfigMap/Role/RoleBinding inventories
+confirmed that no artifact journal or journal grant existed before, during or
+after the tests. Normal worker configuration and mutation safeguards stayed in use.
+
+Fresh trusted and untrusted roots were generated for this run. Only the trusted
+root was imported into the temporary CVK-STDCERT-20261103 device trustpoint.
+The untrusted-CA leaf had the correct IP SAN and valid dates but a fresh unknown
+issuer. The hostname leaf chained to the trusted root but its CN/SAN contained
+only wrong.example.invalid, while the URL used 192.168.129.111. Key sizes,
+algorithms, validity windows, package bytes and HTTPS server configuration were
+otherwise compatible. Public roots/leaves and the [PKI manifest](pki-manifest.json)
+are retained; ephemeral TLS private keys were removed during cleanup.
+
+An independent [TLS control](independent-tls-controls.json) accepted the valid
+certificate and rejected the two deliberately invalid variants with the expected
+issuer/hostname errors. Five [offline certificate controls](offline-certificate-controls.json)
+also verified that each leaf is valid under its own intended issuer/name and
+that the deliberately wrong issuer/name fails. This did not change C9K trust.
+The actual C9K valid-certificate control then installed
+the package and reached native RUNNING, Pod Ready, HTTP release A and an Available/
+Progressing Deployment. This rules out a broken package or generally unusable
+certificate setup as the explanation for a negative result.
+
+The native results above come from the actual Standard app-hosting flow, not
+from the independent Python client. The [server trace](server-events.jsonl)
+separates client 10.1.1.1 (C9K) from the host-side controls. HTTPS servers offered
+the same valid package under every certificate variant and did not require
+client certificates. Rejection assessment covered the normal three-minute pull
+window and subsequent fallback, then required sustained not Ready/no RUNNING,
+no package GET/transfer and an observed native TLS rejection. The retained
+case events and worker diagnostics correlate those failures with the normal
+Standard flow. A download or healthy app under an invalid certificate would be
+reported as a failed rejection qualification, not hidden by the harness.
+
+For each case, the outcome was sealed before any repair. Only the endpoint's
+certificate was then replaced with the already-qualified valid certificate;
+the package URL, payload and Pod template did not change. The existing mutation
+fence was left intact. Guard observations retain its actual identity/timing
+through normal recovery; no Lease or journal was manually cleared or rewritten.
+Both endpoints subsequently passed a valid TLS probe and application health.
+The same Pod/app identity was retained in each case through certificate-corrected
+recovery.
+Normal deletion completed before the next independent case. Case summaries
+record whether invalid-certificate health had already occurred, so post-correction
+health is not confused with recovery from a rejection.
+
+The candidate matches the earlier
+[HTTPS/local control](../standard-iosxe-2026-11-03-https-local/README.md):
+source fingerprint `sha256:{q['candidate']['dirtySourceSHA256']}`,
+binary SHA256 `{q['candidate']['binarySHA256']}`.
+Live manager and worker image IDs were checked against that recorded image.
+See the [assessment](qualification.json), [raw result](qualification-result.json),
+[validation results](automated-checks.json),
+per-case invalid outcomes, certificate-correction records and guarded observations.
+The production source was unchanged; the prior Go race run was not repeated for
+this documentation/evidence-only qualification.
+
+Final cleanup removed the owned fixture/cache files, temporary trusted CA,
+three HTTPS listeners and isolated cluster. The original explicit self-signed
+HTTPS selector and IRIS client trustpoint were restored. Native signature policy
+was preserved; iris remained RUNNING, c9ktest remained DEPLOYED and CAF Stable.
+The shared Kubernetes node remained Ready. See [cleanup evidence](final-cleanup.json).
+
+This is a named device/firmware/package/configuration qualification, not a fleet
+claim. Expiry, revocation, intermediate-chain variants, redirects, TLS downgrade,
+mTLS and registry authentication were not tested. Native package-signature
+verification was disabled at baseline and unchanged. No artifact producer
+validation, Governed workflow, uninterrupted service, stateful migration or
+specific CVE remediation is claimed. The observed TLS rejection and normal
+safety-fence recovery do not add an artifact requirement to Standard.
+
+Evidence is allowlisted and sanitized; it excludes Secret data, credentials,
+private keys, kubeconfig and unrelated topology/interface observations. Harness
+source is under `harness/`. SHA256SUMS covers every exported file.
+''')
+pattern=re.compile(r'^-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----|^\s*client-key-data:\s*[A-Za-z0-9+/]{24,}|password\s*[=:]\s*cisco\b|^Authorization:\s*(?:Basic|Bearer)\s+\S|\b(?:Basic|Bearer)[ \t]+[A-Za-z0-9+/_.=-]{16,}',re.I|re.M)
+for p in OUT.rglob('*'):
+ if p.is_file():assert not pattern.search(p.read_text()),p
+manifest=''.join(hashlib.sha256(p.read_bytes()).hexdigest()+'  '+str(p.relative_to(OUT))+'\n' for p in sorted(OUT.rglob('*')) if p.is_file() and p.name!='SHA256SUMS');(OUT/'SHA256SUMS').write_text(manifest);print('PASS exported',len(manifest.splitlines()),'sanitized certificate-control evidence files')

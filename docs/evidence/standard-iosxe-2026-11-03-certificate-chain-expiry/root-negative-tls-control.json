@@ -1,0 +1,9 @@
+{
+  "atUTC": "2026-11-03T23:09:15.042105+00:00",
+  "case": "root",
+  "accepted": false,
+  "verificationCode": 10,
+  "verificationMessage": "certificate has expired",
+  "rootCertificate": "root-old",
+  "deviceClockChanged": false
+}

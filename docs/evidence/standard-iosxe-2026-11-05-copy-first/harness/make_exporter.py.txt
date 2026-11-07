@@ -1,0 +1,15 @@
+from pathlib import Path
+r=Path('/private/tmp/cvk-stdcopyfix-20261105');s=Path('/private/tmp/cvk-intrefresh-20261105/export_evidence.py').read_text().replace('cvk-intrefresh','cvk-stdcopyfix').replace('standard-iosxe-2026-11-05-intermediate-crl-refresh','standard-iosxe-2026-11-05-copy-first')
+a=s.index('status=');b=s.index('pattern=re.compile',a)
+s=s[:a]+'''# Preserve the safely blocked initial default-path failure and its original candidate.
+initial=R/'initial-missing-directory'
+for p in sorted(initial.iterdir()):
+ if p.is_file() and not p.name.endswith('.key'):copy(p,OUT/'initial-missing-directory'/p.name,raw=True)
+for n in ['implementation.patch','race-root-path.log','Dockerfile.qual']:
+ copy(R/n,OUT/n,raw=True)
+rows=['| Boundary | Result (UTC) |','| --- | --- |', '| Revocation published | '+q['publicationUTC']+' |','| Cached CRL NextUpdate | '+q['originalCRLNextUpdateUTC']+' |','| C9K fetched revoked CRL | '+q['firstRevokedCRLNativeFetchUTC']+' |','| Native serial-specific revocation error | '+q['firstNativePKIRejectionUTC']+' |','| Fresh image while old CRL was cached | '+q['cacheWindowOutcome']+' |','| Failed-copy boundary | No fixture configuration, runtime, Ready or package GET |','| Worker restart while revoked | Block remained in force; same canonical Lease |','| Certificate-only repair | Same Pod recovered the expected release after natural fence |','| Fresh HTTPS with IfNotPresent | Exact compiled release confirmed |','| Preloaded local Never; origin offline | Exact release confirmed before and after worker restart |']
+(OUT/'README.md').write_text((R/'evidence-readme.md').read_text().replace('@@TIMELINE@@','\\n'.join(rows)))
+''' +s[b:]
+# Compress initial archived observation noise as part of its own preserved folder, keep checksums exact.
+(r/'export_evidence.py').write_text(s)
+print('Prepared public-evidence exporter')

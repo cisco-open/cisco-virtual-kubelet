@@ -1,0 +1,12 @@
+{
+  "atUTC": "2026-11-05T20:52:47.269636+00:00",
+  "phase": "cached",
+  "packageSentToC9K": false,
+  "release": "STD-COPYFIX-CACHED-20261105-0609ed4e6d25",
+  "repoTag": "cvk-stdcopyfix-20261105/cached:0609ed4e6d25",
+  "dockerConfigID": "sha256:dbb11af58b5b19cf1f3ecfa5efbf02a3008af1d2aae77ea08d1d969940898d56",
+  "layerDiffID": "sha256:dfcbca02222e6b685c837db5d06cc3d4aacc5661891fc9f174e02996effc262d",
+  "binarySHA256": "7bc8612e21546a6f0af53ae6419c4e5fd2233ec09ba41ac5d44b4c7d641c8f0e",
+  "packageSHA256": "1b1b8a8291f571106573ed16ff38811e1dfb847dc0a7372a21bb6a0536a71365",
+  "packageBytes": 5959680
+}

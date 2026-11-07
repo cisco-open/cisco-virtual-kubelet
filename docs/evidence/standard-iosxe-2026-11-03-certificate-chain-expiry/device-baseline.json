@@ -1,0 +1,33 @@
+{
+  "collectedAtUTC": "2026-11-03T22:51:21.109457+00:00",
+  "commands": [
+    {
+      "command": "show version | include Version|Model Number|System Serial",
+      "output": "show version | include Version|Model Number|System Serial\nCisco IOS XE Software, Version 17.18.01\nCisco IOS Software [IOSXE], Catalyst L3 Switch Software (CAT9K_IOSXE), Version 17.18.1, RELEASE SOFTWARE (fc2)\nlicensed under the GNU General Public License (\"GPL\") Version 2.0.  The\nsoftware code licensed under GPL Version 2.0 is free software that comes\nGPL code under the terms of GPL Version 2.0.  For more details, see the\nROM: IOS-XE ROMMONBOOTLDR: System Bootstrap, Version 17.12.1r, RELEASE SOFTWARE (P)\nModel Number                       : C9300-24UX\nSystem Serial Number               : FCW2247C1AJ\nSwitch Ports Model              SW Version        SW Image              Mode   \nEdge-9K"
+    },
+    {
+      "command": "show app-hosting list",
+      "output": "show app-hosting list\nApp id                                   State\n---------------------------------------------------------\niris                                     RUNNING\nc9ktest                                  DEPLOYED\n\nEdge-9K"
+    },
+    {
+      "command": "show app-hosting infra",
+      "output": "show app-hosting infra\nIOX version: 2.13.0\nApp signature verification: disabled\nCAF Health: Stable\nInternal working directory: /vol/usb1/iox\n\nApplication Interface Mapping\nAppGigabitEthernet Port #  Interface Name                 Port Type            Bandwidth  \n           1               AppGigabitEthernet1/0/1        KR Port - Internal   1G\n        \n\nCPU:\n  Quota: 25(Percentage) \n  Available: 23(Percentage)\n  Quota: 7400(Units)\n  Available: 7000(Units)\n\nEdge-9K"
+    },
+    {
+      "command": "show ip http server status | include trustpoint",
+      "output": "show ip http server status | include trustpoint\nHTTP secure server trustpoint: TP-self-signed-806566997\nHTTP secure server peer validation trustpoint: \nEdge-9K"
+    },
+    {
+      "command": "show running-config | include ^ip http secure-trustpoint|^ip http client secure-trustpoint|^crypto pki trustpoint CVK-STDCHAIN",
+      "output": "show running-config | include ^ip http secure-trustpoint|^ip http client secure-trustpoint|^crypto pki trustpoint CVK-STDCHAIN\nip http secure-trustpoint TP-self-signed-806566997\nip http client secure-trustpoint IRIS\nEdge-9K"
+    },
+    {
+      "command": "dir flash: | include bytes",
+      "output": "dir flash: | include bytes\n11353194496 bytes total (5398515712 bytes free)\nEdge-9K"
+    },
+    {
+      "command": "show clock detail",
+      "output": "show clock detail\n22:51:20.965 UTC Tue Nov 3 2026\nTime source is NTP\nEdge-9K"
+    }
+  ]
+}

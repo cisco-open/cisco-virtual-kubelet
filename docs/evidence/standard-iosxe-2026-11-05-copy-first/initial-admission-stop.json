@@ -1,0 +1,9 @@
+{
+  "atUTC": "2026-11-06T07:14:11.268401+00:00",
+  "rawActorLogSHA256": "d56ef6e6c6f53b2f781d770304fabab09d52d1d3b0f112888f39f56042c0c30d",
+  "reason": "Direct rollout restart was denied by reserved-worker admission; continuation uses CiscoDevice logLevel change and normal manager reconciliation",
+  "rawActorRewritten": false,
+  "samePodRetained": true,
+  "originalNegativeResultPreserved": true,
+  "CRL2ExpiredDuringPause": true
+}

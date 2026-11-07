@@ -1,0 +1,17 @@
+{
+  "atUTC": "2026-11-03T14:58:22.777320+00:00",
+  "request": {
+    "Cisco-IOS-XE-rpc:copy": {
+      "source-drop-node-name": "https://192.168.129.111:18448/standard-agent-a.tar",
+      "destination-drop-node-name": "flash:cvk-stdtls-20261103-a.tar"
+    }
+  },
+  "status": 200,
+  "nativeReply": {
+    "Cisco-IOS-XE-rpc:output": {
+      "result": "RPC request successful"
+    }
+  },
+  "managementTLSVerified": true,
+  "SCPUsed": false
+}

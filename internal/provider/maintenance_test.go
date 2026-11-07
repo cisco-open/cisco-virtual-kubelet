@@ -286,3 +286,30 @@ func TestLiveDrainProtectionRoutesStaleCallbacksThroughStrictAuthorization(t *te
 		})
 	}
 }
+
+type preflightRejectingDriver struct{ notifierDriver }
+
+func (*preflightRejectingDriver) DeployPod(context.Context, *v1.Pod, corev1listers.SecretNamespaceLister, corev1listers.ConfigMapNamespaceLister) error {
+	return devicecoordination.NoDeviceMutation(fmt.Errorf("artifact URL does not match descriptor"))
+}
+func TestProviderPreservesReadOnlyRejectionAcrossInvalidInputWrapper(t *testing.T) {
+	ctx := context.Background()
+	scheme := runtime.NewScheme()
+	_ = coordv1.AddToScheme(scheme)
+	_ = opsv1alpha1.AddToScheme(scheme)
+	c := fake.NewClientBuilder().WithScheme(scheme).Build()
+	pod := &v1.Pod{ObjectMeta: metav1.ObjectMeta{Namespace: "edge", Name: "app", UID: "app-uid"}, Spec: v1.PodSpec{Containers: []v1.Container{{Name: "app"}}}}
+	p, err := NewAppHostingProvider(ctx, &ciskov1.DeviceSpec{}, nodeutil.ProviderConfig{Pods: podLister(t, pod)}, &preflightRejectingDriver{}, nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	p.SetMaintenance(&maintenance.Coordinator{Client: c, Namespace: "edge", DeviceName: "switch", LeaseNamespace: "leases", MutationsEnabled: true})
+	err = p.CreatePod(ctx, pod)
+	if !devicecoordination.IsNoDeviceMutation(err) {
+		t.Fatalf("preflight classification lost: %v", err)
+	}
+	var leases coordv1.LeaseList
+	if err = c.List(ctx, &leases); err != nil || len(leases.Items) != 0 {
+		t.Fatalf("read-only rejection retained fence: %v %+v", err, leases.Items)
+	}
+}

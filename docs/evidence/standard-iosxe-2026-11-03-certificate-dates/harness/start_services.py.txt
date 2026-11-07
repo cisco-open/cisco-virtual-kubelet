@@ -1,0 +1,18 @@
+import pathlib,subprocess,ssl,urllib.request,json,time,datetime
+R=pathlib.Path('/tmp/cvk-stddate-20261103')
+with (R/'servers.log').open('wb') as out:p=subprocess.Popen(['python3',str(R/'servers.py')],stdout=out,stderr=subprocess.STDOUT,start_new_session=True)
+(R/'servers.pid').write_text(str(p.pid));ctx=ssl.create_default_context(cafile=str(R/'trusted-ca.crt'));results=[]
+for case,port in [('valid',18452),('expired',18453),('future',18454)]:
+ for i in range(20):
+  try:
+   with urllib.request.urlopen('https://192.168.129.111:'+str(port)+'/_probe',context=ctx,timeout=5) as r:assert r.status==200
+   assert case=='valid';results.append({'case':case,'accepted':True});break
+  except ssl.SSLCertVerificationError as e:
+   assert case!='valid';results.append({'case':case,'accepted':False,'verificationCode':e.verify_code,'verificationMessage':e.verify_message});break
+  except urllib.error.URLError as e:
+   if isinstance(e.reason,ssl.SSLCertVerificationError):
+    assert case!='valid';results.append({'case':case,'accepted':False,'verificationCode':e.reason.verify_code,'verificationMessage':e.reason.verify_message});break
+   time.sleep(1)
+  except OSError:time.sleep(1)
+ else:raise RuntimeError('Origin control failed '+case)
+assert next(x['verificationCode'] for x in results if x['case']=='expired')==10;assert next(x['verificationCode'] for x in results if x['case']=='future')==9;(R/'independent-tls-controls.json').write_text(json.dumps({'atUTC':datetime.datetime.now(datetime.timezone.utc).isoformat(),'testClient':'ux-agx Python SSL; separate from C9K results','cases':results},indent=2)+'\n');print('PASS valid origin and independent expired/not-yet-valid TLS controls',flush=True)

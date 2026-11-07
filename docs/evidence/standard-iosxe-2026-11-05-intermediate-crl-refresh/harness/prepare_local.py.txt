@@ -1,0 +1,14 @@
+from pathlib import Path
+import json
+r=Path('/private/tmp/cvk-intrefresh-20261105');old=Path('/private/tmp/cvk-crlrefresh-20261104')
+subs=[('/private/tmp/cvk-crlrefresh-20261104','/private/tmp/cvk-intrefresh-20261105'),('/tmp/cvk-crlrefresh-20261104','/tmp/cvk-intrefresh-20261105'),('20261104-crlrefresh','20261105-intrefresh'),('cvk-crlrefresh-k3s-20261104','cvk-intrefresh-k3s-20261105'),('cvk-crlrefresh-apps-20261104','cvk-intrefresh-apps-20261105'),('c9k-crlrefresh-20261104','c9k-intrefresh-20261105'),('cvk-crlrefresh-20261104','cvk-intrefresh-20261105'),('cvk-crlrefresh','cvk-intrefresh'),('CVK-CRLREFRESH-20261104','CVK-INTREFRESH-20261105'),('CVK-CRLREFRESH','CVK-INTREFRESH'),('16456','16457'),('18469','18472'),('18470','18473'),('18471','18474'),('10.74.0.0','10.76.0.0'),('10.75.0.0','10.77.0.0')]
+for n in ['bootstrap','deploy','device_cli','control_functions','snapshot','build_payloads','smoke_host','pki_io','prepare_device','check_pki','servers','cleanup','launch','verify_static','verify_earlier']:
+ s=(old/(n+'.py')).read_text()
+ for a,b in subs:s=s.replace(a,b)
+ if n=='build_payloads':s=s.replace('CRL-REFRESH-','INT-REFRESH-').replace('20261104-','20261105-')
+ if n=='deploy':s=s.replace("apply({'apiVersion':'v1','kind':'Namespace','metadata':{'name':NS}})","apply({'apiVersion':'v1','kind':'Namespace','metadata':{'name':NS}})\napply({'apiVersion':'v1','kind':'Namespace','metadata':{'name':'cvk-intrefresh-apps-20261105'}})")
+ if n=='verify_static':s=s.replace("d.name=='standard-iosxe-2026-11-04-crl-refresh'","d.name=='standard-iosxe-2026-11-05-intermediate-crl-refresh'")
+ (r/(n+'.py')).write_text(s)
+x=json.loads((old/'candidate.json').read_text());x['physicalControl']='Standard intermediate-certificate revocation discovery and natural CRL cache refresh';x['priorCandidateEvidence']='../standard-iosxe-2026-11-04-crl-refresh/candidate.json';(r/'candidate.json').write_text(json.dumps(x,indent=2)+'\n');(r/'main.go').write_text((old/'main.go').read_text().replace('cvk-crl-refresh-qualification','cvk-intermediate-refresh-qualification'))
+files={n:(r/n).read_text() for n in ['bootstrap.py','device_cli.py']}
+(r/'stage_bootstrap.py').write_text("import pathlib,os,subprocess\nr=pathlib.Path('/tmp/cvk-intrefresh-20261105');r.mkdir(mode=0o700,exist_ok=False);os.chmod(r,0o700)\nfiles="+repr(files)+"\nfor n,v in files.items():(r/n).write_text(v)\nsubprocess.run(['python3',str(r/'bootstrap.py')],check=True)\n")

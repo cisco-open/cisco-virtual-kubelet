@@ -1,0 +1,7 @@
+{
+  "atUTC": "2026-11-06T07:47:30.068773+00:00",
+  "lines": [
+    "time=\"2026-11-06T07:25:48Z\" level=error msg=\"Copy RPC failed - source: https://192.168.129.111:18475/refresh.tar, destination: flash:/cvk-cvk0000_302b286af4694fe792a42d963d266570.tar, error: request failed with status 400 Bad Request (RESTCONF error-tag invalid-value)\" file=\"opentelemetry.go:196\" addedViaRedirty=false delayedViaRateLimit=5m27.68s key=cvk-stdcopyfix-apps-20261105/cvk-stdcopyfix-fixture-dc9fd8cd6-mwp6w method=createOrUpdatePod name=cvk-stdcopyfix-fixture-dc9fd8cd6-mwp6w namespace=cvk-stdcopyfix-apps-20261105 originallyAdded=\"2026-11-06 07:14:52.026773621 +0000 UTC m=+4.391071126\" phase=Pending plannedForWork=\"2026-11-06 07:25:48.749491367 +0000 UTC m=+661.113788856\" pod=cvk-stdcopyfix-fixture-dc9fd8cd6-mwp6w queue=syncPodsFromKubernetes reason=ProviderFailed requeues=16 uid=302b286a-f469-4fe7-92a4-2d963d266570 workerId=0"
+  ],
+  "readOnly": true
+}

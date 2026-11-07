@@ -1,0 +1,131 @@
+{
+  "startedAtUTC": "2026-11-06T08:05:45.521287+00:00",
+  "passed": false,
+  "commands": [
+    {
+      "command": "terminal length 0",
+      "output": "terminal length 0\nEdge-9K"
+    },
+    {
+      "command": "terminal width 511",
+      "output": "terminal width 511\nEdge-9K"
+    },
+    {
+      "command": "show app-hosting list",
+      "output": "show app-hosting list\nApp id                                   State\n---------------------------------------------------------\niris                                     RUNNING\nc9ktest                                  DEPLOYED\n\nEdge-9K"
+    },
+    {
+      "command": "dir flash:/cvk-cvk0000_302b286af4694fe792a42d963d266570.tar",
+      "output": "dir flash:/cvk-cvk0000_302b286af4694fe792a42d963d266570.tar\nDirectory of flash:/cvk-cvk0000_302b286af4694fe792a42d963d266570.tar\n\n254044  -rw-          5959680   Nov 6 2026 07:56:55 +00:00  cvk-cvk0000_302b286af4694fe792a42d963d266570.tar\n\n11353194496 bytes total (5374627840 bytes free)\nEdge-9K"
+    },
+    {
+      "command": "delete /force flash:/cvk-cvk0000_302b286af4694fe792a42d963d266570.tar",
+      "output": "delete /force flash:/cvk-cvk0000_302b286af4694fe792a42d963d266570.tar\nEdge-9K"
+    },
+    {
+      "command": "dir flash:/cvk-cvk0000_3e4f2caf3e424f8fb3ee62969bde6a7c.tar",
+      "output": "dir flash:/cvk-cvk0000_3e4f2caf3e424f8fb3ee62969bde6a7c.tar\nDirectory of flash:/cvk-cvk0000_3e4f2caf3e424f8fb3ee62969bde6a7c.tar\n\n254040  -rw-          5959680   Nov 5 2026 20:50:37 +00:00  cvk-cvk0000_3e4f2caf3e424f8fb3ee62969bde6a7c.tar\n\n11353194496 bytes total (5380599808 bytes free)\nEdge-9K"
+    },
+    {
+      "command": "delete /force flash:/cvk-cvk0000_3e4f2caf3e424f8fb3ee62969bde6a7c.tar",
+      "output": "delete /force flash:/cvk-cvk0000_3e4f2caf3e424f8fb3ee62969bde6a7c.tar\nEdge-9K"
+    },
+    {
+      "command": "dir flash:/cvk-cvk0000_4fb5eaf474764346943ae54c84b9e9e1.tar",
+      "output": "dir flash:/cvk-cvk0000_4fb5eaf474764346943ae54c84b9e9e1.tar\n%Error opening flash:/cvk-cvk0000_4fb5eaf474764346943ae54c84b9e9e1.tar (No such file or directory)\nEdge-9K"
+    },
+    {
+      "command": "dir flash:/cvk-cvk0000_58e515e0739f4dc6b3447bfda37eb76b.tar",
+      "output": "dir flash:/cvk-cvk0000_58e515e0739f4dc6b3447bfda37eb76b.tar\nDirectory of flash:/cvk-cvk0000_58e515e0739f4dc6b3447bfda37eb76b.tar\n\n254045  -rw-          5959680   Nov 6 2026 07:59:33 +00:00  cvk-cvk0000_58e515e0739f4dc6b3447bfda37eb76b.tar\n\n11353194496 bytes total (5386571776 bytes free)\nEdge-9K"
+    },
+    {
+      "command": "delete /force flash:/cvk-cvk0000_58e515e0739f4dc6b3447bfda37eb76b.tar",
+      "output": "delete /force flash:/cvk-cvk0000_58e515e0739f4dc6b3447bfda37eb76b.tar\nEdge-9K"
+    },
+    {
+      "command": "dir flash:/cvk-cvk0000_b5b6dad574914618a2518b7b5f748096.tar",
+      "output": "dir flash:/cvk-cvk0000_b5b6dad574914618a2518b7b5f748096.tar\nDirectory of flash:/cvk-cvk0000_b5b6dad574914618a2518b7b5f748096.tar\n\n254043  -rw-          5959680   Nov 5 2026 20:52:51 +00:00  cvk-cvk0000_b5b6dad574914618a2518b7b5f748096.tar\n\n11353194496 bytes total (5392543744 bytes free)\nEdge-9K"
+    },
+    {
+      "command": "delete /force flash:/cvk-cvk0000_b5b6dad574914618a2518b7b5f748096.tar",
+      "output": "delete /force flash:/cvk-cvk0000_b5b6dad574914618a2518b7b5f748096.tar\nEdge-9K"
+    },
+    {
+      "command": "configure terminal",
+      "output": "configure terminal\nEnter configuration commands, one per line.  End with CNTL/Z.\nEdge-9K(config)"
+    },
+    {
+      "command": "ip http secure-trustpoint TP-self-signed-806566997",
+      "output": "ip http secure-trustpoint TP-self-signed-806566997\nEdge-9K(config)"
+    },
+    {
+      "command": "no crypto pki trustpoint CVK-STDCOPYFIX-20261105",
+      "output": "no crypto pki trustpoint CVK-STDCOPYFIX-20261105\n% Removing an enrolled trustpoint will destroy all certificates\n received from the related Certificate Authority.\n\nAre you sure you want to do this? [confirmed owned cleanup]\n yes\n% Be sure to ask the CA administrator to revoke your certificates.\n\nEdge-9K(config)"
+    },
+    {
+      "command": "end",
+      "output": "end\nEdge-9K"
+    },
+    {
+      "command": "show ip http server status | include trustpoint",
+      "output": "show ip http server status | include trustpoint\nHTTP secure server trustpoint: TP-self-signed-806566997\nHTTP secure server peer validation trustpoint: \nEdge-9K"
+    },
+    {
+      "command": "show running-config | include ^ip http secure-trustpoint|^ip http client secure-trustpoint|^crypto pki trustpoint CVK-STDCOPYFIX",
+      "output": "show running-config | include ^ip http secure-trustpoint|^ip http client secure-trustpoint|^crypto pki trustpoint CVK-STDCOPYFIX\nip http secure-trustpoint TP-self-signed-806566997\nip http client secure-trustpoint IRIS\nEdge-9K"
+    },
+    {
+      "command": "show crypto pki crls",
+      "output": "show crypto pki crls\nCRL Issuer Name: \n    cn=CVK Standard copy fix root 717eb0f2c8b8\n    LastUpdate: 07:14:06 UTC Nov 6 2026\n    NextUpdate: 07:14:11 UTC Nov 7 2026\n\n    CRL downloaded at: 07:25:48 UTC Nov 6 2026\n\n    Retrieved from CRL Distribution Point: \n      http://192.168.129.111:18476/issuer.crl\n\n CRL DER is 487 bytes\n CRL is stored in parsed CRL cache\n\nCRL Issuer Name: \n    cn=CVK Standard copy fix intermediate 717eb0f2c8b8\n    LastUpdate: 20:45:18 UTC Nov 5 2026\n    NextUpdate: 20:50:18 UTC Nov 6 2026\n\n    CRL downloaded at: 20:50:33 UTC Nov 5 2026\n\n    Retrieved from CRL Distribution Point: \n      http://192.168.129.111:18476/intermediate.crl\n\n CRL DER is 440 bytes\n CRL is stored in parsed CRL cache\n\nCRL Issuer Name: \n    cn=CVK Standard copy fix intermediate 3bb47dd5c618\n    LastUpdate: 20:12:13 UTC Nov 5 2026\n    NextUpdate: 20:17:13 UTC Nov 6 2026\n\n    CRL downloaded at: 20:19:08 UTC Nov 5 2026\n\n    Retrieved from CRL Distribution Point: \n      http://192.168.129.111:18476/intermediate.crl\n\n CRL DER is 440 bytes\n CRL is stored in parsed CRL cache\n\n\nParsed CRL cache current size is 1367 bytes\nParsed CRL cache maximum size is 65536 bytes\n\nEdge-9K"
+    },
+    {
+      "command": "clear crypto pki crl",
+      "output": "clear crypto pki crl\nEdge-9K"
+    },
+    {
+      "command": "show crypto pki crls",
+      "output": "show crypto pki crls\nEdge-9K"
+    },
+    {
+      "command": "show app-hosting list",
+      "output": "show app-hosting list\nApp id                                   State\n---------------------------------------------------------\niris                                     RUNNING\nc9ktest                                  DEPLOYED\n\nEdge-9K"
+    },
+    {
+      "command": "show app-hosting infra",
+      "output": "show app-hosting infra\nIOX version: 2.13.0\nApp signature verification: disabled\nCAF Health: Stable\nInternal working directory: /vol/usb1/iox\n\nApplication Interface Mapping\nAppGigabitEthernet Port #  Interface Name                 Port Type            Bandwidth  \n           1               AppGigabitEthernet1/0/1        KR Port - Internal   1G\n        \n\nCPU:\n  Quota: 25(Percentage) \n  Available: 23(Percentage)\n  Quota: 7400(Units)\n  Available: 7000(Units)\n\nEdge-9K"
+    },
+    {
+      "command": "dir flash:/cvk-cvk0000_302b286af4694fe792a42d963d266570.tar",
+      "output": "dir flash:/cvk-cvk0000_302b286af4694fe792a42d963d266570.tar\n%Error opening flash:/cvk-cvk0000_302b286af4694fe792a42d963d266570.tar (No such file or directory)\nEdge-9K"
+    },
+    {
+      "command": "dir flash:/cvk-cvk0000_3e4f2caf3e424f8fb3ee62969bde6a7c.tar",
+      "output": "dir flash:/cvk-cvk0000_3e4f2caf3e424f8fb3ee62969bde6a7c.tar\n%Error opening flash:/cvk-cvk0000_3e4f2caf3e424f8fb3ee62969bde6a7c.tar (No such file or directory)\nEdge-9K"
+    },
+    {
+      "command": "dir flash:/cvk-cvk0000_4fb5eaf474764346943ae54c84b9e9e1.tar",
+      "output": "dir flash:/cvk-cvk0000_4fb5eaf474764346943ae54c84b9e9e1.tar\n%Error opening flash:/cvk-cvk0000_4fb5eaf474764346943ae54c84b9e9e1.tar (No such file or directory)\nEdge-9K"
+    },
+    {
+      "command": "dir flash:/cvk-cvk0000_58e515e0739f4dc6b3447bfda37eb76b.tar",
+      "output": "dir flash:/cvk-cvk0000_58e515e0739f4dc6b3447bfda37eb76b.tar\n%Error opening flash:/cvk-cvk0000_58e515e0739f4dc6b3447bfda37eb76b.tar (No such file or directory)\nEdge-9K"
+    },
+    {
+      "command": "dir flash:/cvk-cvk0000_b5b6dad574914618a2518b7b5f748096.tar",
+      "output": "dir flash:/cvk-cvk0000_b5b6dad574914618a2518b7b5f748096.tar\n%Error opening flash:/cvk-cvk0000_b5b6dad574914618a2518b7b5f748096.tar (No such file or directory)\nEdge-9K"
+    }
+  ],
+  "ownedPaths": [
+    "flash:/cvk-cvk0000_302b286af4694fe792a42d963d266570.tar",
+    "flash:/cvk-cvk0000_3e4f2caf3e424f8fb3ee62969bde6a7c.tar",
+    "flash:/cvk-cvk0000_4fb5eaf474764346943ae54c84b9e9e1.tar",
+    "flash:/cvk-cvk0000_58e515e0739f4dc6b3447bfda37eb76b.tar",
+    "flash:/cvk-cvk0000_b5b6dad574914618a2518b7b5f748096.tar"
+  ],
+  "manualLeaseOrJournalChanges": false,
+  "globalImageCachePruned": false,
+  "CRLCacheEntriesBeforeCleanup": 3,
+  "allCRLCacheEntriesOwned": true,
+  "cacheClearedOnlyAfterQualificationAndWorkerStop": true,
+  "CRLCacheEntriesAfterCleanup": 0
+}

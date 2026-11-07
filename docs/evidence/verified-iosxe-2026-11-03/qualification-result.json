@@ -1,0 +1,28 @@
+{
+  "passed": true,
+  "startedAtUTC": "2026-11-03T05:21:25.642568+00:00",
+  "finishedAtUTC": "2026-11-03T06:23:04.556304+00:00",
+  "fault": "accepted install reply lost before client headers/body",
+  "candidateChanged": false,
+  "podUID": "e0b0e50d-aabc-4e7a-861c-c2ba72bad946",
+  "appID": "cvk0000_e0b0e50daabc4e7a861cc2ba72bad946",
+  "journalUID": "f6082b67-aaa0-4e60-b9a9-4d528f894f29",
+  "oldWorkerUID": "09d3ecd4-2bb4-4bea-af06-c905e769a705",
+  "newWorkerUID": "ba3edd55-a184-4ff5-9b22-a74f29410940",
+  "expiryUTC": "2026-11-03T06:21:52.652992+00:00",
+  "fencedObservationCount": 108,
+  "forwardedLifecycleCounts": {
+    "copy": 1,
+    "configuration": 1,
+    "install": 1,
+    "activate": 1,
+    "start": 1
+  },
+  "samePodAppJournalRetained": true,
+  "normalGuardedRecovery": true,
+  "ready": true,
+  "httpRelease": "A",
+  "defaultMode": "Standard",
+  "governed": "deferred",
+  "scope": "installPending lost reply, with subsequent activate/start observed once each; lost activate/start replies not injected"
+}

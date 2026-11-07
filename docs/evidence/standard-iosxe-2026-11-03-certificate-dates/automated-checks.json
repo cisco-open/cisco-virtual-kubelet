@@ -1,0 +1,25 @@
+{
+  "physicalQualification": "passed: actual C9K expired and not-yet-valid leaves, including native pull/fallback",
+  "positiveAndCertificateCorrectedHealth": "passed; same Pod/app retained in each case",
+  "independentTLSControls": "passed; expired code 10, not-yet-valid code 9",
+  "offlinePublicCertificateControls": "five passed",
+  "nativeClockControls": "seven passed; NTP and root validity checked; no device clock/time/NTP configuration changes",
+  "independentEvidenceAssessment": "passed",
+  "canonicalMutationLeaseRecreated": false,
+  "manualLeaseOrJournalChanges": false,
+  "ephemeralPrivateKeysRemaining": 0,
+  "labBaselineRestored": true,
+  "productionSourceChanged": false,
+  "goRaceTestsRerun": false,
+  "priorGoRaceResults": "../verified-iosxe-2026-11-03-replies/test-results.json",
+  "historicalEvidenceUnchanged": true,
+  "preparationObserverCorrection": "read-only readiness path fixed before deployment; original failure retained; no repeated native setup mutations",
+  "strictDocumentationBuild": {
+    "command": ".venv/bin/mkdocs build --strict",
+    "passed": true
+  },
+  "whitespace": {
+    "command": "git diff --check",
+    "passed": true
+  }
+}

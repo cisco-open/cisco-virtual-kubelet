@@ -1,0 +1,58 @@
+#0 building with "default" instance using docker driver
+
+#1 [internal] load build definition from Dockerfile.qual
+#1 transferring dockerfile:
+#1 transferring dockerfile: 308B done
+#1 DONE 0.9s
+
+#2 [internal] load metadata for docker.io/library/cvk-stdcopyfix-qual:20261105-b55c3b3f6aed
+#2 DONE 0.0s
+
+#3 [internal] load .dockerignore
+#3 transferring context:
+#3 transferring context: 69B done
+#3 DONE 3.3s
+
+#4 [1/2] FROM docker.io/library/cvk-stdcopyfix-qual:20261105-b55c3b3f6aed
+#4 ...
+
+#5 [internal] load build context
+#5 transferring context: 122.39MB 1.2s done
+#5 DONE 5.3s
+
+#4 [1/2] FROM docker.io/library/cvk-stdcopyfix-qual:20261105-b55c3b3f6aed
+#4 DONE 9.6s
+
+#6 [2/2] COPY --chmod=0755 cisco-vk /usr/local/bin/cisco-vk
+#6 DONE 6.8s
+
+#7 exporting to image
+#7 exporting layers
+#7 exporting layers 3.0s done
+#7 writing image sha256:135fbe301171ad677714bb6f613abf3c942a9743ebc6195c410767df6d5ae7ff
+#7 writing image sha256:135fbe301171ad677714bb6f613abf3c942a9743ebc6195c410767df6d5ae7ff 0.3s done
+#7 naming to docker.io/library/cvk-stdgc-qual:20261106-3a8365261343
+#7 naming to docker.io/library/cvk-stdgc-qual:20261106-3a8365261343 0.8s done
+#7 DONE 6.5s
+PASS candidate sha256:135fbe301171ad677714bb6f613abf3c942a9743ebc6195c410767df6d5ae7ff
+cfe082e52f7d49eeae55eabd3b4f6f83a73ad3163936a47617d21ea369fa8d0c
+PASS fresh isolated cluster Ready
+docker.io/library/cvk stdgc qual:2026110	saved	
+application/vnd.oci.image.manifest.v1+json sha256:f30e71aaf880ce9442f40f83ed122a9b9949127397ea59da2c56d6d95d1b6aa0
+Importing	elapsed: 171.7s	total:   0.0 B	(0.0 B/s)	
+PASS corrected candidate imported
+PASS three host-only image/release checks
+PASS fresh valid origin root and correct-IP leaf
+PASS baseline and ordinary trusted HTTPS origin; no global policy changes
+namespace/cvk-stdgc-20261106 created
+
+namespace/cvk-stdgc-apps-20261106 created
+
+secret/c9k-credentials created
+
+secret/c9k-ca created
+
+ciscodevice.cisco.vk/c9k-stdgc-20261106 created
+
+PASS strict managed default Standard node Ready
+Started qualification PID 3669849

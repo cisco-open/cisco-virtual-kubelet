@@ -1,0 +1,86 @@
+{
+  "collectedAtUTC": "2026-11-01T06:02:23.282570+00:00",
+  "selectedByUser": {
+    "labHost": "ux-agx",
+    "switchAddress": "10.1.1.1",
+    "platformClaim": "C9K"
+  },
+  "deviceIdentityVerified": false,
+  "switchCredentialsSent": false,
+  "switchConfigurationChanges": false,
+  "ssh": {
+    "strictHostVerification": true,
+    "expectedSavedRSAFingerprint": "SHA256:L9UcjfHV99TkY1RlHHtPov/6HdlcEUaYwYV9hgTz1eI",
+    "observedRSAFingerprint": "SHA256:6a1Ts89cusFB7YnEyKujejZUTb11osqRyI8wBJ1MslA",
+    "savedEntry": "/home/cisco/.ssh/known_hosts:3",
+    "status": "AWAITING_USER_CONFIRMATION",
+    "negotiationNote": "Server offers RSA-SHA2; explicit RSA-SHA2 negotiation reached the existing-key mismatch. Authentication did not proceed."
+  },
+  "anonymousTLSObservations": [
+    {
+      "port": 443,
+      "systemTrustVerified": false,
+      "certificateSHA256": "341949e269cb4241afbdc67245776e7f7421c40addc385e4d53c8fb4154b90ce",
+      "subject": "CN=IOS-Self-Signed-Certificate-806566997",
+      "issuer": "CN=IOS-Self-Signed-Certificate-806566997",
+      "subjectAlternativeNames": null,
+      "qualificationMeaning": "Current certificate lacks an IP SAN and is not system trusted; Verified HTTPS needs suitable certificate/trust configuration."
+    },
+    {
+      "port": 9339,
+      "systemTrustVerified": false,
+      "certificateSHA256": "d28dae699c1948195fb51674f3d1df584a6e7637c46c24f4dc9e3ba179ef497b",
+      "subject": "CN=10.1.1.1,OU=CVK gNOI,O=Cisco,ST=Berlin,C=DE",
+      "issuer": "CN=CVK gNOI live-test issuer,OU=CVK,O=Cisco,C=DE",
+      "subjectAlternativeNames": [
+        "IP:10.1.1.1"
+      ],
+      "qualificationMeaning": "A TLS certificate was observed; its CA trust and authenticated gNOI capabilities remain unverified."
+    },
+    {
+      "port": 50052,
+      "tlsHandshakeSucceeded": false,
+      "qualificationMeaning": "No authenticated gNOI request was made."
+    }
+  ],
+  "existingCluster": {
+    "kubeletVersion": "v1.34.5+k3s1",
+    "controlPlaneNode": "cisco",
+    "lastObservedReady": true,
+    "configurationChanged": false
+  },
+  "qualificationCluster": {
+    "name": "cvk-verified-qual-20261101",
+    "host": "ux-agx",
+    "status": "FAILED_STARTUP_CLEANUP_PENDING",
+    "kubeconfig": "/tmp/cvk-verified-qual-20261101/kubeconfig",
+    "nodeImage": "kindest/node:v1.35.8@sha256:07b2536e30b803ed61d1677a79df6115f798ce64c80f9e22f6ed45afd09323c0",
+    "earlierAttempts": [
+      {
+        "kind": "v0.27.0",
+        "node": "v1.35.0",
+        "result": "FAILED_STARTUP",
+        "reason": "Image extraction/runtime timeouts; API bootstrap did not complete."
+      },
+      {
+        "kind": "v0.33.0",
+        "node": "v1.35.8",
+        "result": "FAILED_STARTUP",
+        "reason": "Kubeadm admin bootstrap API deadline expired before the API server was available."
+      },
+      {
+        "kind": "v0.33.0",
+        "node": "v1.35.8",
+        "result": "FAILED_STARTUP",
+        "reason": "Requested longer timeouts were not present in the effective kubeadm InitConfiguration. Admin bootstrap expired; API server later reported failing RBAC bootstrap health. No CVK controller was deployed."
+      }
+    ],
+    "currentAttempt": "No further bootstrap attempt is running. Diagnostics are being retained and only the owned failed cluster is being cleaned up.",
+    "diagnosticNote": "The initial timeout workaround did not take effect; it is not represented as a validated repair. Existing ux-agx Kubernetes configuration was not changed."
+  },
+  "notes": [
+    "These are sanitized observational summaries, not authenticated device inventory.",
+    "Individual handshake timestamps were not captured; the collection timestamp is not substituted for them.",
+    "No physical deployment, checksum injection, restart, update or rollback was executed."
+  ]
+}

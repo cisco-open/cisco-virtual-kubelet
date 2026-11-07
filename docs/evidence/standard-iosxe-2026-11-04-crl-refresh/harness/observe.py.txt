@@ -1,0 +1,8 @@
+import pathlib,json,datetime
+R=pathlib.Path('/tmp/cvk-crlrefresh-20261104');print('UTC',datetime.datetime.now(datetime.timezone.utc).isoformat());pid=R/('discovery.pid' if (R/'discovery.pid').exists() else 'continuation.pid' if (R/'continuation.pid').exists() else 'qualification.pid');print('Actor running',pid.exists() and pathlib.Path('/proc',pid.read_text().strip()).exists());log=R/('discovery.log' if (R/'discovery.log').exists() else 'continuation.log' if (R/'continuation.log').exists() else 'qualification.log')
+if log.exists():print('\n'.join(log.read_text().splitlines()[-2:]))
+for n in ['invalid-observations','guarded-observations']:
+ p=R/(n+'.jsonl')
+ if p.exists():ls=p.read_text().splitlines();print(n,len(ls),json.loads(ls[-1]))
+p=R/'qualification-result.json'
+if p.exists():print(p.read_text())

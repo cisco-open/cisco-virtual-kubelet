@@ -1,0 +1,357 @@
+{
+  "apiVersion": "v1",
+  "items": [
+    {
+      "apiVersion": "apps/v1",
+      "kind": "ReplicaSet",
+      "metadata": {
+        "annotations": {
+          "deployment.kubernetes.io/desired-replicas": "1",
+          "deployment.kubernetes.io/max-replicas": "1",
+          "deployment.kubernetes.io/revision": "3"
+        },
+        "creationTimestamp": "2026-11-02T22:07:06Z",
+        "generation": 1,
+        "labels": {
+          "app": "cvk-verified-fixture",
+          "pod-template-hash": "68cbd8f7cd",
+          "qualification": "20261102"
+        },
+        "name": "cvk-verified-fixture-68cbd8f7cd",
+        "namespace": "cvk-qual-apps-20261102",
+        "ownerReferences": [
+          {
+            "apiVersion": "apps/v1",
+            "blockOwnerDeletion": true,
+            "controller": true,
+            "kind": "Deployment",
+            "name": "cvk-verified-fixture",
+            "uid": "a4d57181-8fe4-4bfb-86ed-583795bf0df9"
+          }
+        ],
+        "resourceVersion": "8904",
+        "uid": "c5bef488-793d-4a58-a505-eb7292fd8919"
+      },
+      "spec": {
+        "replicas": 1,
+        "selector": {
+          "matchLabels": {
+            "app": "cvk-verified-fixture",
+            "pod-template-hash": "68cbd8f7cd"
+          }
+        },
+        "template": {
+          "metadata": {
+            "annotations": {
+              "cisco.io/apphost-artifacts": "{\"agent\": {\"descriptorDigest\": \"sha256:f688dd0093e5d0abf7db0312ed8fd41b9cb6b10223252dcdd00dc89d25e63b3b\"}}",
+              "cisco.io/apphost-package-timeout": "300s"
+            },
+            "labels": {
+              "app": "cvk-verified-fixture",
+              "pod-template-hash": "68cbd8f7cd",
+              "qualification": "20261102"
+            }
+          },
+          "spec": {
+            "affinity": {
+              "nodeAffinity": {
+                "requiredDuringSchedulingIgnoredDuringExecution": {
+                  "nodeSelectorTerms": [
+                    {
+                      "matchFields": [
+                        {
+                          "key": "metadata.name",
+                          "operator": "In",
+                          "values": [
+                            "c9k-verified-20261102"
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              }
+            },
+            "containers": [
+              {
+                "image": "https://192.168.129.111:18443/v1/packages/sha256/febf34ebd664bbac03002f67578fbdf5b54c0358d24baa83b6abdb201266892f/package.tar",
+                "imagePullPolicy": "IfNotPresent",
+                "name": "agent",
+                "ports": [
+                  {
+                    "containerPort": 8080,
+                    "protocol": "TCP"
+                  }
+                ],
+                "resources": {
+                  "limits": {
+                    "memory": "128Mi"
+                  },
+                  "requests": {
+                    "memory": "128Mi"
+                  }
+                },
+                "terminationMessagePath": "/dev/termination-log",
+                "terminationMessagePolicy": "File"
+              }
+            ],
+            "dnsPolicy": "ClusterFirst",
+            "restartPolicy": "Always",
+            "schedulerName": "default-scheduler",
+            "securityContext": {},
+            "terminationGracePeriodSeconds": 30,
+            "tolerations": [
+              {
+                "effect": "NoSchedule",
+                "key": "cisco.vk/device",
+                "operator": "Exists"
+              }
+            ]
+          }
+        }
+      },
+      "status": {
+        "availableReplicas": 1,
+        "fullyLabeledReplicas": 1,
+        "observedGeneration": 1,
+        "readyReplicas": 1,
+        "replicas": 1,
+        "terminatingReplicas": 0
+      }
+    },
+    {
+      "apiVersion": "apps/v1",
+      "kind": "ReplicaSet",
+      "metadata": {
+        "annotations": {
+          "deployment.kubernetes.io/desired-replicas": "1",
+          "deployment.kubernetes.io/max-replicas": "1",
+          "deployment.kubernetes.io/revision": "2"
+        },
+        "creationTimestamp": "2026-11-02T20:55:14Z",
+        "generation": 6,
+        "labels": {
+          "app": "cvk-verified-fixture",
+          "pod-template-hash": "77c6966bdc",
+          "qualification": "20261102"
+        },
+        "name": "cvk-verified-fixture-77c6966bdc",
+        "namespace": "cvk-qual-apps-20261102",
+        "ownerReferences": [
+          {
+            "apiVersion": "apps/v1",
+            "blockOwnerDeletion": true,
+            "controller": true,
+            "kind": "Deployment",
+            "name": "cvk-verified-fixture",
+            "uid": "a4d57181-8fe4-4bfb-86ed-583795bf0df9"
+          }
+        ],
+        "resourceVersion": "8837",
+        "uid": "80a85555-66fb-4476-8ae6-f70dcc0ba61f"
+      },
+      "spec": {
+        "replicas": 0,
+        "selector": {
+          "matchLabels": {
+            "app": "cvk-verified-fixture",
+            "pod-template-hash": "77c6966bdc"
+          }
+        },
+        "template": {
+          "metadata": {
+            "annotations": {
+              "cisco.io/apphost-artifacts": "{\"agent\": {\"descriptorDigest\": \"sha256:aa3215da3bc24864581775acbf5e0de9e51dac4816d9a9fcc3f8b8ce1d3c755c\"}}",
+              "cisco.io/apphost-package-timeout": "300s"
+            },
+            "labels": {
+              "app": "cvk-verified-fixture",
+              "pod-template-hash": "77c6966bdc",
+              "qualification": "20261102"
+            }
+          },
+          "spec": {
+            "affinity": {
+              "nodeAffinity": {
+                "requiredDuringSchedulingIgnoredDuringExecution": {
+                  "nodeSelectorTerms": [
+                    {
+                      "matchFields": [
+                        {
+                          "key": "metadata.name",
+                          "operator": "In",
+                          "values": [
+                            "c9k-verified-20261102"
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              }
+            },
+            "containers": [
+              {
+                "image": "https://192.168.129.111:18443/v1/packages/sha256/ed8c257297a526229b154cbaabe1c466de239d4c011e4edfd25c7cb440fa071c/package.tar",
+                "imagePullPolicy": "IfNotPresent",
+                "name": "agent",
+                "ports": [
+                  {
+                    "containerPort": 8080,
+                    "protocol": "TCP"
+                  }
+                ],
+                "resources": {
+                  "limits": {
+                    "memory": "128Mi"
+                  },
+                  "requests": {
+                    "memory": "128Mi"
+                  }
+                },
+                "terminationMessagePath": "/dev/termination-log",
+                "terminationMessagePolicy": "File"
+              }
+            ],
+            "dnsPolicy": "ClusterFirst",
+            "restartPolicy": "Always",
+            "schedulerName": "default-scheduler",
+            "securityContext": {},
+            "terminationGracePeriodSeconds": 30,
+            "tolerations": [
+              {
+                "effect": "NoSchedule",
+                "key": "cisco.vk/device",
+                "operator": "Exists"
+              }
+            ]
+          }
+        }
+      },
+      "status": {
+        "observedGeneration": 6,
+        "replicas": 0,
+        "terminatingReplicas": 0
+      }
+    },
+    {
+      "apiVersion": "apps/v1",
+      "kind": "ReplicaSet",
+      "metadata": {
+        "annotations": {
+          "deployment.kubernetes.io/desired-replicas": "1",
+          "deployment.kubernetes.io/max-replicas": "1",
+          "deployment.kubernetes.io/revision": "1"
+        },
+        "creationTimestamp": "2026-11-02T20:54:22Z",
+        "generation": 2,
+        "labels": {
+          "app": "cvk-verified-fixture",
+          "pod-template-hash": "79dfcd4f9d",
+          "qualification": "20261102"
+        },
+        "name": "cvk-verified-fixture-79dfcd4f9d",
+        "namespace": "cvk-qual-apps-20261102",
+        "ownerReferences": [
+          {
+            "apiVersion": "apps/v1",
+            "blockOwnerDeletion": true,
+            "controller": true,
+            "kind": "Deployment",
+            "name": "cvk-verified-fixture",
+            "uid": "a4d57181-8fe4-4bfb-86ed-583795bf0df9"
+          }
+        ],
+        "resourceVersion": "1060",
+        "uid": "bb681d32-3933-498d-9fee-db36a69ab34e"
+      },
+      "spec": {
+        "replicas": 0,
+        "selector": {
+          "matchLabels": {
+            "app": "cvk-verified-fixture",
+            "pod-template-hash": "79dfcd4f9d"
+          }
+        },
+        "template": {
+          "metadata": {
+            "annotations": {
+              "cisco.io/apphost-artifacts": "{\"agent\": {\"descriptorDigest\": \"sha256:aa3215da3bc24864581775acbf5e0de9e51dac4816d9a9fcc3f8b8ce1d3c755c\"}}",
+              "cisco.io/apphost-package-timeout": "300s"
+            },
+            "labels": {
+              "app": "cvk-verified-fixture",
+              "pod-template-hash": "79dfcd4f9d",
+              "qualification": "20261102"
+            }
+          },
+          "spec": {
+            "affinity": {
+              "nodeAffinity": {
+                "requiredDuringSchedulingIgnoredDuringExecution": {
+                  "nodeSelectorTerms": [
+                    {
+                      "matchFields": [
+                        {
+                          "key": "metadata.name",
+                          "operator": "In",
+                          "values": [
+                            "c9k-verified-20261102"
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              }
+            },
+            "containers": [
+              {
+                "image": "https://192.168.129.111:18443/v1/packages/sha256/febf34ebd664bbac03002f67578fbdf5b54c0358d24baa83b6abdb201266892f/package.tar",
+                "imagePullPolicy": "IfNotPresent",
+                "name": "agent",
+                "ports": [
+                  {
+                    "containerPort": 8080,
+                    "protocol": "TCP"
+                  }
+                ],
+                "resources": {
+                  "limits": {
+                    "memory": "128Mi"
+                  },
+                  "requests": {
+                    "memory": "128Mi"
+                  }
+                },
+                "terminationMessagePath": "/dev/termination-log",
+                "terminationMessagePolicy": "File"
+              }
+            ],
+            "dnsPolicy": "ClusterFirst",
+            "restartPolicy": "Always",
+            "schedulerName": "default-scheduler",
+            "securityContext": {},
+            "terminationGracePeriodSeconds": 30,
+            "tolerations": [
+              {
+                "effect": "NoSchedule",
+                "key": "cisco.vk/device",
+                "operator": "Exists"
+              }
+            ]
+          }
+        }
+      },
+      "status": {
+        "observedGeneration": 2,
+        "replicas": 0,
+        "terminatingReplicas": 0
+      }
+    }
+  ],
+  "kind": "List",
+  "metadata": {
+    "resourceVersion": ""
+  }
+}

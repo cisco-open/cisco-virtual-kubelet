@@ -1,0 +1,17 @@
+{
+  "physicalControls": "passed: positive HTTPS delivery, offline preloaded local image, local running-worker replacement and normal deletion",
+  "independentEvidenceAssessment": "passed after recorded Kubernetes timestamp precision correction",
+  "strictDocumentationBuild": {
+    "command": ".venv/bin/mkdocs build --strict",
+    "passed": true
+  },
+  "whitespace": {
+    "command": "git diff --check",
+    "passed": true
+  },
+  "productionSourceUnchanged": true,
+  "sourceFingerprint": "d07b6ea671fb9508e3eb648014e642eabf845d5fe45d1bd339557cf8b0c098ac",
+  "goRaceTestsRerun": false,
+  "priorRaceResults": "../verified-iosxe-2026-11-03-replies/test-results.json",
+  "historicalEvidenceUnchanged": true
+}

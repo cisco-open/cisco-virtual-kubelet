@@ -1,0 +1,11 @@
+[
+  {
+    "Config": "b1ef2b533ea8a6fdd74be7be628940fbf6e4de100de21abd979a5363866577e1.json",
+    "Layers": [
+      "cec6830e8cc87c823be2ebf491a2165155d61cdb2fbcbd4fecf8288a0f09063f/layer.tar"
+    ],
+    "RepoTags": [
+      "cvk-stdcopyfix-20261105/refresh:0609ed4e6d25"
+    ]
+  }
+]

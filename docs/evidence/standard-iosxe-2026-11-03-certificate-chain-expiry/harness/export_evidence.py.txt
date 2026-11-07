@@ -1,0 +1,49 @@
+import pathlib,json,yaml,re,hashlib,shutil
+R=pathlib.Path('/private/tmp/cvk-stdchain-20261103');ROOT=pathlib.Path('/Users/johalley/Git/cisco-virtual-kubelet');OUT=ROOT/'docs/evidence/standard-iosxe-2026-11-03-certificate-chain-expiry';q=json.loads((R/'qualification-assessed.json').read_text());assert q['executionComplete'] and q['baselineCleanupPassed'];OUT.mkdir(parents=True,exist_ok=True)
+def clean(v):
+ if isinstance(v,list):return [clean(x) for x in v]
+ if isinstance(v,dict):return {k:clean(x) for k,x in v.items() if k not in ['managedFields','kubectl.kubernetes.io/last-applied-configuration']}
+ return v
+pki=json.loads((R/'pki-manifest.json').read_text())
+names=['snapshot-root-pre-continuation.json','controls-root-pre-continuation.json','continuation-note.json','continuation.log','root-recovery-start-lease.json','root-expired-native-ca.json','root-native-certificate-replacement-first-attempt.json','device-baseline.json','device-preparation.json','transport-controls.json','pki-manifest.json','independent-tls-controls.json','offline-certificate-controls.json','natural-root-expiry.json','root-native-certificate-replacement.json','qualification-result.json','qualification.log','server-events.jsonl','device-input.yaml','values.yaml','final-cleanup.json']
+names += [name+'.crt' for name in pki['certificates']]+[name+'-chain.pem' for name in pki['chains']]
+names += ['clock-'+label+'.json' for label in ['baseline','valid-root-before','valid-root-after']+[c+'-'+p for c in ['root','intermediate'] for p in ['before','boundary','after-repair']]]
+for case in ['valid-root','valid-intermediate','root','intermediate']:names.append('deployment-'+case+'-input.yaml')
+for case in ['valid-root','valid-intermediate']:
+ names += [p+case+'-control.json' for p in ['snapshot-','controls-','deployment-','native-','leases-']]+['wait-'+case+'-control.jsonl']
+for case in ['root','intermediate']:
+ names += [case+'-'+x+'.json' for x in ['negative-tls-control','invalid-server-events','invalid-lease','worker-diagnostics','invalid-events','invalid-outcome','certificate-corrected','recovery-result','fresh-replacement-result']]+['snapshot-'+case+'-invalid-boundary.json',case+'-invalid-observations.jsonl']
+ for suffix in ['invalid-accepted','corrected-recovery','fresh-replacement']:
+  for prefix,ext in [('snapshot-','.json'),('controls-','.json'),('deployment-','.json'),('native-','.json'),('leases-','.json'),('wait-','.jsonl')]:
+   n=prefix+case+'-'+suffix+ext
+   if (R/n).exists():names.append(n)
+ if (R/(case+'-guarded-observations.jsonl')).exists():names.append(case+'-guarded-observations.jsonl')
+for label in ['baseline']+[c+'-normal-cleanup' for c in ['valid-root','valid-intermediate','root','root-fresh','intermediate','intermediate-fresh']]:
+ names.append('controls-'+label+'.json')
+ if label!='baseline':names+=['snapshot-'+label+'.json','leases-'+label+'.json']
+names += ['candidate.json','static-checks.json','automated-checks.json']
+for n in names:
+ if not n.endswith('.json'):continue
+ x=clean(json.loads((R/n).read_text()))
+ if isinstance(x,dict) and 'devices' in x:
+  for d in x['devices']:
+   if d.get('status'):d['status']={k:v for k,v in d['status'].items() if k in ['phase','conditions','nodeIdentity','workerRevision','networkWorkerRevision','workerCapabilities']}
+  for a in x.get('nativeApps',[]):
+   if not a.get('appID','').startswith('cvk0000_'):a.pop('networkInterfaces',None)
+ (OUT/n).write_text(json.dumps(x,indent=2)+'\n')
+(OUT/'qualification.json').write_text(json.dumps(clean(q),indent=2)+'\n')
+for n in names:
+ if n.endswith('.json'):continue
+ if n.endswith('.jsonl'):(OUT/n).write_text(''.join(json.dumps(clean(json.loads(l)))+'\n' for l in (R/n).read_text().splitlines()))
+ elif n.endswith('.yaml'):
+  v=yaml.safe_load((R/n).read_text());assert 'password' not in json.dumps(v).lower();(OUT/n).write_text(yaml.safe_dump(v))
+ else:shutil.copyfile(R/n,OUT/n)
+(OUT/'harness').mkdir(exist_ok=True)
+for n in ['bootstrap','deploy','device_cli','snapshot','control_functions','pki_io','generate_pki','validate_pki','check_clock','prepare_device','repair_root','repair_root-original','continue_qualification','observe_expired_root','servers','start_services','qualify','cleanup','bundle_evidence','assess','verify_static','export_evidence']:shutil.copyfile(R/(n+'.py'),OUT/'harness'/(n+'.py.txt'))
+rows=['| CA condition | Native outcome | TLS rejections in sealed window | Package GETs while expired | Same Pod retained | Fresh delivery after replacement |','| --- | --- | --- | --- | --- | --- |']
+for c in q['cases']:rows.append('| '+({'root':'Expired imported root','intermediate':'Expired served intermediate'}[c['case']])+' | '+('Rejected' if c['rejectionQualified'] else c['classification'])+' | '+str(c['deviceTLSRejections'])+' | '+str(c['devicePackageRequestsUnderExpiredCA'])+' | '+('Yes' if c['samePodRetained'] else 'No')+' | Passed |')
+readme=(R/'evidence-readme.md').read_text().replace('@@RESULTS@@','\n'.join(rows)).replace('@@STATUS@@','Both expiry rejection cases qualified.' if q['rejectionQualified'] else 'Expiry rejection did not qualify for every case. The observed acceptance or inconclusive result is retained below; post-replacement health does not turn it into a rejection pass.').replace('@@START@@',q['startedAtUTC']).replace('@@END@@',q['finishedAtUTC']);(OUT/'README.md').write_text(readme)
+pattern=re.compile(r'^-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----|^\s*client-key-data:\s*[A-Za-z0-9+/]{24,}|password\s*[=:]\s*cisco\b|^Authorization:\s*(?:Basic|Bearer)\s+\S|\b(?:Basic|Bearer)[ \t]+[A-Za-z0-9+/_.=-]{16,}',re.I|re.M)
+for p in OUT.rglob('*'):
+ if p.is_file():assert not pattern.search(p.read_text()),p
+manifest=''.join(hashlib.sha256(p.read_bytes()).hexdigest()+'  '+str(p.relative_to(OUT))+'\n' for p in sorted(OUT.rglob('*')) if p.is_file() and p.name!='SHA256SUMS');(OUT/'SHA256SUMS').write_text(manifest);print('PASS exported',len(manifest.splitlines()),'sanitized certificate-control evidence files')

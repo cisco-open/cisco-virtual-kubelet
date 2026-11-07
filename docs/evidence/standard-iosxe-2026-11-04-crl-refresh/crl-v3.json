@@ -1,0 +1,11 @@
+{
+  "publishedAtUTC": "2026-11-04T19:38:19.890516+00:00",
+  "version": 3,
+  "sha256": "01f8e700a081137b7c94df7043f52b4a48857837ddd2ddab6cd75215b1aaf733",
+  "bytes": 426,
+  "lastUpdateUTC": "2026-11-04T19:38:14+00:00",
+  "nextUpdateUTC": "2026-11-04T19:48:19+00:00",
+  "revokedSerialsHex": [],
+  "certificateOrPolicyChanged": false,
+  "manualRefreshOrFlushIssued": false
+}

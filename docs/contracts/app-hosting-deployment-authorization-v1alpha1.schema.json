@@ -1,0 +1,299 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "urn:cisco:app-hosting:deployment-authorization:v1alpha1",
+  "title": "Draft App Hosting Deployment Authorization",
+  "description": "Proposed signed deployment permission. A schema-valid object is not an approval. Trusted signer, evidence, scope, clock and current revocation policy must be validated.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "apiVersion",
+    "kind",
+    "authorizationID",
+    "descriptorDigest",
+    "action",
+    "scope",
+    "issuedAt",
+    "notBefore",
+    "expiresAt",
+    "policyDigest",
+    "assessment"
+  ],
+  "properties": {
+    "apiVersion": {
+      "const": "apphosting.cisco.com/v1alpha1"
+    },
+    "kind": {
+      "const": "AppHostingDeploymentAuthorization"
+    },
+    "authorizationID": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "descriptorDigest": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$"
+    },
+    "action": {
+      "enum": [
+        "deploy",
+        "rollback"
+      ]
+    },
+    "scope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "clusterID",
+        "namespace",
+        "namespaceUID",
+        "workload",
+        "containerName",
+        "releaseID",
+        "transitionID",
+        "fromReleaseID",
+        "targetProfiles"
+      ],
+      "properties": {
+        "clusterID": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "namespace": {
+          "type": "string",
+          "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$",
+          "maxLength": 63
+        },
+        "namespaceUID": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "workload": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "apiVersion",
+            "kind",
+            "name",
+            "uid"
+          ],
+          "properties": {
+            "apiVersion": {
+              "const": "apps/v1"
+            },
+            "kind": {
+              "const": "Deployment"
+            },
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 253
+            },
+            "uid": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        },
+        "containerName": {
+          "type": "string",
+          "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$",
+          "maxLength": 63
+        },
+        "releaseID": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "transitionID": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "fromReleaseID": {
+          "anyOf": [
+            { "type": "string", "format": "uuid" },
+            { "type": "null" }
+          ]
+        },
+        "targetProfiles": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 32,
+          "uniqueItems": true,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "digest"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256
+              },
+              "digest": {
+                "type": "string",
+                "pattern": "^sha256:[a-f0-9]{64}$"
+              }
+            }
+          }
+        }
+      }
+    },
+    "issuedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "notBefore": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "expiresAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "policyDigest": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$"
+    },
+    "assessment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "sourceManifestDigest",
+        "packageDigest",
+        "scanReport",
+        "scanner",
+        "scannedAt",
+        "databaseDigest",
+        "databaseUpdatedAt",
+        "qualification"
+      ],
+      "properties": {
+        "sourceManifestDigest": {
+          "type": "string",
+          "pattern": "^sha256:[a-f0-9]{64}$"
+        },
+        "packageDigest": {
+          "type": "string",
+          "pattern": "^sha256:[a-f0-9]{64}$"
+        },
+        "scanReport": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "digest",
+            "mediaType"
+          ],
+          "properties": {
+            "digest": {
+              "type": "string",
+              "pattern": "^sha256:[a-f0-9]{64}$"
+            },
+            "mediaType": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            }
+          }
+        },
+        "scanner": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "name",
+            "version"
+          ],
+          "properties": {
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            "version": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            }
+          }
+        },
+        "scannedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "databaseDigest": {
+          "type": "string",
+          "pattern": "^sha256:[a-f0-9]{64}$"
+        },
+        "databaseUpdatedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "qualification": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "digest",
+            "mediaType"
+          ],
+          "properties": {
+            "digest": {
+              "type": "string",
+              "pattern": "^sha256:[a-f0-9]{64}$"
+            },
+            "mediaType": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            }
+          }
+        },
+        "sourceTrustEvidence": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "digest",
+            "mediaType"
+          ],
+          "properties": {
+            "digest": {
+              "type": "string",
+              "pattern": "^sha256:[a-f0-9]{64}$"
+            },
+            "mediaType": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            }
+          }
+        },
+        "exceptions": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 16,
+          "uniqueItems": true,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "digest",
+              "mediaType"
+            ],
+            "properties": {
+              "digest": {
+                "type": "string",
+                "pattern": "^sha256:[a-f0-9]{64}$"
+              },
+              "mediaType": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

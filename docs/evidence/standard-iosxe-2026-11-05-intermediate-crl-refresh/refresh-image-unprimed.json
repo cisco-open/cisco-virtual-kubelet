@@ -1,0 +1,12 @@
+{
+  "atUTC": "2026-11-05T06:49:55.266236+00:00",
+  "phase": "refresh",
+  "packageSentToC9K": false,
+  "release": "INT-REFRESH-REFRESH-20261105-4cd216c69bce",
+  "repoTag": "cvk-intrefresh-20261105/refresh:4cd216c69bce",
+  "dockerConfigID": "sha256:19fbf269399ef00a47ac30220f7786f6c7d1c5a14c0f87d368ce64cb4868f4a8",
+  "layerDiffID": "sha256:638676afcc15e2556a0c3db36b25b66842803bd2b2a73a438d0254d44e77ae7b",
+  "binarySHA256": "6ab409ef9f748e2610c70f3184c7d8710879519d9ee4cc81b02b62076427cdf0",
+  "packageSHA256": "adeb9677f9d57b8a37d66d7684d955db2a072fb1c2e603e420d4eb650a30d630",
+  "packageBytes": 5959680
+}

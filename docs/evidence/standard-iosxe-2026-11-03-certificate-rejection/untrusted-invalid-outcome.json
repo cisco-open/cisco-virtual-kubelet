@@ -1,0 +1,11 @@
+{
+  "atUTC": "2026-11-03T17:40:47.307772+00:00",
+  "case": "untrusted",
+  "classification": "invalid-certificate-rejected",
+  "rejectionQualified": true,
+  "appHealthyUnderInvalidCertificate": false,
+  "packageURL": "https://192.168.129.111:18450/untrusted-agent-a.tar",
+  "serverModeAtObservation": "untrusted",
+  "packagePayloadSameAsValidControl": true,
+  "artifactConfigurationRequired": false
+}

@@ -1,0 +1,33 @@
+"""Update current guidance; never rewrite historical evidence reports."""
+from pathlib import Path
+root=Path('/Users/johalley/Git/cisco-virtual-kubelet')
+addition='''In the [CRL revocation follow-up](evidence/standard-iosxe-2026-11-04-certificate-revocation/README.md),
+configured CRL checking rejected a revoked leaf and, in a separate
+[uncached-image repeat](evidence/standard-iosxe-2026-11-04-certificate-revocation/cold-repeat/README.md),
+a revoked intermediate. The fresh image had a new Docker configuration ID,
+rootfs layer and application release. No fixture release ran before certificate
+replacement; the same Pod then returned
+`REVOCATION-COLD-20261104-35d8a9c90cb2`, and fresh deployment/deletion passed.
+Root, leaf, CRLs and policy remained unchanged during intermediate replacement;
+normal safety fences were respected. The explicit `revocation-check none`
+control accepted the revoked leaf. In the original warm-image intermediate
+case, known release A ran with a rejected handshake and zero new package
+transfer; that evidence is preserved separately. Transport certificate
+revocation alone does not block cached-content execution or prove a software
+vulnerability was remediated. Verify the actual running release after updates.
+This measured current, prepublished CRLs on the named C9300/IOS-XE profile;
+revocation discovery/cache-refresh latency remains unqualified. Ordinary PKI
+configuration is optional and independent of CVK artifact mode. No artifact
+metadata or journal was required; Standard remains the default and Governed
+remains deferred.
+
+'''
+for name in ['verified-iosxe-qualification.md','verified-artifact-preflight.md','app-image-lifecycle-plan.md']:
+ p=root/'docs'/name;s=p.read_text();old='root/intermediate expiry is covered by the separate run below; revocation\nremains untested.';assert old in s;s=s.replace(old,'root/intermediate expiry and CRL revocation are covered by the separate runs below.')
+ marker='No artifact metadata or journal was required. Standard remains the default;\nGoverned remains deferred.\n\n';assert s.count(marker)==1;s=s.replace(marker,marker+addition)
+ if name=='app-image-lifecycle-plan.md':s=s.replace('The CA-expiry follow-up completed on 2026-11-04; measured outcomes are linked below.','The CA-expiry and CRL-revocation follow-ups completed on 2026-11-04;\nmeasured outcomes and the preserved warm-image limitation are linked below.')
+ if name=='verified-iosxe-qualification.md':
+  row='| Standard CRL revocation | Prepublish signed current CRLs containing revoked leaf/intermediate serials; configure a run-owned CRL profile and a separate none control; use a genuinely fresh image for the intermediate repeat | Prove native CRL retrieval/cache, TLS rejection and no fresh delivery/runtime before replacement; verify exact running release after certificate-only repair, same-Pod recovery, fresh delivery and deletion; preserve any warm-image runtime exception; no artifact metadata or journal |\n'
+  lines=s.splitlines(keepends=True);index=next(i for i,l in enumerate(lines) if l.startswith('| Standard CA expiry |'));lines.insert(index+1,row);s=''.join(lines)
+ p.write_text(s)
+print('PASS current guidance updated; historical evidence reports preserved')

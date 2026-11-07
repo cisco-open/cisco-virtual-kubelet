@@ -1,0 +1,93 @@
+PUBLISHED CRL {"publishedAtUTC": "2026-11-04T19:38:19.890516+00:00", "version": 3, "sha256": "01f8e700a081137b7c94df7043f52b4a48857837ddd2ddab6cd75215b1aaf733", "bytes": 426, "lastUpdateUTC": "2026-11-04T19:38:14+00:00", "nextUpdateUTC": "2026-11-04T19:48:19+00:00", "revokedSerialsHex": [], "certificateOrPolicyChanged": false, "manualRefreshOrFlushIssued": false}
+PASS read-only native PKI baseline published 3
+deployment.apps/cvk-crlrefresh-fixture configured
+{"atUTC": "2026-11-04T19:38:24.990470+00:00", "label": "valid", "release": "CRL-REFRESH-VALID-20261104-a674b004ffa2", "podUIDs": ["123d675a-afac-4470-b58e-95ada003373d"], "nativeStates": {"iris": "RUNNING", "c9ktest": "DEPLOYED"}, "ready": false, "httpReleaseConfirmed": false, "oldNativeAppsAbsent": false, "artifactJournalCount": 0}
+{"atUTC": "2026-11-04T19:38:52.063471+00:00", "label": "valid", "release": "CRL-REFRESH-VALID-20261104-a674b004ffa2", "podUIDs": ["123d675a-afac-4470-b58e-95ada003373d"], "nativeStates": {"iris": "RUNNING", "c9ktest": "DEPLOYED", "cvk0000_123d675aafac4470b58e95ada003373d": "RUNNING"}, "ready": true, "httpReleaseConfirmed": false, "oldNativeAppsAbsent": true, "artifactJournalCount": 0}
+{"atUTC": "2026-11-04T19:39:19.342155+00:00", "label": "valid", "release": "CRL-REFRESH-VALID-20261104-a674b004ffa2", "podUIDs": ["123d675a-afac-4470-b58e-95ada003373d"], "nativeStates": {"iris": "RUNNING", "c9ktest": "DEPLOYED", "cvk0000_123d675aafac4470b58e95ada003373d": "RUNNING"}, "ready": true, "httpReleaseConfirmed": false, "oldNativeAppsAbsent": true, "artifactJournalCount": 0}
+{"atUTC": "2026-11-04T19:39:46.719937+00:00", "label": "valid", "release": "CRL-REFRESH-VALID-20261104-a674b004ffa2", "podUIDs": ["123d675a-afac-4470-b58e-95ada003373d"], "nativeStates": {"iris": "RUNNING", "c9ktest": "DEPLOYED", "cvk0000_123d675aafac4470b58e95ada003373d": "RUNNING"}, "ready": true, "httpReleaseConfirmed": false, "oldNativeAppsAbsent": true, "artifactJournalCount": 0}
+PASS valid Ready/HTTP CRL-REFRESH-VALID-20261104-a674b004ffa2 without artifacts or journal
+PASS read-only native PKI valid published 3
+PUBLISHED CRL {"publishedAtUTC": "2026-11-04T19:39:59.477841+00:00", "version": 4, "sha256": "3ae2e131e85a8472dbefe4d0b86557cea4a1b853635242815fee7b113aaa12db", "bytes": 481, "lastUpdateUTC": "2026-11-04T19:39:53+00:00", "nextUpdateUTC": "2026-11-04T21:39:58+00:00", "revokedSerialsHex": ["3bfea9015d726674567c7ab833744692c8acd0c9"], "certificateOrPolicyChanged": false, "manualRefreshOrFlushIssued": false}
+PASS read-only native PKI just-published published 4
+deployment.apps/cvk-crlrefresh-fixture scaled
+2026-11-04T19:40:10.396047+00:00 valid normal deletion pending 2026-11-04 20:11:03.705775+00:00
+deployment.apps/cvk-crlrefresh-fixture configured
+{"atUTC": "2026-11-04T19:42:23.841816+00:00", "label": "cached", "release": "CRL-REFRESH-CACHED-20261104-a674b004ffa2", "podUIDs": ["25d133f1-4d8f-4360-9db7-4c5cd6f57bae"], "nativeStates": {"iris": "RUNNING", "c9ktest": "DEPLOYED", "cvk0000_25d133f14d8f43609db74c5cd6f57bae": "RUNNING"}, "ready": true, "httpReleaseConfirmed": true, "oldNativeAppsAbsent": true, "artifactJournalCount": 0}
+PASS cached Ready/HTTP CRL-REFRESH-CACHED-20261104-a674b004ffa2 without artifacts or journal
+PASS read-only native PKI cached-boundary published 4
+2026-11-04T19:42:28.693383+00:00 CACHE WINDOW fresh-image-accepted-using-cached-unrevoked-CRL [{'appID': 'cvk0000_25d133f14d8f43609db74c5cd6f57bae', 'release': 'CRL-REFRESH-CACHED-20261104-a674b004ffa2', 'ip': '192.168.129.213'}]
+PASS read-only native PKI idle-cache-0 published 4
+PASS read-only native PKI idle-cache-1 published 4
+PASS read-only native PKI idle-cache-2 published 4
+PASS read-only native PKI idle-cache-3 published 4
+PASS read-only native PKI idle-cache-4 published 4
+PASS read-only native PKI idle-cache-5 published 4
+PASS read-only native PKI idle-cache-6 published 4
+PASS read-only native PKI idle-cache-7 published 4
+PASS read-only native PKI idle-cache-8 published 4
+PASS read-only native PKI idle-cache-9 published 4
+PASS read-only native PKI idle-cache-10 published 4
+PASS read-only native PKI idle-cache-11 published 4
+deployment.apps/cvk-crlrefresh-fixture scaled
+2026-11-04T19:47:01.055490+00:00 cached normal deletion pending 2026-11-04 20:17:56.329974+00:00
+PASS read-only native PKI expiry-wait-0 published 4
+PASS read-only native PKI expiry-wait-1 published 4
+PASS read-only native PKI expiry-wait-2 published 4
+PASS read-only native PKI before-refresh-demand published 4
+deployment.apps/cvk-crlrefresh-fixture configured
+{"atUTC": "2026-11-04T19:48:30.878442+00:00", "podUIDs": ["dec2eb0a-632b-4099-90bf-22918214a19b"], "ready": false, "nativeRunning": false, "actualReleases": [], "newCRLNativeRetrievals": 1, "TLSRejections": 0, "packageRequests": 0, "leaseRenewAgeSeconds": 1.706661, "leaseExpiresUTC": "2026-11-04T20:19:29.171756+00:00", "artifactJournals": 0}
+{"atUTC": "2026-11-04T19:49:18.131433+00:00", "podUIDs": ["dec2eb0a-632b-4099-90bf-22918214a19b"], "ready": false, "nativeRunning": false, "actualReleases": [], "newCRLNativeRetrievals": 1, "TLSRejections": 0, "packageRequests": 0, "leaseRenewAgeSeconds": 18.931727, "leaseExpiresUTC": "2026-11-04T20:19:59.199683+00:00", "artifactJournals": 0}
+{"atUTC": "2026-11-04T19:50:05.455910+00:00", "podUIDs": ["dec2eb0a-632b-4099-90bf-22918214a19b"], "ready": false, "nativeRunning": false, "actualReleases": [], "newCRLNativeRetrievals": 1, "TLSRejections": 0, "packageRequests": 0, "leaseRenewAgeSeconds": 6.254896, "leaseExpiresUTC": "2026-11-04T20:20:59.200993+00:00", "artifactJournals": 0}
+{"atUTC": "2026-11-04T19:50:53.085976+00:00", "podUIDs": ["dec2eb0a-632b-4099-90bf-22918214a19b"], "ready": false, "nativeRunning": false, "actualReleases": [], "newCRLNativeRetrievals": 1, "TLSRejections": 0, "packageRequests": 0, "leaseRenewAgeSeconds": 23.889565, "leaseExpiresUTC": "2026-11-04T20:21:29.196393+00:00", "artifactJournals": 0}
+{"atUTC": "2026-11-04T19:51:40.576584+00:00", "podUIDs": ["dec2eb0a-632b-4099-90bf-22918214a19b"], "ready": false, "nativeRunning": false, "actualReleases": [], "newCRLNativeRetrievals": 1, "TLSRejections": 1, "packageRequests": 0, "leaseRenewAgeSeconds": 11.378054, "leaseExpiresUTC": "2026-11-04T20:22:29.198508+00:00", "artifactJournals": 0}
+{"atUTC": "2026-11-04T19:52:27.909472+00:00", "podUIDs": ["dec2eb0a-632b-4099-90bf-22918214a19b"], "ready": false, "nativeRunning": false, "actualReleases": [], "newCRLNativeRetrievals": 1, "TLSRejections": 1, "packageRequests": 0, "leaseRenewAgeSeconds": 58.710944, "leaseExpiresUTC": "2026-11-04T20:22:29.198508+00:00", "artifactJournals": 0}
+{"atUTC": "2026-11-04T19:53:15.085123+00:00", "podUIDs": ["dec2eb0a-632b-4099-90bf-22918214a19b"], "ready": false, "nativeRunning": false, "actualReleases": [], "newCRLNativeRetrievals": 1, "TLSRejections": 1, "packageRequests": 0, "leaseRenewAgeSeconds": 105.886597, "leaseExpiresUTC": "2026-11-04T20:22:29.198508+00:00", "artifactJournals": 0}
+{"atUTC": "2026-11-04T19:54:02.341312+00:00", "podUIDs": ["dec2eb0a-632b-4099-90bf-22918214a19b"], "ready": false, "nativeRunning": false, "actualReleases": [], "newCRLNativeRetrievals": 1, "TLSRejections": 1, "packageRequests": 0, "leaseRenewAgeSeconds": 153.14276, "leaseExpiresUTC": "2026-11-04T20:22:29.198508+00:00", "artifactJournals": 0}
+{"atUTC": "2026-11-04T19:54:49.991879+00:00", "podUIDs": ["dec2eb0a-632b-4099-90bf-22918214a19b"], "ready": false, "nativeRunning": false, "actualReleases": [], "newCRLNativeRetrievals": 1, "TLSRejections": 1, "packageRequests": 0, "leaseRenewAgeSeconds": 200.793346, "leaseExpiresUTC": "2026-11-04T20:22:29.198508+00:00", "artifactJournals": 0}
+{"atUTC": "2026-11-04T19:55:37.732392+00:00", "podUIDs": ["dec2eb0a-632b-4099-90bf-22918214a19b"], "ready": false, "nativeRunning": false, "actualReleases": [], "newCRLNativeRetrievals": 1, "TLSRejections": 1, "packageRequests": 0, "leaseRenewAgeSeconds": 248.533864, "leaseExpiresUTC": "2026-11-04T20:22:29.198508+00:00", "artifactJournals": 0}
+{"atUTC": "2026-11-04T19:56:25.290780+00:00", "podUIDs": ["dec2eb0a-632b-4099-90bf-22918214a19b"], "ready": false, "nativeRunning": false, "actualReleases": [], "newCRLNativeRetrievals": 1, "TLSRejections": 1, "packageRequests": 0, "leaseRenewAgeSeconds": 296.09225, "leaseExpiresUTC": "2026-11-04T20:22:29.198508+00:00", "artifactJournals": 0}
+{"atUTC": "2026-11-04T19:57:12.998965+00:00", "podUIDs": ["dec2eb0a-632b-4099-90bf-22918214a19b"], "ready": false, "nativeRunning": false, "actualReleases": [], "newCRLNativeRetrievals": 1, "TLSRejections": 1, "packageRequests": 0, "leaseRenewAgeSeconds": 343.80044, "leaseExpiresUTC": "2026-11-04T20:22:29.198508+00:00", "artifactJournals": 0}
+{"atUTC": "2026-11-04T19:58:00.363149+00:00", "podUIDs": ["dec2eb0a-632b-4099-90bf-22918214a19b"], "ready": false, "nativeRunning": false, "actualReleases": [], "newCRLNativeRetrievals": 1, "TLSRejections": 1, "packageRequests": 0, "leaseRenewAgeSeconds": 391.164627, "leaseExpiresUTC": "2026-11-04T20:22:29.198508+00:00", "artifactJournals": 0}
+{"atUTC": "2026-11-04T19:58:47.685681+00:00", "podUIDs": ["dec2eb0a-632b-4099-90bf-22918214a19b"], "ready": false, "nativeRunning": false, "actualReleases": [], "newCRLNativeRetrievals": 1, "TLSRejections": 1, "packageRequests": 0, "leaseRenewAgeSeconds": 438.487156, "leaseExpiresUTC": "2026-11-04T20:22:29.198508+00:00", "artifactJournals": 0}
+{"atUTC": "2026-11-04T19:59:35.203848+00:00", "podUIDs": ["dec2eb0a-632b-4099-90bf-22918214a19b"], "ready": false, "nativeRunning": false, "actualReleases": [], "newCRLNativeRetrievals": 1, "TLSRejections": 1, "packageRequests": 0, "leaseRenewAgeSeconds": 486.005324, "leaseExpiresUTC": "2026-11-04T20:22:29.198508+00:00", "artifactJournals": 0}
+{"atUTC": "2026-11-04T20:00:22.565580+00:00", "podUIDs": ["dec2eb0a-632b-4099-90bf-22918214a19b"], "ready": false, "nativeRunning": false, "actualReleases": [], "newCRLNativeRetrievals": 1, "TLSRejections": 1, "packageRequests": 0, "leaseRenewAgeSeconds": 533.367056, "leaseExpiresUTC": "2026-11-04T20:22:29.198508+00:00", "artifactJournals": 0}
+PASS read-only native PKI revoked-boundary published 4
+2026-11-04T20:00:35.131358+00:00 SEALED REFRESH OUTCOME inconclusive-refresh
+PASS read-only native PKI after-replacement published 4
+2026-11-04T20:00:39.216604+00:00 refresh waiting for normal fence 2026-11-04T20:22:29.198508+00:00
+2026-11-04T20:01:46.769245+00:00 refresh waiting for normal fence 2026-11-04T20:22:29.198508+00:00
+2026-11-04T20:02:54.017828+00:00 refresh waiting for normal fence 2026-11-04T20:22:29.198508+00:00
+2026-11-04T20:04:01.546567+00:00 refresh waiting for normal fence 2026-11-04T20:22:29.198508+00:00
+2026-11-04T20:05:08.878247+00:00 refresh waiting for normal fence 2026-11-04T20:22:29.198508+00:00
+2026-11-04T20:06:16.480566+00:00 refresh waiting for normal fence 2026-11-04T20:22:29.198508+00:00
+2026-11-04T20:07:23.809345+00:00 refresh waiting for normal fence 2026-11-04T20:22:29.198508+00:00
+2026-11-04T20:08:31.222480+00:00 refresh waiting for normal fence 2026-11-04T20:22:29.198508+00:00
+2026-11-04T20:09:38.791613+00:00 refresh waiting for normal fence 2026-11-04T20:22:29.198508+00:00
+2026-11-04T20:10:46.302959+00:00 refresh waiting for normal fence 2026-11-04T20:22:29.198508+00:00
+2026-11-04T20:11:53.653748+00:00 refresh waiting for normal fence 2026-11-04T20:22:29.198508+00:00
+2026-11-04T20:13:01.083570+00:00 refresh waiting for normal fence 2026-11-04T20:22:29.198508+00:00
+2026-11-04T20:14:08.518095+00:00 refresh waiting for normal fence 2026-11-04T20:22:29.198508+00:00
+2026-11-04T20:15:16.095775+00:00 refresh waiting for normal fence 2026-11-04T20:22:29.198508+00:00
+2026-11-04T20:16:23.822685+00:00 refresh waiting for normal fence 2026-11-04T20:22:29.198508+00:00
+2026-11-04T20:17:31.297861+00:00 refresh waiting for normal fence 2026-11-04T20:22:29.198508+00:00
+2026-11-04T20:18:38.644958+00:00 refresh waiting for normal fence 2026-11-04T20:22:29.198508+00:00
+2026-11-04T20:19:46.111357+00:00 refresh waiting for normal fence 2026-11-04T20:22:29.198508+00:00
+2026-11-04T20:20:53.440131+00:00 refresh waiting for normal fence 2026-11-04T20:22:29.198508+00:00
+2026-11-04T20:22:00.758970+00:00 refresh waiting for normal fence 2026-11-04T20:22:29.198508+00:00
+{"atUTC": "2026-11-04T20:22:31.097921+00:00", "label": "recovery", "release": "CRL-REFRESH-REFRESH-20261104-a674b004ffa2", "podUIDs": ["dec2eb0a-632b-4099-90bf-22918214a19b"], "nativeStates": {"iris": "RUNNING", "c9ktest": "DEPLOYED"}, "ready": false, "httpReleaseConfirmed": false, "oldNativeAppsAbsent": false, "artifactJournalCount": 0}
+{"atUTC": "2026-11-04T20:22:58.345760+00:00", "label": "recovery", "release": "CRL-REFRESH-REFRESH-20261104-a674b004ffa2", "podUIDs": ["dec2eb0a-632b-4099-90bf-22918214a19b"], "nativeStates": {"iris": "RUNNING", "c9ktest": "DEPLOYED", "cvk0000_dec2eb0a632b409990bf22918214a19b": "ACTIVATED"}, "ready": false, "httpReleaseConfirmed": false, "oldNativeAppsAbsent": true, "artifactJournalCount": 0}
+{"atUTC": "2026-11-04T20:23:25.281338+00:00", "label": "recovery", "release": "CRL-REFRESH-REFRESH-20261104-a674b004ffa2", "podUIDs": ["dec2eb0a-632b-4099-90bf-22918214a19b"], "nativeStates": {"iris": "RUNNING", "c9ktest": "DEPLOYED", "cvk0000_dec2eb0a632b409990bf22918214a19b": "RUNNING"}, "ready": true, "httpReleaseConfirmed": false, "oldNativeAppsAbsent": true, "artifactJournalCount": 0}
+{"atUTC": "2026-11-04T20:23:52.175489+00:00", "label": "recovery", "release": "CRL-REFRESH-REFRESH-20261104-a674b004ffa2", "podUIDs": ["dec2eb0a-632b-4099-90bf-22918214a19b"], "nativeStates": {"iris": "RUNNING", "c9ktest": "DEPLOYED", "cvk0000_dec2eb0a632b409990bf22918214a19b": "RUNNING"}, "ready": true, "httpReleaseConfirmed": false, "oldNativeAppsAbsent": true, "artifactJournalCount": 0}
+PASS recovery Ready/HTTP CRL-REFRESH-REFRESH-20261104-a674b004ffa2 without artifacts or journal
+deployment.apps/cvk-crlrefresh-fixture scaled
+2026-11-04T20:24:25.130460+00:00 recovery normal deletion pending 2026-11-04 20:55:18.407254+00:00
+deployment.apps/cvk-crlrefresh-fixture configured
+{"atUTC": "2026-11-04T20:25:14.352465+00:00", "label": "fresh", "release": "CRL-REFRESH-REFRESH-20261104-a674b004ffa2", "podUIDs": ["ed401549-3291-4da6-9cfe-130b1fd9e475"], "nativeStates": {"iris": "RUNNING", "c9ktest": "DEPLOYED"}, "ready": false, "httpReleaseConfirmed": false, "oldNativeAppsAbsent": false, "artifactJournalCount": 0}
+{"atUTC": "2026-11-04T20:25:41.640569+00:00", "label": "fresh", "release": "CRL-REFRESH-REFRESH-20261104-a674b004ffa2", "podUIDs": ["ed401549-3291-4da6-9cfe-130b1fd9e475"], "nativeStates": {"iris": "RUNNING", "c9ktest": "DEPLOYED", "cvk0000_ed40154932914da69cfe130b1fd9e475": "RUNNING"}, "ready": true, "httpReleaseConfirmed": false, "oldNativeAppsAbsent": true, "artifactJournalCount": 0}
+{"atUTC": "2026-11-04T20:26:08.653593+00:00", "label": "fresh", "release": "CRL-REFRESH-REFRESH-20261104-a674b004ffa2", "podUIDs": ["ed401549-3291-4da6-9cfe-130b1fd9e475"], "nativeStates": {"iris": "RUNNING", "c9ktest": "DEPLOYED", "cvk0000_ed40154932914da69cfe130b1fd9e475": "RUNNING"}, "ready": true, "httpReleaseConfirmed": false, "oldNativeAppsAbsent": true, "artifactJournalCount": 0}
+{"atUTC": "2026-11-04T20:26:35.709723+00:00", "label": "fresh", "release": "CRL-REFRESH-REFRESH-20261104-a674b004ffa2", "podUIDs": ["ed401549-3291-4da6-9cfe-130b1fd9e475"], "nativeStates": {"iris": "RUNNING", "c9ktest": "DEPLOYED", "cvk0000_ed40154932914da69cfe130b1fd9e475": "RUNNING"}, "ready": true, "httpReleaseConfirmed": true, "oldNativeAppsAbsent": true, "artifactJournalCount": 0}
+PASS fresh Ready/HTTP CRL-REFRESH-REFRESH-20261104-a674b004ffa2 without artifacts or journal
+deployment.apps/cvk-crlrefresh-fixture scaled
+2026-11-04T20:26:45.179941+00:00 fresh normal deletion pending 2026-11-04 20:57:38.500482+00:00
+PASS read-only native PKI complete published 4
+COMPLETE CRL REFRESH QUALIFICATION

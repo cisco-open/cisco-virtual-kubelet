@@ -1,0 +1,16 @@
+{
+  "continuationStartedAtUTC": "2026-11-04T06:04:08.653262+00:00",
+  "originalStopAtUTC": "2026-11-03T23:14:27.632921+00:00",
+  "reason": "IOS-XE 17.18.1 rejected direct CA re-authentication and required deletion/recreation of the run-owned origin CA trustpoint. Original sealed rejection was preserved; normal CVK retries continued during the gap.",
+  "originalQualifySHA256": "75fa5a5b26ff2d6c964d2c187bc3546d86b22d9977c19900e6ad259159a8cbf6",
+  "originalRepairSHA256": "98837111fb12caba2dce0a28c5fd7bed6c3347f30fd3970fb40dc14f1d2fc8d3",
+  "rootTrustpointRecreatedForReplacement": true,
+  "originalNegativePhaseRepeated": false,
+  "sameRootPodBeforeContinuation": true,
+  "canonicalLeaseUID": "c64e72c3-4aed-4789-8fe8-2159a8ca34d5",
+  "originalNegativeLeaseRenewTime": "2026-11-03T23:12:15.407726Z",
+  "currentAutomaticRetryLeaseRenewTime": "2026-11-04T06:03:42.533708Z",
+  "currentLeaseHolder": "device-write/9b95da38-83f0-4273-8ae2-647f445c4be7",
+  "manualLeaseOrJournalEdits": false,
+  "deviceClockChanged": false
+}

@@ -1,0 +1,18 @@
+package main
+import("context";"crypto/sha256";"crypto/tls";"crypto/x509";"encoding/hex";"encoding/json";"flag";"fmt";"os";"strings";"time";"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/devicegrpc";"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/gnoi";"google.golang.org/grpc";"google.golang.org/grpc/credentials";"google.golang.org/grpc/status")
+func main(){
+ ca:=flag.String("ca","","CA PEM");mode:=flag.String("mode","get","get, put, remove");path:=flag.String("path","flash:cvk-qual-probe-20261101.txt","owned probe file");flag.Parse()
+ if !strings.HasPrefix(*path,"flash:cvk-qual-probe-20261101"){panic("path outside qualification probe scope")}
+ pem,err:=os.ReadFile(*ca);if err!=nil{panic(err)};roots:=x509.NewCertPool();if !roots.AppendCertsFromPEM(pem){panic("invalid CA")}
+ conn,err:=grpc.NewClient("10.1.1.1:9339",grpc.WithTransportCredentials(credentials.NewTLS(&tls.Config{RootCAs:roots,MinVersion:tls.VersionTLS12})),grpc.WithPerRPCCredentials(devicegrpc.NewIOSXEPasswordCredentials("cisco",os.Getenv("CVK_QUAL_DEVICE_PASSWORD"))));if err!=nil{panic(err)};defer conn.Close()
+ c,err:=gnoi.New(conn,gnoi.Options{});if err!=nil{panic(err)};ctx,cancel:=context.WithTimeout(context.Background(),20*time.Second);defer cancel()
+ out:=map[string]any{"mode":*mode,"path":*path,"tlsVerificationEnabled":true}
+ switch *mode{
+ case "verify":result,e:=c.Verify(ctx);err=e;if e==nil{out["version"]=result.Version;out["activationFailMessage"]=result.ActivationFailMessage}
+ case "get":h:=sha256.New();reported,e:=c.Get(ctx,*path,h);err=e;if e==nil{out["computedSHA256"]=hex.EncodeToString(h.Sum(nil));out["reportedHashMethod"]=reported.GetMethod().String();out["reportedHash"]=hex.EncodeToString(reported.GetHash())}
+ case "put":err=c.Put(ctx,*path,strings.NewReader("CVK Verified physical qualification file probe\n"),gnoi.PutOpts{Permissions:0600})
+ case "remove":err=c.Remove(ctx,*path)
+ default:err=fmt.Errorf("unknown mode")
+ }
+ out["success"]=err==nil;if err!=nil{out["grpcCode"]=status.Code(err).String();out["error"]=err.Error()};json.NewEncoder(os.Stdout).Encode(out);if err!=nil{os.Exit(1)}
+}

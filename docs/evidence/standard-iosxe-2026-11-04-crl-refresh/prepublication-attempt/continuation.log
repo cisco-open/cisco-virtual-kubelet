@@ -1,0 +1,13 @@
+PASS read-only native PKI baseline-continuation published 1
+deployment.apps/cvk-crlrefresh-fixture created
+{"atUTC": "2026-11-04T19:22:22.844454+00:00", "label": "valid", "release": "CRL-REFRESH-VALID-20261104-a674b004ffa2", "podUIDs": ["354497f3-07ed-4e59-a7c1-6745a03a7151"], "nativeStates": {"iris": "RUNNING", "c9ktest": "DEPLOYED"}, "ready": false, "httpReleaseConfirmed": false, "oldNativeAppsAbsent": false, "artifactJournalCount": 0}
+{"atUTC": "2026-11-04T19:22:49.797976+00:00", "label": "valid", "release": "CRL-REFRESH-VALID-20261104-a674b004ffa2", "podUIDs": ["354497f3-07ed-4e59-a7c1-6745a03a7151"], "nativeStates": {"iris": "RUNNING", "c9ktest": "DEPLOYED", "cvk0000_354497f307ed4e59a7c16745a03a7151": "RUNNING"}, "ready": false, "httpReleaseConfirmed": false, "oldNativeAppsAbsent": true, "artifactJournalCount": 0}
+{"atUTC": "2026-11-04T19:23:16.677796+00:00", "label": "valid", "release": "CRL-REFRESH-VALID-20261104-a674b004ffa2", "podUIDs": ["354497f3-07ed-4e59-a7c1-6745a03a7151"], "nativeStates": {"iris": "RUNNING", "c9ktest": "DEPLOYED", "cvk0000_354497f307ed4e59a7c16745a03a7151": "RUNNING"}, "ready": true, "httpReleaseConfirmed": false, "oldNativeAppsAbsent": true, "artifactJournalCount": 0}
+{"atUTC": "2026-11-04T19:23:43.476100+00:00", "label": "valid", "release": "CRL-REFRESH-VALID-20261104-a674b004ffa2", "podUIDs": ["354497f3-07ed-4e59-a7c1-6745a03a7151"], "nativeStates": {"iris": "RUNNING", "c9ktest": "DEPLOYED", "cvk0000_354497f307ed4e59a7c16745a03a7151": "RUNNING"}, "ready": true, "httpReleaseConfirmed": false, "oldNativeAppsAbsent": true, "artifactJournalCount": 0}
+PASS valid Ready/HTTP CRL-REFRESH-VALID-20261104-a674b004ffa2 without artifacts or journal
+PASS read-only native PKI valid published 1
+Traceback (most recent call last):
+  File "/tmp/cvk-crlrefresh-20261104/continuation.py", line 55, in <module>
+    pki('baseline-continuation');deploy('valid');valid=health('valid',P['phases']['valid']['release']);pki('valid');assert any(e['kind']=='crl-served' and e.get('version')==1 for e in events());assert any(e['kind']=='package-sent' and e.get('phase')=='valid' for e in events())
+                                                                                                                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError

@@ -1,0 +1,32 @@
+"""Unique roots; same leaf/key per case, same CA subject/SPKI across renewal."""
+import pathlib,datetime,uuid,json,os,ipaddress,hashlib
+from cryptography import x509
+from cryptography.x509.oid import NameOID,ExtendedKeyUsageOID
+from cryptography.hazmat.primitives import hashes,serialization
+from cryptography.hazmat.primitives.asymmetric import rsa
+R=pathlib.Path('/tmp/cvk-stdchain-20261103');now=datetime.datetime.now(datetime.timezone.utc);nonce=uuid.uuid4().hex[:12];certs={};keys={}
+def write(n,data):
+ p=R/n;p.write_bytes(data);os.chmod(p,0o600)
+def key(n):
+ k=rsa.generate_private_key(65537,2048);keys[n]=k;write(n+'.key',k.private_bytes(serialization.Encoding.PEM,serialization.PrivateFormat.PKCS8,serialization.NoEncryption()));return k
+def name(n):return x509.Name([x509.NameAttribute(NameOID.COMMON_NAME,'CVK chain '+n+' '+nonce)])
+def certificate(n,k,subject,issuer,issuerKey,start,end,ca,path=None):
+ b=x509.CertificateBuilder().subject_name(subject).issuer_name(issuer).public_key(k.public_key()).serial_number(x509.random_serial_number()).not_valid_before(start).not_valid_after(end).add_extension(x509.BasicConstraints(ca=ca,path_length=path),True).add_extension(x509.SubjectKeyIdentifier.from_public_key(k.public_key()),False).add_extension(x509.AuthorityKeyIdentifier.from_issuer_public_key(issuerKey.public_key()),False)
+ if ca:b=b.add_extension(x509.KeyUsage(False,False,False,False,False,True,True,False,False),True)
+ else:b=b.add_extension(x509.SubjectAlternativeName([x509.IPAddress(ipaddress.ip_address('192.168.129.111'))]),False).add_extension(x509.KeyUsage(True,False,True,False,False,False,False,False,False),True).add_extension(x509.ExtendedKeyUsage([ExtendedKeyUsageOID.SERVER_AUTH]),False)
+ c=b.sign(issuerKey,hashes.SHA256());certs[n]=c;write(n+'.crt',c.public_bytes(serialization.Encoding.PEM));return c
+rk=key('root-ca');rn=name('short-root');before=now-datetime.timedelta(days=30)
+certificate('root-old',rk,rn,rn,rk,before,now+datetime.timedelta(minutes=15),True,0)
+certificate('root-renewed',rk,rn,rn,rk,before,now+datetime.timedelta(days=30),True,0)
+ikroot=key('intermediate-root');irn=name('intermediate-root');certificate('intermediate-root',ikroot,irn,irn,ikroot,before,now+datetime.timedelta(days=30),True,1)
+ik=key('intermediate-ca');inn=name('intermediate');certificate('intermediate-expired',ik,inn,irn,ikroot,now-datetime.timedelta(days=15),now-datetime.timedelta(days=2),True,0);certificate('intermediate-renewed',ik,inn,irn,ikroot,now-datetime.timedelta(days=15),now+datetime.timedelta(days=14),True,0)
+ck=key('control-intermediate');cn=name('control-intermediate');certificate('control-intermediate',ck,cn,irn,ikroot,now-datetime.timedelta(days=15),now+datetime.timedelta(days=14),True,0)
+for n,issuer,issuerKey in [('root-leaf',rn,rk),('intermediate-leaf',inn,ik),('control-leaf',cn,ck)]:
+ lk=key(n);certificate(n,lk,x509.Name([x509.NameAttribute(NameOID.COMMON_NAME,'192.168.129.111')]),issuer,issuerKey,now-datetime.timedelta(days=10),now+datetime.timedelta(days=7),False)
+chains={'control-intermediate':['control-leaf','control-intermediate'],'root-old':['root-leaf','root-old'],'root-renewed':['root-leaf','root-renewed'],'intermediate-expired':['intermediate-leaf','intermediate-expired'],'intermediate-renewed':['intermediate-leaf','intermediate-renewed']}
+for n,parts in chains.items():write(n+'-chain.pem',b''.join(certs[p].public_bytes(serialization.Encoding.PEM) for p in parts))
+for a,b in [('root-old','root-renewed'),('intermediate-expired','intermediate-renewed')]:assert certs[a].subject==certs[b].subject and certs[a].public_key().public_numbers()==certs[b].public_key().public_numbers()
+manifest={'generatedAtUTC':now.isoformat(),'nonce':nonce,'rootExpiryMode':'Natural expiration of initially valid imported root; no device clock changes','rootExpiresAtUTC':certs['root-old'].not_valid_after.replace(tzinfo=datetime.timezone.utc).isoformat(),'certificates':{},'chains':chains,'ephemeralPrivateKeys':[n+'.key' for n in keys],'leavesUnchangedAcrossRepair':True,'CAKeysAndSubjectsUnchangedAcrossRenewal':True}
+for n,c in certs.items():
+ manifest['certificates'][n]={'sha256':c.fingerprint(hashes.SHA256()).hex(),'SPKISHA256':hashlib.sha256(c.public_key().public_bytes(serialization.Encoding.DER,serialization.PublicFormat.SubjectPublicKeyInfo)).hexdigest(),'subject':c.subject.rfc4514_string(),'issuer':c.issuer.rfc4514_string(),'serialHex':format(c.serial_number,'x'),'validFromUTC':c.not_valid_before.replace(tzinfo=datetime.timezone.utc).isoformat(),'validUntilUTC':c.not_valid_after.replace(tzinfo=datetime.timezone.utc).isoformat(),'ca':c.extensions.get_extension_for_class(x509.BasicConstraints).value.ca}
+(R/'pki-manifest.json').write_text(json.dumps(manifest,indent=2)+'\n');(R/'server-mode.json').write_text(json.dumps({'valid-root':'root-old','valid-intermediate':'control-intermediate','root':'root-old','intermediate':'intermediate-expired'}));(R/'device-root-mode.json').write_text(json.dumps({'mode':'root-old'}));print('PASS root/intermediate PKI fixtures; natural root expiry at',manifest['rootExpiresAtUTC'],flush=True)

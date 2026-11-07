@@ -1,0 +1,316 @@
+{
+  "atUTC": "2026-11-06T11:57:49.596168+00:00",
+  "label": "final-rollback-a",
+  "passed": true,
+  "deviceName": "c9k-stdgc-20261106",
+  "deviceUID": "7049f785-755d-4c7f-98e2-994fa3a7074b",
+  "deviceAppArtifactsPresent": false,
+  "workerConfigName": "c9k-stdgc-20261106-config",
+  "workerConfigUID": "80d5b5f5-e9c9-4c2e-bbe9-4d50c2c0da78",
+  "workerAppArtifactsPresent": false,
+  "effectiveMode": "Standard (omitted configuration)",
+  "artifactJournalAndGrantCount": 0,
+  "workerArtifactRuntimeOptionsPresent": false,
+  "workloadArtifactBindingsPresent": false,
+  "resourceInventory": {
+    "configmaps": [
+      {
+        "name": "c9k-stdgc-20261106-config",
+        "namespace": "cvk-stdgc-20261106",
+        "uid": "80d5b5f5-e9c9-4c2e-bbe9-4d50c2c0da78",
+        "annotations": null
+      },
+      {
+        "name": "cvk-stdgc-cisco-virtual-kubelet-topology-ledger",
+        "namespace": "cvk-stdgc-20261106",
+        "uid": "4cdf1328-dbba-4283-9ff5-90380e051dc0",
+        "annotations": {
+          "helm.sh/resource-policy": "keep",
+          "meta.helm.sh/release-name": "cvk-stdgc",
+          "meta.helm.sh/release-namespace": "cvk-stdgc-20261106",
+          "topology.cisco.vk/managed-ledger": "true"
+        }
+      },
+      {
+        "name": "cvk-stdgc-cisco-virtual-kubelet-topology-policy",
+        "namespace": "cvk-stdgc-20261106",
+        "uid": "8ef3426a-52d1-4581-b619-950c2e32c3e2",
+        "annotations": {
+          "helm.sh/resource-policy": "keep",
+          "meta.helm.sh/release-name": "cvk-stdgc",
+          "meta.helm.sh/release-namespace": "cvk-stdgc-20261106",
+          "topology.cisco.vk/admission-contract-version": "v2",
+          "topology.cisco.vk/admission-policy-prefix": "cvk-stdgc-cisco-virtual-kubelet",
+          "topology.cisco.vk/app-hosting-service-account": "cvk-stdgc-cisco-virtual-kubelet-app-hosting",
+          "topology.cisco.vk/config-lease-namespace": "",
+          "topology.cisco.vk/ledger-uid": "4cdf1328-dbba-4283-9ff5-90380e051dc0",
+          "topology.cisco.vk/managed-policy": "true",
+          "topology.cisco.vk/network-management-service-account": "cvk-stdgc-cisco-virtual-kubelet-network-management"
+        }
+      },
+      {
+        "name": "kube-root-ca.crt",
+        "namespace": "cvk-stdgc-20261106",
+        "uid": "04336963-cea6-47f0-ba2b-fe2afba45516",
+        "annotations": {
+          "kubernetes.io/description": "Contains a CA bundle that can be used to verify the kube-apiserver when using internal endpoints such as the internal service IP or kubernetes.default.svc. No other usage is guaranteed across distributions of Kubernetes clusters."
+        }
+      },
+      {
+        "name": "kube-root-ca.crt",
+        "namespace": "cvk-stdgc-apps-20261106",
+        "uid": "b43ef3f5-bf73-4345-9a9c-3fbb47b50b4d",
+        "annotations": {
+          "kubernetes.io/description": "Contains a CA bundle that can be used to verify the kube-apiserver when using internal endpoints such as the internal service IP or kubernetes.default.svc. No other usage is guaranteed across distributions of Kubernetes clusters."
+        }
+      },
+      {
+        "name": "kube-root-ca.crt",
+        "namespace": "default",
+        "uid": "e5d20b69-de16-495e-92f1-d162023bffc4",
+        "annotations": {
+          "kubernetes.io/description": "Contains a CA bundle that can be used to verify the kube-apiserver when using internal endpoints such as the internal service IP or kubernetes.default.svc. No other usage is guaranteed across distributions of Kubernetes clusters."
+        }
+      },
+      {
+        "name": "kube-root-ca.crt",
+        "namespace": "kube-node-lease",
+        "uid": "9fde4080-f95b-49a4-9e7b-004e1bf19b06",
+        "annotations": {
+          "kubernetes.io/description": "Contains a CA bundle that can be used to verify the kube-apiserver when using internal endpoints such as the internal service IP or kubernetes.default.svc. No other usage is guaranteed across distributions of Kubernetes clusters."
+        }
+      },
+      {
+        "name": "kube-root-ca.crt",
+        "namespace": "kube-public",
+        "uid": "b4459cb0-8e64-4a1e-9595-23ff6a046f18",
+        "annotations": {
+          "kubernetes.io/description": "Contains a CA bundle that can be used to verify the kube-apiserver when using internal endpoints such as the internal service IP or kubernetes.default.svc. No other usage is guaranteed across distributions of Kubernetes clusters."
+        }
+      },
+      {
+        "name": "cluster-dns",
+        "namespace": "kube-system",
+        "uid": "8f65d66c-635d-4e09-9ef5-c2eeef9f4c81",
+        "annotations": null
+      },
+      {
+        "name": "coredns",
+        "namespace": "kube-system",
+        "uid": "9dedba70-3ce1-4aa7-a5a6-38bfa58b34fa",
+        "annotations": {
+          "objectset.rio.cattle.io/applied": "H4sIAAAAAAAA/4yPMU/DMBCF/4p1XdO0SdomWGJALUgIQQcqJpazfWlNknMUm6Cq6n9HHhADKjCe3rvvvXcC7O0LDd46BgljBgkYDAjyBGs3UG1bAgkTcWdbEh0y7skIdRRN4VOx2Yqn7U7cbu536StPxDORFIcQei9nM+O0T6PNuhnCOYHGsgEJa8e13T9iDwl0FPArDpldwGAd+3g69UY6eArpYF2qMYSWIspGBiQXdffBNEz3YwMSYvq3MmaJeLBsrm+McfwngrGL07UbyLD/l933qONP865o6o8+UBeHt6io/XXUAf0BJChNeVXkV1WVZeWiwHlRrVAts3md16uS6nKRL+Z6WUboj3oXC5w/AwAA//+nUJQR5QEAAA",
+          "objectset.rio.cattle.io/id": "",
+          "objectset.rio.cattle.io/owner-gvk": "k3s.cattle.io/v1, Kind=Addon",
+          "objectset.rio.cattle.io/owner-name": "coredns",
+          "objectset.rio.cattle.io/owner-namespace": "kube-system"
+        }
+      },
+      {
+        "name": "extension-apiserver-authentication",
+        "namespace": "kube-system",
+        "uid": "b9905c7b-d778-4d2c-8f1e-6e36fca8b404",
+        "annotations": null
+      },
+      {
+        "name": "kube-apiserver-legacy-service-account-token-tracking",
+        "namespace": "kube-system",
+        "uid": "d8ad02d6-b641-405a-a978-49bbfb4ce1f3",
+        "annotations": null
+      },
+      {
+        "name": "kube-root-ca.crt",
+        "namespace": "kube-system",
+        "uid": "aa89a03c-def6-4f58-b890-a927475883d1",
+        "annotations": {
+          "kubernetes.io/description": "Contains a CA bundle that can be used to verify the kube-apiserver when using internal endpoints such as the internal service IP or kubernetes.default.svc. No other usage is guaranteed across distributions of Kubernetes clusters."
+        }
+      },
+      {
+        "name": "local-path-config",
+        "namespace": "kube-system",
+        "uid": "b2ae5bba-f165-4bd2-9b36-9e52dd5b5051",
+        "annotations": {
+          "objectset.rio.cattle.io/applied": "H4sIAAAAAAAA/4ySX2vbMBTFv4p2t0c7deb8Q7CHsLSsLG1Cl/VlAnMtybFq+0pYSkoJ+e5DCYFurNsepR/n6JyDDoDOPOreG0vAYT+EBBQGBH4Aaaky28GTP6GDIMYEkFV6jaG+QyeA/4iXJ3JhAriAxfXN/PtyU6znmy/FzeqhuF/dF8vbb5vrRQEJ1Lp1ul9bNXjBrgX+KgNn+6GgxpDibG2VoE4HjIF4fISw05yd5amL2DstT0haSMDrsHPA4f27q9LQla8FeR1YqneCukaZnqUdy6bTKUsdE/Dh8LhaFovbh6MAQbLurGLTLLsQSCBo7JV9pjc8+46lffWbExwTiAWAw+fTgnfoIIFLkbgsEtmAwVjy8WjLJy2D12HQGzuQGEKrB8ZemegByZvcPpPu0+2+AQ5N7l+R/TBhXw2pT3OlLP3TIu4KHForsU19sD1u9X+JvEMZlc2u1Kl/8UF3sX6LpW7/Wq1GXwOH4Syv8rGcjKuqlHk2GU2yvBrl1XA8y9RMTmb4UWGpRtH0l5AOQ52ePyic0R+jHH8GAAD//7kWEdfgAgAA",
+          "objectset.rio.cattle.io/id": "",
+          "objectset.rio.cattle.io/owner-gvk": "k3s.cattle.io/v1, Kind=Addon",
+          "objectset.rio.cattle.io/owner-name": "local-storage",
+          "objectset.rio.cattle.io/owner-namespace": "kube-system"
+        }
+      }
+    ],
+    "roles": [
+      {
+        "name": "system:controller:bootstrap-signer",
+        "namespace": "kube-public",
+        "uid": "7db97a79-31b6-4c60-b09c-5895eed47526",
+        "annotations": {
+          "rbac.authorization.kubernetes.io/autoupdate": "true"
+        }
+      },
+      {
+        "name": "extension-apiserver-authentication-reader",
+        "namespace": "kube-system",
+        "uid": "f639c4cd-66c8-430f-b612-066d6d505783",
+        "annotations": {
+          "rbac.authorization.kubernetes.io/autoupdate": "true"
+        }
+      },
+      {
+        "name": "system::leader-locking-kube-controller-manager",
+        "namespace": "kube-system",
+        "uid": "5c27a404-bbc4-40ea-aab0-0e5b2010271e",
+        "annotations": {
+          "rbac.authorization.kubernetes.io/autoupdate": "true"
+        }
+      },
+      {
+        "name": "system::leader-locking-kube-scheduler",
+        "namespace": "kube-system",
+        "uid": "324e6377-1e33-48a3-bd1a-b0e437447363",
+        "annotations": {
+          "rbac.authorization.kubernetes.io/autoupdate": "true"
+        }
+      },
+      {
+        "name": "system:controller:bootstrap-signer",
+        "namespace": "kube-system",
+        "uid": "62793f5d-2c82-4a21-83f9-1baaff62e265",
+        "annotations": {
+          "rbac.authorization.kubernetes.io/autoupdate": "true"
+        }
+      },
+      {
+        "name": "system:controller:cloud-provider",
+        "namespace": "kube-system",
+        "uid": "5ca253f9-d389-420c-8470-4fb499d30cc9",
+        "annotations": {
+          "rbac.authorization.kubernetes.io/autoupdate": "true"
+        }
+      },
+      {
+        "name": "system:controller:token-cleaner",
+        "namespace": "kube-system",
+        "uid": "0d363998-f604-432e-934f-c309dc1be490",
+        "annotations": {
+          "rbac.authorization.kubernetes.io/autoupdate": "true"
+        }
+      }
+    ],
+    "rolebindings": [
+      {
+        "name": "cvk-stdgc-cisco-virtual-kubelet-app-hosting",
+        "namespace": "cvk-stdgc-20261106",
+        "uid": "4729231d-b2e1-44e2-a3dc-5d8038750271",
+        "annotations": {
+          "topology.cisco.vk/shared-worker-account": "app-hosting",
+          "topology.cisco.vk/shared-worker-namespace": "cvk-stdgc-20261106",
+          "topology.cisco.vk/shared-worker-role": "cisco-virtual-kubelet-app-hosting-device-read",
+          "topology.cisco.vk/worker-protocol": "rollout-v1"
+        }
+      },
+      {
+        "name": "cvk-stdgc-cisco-virtual-kubelet-network-management",
+        "namespace": "cvk-stdgc-20261106",
+        "uid": "1a53b0eb-9eff-4600-967a-6622569d96d9",
+        "annotations": {
+          "topology.cisco.vk/shared-worker-account": "network-management",
+          "topology.cisco.vk/shared-worker-namespace": "cvk-stdgc-20261106",
+          "topology.cisco.vk/shared-worker-role": "cisco-virtual-kubelet-network-management-read-only",
+          "topology.cisco.vk/worker-protocol": "rollout-v1"
+        }
+      },
+      {
+        "name": "system:controller:bootstrap-signer",
+        "namespace": "kube-public",
+        "uid": "1225c385-8d17-4edc-93f1-2fee367d997b",
+        "annotations": {
+          "rbac.authorization.kubernetes.io/autoupdate": "true"
+        }
+      },
+      {
+        "name": "k3s-cloud-controller-manager-authentication-reader",
+        "namespace": "kube-system",
+        "uid": "88f1ed90-ddbb-4b3e-abe3-84761e4a1aad",
+        "annotations": {
+          "objectset.rio.cattle.io/applied": "H4sIAAAAAAAA/4ySv27jMAyHX+XA2fI5sX1xDNxwt3ToFqBdig60xCSqZdKQZPdPkHcvnLRBOyTpKJD88JE/7QB7e08+WGGowTeoUxziVrx9w2iF07YKqZXf4wwSaC0bqGEljv5bNpY3kEBHEQ1GhHoHyCzxMBempzRPpGOgmHorqcYYHU0wO1EgOVuXZyavNmMLNbR5+FIZZ8mvW8vm7z9jhK8iGDuCGrTuftQaetRTfzs0pMJriNTBPgGHDbmLC20xbKGGMquWxZ+qLEpdFtW8mOV6sc5KqvIFLZuqWmdzNFk5n6Afam0elHYyGKWFoxfnyKsOGTfk1ZQEcbT6cFLlCQ15OM6ecfXiaEXrQxi9vfEy9Jdy/R4qnLToJRJPn0JhbwP58azNPoEwHM8C9cPuE3cXTqZXtry0z+P+PQAA//8x+Zq3oQIAAA",
+          "objectset.rio.cattle.io/id": "",
+          "objectset.rio.cattle.io/owner-gvk": "k3s.cattle.io/v1, Kind=Addon",
+          "objectset.rio.cattle.io/owner-name": "ccm",
+          "objectset.rio.cattle.io/owner-namespace": "kube-system"
+        }
+      },
+      {
+        "name": "system::extension-apiserver-authentication-reader",
+        "namespace": "kube-system",
+        "uid": "28afab3a-c016-45b5-93db-095e2e582658",
+        "annotations": {
+          "rbac.authorization.kubernetes.io/autoupdate": "true"
+        }
+      },
+      {
+        "name": "system::leader-locking-kube-controller-manager",
+        "namespace": "kube-system",
+        "uid": "8ce7d340-f044-4ee4-8c2b-3788c237553f",
+        "annotations": {
+          "rbac.authorization.kubernetes.io/autoupdate": "true"
+        }
+      },
+      {
+        "name": "system::leader-locking-kube-scheduler",
+        "namespace": "kube-system",
+        "uid": "c358dbc0-b174-4192-bebc-c8f727a5b5be",
+        "annotations": {
+          "rbac.authorization.kubernetes.io/autoupdate": "true"
+        }
+      },
+      {
+        "name": "system:controller:bootstrap-signer",
+        "namespace": "kube-system",
+        "uid": "aab1458a-e1ce-4a5a-9e6f-c34dc951c4f5",
+        "annotations": {
+          "rbac.authorization.kubernetes.io/autoupdate": "true"
+        }
+      },
+      {
+        "name": "system:controller:cloud-provider",
+        "namespace": "kube-system",
+        "uid": "c6872d8e-ac3a-4e90-a61e-f210133eece6",
+        "annotations": {
+          "rbac.authorization.kubernetes.io/autoupdate": "true"
+        }
+      },
+      {
+        "name": "system:controller:token-cleaner",
+        "namespace": "kube-system",
+        "uid": "88dfc7d8-9d29-4b99-8d9f-469237874ad5",
+        "annotations": {
+          "rbac.authorization.kubernetes.io/autoupdate": "true"
+        }
+      }
+    ]
+  },
+  "liveImages": [
+    {
+      "pod": "c9k-stdgc-20261106-vk-57f896b5dc-wkrz4",
+      "uid": "6e2c1b56-6a89-4464-95ad-e2a38b224a58",
+      "images": [
+        "sha256:135fbe301171ad677714bb6f613abf3c942a9743ebc6195c410767df6d5ae7ff"
+      ]
+    },
+    {
+      "pod": "cvk-stdgc-cisco-virtual-kubelet-controller-9df8d744-hd6jv",
+      "uid": "45e8bea2-3b22-43b4-8248-84c28e49ee49",
+      "images": [
+        "sha256:135fbe301171ad677714bb6f613abf3c942a9743ebc6195c410767df6d5ae7ff"
+      ]
+    },
+    {
+      "pod": "u7049f785-755d-4c7f-98e2-994fa3a7074b-network-dfb485bb5-bpj2r",
+      "uid": "e65496d8-b870-4fbd-b648-9a2c698dfc30",
+      "images": [
+        "sha256:135fbe301171ad677714bb6f613abf3c942a9743ebc6195c410767df6d5ae7ff"
+      ]
+    }
+  ]
+}

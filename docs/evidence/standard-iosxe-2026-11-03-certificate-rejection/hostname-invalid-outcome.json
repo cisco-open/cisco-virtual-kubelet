@@ -1,0 +1,11 @@
+{
+  "atUTC": "2026-11-03T18:16:34.655798+00:00",
+  "case": "hostname",
+  "classification": "invalid-certificate-rejected",
+  "rejectionQualified": true,
+  "appHealthyUnderInvalidCertificate": false,
+  "packageURL": "https://192.168.129.111:18451/hostname-agent-a.tar",
+  "serverModeAtObservation": "hostname",
+  "packagePayloadSameAsValidControl": true,
+  "artifactConfigurationRequired": false
+}

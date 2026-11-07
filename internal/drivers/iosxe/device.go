@@ -136,6 +136,11 @@ func jsonMarshal(v any) ([]byte, error) {
 // releases separate that persistent setting from the effective runtime state,
 // so the corresponding app-hosting verification RPC must also succeed.
 func (d *XEDriver) ConfigureSignVerification(ctx context.Context, enabled bool) error {
+	if !enabled {
+		if err := common.RequireStandardAppArtifacts(d.config); err != nil {
+			return err
+		}
+	}
 	payload := appHostingControls{}
 	payload.Controls.SignVerification = enabled
 

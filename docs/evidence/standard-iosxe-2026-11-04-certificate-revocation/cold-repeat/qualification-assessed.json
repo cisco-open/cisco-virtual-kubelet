@@ -1,0 +1,41 @@
+{
+  "status": "uncached-revoked-intermediate-delivery-qualified",
+  "executionComplete": true,
+  "uncachedImageRejectionQualified": true,
+  "classification": "revoked-intermediate-rejected-for-uncached-image",
+  "expectedRelease": "REVOCATION-COLD-20261104-35d8a9c90cb2",
+  "imageConfigID": "sha256:fb0f4dd6b1012b3e626e42fa64f4fb98bcd5feeba40c34f5c812c4598be2046a",
+  "layerDiffID": "sha256:dc78be3c3975209b7a2b8d5170dcd7dd6274ec1b72134883d23c9b3265b8f00c",
+  "packageSHA256": "624075b6ecc6383fa8615ead9e2bcdb0c410a3f48a3e3351528ef04344b473bd",
+  "packageBytes": 5959680,
+  "releaseBeforeReplacement": [],
+  "TLSRejectionsBeforeReplacement": 2,
+  "packageRequestsBeforeReplacement": 0,
+  "releaseAfterCertificateOnlyReplacement": [
+    {
+      "appID": "cvk0000_7e8b7d7a5dfe40d4957637e0c0e2e882",
+      "release": "REVOCATION-COLD-20261104-35d8a9c90cb2",
+      "ip": "192.168.129.185"
+    }
+  ],
+  "samePodReleaseAfterReplacementPassed": true,
+  "samePodRetained": true,
+  "freshDeploymentReleasePassed": true,
+  "freshDeploymentReleases": [
+    {
+      "appID": "cvk0000_19a9ea42a177452e8e47afcbbe938834",
+      "release": "REVOCATION-COLD-20261104-35d8a9c90cb2",
+      "ip": "192.168.129.186"
+    }
+  ],
+  "invalidObservations": 27,
+  "guardedObservations": 103,
+  "canonicalLeaseUID": "efc355e4-f1b8-4bd4-83c4-f1da96315d4d",
+  "metadataAndJournalOmitted": true,
+  "rootLeafCRLAndPoliciesUnchangedDuringRecovery": true,
+  "defaultMode": "Standard",
+  "governed": "deferred",
+  "startedAtUTC": "2026-11-04T17:20:25.110869+00:00",
+  "finishedAtUTC": "2026-11-04T18:00:20.724693+00:00",
+  "earlierEvidencePreserved": true
+}

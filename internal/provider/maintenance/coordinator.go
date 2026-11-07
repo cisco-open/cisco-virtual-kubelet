@@ -201,9 +201,15 @@ func (c *Coordinator) AcquireWrite(ctx context.Context) (context.Context, func(e
 			<-done
 			// Cancellation can leave device-side work in progress. Retain the
 			// remaining lease rather than immediately authorizing a disruption.
-			cancelled := writeCtx.Err() != nil || outcome != nil
+			contextCancelled := writeCtx.Err() != nil
+			cancelled := !devicecoordination.IsNoDeviceMutation(outcome) && (contextCancelled || outcome != nil)
 			cancel()
 			if cancelled {
+				log.G(ctx).WithFields(log.Fields{
+					"holder":            identity,
+					"context_cancelled": contextCancelled,
+					"outcome_type":      fmt.Sprintf("%T", outcome),
+				}).Warn("device maintenance retaining write fence after uncertain or cancelled operation")
 				return
 			}
 			releaseCtx, releaseCancel := context.WithTimeout(context.WithoutCancel(ctx), apiTimeout)

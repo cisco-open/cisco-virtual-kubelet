@@ -1,0 +1,31 @@
+{
+  "label": "expired-before",
+  "atUTC": "2026-11-03T19:37:08.926263+00:00",
+  "hostBeforeUTC": "2026-11-03T19:37:07.970750+00:00",
+  "hostAfterUTC": "2026-11-03T19:37:08.926263+00:00",
+  "deviceUTC": "2026-11-03T19:37:08.762000+00:00",
+  "deviceTimeSource": "NTP",
+  "clockChanged": false,
+  "clockWithinMeasurementMargin": true,
+  "rootValidAtDeviceTime": true,
+  "originalLeafStatusesAtDeviceTime": {
+    "valid": "valid",
+    "expired": "expired",
+    "future": "not-yet-valid"
+  },
+  "case": "expired",
+  "activeEndpointLeafStatuses": {
+    "valid": "valid",
+    "expired": "expired",
+    "future": "not-yet-valid"
+  },
+  "nativeClockEvidence": {
+    "collectedAtUTC": "2026-11-03T19:37:08.906630+00:00",
+    "commands": [
+      {
+        "command": "show clock detail",
+        "output": "show clock detail\n19:37:08.762 UTC Tue Nov 3 2026\nTime source is NTP\nEdge-9K"
+      }
+    ]
+  }
+}

@@ -1,0 +1,22 @@
+[
+  {
+    "kind": "tls-rejected",
+    "case": "future",
+    "port": 18454,
+    "certMode": "future",
+    "client": "10.1.1.1",
+    "errorReason": "SSLV3_ALERT_BAD_CERTIFICATE",
+    "error": "[SSL: SSLV3_ALERT_BAD_CERTIFICATE] sslv3 alert bad certificate (_ssl.c:1000)",
+    "atUTC": "2026-11-03T20:12:57.815225+00:00"
+  },
+  {
+    "kind": "tls-rejected",
+    "case": "future",
+    "port": 18454,
+    "certMode": "future",
+    "client": "10.1.1.1",
+    "errorReason": "SSLV3_ALERT_BAD_CERTIFICATE",
+    "error": "[SSL: SSLV3_ALERT_BAD_CERTIFICATE] sslv3 alert bad certificate (_ssl.c:1000)",
+    "atUTC": "2026-11-03T20:15:58.641129+00:00"
+  }
+]

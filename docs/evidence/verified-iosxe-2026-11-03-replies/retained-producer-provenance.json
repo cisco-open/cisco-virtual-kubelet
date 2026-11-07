@@ -1,0 +1,20 @@
+{
+  "passthrough": {
+    "baseCommit": "813624e3d403c24da8102953ab218ec16f38023d",
+    "branch": "pr/johalley/verified-artifact-prepare",
+    "dirtyWorktree": true,
+    "sourceTreeDigest": "sha256:39e41956af842d9f5800b8769c9d64a54dbc559eface04e53cdf6dfa7e05faa1",
+    "sourceFileCount": 11,
+    "binarySHA256": "dc75544917ecb246fe4213afffd1466d95834bbf41a41092ad116c23c1f88949"
+  },
+  "nativeChecksumProbe": {
+    "binarySHA256": "1a8f4f6e385480a9b80901091b637cb9e92bab748794afedfaf79cdcd3468d71",
+    "source": "harness/checksum-probe.go.txt",
+    "productionImplementation": "internal/drivers/iosxe/configdriver/transport/app_checksum.go",
+    "productionSourceSHA256": "15d4384af3b5c49e9e41a9bd1fe083296c297be6f932b44b308465a4ab928c2b"
+  },
+  "reusedWithoutRebuild": true,
+  "productionChecksumSourceUnchanged": true,
+  "originalProvenance": "../verified-iosxe-2026-11-03/candidate-provenance.json",
+  "originalArtifactRun": "../verified-iosxe-2026-11-02/README.md"
+}

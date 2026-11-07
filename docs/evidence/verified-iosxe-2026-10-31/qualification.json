@@ -1,0 +1,105 @@
+{
+  "kind": "VerifiedIOSXEQualification",
+  "reportVersion": 1,
+  "collectedAt": "2026-10-31T22:31:59.257475+00:00",
+  "status": "BLOCKED",
+  "candidate": {
+    "baseCommit": "1791a7e1634961936233ee94170f1c63cea1b64c",
+    "branch": "pr/johalley/verified-app-artifacts",
+    "dirtyWorktree": true,
+    "runtimeSourceTreeDigest": "sha256:c2bf9f60c88d7beeea2198c0da85a9f3a9a6a87fe791571119e2d9aa9de5f6ab",
+    "sourceFileCount": 1550,
+    "digestAlgorithm": "SHA256 of sorted unique git ls-files -co --exclude-standard paths under api/, cmd/, internal/, charts/ plus go.mod, go.sum, Dockerfile and Makefile; concatenate UTF-8 path, NUL, lowercase SHA256 of file bytes and newline for each regular file.",
+    "deployedCVKImageDigest": null,
+    "producerExecutableDigest": null
+  },
+  "target": null,
+  "releases": {
+    "A": null,
+    "B": null
+  },
+  "cases": [
+    {
+      "id": "baseline",
+      "description": "Current device identity, health, capacity and candidate provenance",
+      "status": "NOT_RUN",
+      "reason": "Live IOS-XE cluster access and target binding unavailable.",
+      "evidence": []
+    },
+    {
+      "id": "deployment-a",
+      "description": "Physical Verified deployment of retained release A",
+      "status": "NOT_RUN",
+      "reason": "Live IOS-XE cluster access and target binding unavailable.",
+      "evidence": []
+    },
+    {
+      "id": "download-checksum-failure",
+      "description": "Same-size corruption rejected before device transfer/installation",
+      "status": "NOT_RUN",
+      "reason": "Live IOS-XE cluster access and target binding unavailable.",
+      "evidence": []
+    },
+    {
+      "id": "device-checksum-failure",
+      "description": "Corrupt only owned staged bytes and prove recovery start is blocked",
+      "status": "NOT_RUN",
+      "reason": "Live IOS-XE cluster access and target binding unavailable.",
+      "evidence": []
+    },
+    {
+      "id": "worker-restart-running",
+      "description": "Worker replacement without reinstalling the running application",
+      "status": "NOT_RUN",
+      "reason": "Live IOS-XE cluster access and target binding unavailable.",
+      "evidence": []
+    },
+    {
+      "id": "worker-restart-pending",
+      "description": "Lost accepted install response and worker replacement without replay",
+      "status": "NOT_RUN",
+      "reason": "Live IOS-XE cluster access and target binding unavailable.",
+      "evidence": []
+    },
+    {
+      "id": "image-update-b",
+      "description": "Deployment replaces A with retained release B",
+      "status": "NOT_RUN",
+      "reason": "Live IOS-XE cluster access and target binding unavailable.",
+      "evidence": []
+    },
+    {
+      "id": "rollback-a",
+      "description": "Deployment restores retained release A under a new Pod identity",
+      "status": "NOT_RUN",
+      "reason": "Live IOS-XE cluster access and target binding unavailable.",
+      "evidence": []
+    },
+    {
+      "id": "standard-control",
+      "description": "Separate Standard workflow retains its default behavior",
+      "status": "NOT_RUN",
+      "reason": "Live IOS-XE cluster access and target binding unavailable.",
+      "evidence": []
+    },
+    {
+      "id": "cleanup",
+      "description": "Only fixture resources removed and unrelated baseline health retained",
+      "status": "NOT_RUN",
+      "reason": "Live IOS-XE cluster access and target binding unavailable.",
+      "evidence": []
+    }
+  ],
+  "evidence": [
+    {
+      "path": "preflight.json",
+      "sha256": "85c36f28fdf0e7eda03c152eda3b4600d681cf3e23d6ec0388c680c2587a2475"
+    }
+  ],
+  "qualificationPassed": false,
+  "notes": [
+    "No physical qualification case was executed.",
+    "No previously collected physical or mock-device result is substituted for this candidate.",
+    "Standard remains the default and Governed remains deferred."
+  ]
+}

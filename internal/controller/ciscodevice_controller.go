@@ -49,6 +49,7 @@ import (
 	"k8s.io/client-go/tools/record"
 	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
+	ctrlbuilder "sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -285,7 +286,7 @@ type CiscoDeviceReconciler struct {
 // Namespace RBAC safety audits resolve every RoleBinding in a managed-device
 // namespace and watch role changes so unsafe edit/admin-style grants promptly
 // quarantine the reusable worker identities.
-// +kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=roles,verbs=get;list;watch
+// +kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=roles,verbs=get;list;watch;create
 // +kubebuilder:rbac:groups=coordination.k8s.io,resources=leases,verbs=get;list;watch;create;update;patch;delete
 // The controller manages its own per-device ClusterRoleBindings named by
 // vkAccessClusterRoleBindingName; resourceNames pinning is infeasible because
@@ -474,6 +475,11 @@ func (r *CiscoDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	}
 
 	// ── 3. Ensure finalizer is registered ───────────────────────────────
+	// Validate operator artifact trust before creating or changing workers or
+	// prerequisite resources. Invalid configuration must not block deletion.
+	if err := device.Spec.AppArtifacts.Validate(); err != nil {
+		return ctrl.Result{}, fmt.Errorf("invalid appArtifacts config: %w", err)
+	}
 	if !controllerutil.ContainsFinalizer(&device, ciscoDeviceFinalizer) {
 		controllerutil.AddFinalizer(&device, ciscoDeviceFinalizer)
 		if err := r.Update(ctx, &device); err != nil {
@@ -2352,6 +2358,7 @@ func (r *CiscoDeviceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			Watches(&configv1alpha1.IOSXEConfigRevision{}, handler.EnqueueRequestsFromMapFunc(r.mapManagedNetworkObjectToCiscoDevice)).
 			Watches(&opsv1alpha1.DeviceOperation{}, handler.EnqueueRequestsFromMapFunc(r.mapManagedNetworkObjectToCiscoDevice)).
 			Watches(&opsv1alpha1.IOSXEOperationalAction{}, handler.EnqueueRequestsFromMapFunc(r.mapManagedNetworkObjectToCiscoDevice)).
+			Watches(&corev1.ConfigMap{}, handler.EnqueueRequestsFromMapFunc(r.mapNamespacedRBACToCiscoDevices), ctrlbuilder.WithPredicates(artifactJournalEvents())).
 			Watches(&rbacv1.RoleBinding{}, handler.EnqueueRequestsFromMapFunc(r.mapNamespacedRBACToCiscoDevices)).
 			Watches(&rbacv1.Role{}, handler.EnqueueRequestsFromMapFunc(r.mapNamespacedRBACToCiscoDevices)).
 			Watches(&rbacv1.ClusterRole{}, handler.EnqueueRequestsFromMapFunc(r.mapClusterRoleToCiscoDevices)).
@@ -2412,6 +2419,9 @@ func renderDeviceConfig(spec *ciskov1.DeviceSpec) (string, error) {
 }
 
 func renderDeviceConfigForWorker(spec *ciskov1.DeviceSpec, gnoiTLSClientCertificate bool) (string, error) {
+	if err := spec.AppArtifacts.Validate(); err != nil {
+		return "", fmt.Errorf("invalid appArtifacts config: %w", err)
+	}
 	// The VK config loader expects:
 	//   device:
 	//     driver: ...

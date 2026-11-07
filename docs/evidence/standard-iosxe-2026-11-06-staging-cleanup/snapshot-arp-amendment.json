@@ -1,0 +1,11 @@
+{
+  "atUTC": "2026-11-06T11:57:45.157660+00:00",
+  "originalScript": "snapshot-oper-only.py",
+  "originalSHA256": "715057abcea321f8e81b1b12d1f89bfae9c084c95010fd4397d89d50418d45ee",
+  "amendedScript": "snapshot.py",
+  "amendedSHA256": "0e6a40fa35dc0af69ad064e83199a2d5ae458bada35c8c1966dd89a61e117ed2",
+  "reason": "Qualification observer lacked CVK native-ARP fallback for Pod IP while IOS-XE app oper IPv4 is 0.0.0.0",
+  "productionChanged": false,
+  "nativeStateOverridden": false,
+  "originalOperOnlySnapshotsPreserved": true
+}

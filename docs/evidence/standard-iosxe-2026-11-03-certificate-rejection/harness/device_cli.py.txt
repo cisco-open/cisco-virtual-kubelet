@@ -1,0 +1,15 @@
+import pexpect,pathlib,json,datetime,sys,os
+root=pathlib.Path('/tmp/cvk-stdcert-20261103')
+commands=json.loads(sys.stdin.read())
+p=pexpect.spawn('ssh',['-o','StrictHostKeyChecking=yes','-o','UserKnownHostsFile=/tmp/cvk-verified-qual-20261101/switch_known_hosts','-o','GlobalKnownHostsFile=/dev/null','-o','HostKeyAlgorithms=rsa-sha2-512,rsa-sha2-256','cisco@10.1.1.1'],encoding='utf-8',timeout=180)
+records=[]
+try:
+ p.expect('(?i)password:');p.sendline(os.environ['CVK_QUAL_DEVICE_PASSWORD']);p.expect(r'[>#] ?$')
+ for cmd in ['terminal length 0','terminal width 511']:
+  p.sendline(cmd);p.expect(r'[>#] ?$')
+ for cmd in commands:
+  p.sendline(cmd);p.expect(r'[>#] ?$');records.append({'command':cmd,'output':p.before.replace('\r','')})
+ p.sendline('exit')
+finally:p.close(force=True)
+result={'collectedAtUTC':datetime.datetime.now(datetime.timezone.utc).isoformat(),'commands':records}
+print(json.dumps(result,indent=2))

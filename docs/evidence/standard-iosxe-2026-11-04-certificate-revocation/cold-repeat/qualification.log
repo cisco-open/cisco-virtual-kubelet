@@ -1,0 +1,61 @@
+PASS cold native NTP, policies and unchanged fresh CRLs: baseline
+deployment.apps/cvk-stdrevoke-fixture configured
+{"atUTC": "2026-11-04T17:20:30.945243+00:00", "label": "valid-control", "release": "A", "podUIDs": ["8d451af6-ec24-4979-aff4-bda9f3875911"], "nativeStates": {"iris": "RUNNING", "c9ktest": "DEPLOYED"}, "ready": false, "httpReleaseConfirmed": false, "oldNativeAppsAbsent": false, "artifactJournalCount": 0}
+{"atUTC": "2026-11-04T17:20:57.917704+00:00", "label": "valid-control", "release": "A", "podUIDs": ["8d451af6-ec24-4979-aff4-bda9f3875911"], "nativeStates": {"iris": "RUNNING", "c9ktest": "DEPLOYED", "cvk0000_8d451af6ec244979aff4bda9f3875911": "RUNNING"}, "ready": true, "httpReleaseConfirmed": false, "oldNativeAppsAbsent": true, "artifactJournalCount": 0}
+PASS valid-control Ready/HTTP A without artifacts or journal
+PASS cold native NTP, policies and unchanged fresh CRLs: valid-control
+deployment.apps/cvk-stdrevoke-fixture scaled
+2026-11-04T17:21:22.997406+00:00 control normal deletion pending 2026-11-04 17:52:16.260549+00:00
+PASS cold native NTP, policies and unchanged fresh CRLs: before
+deployment.apps/cvk-stdrevoke-fixture configured
+{"atUTC": "2026-11-04T17:22:14.305480+00:00", "serverMode": "bad", "podUIDs": ["7e8b7d7a-5dfe-40d4-9576-37e0c0e2e882"], "ready": false, "nativeRunning": false, "actualReleases": [], "expectedRelease": "REVOCATION-COLD-20261104-35d8a9c90cb2", "TLSRejections": 1, "packageRequests": 0, "leaseRenewAgeSeconds": 1.843048, "leaseExpiresUTC": "2026-11-04T17:53:12.462414+00:00", "artifactJournals": 0}
+{"atUTC": "2026-11-04T17:23:01.439676+00:00", "serverMode": "bad", "podUIDs": ["7e8b7d7a-5dfe-40d4-9576-37e0c0e2e882"], "ready": false, "nativeRunning": false, "actualReleases": [], "expectedRelease": "REVOCATION-COLD-20261104-35d8a9c90cb2", "TLSRejections": 1, "packageRequests": 0, "leaseRenewAgeSeconds": 18.946021, "leaseExpiresUTC": "2026-11-04T17:53:42.493641+00:00", "artifactJournals": 0}
+{"atUTC": "2026-11-04T17:23:48.754194+00:00", "serverMode": "bad", "podUIDs": ["7e8b7d7a-5dfe-40d4-9576-37e0c0e2e882"], "ready": false, "nativeRunning": false, "actualReleases": [], "expectedRelease": "REVOCATION-COLD-20261104-35d8a9c90cb2", "TLSRejections": 1, "packageRequests": 0, "leaseRenewAgeSeconds": 6.267481, "leaseExpiresUTC": "2026-11-04T17:54:42.486692+00:00", "artifactJournals": 0}
+{"atUTC": "2026-11-04T17:24:35.880644+00:00", "serverMode": "bad", "podUIDs": ["7e8b7d7a-5dfe-40d4-9576-37e0c0e2e882"], "ready": false, "nativeRunning": false, "actualReleases": [], "expectedRelease": "REVOCATION-COLD-20261104-35d8a9c90cb2", "TLSRejections": 1, "packageRequests": 0, "leaseRenewAgeSeconds": 23.387903, "leaseExpiresUTC": "2026-11-04T17:55:12.492717+00:00", "artifactJournals": 0}
+{"atUTC": "2026-11-04T17:25:23.310813+00:00", "serverMode": "bad", "podUIDs": ["7e8b7d7a-5dfe-40d4-9576-37e0c0e2e882"], "ready": false, "nativeRunning": false, "actualReleases": [], "expectedRelease": "REVOCATION-COLD-20261104-35d8a9c90cb2", "TLSRejections": 2, "packageRequests": 0, "leaseRenewAgeSeconds": 10.819014, "leaseExpiresUTC": "2026-11-04T17:56:12.491781+00:00", "artifactJournals": 0}
+{"atUTC": "2026-11-04T17:26:10.951586+00:00", "serverMode": "bad", "podUIDs": ["7e8b7d7a-5dfe-40d4-9576-37e0c0e2e882"], "ready": false, "nativeRunning": false, "actualReleases": [], "expectedRelease": "REVOCATION-COLD-20261104-35d8a9c90cb2", "TLSRejections": 2, "packageRequests": 0, "leaseRenewAgeSeconds": 58.459783, "leaseExpiresUTC": "2026-11-04T17:56:12.491781+00:00", "artifactJournals": 0}
+{"atUTC": "2026-11-04T17:26:58.522707+00:00", "serverMode": "bad", "podUIDs": ["7e8b7d7a-5dfe-40d4-9576-37e0c0e2e882"], "ready": false, "nativeRunning": false, "actualReleases": [], "expectedRelease": "REVOCATION-COLD-20261104-35d8a9c90cb2", "TLSRejections": 2, "packageRequests": 0, "leaseRenewAgeSeconds": 106.030905, "leaseExpiresUTC": "2026-11-04T17:56:12.491781+00:00", "artifactJournals": 0}
+PASS cold native NTP, policies and unchanged fresh CRLs: boundary
+2026-11-04T17:27:24.311262+00:00 SEALED BEFORE REPLACEMENT revoked-intermediate-rejected-for-uncached-image []
+PASS cold native NTP, policies and unchanged fresh CRLs: after-repair
+2026-11-04T17:27:28.017226+00:00 cold waiting for normal fence 2026-11-04T17:56:12.491781+00:00
+2026-11-04T17:28:35.307721+00:00 cold waiting for normal fence 2026-11-04T17:56:12.491781+00:00
+2026-11-04T17:29:42.512518+00:00 cold waiting for normal fence 2026-11-04T17:56:12.491781+00:00
+2026-11-04T17:30:50.101323+00:00 cold waiting for normal fence 2026-11-04T17:56:12.491781+00:00
+2026-11-04T17:31:57.709301+00:00 cold waiting for normal fence 2026-11-04T17:56:12.491781+00:00
+2026-11-04T17:33:05.424703+00:00 cold waiting for normal fence 2026-11-04T17:56:12.491781+00:00
+2026-11-04T17:34:12.698109+00:00 cold waiting for normal fence 2026-11-04T17:56:12.491781+00:00
+2026-11-04T17:35:20.038430+00:00 cold waiting for normal fence 2026-11-04T17:56:12.491781+00:00
+2026-11-04T17:36:27.410986+00:00 cold waiting for normal fence 2026-11-04T17:56:12.491781+00:00
+2026-11-04T17:37:34.751299+00:00 cold waiting for normal fence 2026-11-04T17:56:12.491781+00:00
+2026-11-04T17:38:42.017529+00:00 cold waiting for normal fence 2026-11-04T17:56:12.491781+00:00
+2026-11-04T17:39:49.463620+00:00 cold waiting for normal fence 2026-11-04T17:56:12.491781+00:00
+2026-11-04T17:40:56.826234+00:00 cold waiting for normal fence 2026-11-04T17:56:12.491781+00:00
+2026-11-04T17:42:04.348867+00:00 cold waiting for normal fence 2026-11-04T17:56:12.491781+00:00
+2026-11-04T17:43:11.708221+00:00 cold waiting for normal fence 2026-11-04T17:56:12.491781+00:00
+2026-11-04T17:44:19.203929+00:00 cold waiting for normal fence 2026-11-04T17:56:12.491781+00:00
+2026-11-04T17:45:26.834395+00:00 cold waiting for normal fence 2026-11-04T17:56:12.491781+00:00
+2026-11-04T17:46:34.145006+00:00 cold waiting for normal fence 2026-11-04T17:56:12.491781+00:00
+2026-11-04T17:47:41.646169+00:00 cold waiting for normal fence 2026-11-04T17:56:12.491781+00:00
+2026-11-04T17:48:48.998271+00:00 cold waiting for normal fence 2026-11-04T17:56:12.491781+00:00
+2026-11-04T17:49:56.521157+00:00 cold waiting for normal fence 2026-11-04T17:56:12.491781+00:00
+2026-11-04T17:51:03.825695+00:00 cold waiting for normal fence 2026-11-04T17:56:12.491781+00:00
+2026-11-04T17:52:11.047943+00:00 cold waiting for normal fence 2026-11-04T17:56:12.491781+00:00
+2026-11-04T17:53:18.327207+00:00 cold waiting for normal fence 2026-11-04T17:56:12.491781+00:00
+2026-11-04T17:54:25.628379+00:00 cold waiting for normal fence 2026-11-04T17:56:12.491781+00:00
+2026-11-04T17:55:33.150165+00:00 cold waiting for normal fence 2026-11-04T17:56:12.491781+00:00
+{"atUTC": "2026-11-04T17:56:14.296565+00:00", "label": "corrected-recovery", "release": "REVOCATION-COLD-20261104-35d8a9c90cb2", "podUIDs": ["7e8b7d7a-5dfe-40d4-9576-37e0c0e2e882"], "nativeStates": {"iris": "RUNNING", "c9ktest": "DEPLOYED"}, "ready": false, "httpReleaseConfirmed": false, "oldNativeAppsAbsent": false, "artifactJournalCount": 0}
+{"atUTC": "2026-11-04T17:56:41.530896+00:00", "label": "corrected-recovery", "release": "REVOCATION-COLD-20261104-35d8a9c90cb2", "podUIDs": ["7e8b7d7a-5dfe-40d4-9576-37e0c0e2e882"], "nativeStates": {"iris": "RUNNING", "c9ktest": "DEPLOYED", "cvk0000_7e8b7d7a5dfe40d4957637e0c0e2e882": "RUNNING"}, "ready": true, "httpReleaseConfirmed": false, "oldNativeAppsAbsent": true, "artifactJournalCount": 0}
+PASS corrected-recovery Ready/HTTP REVOCATION-COLD-20261104-35d8a9c90cb2 without artifacts or journal
+deployment.apps/cvk-stdrevoke-fixture scaled
+2026-11-04T17:57:11.485417+00:00 recovery normal deletion pending 2026-11-04 18:28:04.749375+00:00
+deployment.apps/cvk-stdrevoke-fixture configured
+{"atUTC": "2026-11-04T17:58:00.496080+00:00", "label": "fresh-replacement", "release": "REVOCATION-COLD-20261104-35d8a9c90cb2", "podUIDs": ["19a9ea42-a177-452e-8e47-afcbbe938834"], "nativeStates": {"iris": "RUNNING", "c9ktest": "DEPLOYED"}, "ready": false, "httpReleaseConfirmed": false, "oldNativeAppsAbsent": false, "artifactJournalCount": 0}
+{"atUTC": "2026-11-04T17:58:27.466596+00:00", "label": "fresh-replacement", "release": "REVOCATION-COLD-20261104-35d8a9c90cb2", "podUIDs": ["19a9ea42-a177-452e-8e47-afcbbe938834"], "nativeStates": {"iris": "RUNNING", "c9ktest": "DEPLOYED", "cvk0000_19a9ea42a177452e8e47afcbbe938834": "RUNNING"}, "ready": true, "httpReleaseConfirmed": false, "oldNativeAppsAbsent": true, "artifactJournalCount": 0}
+{"atUTC": "2026-11-04T17:58:54.666690+00:00", "label": "fresh-replacement", "release": "REVOCATION-COLD-20261104-35d8a9c90cb2", "podUIDs": ["19a9ea42-a177-452e-8e47-afcbbe938834"], "nativeStates": {"iris": "RUNNING", "c9ktest": "DEPLOYED", "cvk0000_19a9ea42a177452e8e47afcbbe938834": "RUNNING"}, "ready": true, "httpReleaseConfirmed": false, "oldNativeAppsAbsent": true, "artifactJournalCount": 0}
+{"atUTC": "2026-11-04T17:59:22.218805+00:00", "label": "fresh-replacement", "release": "REVOCATION-COLD-20261104-35d8a9c90cb2", "podUIDs": ["19a9ea42-a177-452e-8e47-afcbbe938834"], "nativeStates": {"iris": "RUNNING", "c9ktest": "DEPLOYED", "cvk0000_19a9ea42a177452e8e47afcbbe938834": "RUNNING"}, "ready": true, "httpReleaseConfirmed": true, "oldNativeAppsAbsent": true, "artifactJournalCount": 0}
+PASS fresh-replacement Ready/HTTP REVOCATION-COLD-20261104-35d8a9c90cb2 without artifacts or journal
+deployment.apps/cvk-stdrevoke-fixture scaled
+2026-11-04T17:59:31.687330+00:00 fresh normal deletion pending 2026-11-04 18:30:24.908832+00:00
+PASS cold native NTP, policies and unchanged fresh CRLs: complete
+COMPLETE cold repeat: {"executionComplete": true, "startedAtUTC": "2026-11-04T17:20:25.110869+00:00", "finishedAtUTC": "2026-11-04T18:00:20.724693+00:00", "classification": "revoked-intermediate-rejected-for-uncached-image", "uncachedImageRejectionQualified": true, "expectedRelease": "REVOCATION-COLD-20261104-35d8a9c90cb2", "beforeReplacement": [], "samePodReleaseAfterReplacementPassed": true, "samePodRetained": true, "freshDeploymentReleasePassed": true, "normalDeletionPassed": true, "imageWasUnprimedBeforeNegative": true, "packageURL": "https://192.168.129.111:18467/cold-agent.tar", "podUIDs": ["19a9ea42-a177-452e-8e47-afcbbe938834", "7e8b7d7a-5dfe-40d4-9576-37e0c0e2e882", "8d451af6-ec24-4979-aff4-bda9f3875911"], "defaultMode": "Standard", "governed": "deferred", "metadataAndJournalOmitted": true, "manualLeaseOrJournalEdits": false, "CRLOrPolicyChangedDuringRecovery": false}

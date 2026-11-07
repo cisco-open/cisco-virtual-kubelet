@@ -1,0 +1,30 @@
+{
+  "passed": true,
+  "startedAtUTC": "2026-11-03T14:27:05.334389+00:00",
+  "finishedAtUTC": "2026-11-03T14:34:17.771264+00:00",
+  "defaultMode": "Standard",
+  "governed": "deferred",
+  "appArtifactsOmitted": true,
+  "workloadArtifactMetadataOmitted": true,
+  "journalConfigurationOmitted": true,
+  "artifactJournalAndGrantCount": 0,
+  "plainPackageURLs": {
+    "A": "http://192.168.129.111:18447/standard-agent-a.tar",
+    "B": "http://192.168.129.111:18447/standard-agent-b.tar"
+  },
+  "podUIDs": {
+    "initialA": "7d849564-b492-4031-b9db-0759968c7053",
+    "updatedB": "fc4d0ff0-ee20-40b2-bafc-0296ae34f7c4",
+    "rollbackA": "35755dc6-8419-4d3a-84c1-e57122353af1"
+  },
+  "revisionRolledBackTo": "1",
+  "oldWorkerUID": "439b2102-7725-49c8-a7e5-006afd6ee56b",
+  "newWorkerUID": "187047a5-73c0-48b0-9226-506ae67e1777",
+  "initialDeployment": true,
+  "managedWorkerReplacement": true,
+  "imageUpdate": true,
+  "historyRollback": true,
+  "normalDeletion": true,
+  "artifactServiceUsed": false,
+  "nativeSignaturePolicyChanged": false
+}
