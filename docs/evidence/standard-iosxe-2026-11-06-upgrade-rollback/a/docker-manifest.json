@@ -1,0 +1,11 @@
+[
+  {
+    "Config": "6867fbf05d7a5df0d11ab7c023b9a5e5a5389a171c309d8327abe23c0981859f.json",
+    "Layers": [
+      "99c9c80936ca1b949331f9c86c49892046bf5cc2d7ff4cdc348ef28508555445/layer.tar"
+    ],
+    "RepoTags": [
+      "cvk-stdupgrade-20261106/a:8f0d26f6c543"
+    ]
+  }
+]

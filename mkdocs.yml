@@ -46,6 +46,9 @@ nav:
 - Guides:
   - Guides overview: 'guides.md'
   - App image distribution: 'image-distribution.md'
+  - Application image lifecycle: 'app-image-lifecycle-plan.md'
+  - Verified artifact delivery: 'verified-artifact-preflight.md'
+  - Verified IOS-XE qualification: 'verified-iosxe-qualification.md'
   - Device setup:
     - Catalyst 8000V: 'configuration-cat8000v.md'
     - Catalyst 9000: 'configuration-cat9000.md'

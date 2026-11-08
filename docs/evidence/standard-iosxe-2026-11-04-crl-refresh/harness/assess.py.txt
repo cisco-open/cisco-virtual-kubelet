@@ -1,0 +1,85 @@
+"""Independent signed-CRL sequence, native fetch timing, runtime and cache assessment."""
+import pathlib,json,hashlib,datetime,subprocess,ssl,re,tarfile,io,yaml
+R=pathlib.Path('/private/tmp/cvk-crlrefresh-20261104')
+def read(n):return json.loads((R/(n+'.json')).read_text())
+def rows(n):
+ p=R/(n+'.jsonl');return [json.loads(l) for l in p.read_text().splitlines()] if p.exists() else []
+def dt(s):return datetime.datetime.fromisoformat(s.replace('Z','+00:00'))
+q=read('qualification-result');m=read('pki-manifest');P=read('payload-provenance');cleanup=read('final-cleanup');assert q['executionComplete'] and cleanup['passed'] and q['metadataAndJournalOmitted'];assert not any(q[k] for k in ['manualLeaseOrJournalChanges','forcedCRLRefreshOrFlushDuringQualification','cachePolicyChanged','clockChanged']);assert len(cleanup['ephemeralPrivateKeysRemoved'])==3 and len(cleanup['originImagesRemoved'])==3 and cleanup['allCRLCacheEntriesOwned'] and cleanup['cacheClearedOnlyAfterQualificationAndWorkerStop'] and cleanup['CRLCacheEntriesAfterCleanup']==0 and cleanup['sharedHostNodeReady'];assert read('earlier-evidence-preservation')['passed'];assert read('static-checks')['historicalEvidenceUnchanged'] and read('static-checks')['productionSourceUnchanged']
+executed=read('executed-source-hashes')
+for name in ['qualify.py','servers.py','control_functions.py','check_pki.py','publish_crl.py']:
+ assert hashlib.sha256((R/name).read_bytes()).hexdigest()==executed[name],name
+assert hashlib.sha256((R/'discovery.py').read_bytes()).hexdigest()==read('prepublication-rearm')['discoverySourceSHA256']
+assert hashlib.sha256((R/'continuation.py').read_bytes()).hexdigest()==read('initial-stop-and-continuation')['continuationSHA256']
+archive=R/'prepublication-attempt';preserved=json.loads((archive/'PRESERVED.json').read_text())
+for v in preserved['files']:
+ b=(archive/v['name']).read_bytes();assert len(b)==v['bytes'] and hashlib.sha256(b).hexdigest()==v['sha256']
+for n,c in m['certificates'].items():
+ raw=(R/(n+'.crt')).read_text();assert hashlib.sha256(ssl.PEM_cert_to_DER_cert(raw)).hexdigest()==c['sha256'];serial=subprocess.check_output(['openssl','x509','-in',str(R/(n+'.crt')),'-serial','-noout'],text=True).strip().split('=',1)[1];assert serial.lower().lstrip('0')==c['serialHex'].lower().lstrip('0');assert c['issuer']==m['certificates']['root']['subject']
+ pub=subprocess.check_output(['openssl','x509','-in',str(R/(n+'.crt')),'-pubkey','-noout']);der=subprocess.check_output(['openssl','pkey','-pubin','-outform','DER'],input=pub);assert hashlib.sha256(der).hexdigest()==c['SPKISHA256']
+ result=subprocess.run(['openssl','verify','-CAfile',str(R/'root.crt'),str(R/(n+'.crt'))],text=True,capture_output=True);assert result.returncode==0
+
+assert m['certificates']['original']['SPKISHA256']!=m['certificates']['replacement']['SPKISHA256']
+crls={}
+for v in [1,3,4]:
+ report=read('crl-v'+str(v));raw=(R/('crl-v'+str(v)+'.crl')).read_bytes();assert hashlib.sha256(raw).hexdigest()==report['sha256'];text=subprocess.check_output(['openssl','crl','-inform','DER','-in',str(R/('crl-v'+str(v)+'.crl')),'-text','-noout'],text=True);assert int(re.search(r'X509v3 CRL Number:\s*(\d+)',text)[1])==v;serials={x.lower().lstrip('0') for x in re.findall(r'Serial Number:\s*([a-fA-F0-9]+)',text)};assert serials=={x.lower().lstrip('0') for x in report['revokedSerialsHex']}
+ times=subprocess.check_output(['openssl','crl','-inform','DER','-in',str(R/('crl-v'+str(v)+'.crl')),'-lastupdate','-nextupdate','-noout'],text=True).splitlines()
+ for line,key in zip(times,['lastUpdateUTC','nextUpdateUTC']):assert datetime.datetime.strptime(line.split('=',1)[1],'%b %d %H:%M:%S %Y %Z').replace(tzinfo=datetime.timezone.utc)==dt(report[key])
+ cmd=subprocess.run(['openssl','crl','-inform','DER','-in',str(R/('crl-v'+str(v)+'.crl')),'-noout','-verify','-CAfile',str(R/'root.crt')],capture_output=True,text=True);assert cmd.returncode==0;crls[v]=report
+
+assert not crls[3]['revokedSerialsHex'];assert crls[4]['revokedSerialsHex']==[m['certificates']['original']['serialHex']];assert m['certificates']['replacement']['serialHex'] not in crls[4]['revokedSerialsHex'];assert dt(crls[3]['publishedAtUTC'])<dt(crls[4]['publishedAtUTC'])<dt(crls[3]['nextUpdateUTC']);assert (dt(crls[3]['nextUpdateUTC'])-dt(crls[3]['lastUpdateUTC'])).total_seconds()==605;assert hashlib.sha256((R/'issuer.crl').read_bytes()).hexdigest()==crls[4]['sha256']
+assert read('tls-control-valid')['accepted'];assert not read('tls-control-revoked')['accepted'] and read('tls-control-revoked')['verificationCode']==23;assert read('tls-control-replacement')['accepted'];assert read('host-smoke')['passed'];assert len({p['dockerConfigID'] for p in P['phases'].values()})==3 and len({p['layerDiffID'] for p in P['phases'].values()})==3
+assert hashlib.sha256((R/'main.go').read_bytes()).hexdigest()==P['sourceSHA256']
+for phase,p in P['phases'].items():
+ data=(R/phase/'package.tar').read_bytes();assert hashlib.sha256(data).hexdigest()==p['packageSHA256'] and len(data)==p['packageBytes']
+ with tarfile.open(fileobj=io.BytesIO(data)) as t:
+  manifest=json.loads(t.extractfile('manifest.json').read());config=t.extractfile(manifest[0]['Config']).read();layer=t.extractfile(manifest[0]['Layers'][0]).read();assert 'sha256:'+hashlib.sha256(config).hexdigest()==p['dockerConfigID'];assert 'sha256:'+hashlib.sha256(layer).hexdigest()==p['layerDiffID'];assert json.loads(config)['rootfs']['diff_ids']==[p['layerDiffID']]
+  with tarfile.open(fileobj=io.BytesIO(layer)) as l:assert hashlib.sha256(l.extractfile('app').read()).hexdigest()==p['binarySHA256']
+for p in R.glob('pki-*.json'):
+ if p.name in ['pki-manifest.json','pki-policy.json']:continue
+ x=json.loads(p.read_text());assert x['allCertificatesCurrentlyValid'] and x['publishedCRLCurrentlyValid'] and x['defaultCachePolicyUnchanged'] and x['revocationCheckCRLUnchanged'] and not x['deviceWritesIssued'] and x['deviceTimeSource']=='NTP';when=dt(x['deviceUTC']);assert all(dt(v['validFromUTC'])<when<dt(v['validUntilUTC']) for v in m['certificates'].values());assert dt(crls[x['publishedCRLversion']]['lastUpdateUTC'])<when<dt(crls[x['publishedCRLversion']]['nextUpdateUTC'])
+assert read('prepublication-rearm')['sameRootAndLeafPreserved'] and not read('prepublication-rearm')['rawTraceRewritten'];prep=read('device-preparation');assert prep['onlyRootsTrusted'] and not prep['intermediateExplicitlyTrusted'] and prep['certificateProofs'][0]['sha256']==m['certificates']['root']['sha256'];assert read('transport-controls')['clientIdentityTrustpointPreserved']=='IRIS';assert not yaml.safe_load((R/'device-input.yaml').read_text())['spec'].get('appArtifacts');policy=read('pki-policy');assert policy['policies']['leaf']['revocationCheck']=='crl' and not policy['policies']['leaf']['noneFallback']
+versions={read('crl-v'+str(v))['sha256']:v for v in [1,3,4]};native=[]
+for e in rows('server-events'):
+ if e.get('client') not in ['10.1.1.1','192.168.129.2']:continue
+ if e.get('kind')=='crl-served' and e.get('version') is None:
+  e['rawVersionWasNullForEmptyCRL']=True;e['version']=versions[e['sha256']]
+ native.append(e)
+assert all(e['sessionReused'] is False for e in native if e['kind']=='tls-established');fetch=[e for e in native if e['kind']=='crl-served' and e.get('status')==200 and e.get('version') in [3,4]];assert {e['version'] for e in fetch}=={3,4}
+for e in fetch:assert e['sha256']==crls[e['version']]['sha256'] and e['revokedSerialsHex']==crls[e['version']]['revokedSerialsHex']
+for e in native:
+ if e['kind']=='package-sent':
+  expected=P['phases'][e['phase']];assert e['sha256']==expected['packageSHA256'] and e['bytes']==expected['packageBytes']
+assert any(e['kind']=='package-sent' and e.get('phase')=='valid' and dt(crls[3]['publishedAtUTC'])<dt(e['atUTC'])<dt(crls[4]['publishedAtUTC']) for e in native)
+v1=next(e for e in fetch if e['version']==3);v2=next(e for e in fetch if e['version']==4);assert dt(v1['atUTC'])<dt(crls[4]['publishedAtUTC'])<dt(v2['atUTC']);assert q['firstVersion2NativeFetchUTC']==v2['atUTC'];assert q['publicationUTC']==crls[4]['publishedAtUTC'];uids=set();leaseUIDs=set()
+def controls(label):
+ x=read('controls-'+label);assert x['passed'] and x['artifactJournalAndGrantCount']==0 and not any(x[k] for k in ['deviceAppArtifactsPresent','workerAppArtifactsPresent','workerArtifactRuntimeOptionsPresent','workloadArtifactBindingsPresent']);uids.add(x['deviceUID'])
+def released(label):
+ ls=[v for v in read('leases-'+label)['items'] if v.get('metadata',{}).get('labels',{}).get('cisco.vk/family')=='device-disruptive-mutation'];assert ls and all(not v['spec'].get('holderIdentity') for v in ls);leaseUIDs.update(v['metadata']['uid'] for v in ls)
+def releases(s):return [json.loads(v['body'])['release'] for v in s['probes'] if v.get('status')==200]
+def health(label,want):
+ s=read('snapshot-'+label);assert s['assertions']['passed'] and len(s['pods'])==1 and releases(s)==[want];p=s['pods'][0];assert p['status']['phase']=='Running' and any(v['type']=='Ready' and v['status']=='True' for v in p['status']['conditions']);aid='cvk0000_'+p['metadata']['uid'].replace('-','');assert {a['appID']:a['details'].get('state') for a in s['nativeApps']}=={'iris':'RUNNING','c9ktest':'DEPLOYED',aid:'RUNNING'} and not s['journals'];d=read('deployment-'+label);assert d['status']['availableReplicas']==1;controls(label);released(label);return s
+def deleted(label):
+ s=read('snapshot-'+label+'-normal-cleanup');assert not s['pods'] and not s['journals'] and {a['appID']:a['details'].get('state') for a in s['nativeApps']}=={'iris':'RUNNING','c9ktest':'DEPLOYED'};controls(label+'-normal-cleanup');released(label+'-normal-cleanup')
+controls('baseline');health('valid',P['phases']['valid']['release']);deleted('valid');cached=read('cached-window-result');cacheAccepted=cached['classification']=='fresh-image-accepted-using-cached-unrevoked-CRL'
+if cacheAccepted:
+ health('cached',P['phases']['cached']['release']);assert cached['beforeOriginalNextUpdate'];cachedGets=[e for e in native if e['kind']=='http-request' and e.get('phase')=='cached' and e.get('package')];assert cachedGets and all(dt(crls[4]['publishedAtUTC'])<dt(e['atUTC'])<dt(crls[3]['nextUpdateUTC']) for e in cachedGets);assert not any(dt(crls[4]['publishedAtUTC'])<dt(e['atUTC'])<=dt(cached['atUTC']) and e['version']==4 for e in fetch)
+deleted('cached');bad=read('snapshot-invalid-boundary');badRelease=read('release-before-replacement');invalid=rows('invalid-observations');fix=read('certificate-replaced');alerts=[e for e in native if e['kind']=='tls-rejected' and e['certMode']=='original' and dt(e['atUTC'])>dt(crls[4]['publishedAtUTC'])];gets=[e for e in native if e['kind']=='http-request' and e.get('phase')=='refresh' and e.get('package') and dt(e['atUTC'])<dt(fix['atUTC'])]
+proof=read('native-refresh-diagnostics');assert proof['readOnly'];log=proof['commands'][1]['output'];pkifail=[]
+for when,serial in re.findall(r'Nov +4 (\d\d:\d\d:\d\d\.\d+): %PKI-3-CERTIFICATE_REVOKED:.*?\(SN: ([A-Fa-f0-9]+)\)',log):
+ assert int(serial,16)==int(m['certificates']['original']['serialHex'],16);pkifail.append(dt('2026-11-04T'+when+'+00:00'))
+assert len(pkifail)>=2 and dt(v2['atUTC'])<=pkifail[0] and (pkifail[0]-dt(v2['atUTC'])).total_seconds()<1
+assert len(alerts)>=1 and abs((pkifail[1]-dt(alerts[0]['atUTC'])).total_seconds())<2
+assert not gets and not badRelease['actualReleases'] and all(not v['ready'] and not v['nativeRunning'] and not v['actualReleases'] and v['packageRequests']==0 for v in invalid);assert (dt(invalid[-1]['atUTC'])-dt(invalid[0]['atUTC'])).total_seconds()>=270;diag='\n'.join(read('worker-diagnostics')['lines']);assert 'Falling back to copy-then-install' in diag and 'Copy RPC failed' in diag
+qualified=True
+assert fix['onlyLeafCertificateAndKeyChanged'] and not fix['CRLOrPolicyChanged'] and not fix['URLOrPayloadChanged'] and not fix['revokedSerialRemoved'];recovery=health('recovery',P['phases']['refresh']['release']);assert {p['metadata']['uid'] for p in bad['pods']}=={p['metadata']['uid'] for p in recovery['pods']};deleted('recovery');health('fresh',P['phases']['refresh']['release']);deleted('fresh');original=read('invalid-lease')
+for v in rows('guarded-observations'):assert v['leaseUID']==original['metadata']['uid'] and v['holder']==original['spec']['holderIdentity'] and v['renewTime']==original['spec']['renewTime'] and v['artifactJournals']==0
+assert len(uids)==len(leaseUIDs)==1;initialCache=read('pki-valid')['nativeEvidence']['commands'][2]['output'];newCache=read('pki-revoked-boundary')['nativeEvidence']['commands'][2]['output'];assert m['nonce'] in initialCache and m['nonce'] in newCache and str(crls[3]['bytes'])+' bytes' in initialCache and str(crls[4]['bytes'])+' bytes' in newCache
+def nativeCacheTimes(text):
+ blocks=[b for b in re.split(r'(?m)(?=^CRL Issuer Name:)',text) if m['nonce'] in b];assert len(blocks)==1;out={}
+ for field in ['LastUpdate','NextUpdate']:
+  raw=re.search(field+r': (\d\d:\d\d:\d\d UTC \w+ +\d+ \d{4})',blocks[0])[1];out[field]=datetime.datetime.strptime(raw,'%H:%M:%S UTC %b %d %Y').replace(tzinfo=datetime.timezone.utc)
+ return out
+for text,version in [(initialCache,3),(read('pki-cached-boundary')['nativeEvidence']['commands'][2]['output'],3),(newCache,4)]:
+ times=nativeCacheTimes(text);assert times['LastUpdate']==dt(crls[version]['lastUpdateUTC']) and times['NextUpdate']==dt(crls[version]['nextUpdateUTC'])
+out={'status':'natural-crl-refresh-and-revocation-discovery-qualified' if qualified else 'natural-crl-refresh-characterized-not-qualified','executionComplete':True,'revocationDiscoveryQualified':qualified,'rawActorRevocationDiscoveryQualified':q['revocationDiscoveryQualified'],'rawActorClassification':q['classification'],'nativeSerialSpecificPKIRejections':[v.isoformat() for v in pkifail],'firstNativePKIRejectionUTC':pkifail[0].isoformat(),'firstOriginTLSAlertUTC':alerts[0]['atUTC'],'publicationToFirstNativePKIRejectionSeconds':(pkifail[0]-dt(crls[4]['publishedAtUTC'])).total_seconds(),'originMissedFirstClientValidationFailure':True,'cacheWindowAcceptanceObserved':cacheAccepted,'cacheWindowOutcome':q['cacheWindowOutcome'],'publicationUTC':crls[4]['publishedAtUTC'],'originalCRLNextUpdateUTC':crls[3]['nextUpdateUTC'],'initialCRLNumber':3,'revokedCRLNumber':4,'firstRevokedCRLNativeFetchUTC':v2['atUTC'],'publicationToNativeFetchSeconds':(dt(v2['atUTC'])-dt(crls[4]['publishedAtUTC'])).total_seconds(),'originalNextUpdateToNativeFetchSeconds':(dt(v2['atUTC'])-dt(crls[3]['nextUpdateUTC'])).total_seconds(),'publicationToFirstOriginTLSAlertSeconds':(dt(alerts[0]['atUTC'])-dt(crls[4]['publishedAtUTC'])).total_seconds() if alerts else None,'freshImageAcceptedDuringCachedWindow':cacheAccepted,'freshImageBlockedAfterDiscovery':qualified,'releaseBeforeReplacement':badRelease['actualReleases'],'releaseAfterReplacement':read('release-after-replacement')['actualReleases'],'runningReleaseAfterPublication':read('release-after-publication')['actualReleases'],'samePodRecoveryPassed':True,'freshDeploymentAndDeletionPassed':True,'invalidObservations':len(invalid),'guardedObservations':len(rows('guarded-observations')),'canonicalMutationLeaseUID':next(iter(leaseUIDs)),'manualLeaseOrJournalChanges':False,'forcedCRLRefreshOrFlushDuringQualification':False,'defaultCachePolicyUnchanged':True,'baselineCleanupPassed':True,'earlierEvidencePreserved':True,'defaultMode':'Standard','governed':'deferred','startedAtUTC':q['startedAtUTC'],'finishedAtUTC':cleanup['finishedAtUTC'],'rawEmptyCRLVersionObserverCorrectionDocumented':True,'initialPrepublicationStopsPreserved':True,'scope':'C9300-24UX / IOS-XE 17.18.1 fc2; valid directly issued leaf, HTTP CDP, initial 10-minute CRL and reachable newly published CRL; excludes unavailable/stale CRLs, intermediate revocation discovery, OCSP and optional cache-policy overrides'};(R/'qualification-assessed.json').write_text(json.dumps(out,indent=2)+'\n');print('PASS independent discovery assessment:',out['status'])

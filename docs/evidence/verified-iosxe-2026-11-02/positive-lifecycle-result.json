@@ -1,0 +1,27 @@
+{
+  "atUTC": "2026-11-02T22:17:26.812712+00:00",
+  "passed": true,
+  "initialAUIDs": [
+    "a7d0dd69-ed81-458b-a9b3-e02bb4c33f63"
+  ],
+  "bUIDs": [
+    "d2aad048-307f-4ae0-93f3-17c46d9c8be7"
+  ],
+  "rollbackAUIDs": [
+    "307fb269-b02f-43eb-b487-1ce6546f0025"
+  ],
+  "oldWorkerUID": "1e46c986-9467-491b-ba97-8c74d4bc8379",
+  "newWorkerUID": "bcbb90e6-708d-4bee-ac93-cd76719bfe9f",
+  "journalUIDs": [
+    "b04225bb-c9b9-4364-a98c-f6e628907226"
+  ],
+  "originalARevision": 2,
+  "workerReplacementTrigger": "CiscoDevice.spec.logLevel info -> warn, handled by topology manager",
+  "workerReplacementStartedUTC": "2026-11-02T22:16:54.354949+00:00",
+  "archiveRequestsDuringWorkerReplacement": [],
+  "limitations": [
+    "Native install RPC counters unavailable; unchanged app identity and no archive refetch do not establish a native installation count.",
+    "Pending accepted-operation lost-response replacement not injected on hardware.",
+    "Recreate single replica; service continuity and stateful data migration not qualified."
+  ]
+}

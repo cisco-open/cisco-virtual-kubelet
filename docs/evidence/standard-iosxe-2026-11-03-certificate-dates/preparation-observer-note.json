@@ -1,0 +1,11 @@
+{
+  "issue": "Generic case-name substitution changed the read-only IOS-XE hostname resource to future in the preparation probe.",
+  "originalProbePath": "/restconf/data/Cisco-IOS-XE-native:native/future",
+  "correctedProbePath": "/restconf/data/Cisco-IOS-XE-native:native/hostname",
+  "originalSourceSHA256": "0507ea2de0b0915e9a4c7498480b0c161712880af9f114e087be9cf956686256",
+  "correctedSourceSHA256": "cd13cd12a5fc539334ed5fcd8a0cbad127fe88a3977a87e5d72ea110ebe10a22",
+  "appDeploymentsStarted": false,
+  "nativeChangesRepeated": false,
+  "resolution": "Read-only readiness continuation using the correct endpoint; original failure log retained.",
+  "transportSummary": "The original preparation exception prevented transport-controls.json from being created. Evidence uses the actual verified-TLS readiness continuation, executed helper sources and live deployment controls; no substitute device observation was invented."
+}

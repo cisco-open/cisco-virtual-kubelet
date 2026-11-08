@@ -1,0 +1,13 @@
+from pathlib import Path
+import json,subprocess,os,hashlib,datetime,tarfile,io,uuid
+r=Path('/private/tmp/cvk-stdgc-20261106');nonce=uuid.uuid4().hex[:12];out={}
+for phase in ['a','b']:
+ d=r/phase;d.mkdir(exist_ok=True);release='STD-GC-'+phase.upper()+'-20261106-'+nonce;env=os.environ.copy();env.update({'GOOS':'linux','GOARCH':'amd64','CGO_ENABLED':'0','GOTOOLCHAIN':'local','GOPROXY':'off','GO111MODULE':'off','GOCACHE':'/private/tmp/cvk-stdrevoke-20261104/cold/go-build-cache'});subprocess.run(['go','build','-trimpath','-ldflags','-s -w -X main.release='+release,'-o',str(d/'app'),str(r/'main.go')],cwd=r,env=env,check=True)
+ app=(d/'app').read_bytes();b=io.BytesIO()
+ with tarfile.open(fileobj=b,mode='w',format=tarfile.USTAR_FORMAT) as t:
+  m=tarfile.TarInfo('app');m.mode=0o755;m.uid=m.gid=65532;m.mtime=0;m.size=len(app);t.addfile(m,io.BytesIO(app))
+ layer=b.getvalue();diff=hashlib.sha256(layer).hexdigest();created=datetime.datetime.now(datetime.timezone.utc).isoformat();tag='cvk-stdgc-20261106/'+phase+':'+nonce;cfg={'architecture':'amd64','os':'linux','created':created,'config':{'User':'65532:65532','ExposedPorts':{'8080/tcp':{}},'Entrypoint':['/app'],'WorkingDir':'/','Labels':{'apphosting.cisco.com/qualification':'20261106-stdgc','apphosting.cisco.com/release':release}},'rootfs':{'type':'layers','diff_ids':['sha256:'+diff]},'history':[{'created':created,'created_by':'Run-owned upgrade/rollback fixture'}]};raw=json.dumps(cfg,separators=(',',':')).encode();iid=hashlib.sha256(raw).hexdigest();manifest=[{'Config':iid+'.json','Layers':[diff+'/layer.tar'],'RepoTags':[tag]}];files={'manifest.json':json.dumps(manifest,separators=(',',':')).encode(),iid+'.json':raw,diff+'/VERSION':b'1.0\n',diff+'/json':json.dumps({'id':diff,'created':created},separators=(',',':')).encode(),diff+'/layer.tar':layer}
+ with tarfile.open(d/'package.tar','w',format=tarfile.USTAR_FORMAT) as t:
+  for n,data in files.items():m=tarfile.TarInfo(n);m.mode=0o644;m.mtime=0;m.size=len(data);t.addfile(m,io.BytesIO(data))
+ pkg=(d/'package.tar').read_bytes();out[phase]={'release':release,'repoTag':tag,'dockerConfigID':'sha256:'+iid,'layerDiffID':'sha256:'+diff,'binarySHA256':hashlib.sha256(app).hexdigest(),'packageSHA256':hashlib.sha256(pkg).hexdigest(),'packageBytes':len(pkg)};(d/'docker-config.json').write_bytes(raw);(d/'docker-manifest.json').write_text(json.dumps(manifest,indent=2)+'\n')
+(r/'payload-provenance.json').write_text(json.dumps({'createdAtUTC':datetime.datetime.now(datetime.timezone.utc).isoformat(),'sourceSHA256':hashlib.sha256((r/'main.go').read_bytes()).hexdigest(),'compiler':subprocess.check_output(['go','version'],text=True).strip(),'phases':out,'independentConfigAndLayerPerPhase':True},indent=2)+'\n');print('Built two fresh independent images')

@@ -1,0 +1,2731 @@
+{
+  "collectedAtUTC": "2026-11-06T07:14:09.646046+00:00",
+  "case": "continuation-entry",
+  "devices": [
+    {
+      "name": "c9k-stdcopyfix-20261105",
+      "uid": "d904e1a0-fc5c-4a5b-9b9b-6e249a90d009",
+      "status": {
+        "conditions": [
+          {
+            "lastTransitionTime": "2026-11-05T20:18:10Z",
+            "message": "no topology ownership conflict is present",
+            "observedGeneration": 3,
+            "reason": "ProjectionComplete",
+            "status": "False",
+            "type": "TopologyConflict"
+          },
+          {
+            "lastTransitionTime": "2026-11-05T20:18:36Z",
+            "message": "required topology is projected and the live physical identity is verified",
+            "observedGeneration": 3,
+            "reason": "ProjectionComplete",
+            "status": "True",
+            "type": "TopologyReady"
+          },
+          {
+            "lastTransitionTime": "2026-11-05T20:18:10Z",
+            "message": "no managed maintenance session is active",
+            "observedGeneration": 3,
+            "reason": "Idle",
+            "status": "True",
+            "type": "MaintenanceReady"
+          },
+          {
+            "lastTransitionTime": "2026-11-05T20:18:10Z",
+            "message": "Node name and UID are bound to this CiscoDevice incarnation",
+            "observedGeneration": 3,
+            "reason": "UIDBound",
+            "status": "True",
+            "type": "NodeIdentityReady"
+          },
+          {
+            "lastTransitionTime": "2026-11-05T20:18:10Z",
+            "message": "all required topology labels are present",
+            "observedGeneration": 3,
+            "reason": "ProjectionComplete",
+            "status": "False",
+            "type": "TopologyIncomplete"
+          },
+          {
+            "lastTransitionTime": "2026-11-05T20:18:10Z",
+            "message": "network-management worker is read-only; gNOI software mutation is unavailable",
+            "observedGeneration": 3,
+            "reason": "NetworkManagementReadOnly",
+            "status": "False",
+            "type": "GNOIConfigurationReady"
+          }
+        ],
+        "networkWorkerRevision": {
+          "deploymentGeneration": 2,
+          "deploymentUID": "db5e6ff0-73ef-415a-bc16-db2a4122c05a",
+          "desiredRevision": "sha256:1bb15b90a97c791cf9ab89ae8e0b7444f94a52537503da7ee70de556ffc278ce",
+          "observedAt": "2026-11-05T20:24:58Z",
+          "observedRevision": "sha256:1bb15b90a97c791cf9ab89ae8e0b7444f94a52537503da7ee70de556ffc278ce",
+          "podReadyTime": "2026-11-05T20:24:57Z",
+          "podStartTime": "2026-11-05T20:24:38Z",
+          "podUID": "c996abc8-f594-4c6b-b2bc-1e1621e0d785"
+        },
+        "nodeIdentity": {
+          "deviceUID": "d904e1a0-fc5c-4a5b-9b9b-6e249a90d009",
+          "nodeName": "c9k-stdcopyfix-20261105",
+          "nodeUID": "2f9be910-1f41-4ce1-84c5-9e35a6cfa94a",
+          "physicalIdentity": "fcw2247c1aj"
+        },
+        "phase": "Ready",
+        "workerCapabilities": [
+          {
+            "enabled": true,
+            "name": "apphosting",
+            "runtime": "per-device-worker"
+          },
+          {
+            "enabled": true,
+            "name": "config",
+            "runtime": "per-device-worker"
+          },
+          {
+            "enabled": true,
+            "name": "telemetry",
+            "runtime": "per-device-worker"
+          },
+          {
+            "enabled": true,
+            "name": "diagnostics",
+            "runtime": "per-device-worker"
+          },
+          {
+            "enabled": true,
+            "name": "operations",
+            "runtime": "per-device-worker"
+          },
+          {
+            "enabled": true,
+            "name": "lifecycle",
+            "runtime": "per-device-worker"
+          }
+        ],
+        "workerRevision": {
+          "deploymentGeneration": 2,
+          "deploymentUID": "a2f97b77-fecb-4464-b7cd-c86934cc2972",
+          "desiredRevision": "sha256:99d726ce46e12717e574155bd5c34888767a382474d7aba13da7e2dcd898d300",
+          "observedAt": "2026-11-06T07:14:07Z",
+          "observedRevision": "sha256:99d726ce46e12717e574155bd5c34888767a382474d7aba13da7e2dcd898d300",
+          "podStartTime": "2026-11-05T20:24:18Z",
+          "podUID": "abd977b5-fb36-4fdd-b0c9-d6e0ceaabafd",
+          "readyHeartbeatTime": "2026-11-06T07:14:07Z"
+        }
+      },
+      "artifactConfig": null,
+      "artifactConfigPresent": false
+    }
+  ],
+  "leaseInventory": [
+    {
+      "apiVersion": "coordination.k8s.io/v1",
+      "kind": "Lease",
+      "metadata": {
+        "creationTimestamp": "2026-11-05T20:17:52Z",
+        "name": "ciscodevice.cisco.vk",
+        "namespace": "cvk-stdcopyfix-20261105",
+        "resourceVersion": "47021",
+        "uid": "8ac7ca2f-0cda-48cf-9f54-9c2e09c90b3b"
+      },
+      "spec": {
+        "acquireTime": "2026-11-05T20:24:02.332764Z",
+        "holderIdentity": "cvk-stdcopyfix-cisco-virtual-kubelet-controller-64675fc5545ffq8_abbbb558-e40a-4dde-840a-ed99aad9c8ae",
+        "leaseDurationSeconds": 15,
+        "leaseTransitions": 1,
+        "renewTime": "2026-11-06T07:14:09.278901Z"
+      }
+    },
+    {
+      "apiVersion": "coordination.k8s.io/v1",
+      "kind": "Lease",
+      "metadata": {
+        "annotations": {
+          "topology.cisco.vk/app-worker-pod-name": "c9k-stdcopyfix-20261105-vk-74b589d-jkrtp",
+          "topology.cisco.vk/app-worker-pod-uid": "abd977b5-fb36-4fdd-b0c9-d6e0ceaabafd",
+          "topology.cisco.vk/app-worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-app-hosting",
+          "topology.cisco.vk/device-name": "c9k-stdcopyfix-20261105",
+          "topology.cisco.vk/device-namespace": "cvk-stdcopyfix-20261105",
+          "topology.cisco.vk/device-uid": "d904e1a0-fc5c-4a5b-9b9b-6e249a90d009",
+          "topology.cisco.vk/lease-purpose": "config-family",
+          "topology.cisco.vk/managed": "true",
+          "topology.cisco.vk/network-worker-pod-name": "ud904e1a0-fc5c-4a5b-9b9b-6e249a90d009-network-77d599fd9d-7l426",
+          "topology.cisco.vk/network-worker-pod-uid": "c996abc8-f594-4c6b-b2bc-1e1621e0d785",
+          "topology.cisco.vk/network-worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-network-management",
+          "topology.cisco.vk/node-name": "c9k-stdcopyfix-20261105",
+          "topology.cisco.vk/node-uid": "2f9be910-1f41-4ce1-84c5-9e35a6cfa94a",
+          "topology.cisco.vk/retain-lease": "true",
+          "topology.cisco.vk/worker-protocol": "rollout-v1",
+          "topology.cisco.vk/worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-network-management"
+        },
+        "creationTimestamp": "2026-11-05T20:18:05Z",
+        "labels": {
+          "cisco.vk/device": "device-a6a123d578f69ec1",
+          "cisco.vk/family": "aaa"
+        },
+        "name": "cvk-device-a6a123d578f69ec1-aaa-2ce5eaf3",
+        "namespace": "cvk-stdcopyfix-20261105",
+        "resourceVersion": "1970",
+        "uid": "9da6908a-5f15-4b84-a079-996a0c5cbdef"
+      },
+      "spec": {}
+    },
+    {
+      "apiVersion": "coordination.k8s.io/v1",
+      "kind": "Lease",
+      "metadata": {
+        "annotations": {
+          "topology.cisco.vk/app-worker-pod-name": "c9k-stdcopyfix-20261105-vk-74b589d-jkrtp",
+          "topology.cisco.vk/app-worker-pod-uid": "abd977b5-fb36-4fdd-b0c9-d6e0ceaabafd",
+          "topology.cisco.vk/app-worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-app-hosting",
+          "topology.cisco.vk/device-name": "c9k-stdcopyfix-20261105",
+          "topology.cisco.vk/device-namespace": "cvk-stdcopyfix-20261105",
+          "topology.cisco.vk/device-uid": "d904e1a0-fc5c-4a5b-9b9b-6e249a90d009",
+          "topology.cisco.vk/lease-purpose": "config-family",
+          "topology.cisco.vk/managed": "true",
+          "topology.cisco.vk/network-worker-pod-name": "ud904e1a0-fc5c-4a5b-9b9b-6e249a90d009-network-77d599fd9d-7l426",
+          "topology.cisco.vk/network-worker-pod-uid": "c996abc8-f594-4c6b-b2bc-1e1621e0d785",
+          "topology.cisco.vk/network-worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-network-management",
+          "topology.cisco.vk/node-name": "c9k-stdcopyfix-20261105",
+          "topology.cisco.vk/node-uid": "2f9be910-1f41-4ce1-84c5-9e35a6cfa94a",
+          "topology.cisco.vk/retain-lease": "true",
+          "topology.cisco.vk/worker-protocol": "rollout-v1",
+          "topology.cisco.vk/worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-network-management"
+        },
+        "creationTimestamp": "2026-11-05T20:18:05Z",
+        "labels": {
+          "cisco.vk/device": "device-a6a123d578f69ec1",
+          "cisco.vk/family": "access_list_extended"
+        },
+        "name": "cvk-device-a6a123d578f69ec1-access-list-extended-4b1f1490",
+        "namespace": "cvk-stdcopyfix-20261105",
+        "resourceVersion": "1971",
+        "uid": "2d61da46-b46c-4fe7-a3fa-49cf052dc96f"
+      },
+      "spec": {}
+    },
+    {
+      "apiVersion": "coordination.k8s.io/v1",
+      "kind": "Lease",
+      "metadata": {
+        "annotations": {
+          "topology.cisco.vk/app-worker-pod-name": "c9k-stdcopyfix-20261105-vk-74b589d-jkrtp",
+          "topology.cisco.vk/app-worker-pod-uid": "abd977b5-fb36-4fdd-b0c9-d6e0ceaabafd",
+          "topology.cisco.vk/app-worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-app-hosting",
+          "topology.cisco.vk/device-name": "c9k-stdcopyfix-20261105",
+          "topology.cisco.vk/device-namespace": "cvk-stdcopyfix-20261105",
+          "topology.cisco.vk/device-uid": "d904e1a0-fc5c-4a5b-9b9b-6e249a90d009",
+          "topology.cisco.vk/lease-purpose": "config-family",
+          "topology.cisco.vk/managed": "true",
+          "topology.cisco.vk/network-worker-pod-name": "ud904e1a0-fc5c-4a5b-9b9b-6e249a90d009-network-77d599fd9d-7l426",
+          "topology.cisco.vk/network-worker-pod-uid": "c996abc8-f594-4c6b-b2bc-1e1621e0d785",
+          "topology.cisco.vk/network-worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-network-management",
+          "topology.cisco.vk/node-name": "c9k-stdcopyfix-20261105",
+          "topology.cisco.vk/node-uid": "2f9be910-1f41-4ce1-84c5-9e35a6cfa94a",
+          "topology.cisco.vk/retain-lease": "true",
+          "topology.cisco.vk/worker-protocol": "rollout-v1",
+          "topology.cisco.vk/worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-network-management"
+        },
+        "creationTimestamp": "2026-11-05T20:18:05Z",
+        "labels": {
+          "cisco.vk/device": "device-a6a123d578f69ec1",
+          "cisco.vk/family": "access_list_standard"
+        },
+        "name": "cvk-device-a6a123d578f69ec1-access-list-standard-b2b1418b",
+        "namespace": "cvk-stdcopyfix-20261105",
+        "resourceVersion": "1973",
+        "uid": "b97b5fb6-aac1-431a-bd87-03dbe3c94b02"
+      },
+      "spec": {}
+    },
+    {
+      "apiVersion": "coordination.k8s.io/v1",
+      "kind": "Lease",
+      "metadata": {
+        "annotations": {
+          "topology.cisco.vk/app-worker-pod-name": "c9k-stdcopyfix-20261105-vk-74b589d-jkrtp",
+          "topology.cisco.vk/app-worker-pod-uid": "abd977b5-fb36-4fdd-b0c9-d6e0ceaabafd",
+          "topology.cisco.vk/app-worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-app-hosting",
+          "topology.cisco.vk/device-name": "c9k-stdcopyfix-20261105",
+          "topology.cisco.vk/device-namespace": "cvk-stdcopyfix-20261105",
+          "topology.cisco.vk/device-uid": "d904e1a0-fc5c-4a5b-9b9b-6e249a90d009",
+          "topology.cisco.vk/lease-purpose": "config-family",
+          "topology.cisco.vk/managed": "true",
+          "topology.cisco.vk/network-worker-pod-name": "ud904e1a0-fc5c-4a5b-9b9b-6e249a90d009-network-77d599fd9d-7l426",
+          "topology.cisco.vk/network-worker-pod-uid": "c996abc8-f594-4c6b-b2bc-1e1621e0d785",
+          "topology.cisco.vk/network-worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-network-management",
+          "topology.cisco.vk/node-name": "c9k-stdcopyfix-20261105",
+          "topology.cisco.vk/node-uid": "2f9be910-1f41-4ce1-84c5-9e35a6cfa94a",
+          "topology.cisco.vk/retain-lease": "true",
+          "topology.cisco.vk/worker-protocol": "rollout-v1",
+          "topology.cisco.vk/worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-network-management"
+        },
+        "creationTimestamp": "2026-11-05T20:18:05Z",
+        "labels": {
+          "cisco.vk/device": "device-a6a123d578f69ec1",
+          "cisco.vk/family": "banner"
+        },
+        "name": "cvk-device-a6a123d578f69ec1-banner-282ed25c",
+        "namespace": "cvk-stdcopyfix-20261105",
+        "resourceVersion": "1974",
+        "uid": "5774fbdc-972b-4945-8b54-707d7fcc917d"
+      },
+      "spec": {}
+    },
+    {
+      "apiVersion": "coordination.k8s.io/v1",
+      "kind": "Lease",
+      "metadata": {
+        "annotations": {
+          "topology.cisco.vk/app-worker-pod-name": "c9k-stdcopyfix-20261105-vk-74b589d-jkrtp",
+          "topology.cisco.vk/app-worker-pod-uid": "abd977b5-fb36-4fdd-b0c9-d6e0ceaabafd",
+          "topology.cisco.vk/app-worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-app-hosting",
+          "topology.cisco.vk/device-name": "c9k-stdcopyfix-20261105",
+          "topology.cisco.vk/device-namespace": "cvk-stdcopyfix-20261105",
+          "topology.cisco.vk/device-uid": "d904e1a0-fc5c-4a5b-9b9b-6e249a90d009",
+          "topology.cisco.vk/lease-purpose": "config-family",
+          "topology.cisco.vk/managed": "true",
+          "topology.cisco.vk/network-worker-pod-name": "ud904e1a0-fc5c-4a5b-9b9b-6e249a90d009-network-77d599fd9d-7l426",
+          "topology.cisco.vk/network-worker-pod-uid": "c996abc8-f594-4c6b-b2bc-1e1621e0d785",
+          "topology.cisco.vk/network-worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-network-management",
+          "topology.cisco.vk/node-name": "c9k-stdcopyfix-20261105",
+          "topology.cisco.vk/node-uid": "2f9be910-1f41-4ce1-84c5-9e35a6cfa94a",
+          "topology.cisco.vk/retain-lease": "true",
+          "topology.cisco.vk/worker-protocol": "rollout-v1",
+          "topology.cisco.vk/worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-network-management"
+        },
+        "creationTimestamp": "2026-11-05T20:18:05Z",
+        "labels": {
+          "cisco.vk/device": "device-a6a123d578f69ec1",
+          "cisco.vk/family": "bgp"
+        },
+        "name": "cvk-device-a6a123d578f69ec1-bgp-7533fcaa",
+        "namespace": "cvk-stdcopyfix-20261105",
+        "resourceVersion": "1975",
+        "uid": "1a092731-40fc-4dc4-8f11-10c24bb76846"
+      },
+      "spec": {}
+    },
+    {
+      "apiVersion": "coordination.k8s.io/v1",
+      "kind": "Lease",
+      "metadata": {
+        "annotations": {
+          "topology.cisco.vk/app-worker-pod-name": "c9k-stdcopyfix-20261105-vk-74b589d-jkrtp",
+          "topology.cisco.vk/app-worker-pod-uid": "abd977b5-fb36-4fdd-b0c9-d6e0ceaabafd",
+          "topology.cisco.vk/app-worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-app-hosting",
+          "topology.cisco.vk/device-name": "c9k-stdcopyfix-20261105",
+          "topology.cisco.vk/device-namespace": "cvk-stdcopyfix-20261105",
+          "topology.cisco.vk/device-uid": "d904e1a0-fc5c-4a5b-9b9b-6e249a90d009",
+          "topology.cisco.vk/lease-purpose": "config-family",
+          "topology.cisco.vk/managed": "true",
+          "topology.cisco.vk/network-worker-pod-name": "ud904e1a0-fc5c-4a5b-9b9b-6e249a90d009-network-77d599fd9d-7l426",
+          "topology.cisco.vk/network-worker-pod-uid": "c996abc8-f594-4c6b-b2bc-1e1621e0d785",
+          "topology.cisco.vk/network-worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-network-management",
+          "topology.cisco.vk/node-name": "c9k-stdcopyfix-20261105",
+          "topology.cisco.vk/node-uid": "2f9be910-1f41-4ce1-84c5-9e35a6cfa94a",
+          "topology.cisco.vk/retain-lease": "true",
+          "topology.cisco.vk/worker-protocol": "rollout-v1",
+          "topology.cisco.vk/worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-network-management"
+        },
+        "creationTimestamp": "2026-11-05T20:18:05Z",
+        "labels": {
+          "cisco.vk/device": "device-a6a123d578f69ec1",
+          "cisco.vk/family": "cdp"
+        },
+        "name": "cvk-device-a6a123d578f69ec1-cdp-8d738fcc",
+        "namespace": "cvk-stdcopyfix-20261105",
+        "resourceVersion": "1976",
+        "uid": "22a49de6-53d0-4393-80d9-5f3fbfa822e3"
+      },
+      "spec": {}
+    },
+    {
+      "apiVersion": "coordination.k8s.io/v1",
+      "kind": "Lease",
+      "metadata": {
+        "annotations": {
+          "topology.cisco.vk/app-worker-pod-name": "c9k-stdcopyfix-20261105-vk-74b589d-jkrtp",
+          "topology.cisco.vk/app-worker-pod-uid": "abd977b5-fb36-4fdd-b0c9-d6e0ceaabafd",
+          "topology.cisco.vk/app-worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-app-hosting",
+          "topology.cisco.vk/device-name": "c9k-stdcopyfix-20261105",
+          "topology.cisco.vk/device-namespace": "cvk-stdcopyfix-20261105",
+          "topology.cisco.vk/device-uid": "d904e1a0-fc5c-4a5b-9b9b-6e249a90d009",
+          "topology.cisco.vk/lease-purpose": "config-family",
+          "topology.cisco.vk/managed": "true",
+          "topology.cisco.vk/network-worker-pod-name": "ud904e1a0-fc5c-4a5b-9b9b-6e249a90d009-network-77d599fd9d-7l426",
+          "topology.cisco.vk/network-worker-pod-uid": "c996abc8-f594-4c6b-b2bc-1e1621e0d785",
+          "topology.cisco.vk/network-worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-network-management",
+          "topology.cisco.vk/node-name": "c9k-stdcopyfix-20261105",
+          "topology.cisco.vk/node-uid": "2f9be910-1f41-4ce1-84c5-9e35a6cfa94a",
+          "topology.cisco.vk/retain-lease": "true",
+          "topology.cisco.vk/worker-protocol": "rollout-v1",
+          "topology.cisco.vk/worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-network-management"
+        },
+        "creationTimestamp": "2026-11-05T20:18:05Z",
+        "labels": {
+          "cisco.vk/device": "device-a6a123d578f69ec1",
+          "cisco.vk/family": "class_map"
+        },
+        "name": "cvk-device-a6a123d578f69ec1-class-map-14e4c887",
+        "namespace": "cvk-stdcopyfix-20261105",
+        "resourceVersion": "1977",
+        "uid": "c63eeebe-dcb9-4f8b-affe-3a81c5750e3f"
+      },
+      "spec": {}
+    },
+    {
+      "apiVersion": "coordination.k8s.io/v1",
+      "kind": "Lease",
+      "metadata": {
+        "annotations": {
+          "topology.cisco.vk/app-worker-pod-name": "c9k-stdcopyfix-20261105-vk-74b589d-jkrtp",
+          "topology.cisco.vk/app-worker-pod-uid": "abd977b5-fb36-4fdd-b0c9-d6e0ceaabafd",
+          "topology.cisco.vk/app-worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-app-hosting",
+          "topology.cisco.vk/device-name": "c9k-stdcopyfix-20261105",
+          "topology.cisco.vk/device-namespace": "cvk-stdcopyfix-20261105",
+          "topology.cisco.vk/device-uid": "d904e1a0-fc5c-4a5b-9b9b-6e249a90d009",
+          "topology.cisco.vk/lease-purpose": "config-family",
+          "topology.cisco.vk/managed": "true",
+          "topology.cisco.vk/network-worker-pod-name": "ud904e1a0-fc5c-4a5b-9b9b-6e249a90d009-network-77d599fd9d-7l426",
+          "topology.cisco.vk/network-worker-pod-uid": "c996abc8-f594-4c6b-b2bc-1e1621e0d785",
+          "topology.cisco.vk/network-worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-network-management",
+          "topology.cisco.vk/node-name": "c9k-stdcopyfix-20261105",
+          "topology.cisco.vk/node-uid": "2f9be910-1f41-4ce1-84c5-9e35a6cfa94a",
+          "topology.cisco.vk/retain-lease": "true",
+          "topology.cisco.vk/worker-protocol": "rollout-v1",
+          "topology.cisco.vk/worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-network-management"
+        },
+        "creationTimestamp": "2026-11-05T20:18:05Z",
+        "labels": {
+          "cisco.vk/device": "device-a6a123d578f69ec1",
+          "cisco.vk/family": "clock"
+        },
+        "name": "cvk-device-a6a123d578f69ec1-clock-4e20c9ba",
+        "namespace": "cvk-stdcopyfix-20261105",
+        "resourceVersion": "1978",
+        "uid": "3556cb37-af0f-469c-9289-1698987795a9"
+      },
+      "spec": {}
+    },
+    {
+      "apiVersion": "coordination.k8s.io/v1",
+      "kind": "Lease",
+      "metadata": {
+        "annotations": {
+          "topology.cisco.vk/app-worker-pod-name": "c9k-stdcopyfix-20261105-vk-74b589d-jkrtp",
+          "topology.cisco.vk/app-worker-pod-uid": "abd977b5-fb36-4fdd-b0c9-d6e0ceaabafd",
+          "topology.cisco.vk/app-worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-app-hosting",
+          "topology.cisco.vk/device-name": "c9k-stdcopyfix-20261105",
+          "topology.cisco.vk/device-namespace": "cvk-stdcopyfix-20261105",
+          "topology.cisco.vk/device-uid": "d904e1a0-fc5c-4a5b-9b9b-6e249a90d009",
+          "topology.cisco.vk/lease-purpose": "config-family",
+          "topology.cisco.vk/managed": "true",
+          "topology.cisco.vk/network-worker-pod-name": "ud904e1a0-fc5c-4a5b-9b9b-6e249a90d009-network-77d599fd9d-7l426",
+          "topology.cisco.vk/network-worker-pod-uid": "c996abc8-f594-4c6b-b2bc-1e1621e0d785",
+          "topology.cisco.vk/network-worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-network-management",
+          "topology.cisco.vk/node-name": "c9k-stdcopyfix-20261105",
+          "topology.cisco.vk/node-uid": "2f9be910-1f41-4ce1-84c5-9e35a6cfa94a",
+          "topology.cisco.vk/retain-lease": "true",
+          "topology.cisco.vk/worker-protocol": "rollout-v1",
+          "topology.cisco.vk/worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-network-management"
+        },
+        "creationTimestamp": "2026-11-05T20:18:06Z",
+        "labels": {
+          "cisco.vk/device": "device-a6a123d578f69ec1",
+          "cisco.vk/family": "crypto_ikev2_profile"
+        },
+        "name": "cvk-device-a6a123d578f69ec1-crypto-ikev2-profile-788c0723",
+        "namespace": "cvk-stdcopyfix-20261105",
+        "resourceVersion": "1979",
+        "uid": "227739f7-113b-4416-8b3c-b5b9a7552b2a"
+      },
+      "spec": {}
+    },
+    {
+      "apiVersion": "coordination.k8s.io/v1",
+      "kind": "Lease",
+      "metadata": {
+        "annotations": {
+          "topology.cisco.vk/app-worker-pod-name": "c9k-stdcopyfix-20261105-vk-74b589d-jkrtp",
+          "topology.cisco.vk/app-worker-pod-uid": "abd977b5-fb36-4fdd-b0c9-d6e0ceaabafd",
+          "topology.cisco.vk/app-worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-app-hosting",
+          "topology.cisco.vk/device-name": "c9k-stdcopyfix-20261105",
+          "topology.cisco.vk/device-namespace": "cvk-stdcopyfix-20261105",
+          "topology.cisco.vk/device-uid": "d904e1a0-fc5c-4a5b-9b9b-6e249a90d009",
+          "topology.cisco.vk/lease-purpose": "config-family",
+          "topology.cisco.vk/managed": "true",
+          "topology.cisco.vk/network-worker-pod-name": "ud904e1a0-fc5c-4a5b-9b9b-6e249a90d009-network-77d599fd9d-7l426",
+          "topology.cisco.vk/network-worker-pod-uid": "c996abc8-f594-4c6b-b2bc-1e1621e0d785",
+          "topology.cisco.vk/network-worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-network-management",
+          "topology.cisco.vk/node-name": "c9k-stdcopyfix-20261105",
+          "topology.cisco.vk/node-uid": "2f9be910-1f41-4ce1-84c5-9e35a6cfa94a",
+          "topology.cisco.vk/retain-lease": "true",
+          "topology.cisco.vk/worker-protocol": "rollout-v1",
+          "topology.cisco.vk/worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-network-management"
+        },
+        "creationTimestamp": "2026-11-05T20:18:06Z",
+        "labels": {
+          "cisco.vk/device": "device-a6a123d578f69ec1",
+          "cisco.vk/family": "crypto_ipsec_profile"
+        },
+        "name": "cvk-device-a6a123d578f69ec1-crypto-ipsec-profile-71f87561",
+        "namespace": "cvk-stdcopyfix-20261105",
+        "resourceVersion": "1980",
+        "uid": "e0365120-4d8a-42dd-8557-b467fc355b10"
+      },
+      "spec": {}
+    },
+    {
+      "apiVersion": "coordination.k8s.io/v1",
+      "kind": "Lease",
+      "metadata": {
+        "annotations": {
+          "topology.cisco.vk/app-worker-pod-name": "c9k-stdcopyfix-20261105-vk-74b589d-jkrtp",
+          "topology.cisco.vk/app-worker-pod-uid": "abd977b5-fb36-4fdd-b0c9-d6e0ceaabafd",
+          "topology.cisco.vk/app-worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-app-hosting",
+          "topology.cisco.vk/device-name": "c9k-stdcopyfix-20261105",
+          "topology.cisco.vk/device-namespace": "cvk-stdcopyfix-20261105",
+          "topology.cisco.vk/device-uid": "d904e1a0-fc5c-4a5b-9b9b-6e249a90d009",
+          "topology.cisco.vk/lease-purpose": "config-family",
+          "topology.cisco.vk/managed": "true",
+          "topology.cisco.vk/network-worker-pod-name": "ud904e1a0-fc5c-4a5b-9b9b-6e249a90d009-network-77d599fd9d-7l426",
+          "topology.cisco.vk/network-worker-pod-uid": "c996abc8-f594-4c6b-b2bc-1e1621e0d785",
+          "topology.cisco.vk/network-worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-network-management",
+          "topology.cisco.vk/node-name": "c9k-stdcopyfix-20261105",
+          "topology.cisco.vk/node-uid": "2f9be910-1f41-4ce1-84c5-9e35a6cfa94a",
+          "topology.cisco.vk/retain-lease": "true",
+          "topology.cisco.vk/worker-protocol": "rollout-v1",
+          "topology.cisco.vk/worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-network-management"
+        },
+        "creationTimestamp": "2026-11-05T20:18:07Z",
+        "labels": {
+          "cisco.vk/device": "device-a6a123d578f69ec1",
+          "cisco.vk/family": "crypto_ipsec_transform_set"
+        },
+        "name": "cvk-device-a6a123d578f69ec1-crypto-ipsec-transform-set-a3cb7000",
+        "namespace": "cvk-stdcopyfix-20261105",
+        "resourceVersion": "1981",
+        "uid": "13da0631-6baa-4394-90dc-c718fc9931ef"
+      },
+      "spec": {}
+    },
+    {
+      "apiVersion": "coordination.k8s.io/v1",
+      "kind": "Lease",
+      "metadata": {
+        "annotations": {
+          "topology.cisco.vk/app-worker-pod-name": "c9k-stdcopyfix-20261105-vk-74b589d-jkrtp",
+          "topology.cisco.vk/app-worker-pod-uid": "abd977b5-fb36-4fdd-b0c9-d6e0ceaabafd",
+          "topology.cisco.vk/app-worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-app-hosting",
+          "topology.cisco.vk/device-name": "c9k-stdcopyfix-20261105",
+          "topology.cisco.vk/device-namespace": "cvk-stdcopyfix-20261105",
+          "topology.cisco.vk/device-uid": "d904e1a0-fc5c-4a5b-9b9b-6e249a90d009",
+          "topology.cisco.vk/lease-purpose": "config-family",
+          "topology.cisco.vk/managed": "true",
+          "topology.cisco.vk/network-worker-pod-name": "ud904e1a0-fc5c-4a5b-9b9b-6e249a90d009-network-77d599fd9d-7l426",
+          "topology.cisco.vk/network-worker-pod-uid": "c996abc8-f594-4c6b-b2bc-1e1621e0d785",
+          "topology.cisco.vk/network-worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-network-management",
+          "topology.cisco.vk/node-name": "c9k-stdcopyfix-20261105",
+          "topology.cisco.vk/node-uid": "2f9be910-1f41-4ce1-84c5-9e35a6cfa94a",
+          "topology.cisco.vk/retain-lease": "true",
+          "topology.cisco.vk/worker-protocol": "rollout-v1",
+          "topology.cisco.vk/worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-network-management"
+        },
+        "creationTimestamp": "2026-11-05T20:18:08Z",
+        "labels": {
+          "cisco.vk/device": "device-a6a123d578f69ec1",
+          "cisco.vk/family": "crypto_map"
+        },
+        "name": "cvk-device-a6a123d578f69ec1-crypto-map-395750ce",
+        "namespace": "cvk-stdcopyfix-20261105",
+        "resourceVersion": "1982",
+        "uid": "4f1053cb-68be-4c25-b41a-dfbe133c43be"
+      },
+      "spec": {}
+    },
+    {
+      "apiVersion": "coordination.k8s.io/v1",
+      "kind": "Lease",
+      "metadata": {
+        "annotations": {
+          "topology.cisco.vk/app-worker-pod-name": "c9k-stdcopyfix-20261105-vk-74b589d-jkrtp",
+          "topology.cisco.vk/app-worker-pod-uid": "abd977b5-fb36-4fdd-b0c9-d6e0ceaabafd",
+          "topology.cisco.vk/app-worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-app-hosting",
+          "topology.cisco.vk/device-name": "c9k-stdcopyfix-20261105",
+          "topology.cisco.vk/device-namespace": "cvk-stdcopyfix-20261105",
+          "topology.cisco.vk/device-uid": "d904e1a0-fc5c-4a5b-9b9b-6e249a90d009",
+          "topology.cisco.vk/lease-purpose": "config-family",
+          "topology.cisco.vk/managed": "true",
+          "topology.cisco.vk/network-worker-pod-name": "ud904e1a0-fc5c-4a5b-9b9b-6e249a90d009-network-77d599fd9d-7l426",
+          "topology.cisco.vk/network-worker-pod-uid": "c996abc8-f594-4c6b-b2bc-1e1621e0d785",
+          "topology.cisco.vk/network-worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-network-management",
+          "topology.cisco.vk/node-name": "c9k-stdcopyfix-20261105",
+          "topology.cisco.vk/node-uid": "2f9be910-1f41-4ce1-84c5-9e35a6cfa94a",
+          "topology.cisco.vk/retain-lease": "true",
+          "topology.cisco.vk/worker-protocol": "rollout-v1",
+          "topology.cisco.vk/worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-network-management"
+        },
+        "creationTimestamp": "2026-11-05T20:18:08Z",
+        "labels": {
+          "cisco.vk/device": "device-a6a123d578f69ec1",
+          "cisco.vk/family": "crypto_pki_trustpoint"
+        },
+        "name": "cvk-device-a6a123d578f69ec1-crypto-pki-trustpoint-e5b71363",
+        "namespace": "cvk-stdcopyfix-20261105",
+        "resourceVersion": "1983",
+        "uid": "982ea676-96eb-407d-8248-a2aef840f021"
+      },
+      "spec": {}
+    },
+    {
+      "apiVersion": "coordination.k8s.io/v1",
+      "kind": "Lease",
+      "metadata": {
+        "annotations": {
+          "topology.cisco.vk/app-worker-pod-name": "c9k-stdcopyfix-20261105-vk-74b589d-jkrtp",
+          "topology.cisco.vk/app-worker-pod-uid": "abd977b5-fb36-4fdd-b0c9-d6e0ceaabafd",
+          "topology.cisco.vk/app-worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-app-hosting",
+          "topology.cisco.vk/device-name": "c9k-stdcopyfix-20261105",
+          "topology.cisco.vk/device-namespace": "cvk-stdcopyfix-20261105",
+          "topology.cisco.vk/device-uid": "d904e1a0-fc5c-4a5b-9b9b-6e249a90d009",
+          "topology.cisco.vk/lease-purpose": "device-mutation",
+          "topology.cisco.vk/managed": "true",
+          "topology.cisco.vk/network-worker-pod-name": "ud904e1a0-fc5c-4a5b-9b9b-6e249a90d009-network-77d599fd9d-7l426",
+          "topology.cisco.vk/network-worker-pod-uid": "c996abc8-f594-4c6b-b2bc-1e1621e0d785",
+          "topology.cisco.vk/network-worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-network-management",
+          "topology.cisco.vk/node-name": "c9k-stdcopyfix-20261105",
+          "topology.cisco.vk/node-uid": "2f9be910-1f41-4ce1-84c5-9e35a6cfa94a",
+          "topology.cisco.vk/retain-lease": "true",
+          "topology.cisco.vk/worker-protocol": "rollout-v1",
+          "topology.cisco.vk/worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-network-management"
+        },
+        "creationTimestamp": "2026-11-05T20:18:05Z",
+        "labels": {
+          "cisco.vk/device": "device-a6a123d578f69ec1",
+          "cisco.vk/family": "device-disruptive-mutation"
+        },
+        "name": "cvk-device-a6a123d578f69ec1-device-disruptive-mutation-72ac365f",
+        "namespace": "cvk-stdcopyfix-20261105",
+        "resourceVersion": "45401",
+        "uid": "9a7919b7-3d1c-46e8-865e-e306c6be3e6f"
+      },
+      "spec": {
+        "acquireTime": "2026-11-06T06:50:32.066361Z",
+        "holderIdentity": "device-write/2f900a1c-d207-4264-b6d3-2da2bf60cc46",
+        "leaseDurationSeconds": 1860,
+        "leaseTransitions": 29,
+        "renewTime": "2026-11-06T06:50:32.066361Z"
+      }
+    },
+    {
+      "apiVersion": "coordination.k8s.io/v1",
+      "kind": "Lease",
+      "metadata": {
+        "annotations": {
+          "topology.cisco.vk/app-worker-pod-name": "c9k-stdcopyfix-20261105-vk-74b589d-jkrtp",
+          "topology.cisco.vk/app-worker-pod-uid": "abd977b5-fb36-4fdd-b0c9-d6e0ceaabafd",
+          "topology.cisco.vk/app-worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-app-hosting",
+          "topology.cisco.vk/device-name": "c9k-stdcopyfix-20261105",
+          "topology.cisco.vk/device-namespace": "cvk-stdcopyfix-20261105",
+          "topology.cisco.vk/device-uid": "d904e1a0-fc5c-4a5b-9b9b-6e249a90d009",
+          "topology.cisco.vk/lease-purpose": "config-family",
+          "topology.cisco.vk/managed": "true",
+          "topology.cisco.vk/network-worker-pod-name": "ud904e1a0-fc5c-4a5b-9b9b-6e249a90d009-network-77d599fd9d-7l426",
+          "topology.cisco.vk/network-worker-pod-uid": "c996abc8-f594-4c6b-b2bc-1e1621e0d785",
+          "topology.cisco.vk/network-worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-network-management",
+          "topology.cisco.vk/node-name": "c9k-stdcopyfix-20261105",
+          "topology.cisco.vk/node-uid": "2f9be910-1f41-4ce1-84c5-9e35a6cfa94a",
+          "topology.cisco.vk/retain-lease": "true",
+          "topology.cisco.vk/worker-protocol": "rollout-v1",
+          "topology.cisco.vk/worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-network-management"
+        },
+        "creationTimestamp": "2026-11-05T20:18:09Z",
+        "labels": {
+          "cisco.vk/device": "device-a6a123d578f69ec1",
+          "cisco.vk/family": "dhcp"
+        },
+        "name": "cvk-device-a6a123d578f69ec1-dhcp-dd00ccfd",
+        "namespace": "cvk-stdcopyfix-20261105",
+        "resourceVersion": "1985",
+        "uid": "bab1b094-1c62-4243-9217-cfc37b3109fd"
+      },
+      "spec": {}
+    },
+    {
+      "apiVersion": "coordination.k8s.io/v1",
+      "kind": "Lease",
+      "metadata": {
+        "annotations": {
+          "topology.cisco.vk/app-worker-pod-name": "c9k-stdcopyfix-20261105-vk-74b589d-jkrtp",
+          "topology.cisco.vk/app-worker-pod-uid": "abd977b5-fb36-4fdd-b0c9-d6e0ceaabafd",
+          "topology.cisco.vk/app-worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-app-hosting",
+          "topology.cisco.vk/device-name": "c9k-stdcopyfix-20261105",
+          "topology.cisco.vk/device-namespace": "cvk-stdcopyfix-20261105",
+          "topology.cisco.vk/device-uid": "d904e1a0-fc5c-4a5b-9b9b-6e249a90d009",
+          "topology.cisco.vk/lease-purpose": "config-family",
+          "topology.cisco.vk/managed": "true",
+          "topology.cisco.vk/network-worker-pod-name": "ud904e1a0-fc5c-4a5b-9b9b-6e249a90d009-network-77d599fd9d-7l426",
+          "topology.cisco.vk/network-worker-pod-uid": "c996abc8-f594-4c6b-b2bc-1e1621e0d785",
+          "topology.cisco.vk/network-worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-network-management",
+          "topology.cisco.vk/node-name": "c9k-stdcopyfix-20261105",
+          "topology.cisco.vk/node-uid": "2f9be910-1f41-4ce1-84c5-9e35a6cfa94a",
+          "topology.cisco.vk/retain-lease": "true",
+          "topology.cisco.vk/worker-protocol": "rollout-v1",
+          "topology.cisco.vk/worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-network-management"
+        },
+        "creationTimestamp": "2026-11-05T20:18:09Z",
+        "labels": {
+          "cisco.vk/device": "device-a6a123d578f69ec1",
+          "cisco.vk/family": "eigrp"
+        },
+        "name": "cvk-device-a6a123d578f69ec1-eigrp-0118b150",
+        "namespace": "cvk-stdcopyfix-20261105",
+        "resourceVersion": "1986",
+        "uid": "b1ad8621-aa59-42c4-9105-a5ac7dcf8316"
+      },
+      "spec": {}
+    },
+    {
+      "apiVersion": "coordination.k8s.io/v1",
+      "kind": "Lease",
+      "metadata": {
+        "annotations": {
+          "topology.cisco.vk/app-worker-pod-name": "c9k-stdcopyfix-20261105-vk-74b589d-jkrtp",
+          "topology.cisco.vk/app-worker-pod-uid": "abd977b5-fb36-4fdd-b0c9-d6e0ceaabafd",
+          "topology.cisco.vk/app-worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-app-hosting",
+          "topology.cisco.vk/device-name": "c9k-stdcopyfix-20261105",
+          "topology.cisco.vk/device-namespace": "cvk-stdcopyfix-20261105",
+          "topology.cisco.vk/device-uid": "d904e1a0-fc5c-4a5b-9b9b-6e249a90d009",
+          "topology.cisco.vk/lease-purpose": "config-family",
+          "topology.cisco.vk/managed": "true",
+          "topology.cisco.vk/network-worker-pod-name": "ud904e1a0-fc5c-4a5b-9b9b-6e249a90d009-network-77d599fd9d-7l426",
+          "topology.cisco.vk/network-worker-pod-uid": "c996abc8-f594-4c6b-b2bc-1e1621e0d785",
+          "topology.cisco.vk/network-worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-network-management",
+          "topology.cisco.vk/node-name": "c9k-stdcopyfix-20261105",
+          "topology.cisco.vk/node-uid": "2f9be910-1f41-4ce1-84c5-9e35a6cfa94a",
+          "topology.cisco.vk/retain-lease": "true",
+          "topology.cisco.vk/worker-protocol": "rollout-v1",
+          "topology.cisco.vk/worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-network-management"
+        },
+        "creationTimestamp": "2026-11-05T20:18:09Z",
+        "labels": {
+          "cisco.vk/device": "device-a6a123d578f69ec1",
+          "cisco.vk/family": "errdisable"
+        },
+        "name": "cvk-device-a6a123d578f69ec1-errdisable-28de6e15",
+        "namespace": "cvk-stdcopyfix-20261105",
+        "resourceVersion": "1987",
+        "uid": "c159ad84-9c0f-4f9e-a421-a4c6e03d4fab"
+      },
+      "spec": {}
+    },
+    {
+      "apiVersion": "coordination.k8s.io/v1",
+      "kind": "Lease",
+      "metadata": {
+        "annotations": {
+          "topology.cisco.vk/app-worker-pod-name": "c9k-stdcopyfix-20261105-vk-74b589d-jkrtp",
+          "topology.cisco.vk/app-worker-pod-uid": "abd977b5-fb36-4fdd-b0c9-d6e0ceaabafd",
+          "topology.cisco.vk/app-worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-app-hosting",
+          "topology.cisco.vk/device-name": "c9k-stdcopyfix-20261105",
+          "topology.cisco.vk/device-namespace": "cvk-stdcopyfix-20261105",
+          "topology.cisco.vk/device-uid": "d904e1a0-fc5c-4a5b-9b9b-6e249a90d009",
+          "topology.cisco.vk/lease-purpose": "config-family",
+          "topology.cisco.vk/managed": "true",
+          "topology.cisco.vk/network-worker-pod-name": "ud904e1a0-fc5c-4a5b-9b9b-6e249a90d009-network-77d599fd9d-7l426",
+          "topology.cisco.vk/network-worker-pod-uid": "c996abc8-f594-4c6b-b2bc-1e1621e0d785",
+          "topology.cisco.vk/network-worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-network-management",
+          "topology.cisco.vk/node-name": "c9k-stdcopyfix-20261105",
+          "topology.cisco.vk/node-uid": "2f9be910-1f41-4ce1-84c5-9e35a6cfa94a",
+          "topology.cisco.vk/retain-lease": "true",
+          "topology.cisco.vk/worker-protocol": "rollout-v1",
+          "topology.cisco.vk/worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-network-management"
+        },
+        "creationTimestamp": "2026-11-05T20:18:09Z",
+        "labels": {
+          "cisco.vk/device": "device-a6a123d578f69ec1",
+          "cisco.vk/family": "event_manager"
+        },
+        "name": "cvk-device-a6a123d578f69ec1-event-manager-e90b2920",
+        "namespace": "cvk-stdcopyfix-20261105",
+        "resourceVersion": "1988",
+        "uid": "22d58851-c35a-4b23-88b0-b35e63049228"
+      },
+      "spec": {}
+    },
+    {
+      "apiVersion": "coordination.k8s.io/v1",
+      "kind": "Lease",
+      "metadata": {
+        "annotations": {
+          "topology.cisco.vk/app-worker-pod-name": "c9k-stdcopyfix-20261105-vk-74b589d-jkrtp",
+          "topology.cisco.vk/app-worker-pod-uid": "abd977b5-fb36-4fdd-b0c9-d6e0ceaabafd",
+          "topology.cisco.vk/app-worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-app-hosting",
+          "topology.cisco.vk/device-name": "c9k-stdcopyfix-20261105",
+          "topology.cisco.vk/device-namespace": "cvk-stdcopyfix-20261105",
+          "topology.cisco.vk/device-uid": "d904e1a0-fc5c-4a5b-9b9b-6e249a90d009",
+          "topology.cisco.vk/lease-purpose": "config-family",
+          "topology.cisco.vk/managed": "true",
+          "topology.cisco.vk/network-worker-pod-name": "ud904e1a0-fc5c-4a5b-9b9b-6e249a90d009-network-77d599fd9d-7l426",
+          "topology.cisco.vk/network-worker-pod-uid": "c996abc8-f594-4c6b-b2bc-1e1621e0d785",
+          "topology.cisco.vk/network-worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-network-management",
+          "topology.cisco.vk/node-name": "c9k-stdcopyfix-20261105",
+          "topology.cisco.vk/node-uid": "2f9be910-1f41-4ce1-84c5-9e35a6cfa94a",
+          "topology.cisco.vk/retain-lease": "true",
+          "topology.cisco.vk/worker-protocol": "rollout-v1",
+          "topology.cisco.vk/worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-network-management"
+        },
+        "creationTimestamp": "2026-11-05T20:18:09Z",
+        "labels": {
+          "cisco.vk/device": "device-a6a123d578f69ec1",
+          "cisco.vk/family": "interface_ethernet"
+        },
+        "name": "cvk-device-a6a123d578f69ec1-interface-ethernet-e8b9bb88",
+        "namespace": "cvk-stdcopyfix-20261105",
+        "resourceVersion": "1989",
+        "uid": "24ec36f1-78e5-4acb-bed3-8314d3ce1e46"
+      },
+      "spec": {}
+    },
+    {
+      "apiVersion": "coordination.k8s.io/v1",
+      "kind": "Lease",
+      "metadata": {
+        "annotations": {
+          "topology.cisco.vk/app-worker-pod-name": "c9k-stdcopyfix-20261105-vk-74b589d-jkrtp",
+          "topology.cisco.vk/app-worker-pod-uid": "abd977b5-fb36-4fdd-b0c9-d6e0ceaabafd",
+          "topology.cisco.vk/app-worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-app-hosting",
+          "topology.cisco.vk/device-name": "c9k-stdcopyfix-20261105",
+          "topology.cisco.vk/device-namespace": "cvk-stdcopyfix-20261105",
+          "topology.cisco.vk/device-uid": "d904e1a0-fc5c-4a5b-9b9b-6e249a90d009",
+          "topology.cisco.vk/lease-purpose": "config-family",
+          "topology.cisco.vk/managed": "true",
+          "topology.cisco.vk/network-worker-pod-name": "ud904e1a0-fc5c-4a5b-9b9b-6e249a90d009-network-77d599fd9d-7l426",
+          "topology.cisco.vk/network-worker-pod-uid": "c996abc8-f594-4c6b-b2bc-1e1621e0d785",
+          "topology.cisco.vk/network-worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-network-management",
+          "topology.cisco.vk/node-name": "c9k-stdcopyfix-20261105",
+          "topology.cisco.vk/node-uid": "2f9be910-1f41-4ce1-84c5-9e35a6cfa94a",
+          "topology.cisco.vk/retain-lease": "true",
+          "topology.cisco.vk/worker-protocol": "rollout-v1",
+          "topology.cisco.vk/worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-network-management"
+        },
+        "creationTimestamp": "2026-11-05T20:18:09Z",
+        "labels": {
+          "cisco.vk/device": "device-a6a123d578f69ec1",
+          "cisco.vk/family": "interface_loopback"
+        },
+        "name": "cvk-device-a6a123d578f69ec1-interface-loopback-fede375b",
+        "namespace": "cvk-stdcopyfix-20261105",
+        "resourceVersion": "1990",
+        "uid": "473f2cc2-b40d-4032-9942-d4b8559638a4"
+      },
+      "spec": {}
+    },
+    {
+      "apiVersion": "coordination.k8s.io/v1",
+      "kind": "Lease",
+      "metadata": {
+        "annotations": {
+          "topology.cisco.vk/app-worker-pod-name": "c9k-stdcopyfix-20261105-vk-74b589d-jkrtp",
+          "topology.cisco.vk/app-worker-pod-uid": "abd977b5-fb36-4fdd-b0c9-d6e0ceaabafd",
+          "topology.cisco.vk/app-worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-app-hosting",
+          "topology.cisco.vk/device-name": "c9k-stdcopyfix-20261105",
+          "topology.cisco.vk/device-namespace": "cvk-stdcopyfix-20261105",
+          "topology.cisco.vk/device-uid": "d904e1a0-fc5c-4a5b-9b9b-6e249a90d009",
+          "topology.cisco.vk/lease-purpose": "config-family",
+          "topology.cisco.vk/managed": "true",
+          "topology.cisco.vk/network-worker-pod-name": "ud904e1a0-fc5c-4a5b-9b9b-6e249a90d009-network-77d599fd9d-7l426",
+          "topology.cisco.vk/network-worker-pod-uid": "c996abc8-f594-4c6b-b2bc-1e1621e0d785",
+          "topology.cisco.vk/network-worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-network-management",
+          "topology.cisco.vk/node-name": "c9k-stdcopyfix-20261105",
+          "topology.cisco.vk/node-uid": "2f9be910-1f41-4ce1-84c5-9e35a6cfa94a",
+          "topology.cisco.vk/retain-lease": "true",
+          "topology.cisco.vk/worker-protocol": "rollout-v1",
+          "topology.cisco.vk/worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-network-management"
+        },
+        "creationTimestamp": "2026-11-05T20:18:09Z",
+        "labels": {
+          "cisco.vk/device": "device-a6a123d578f69ec1",
+          "cisco.vk/family": "interface_port_channel"
+        },
+        "name": "cvk-device-a6a123d578f69ec1-interface-port-channel-3910ae38",
+        "namespace": "cvk-stdcopyfix-20261105",
+        "resourceVersion": "1991",
+        "uid": "d0f8cc1e-29a1-448b-bb40-6552fbe3779a"
+      },
+      "spec": {}
+    },
+    {
+      "apiVersion": "coordination.k8s.io/v1",
+      "kind": "Lease",
+      "metadata": {
+        "annotations": {
+          "topology.cisco.vk/app-worker-pod-name": "c9k-stdcopyfix-20261105-vk-74b589d-jkrtp",
+          "topology.cisco.vk/app-worker-pod-uid": "abd977b5-fb36-4fdd-b0c9-d6e0ceaabafd",
+          "topology.cisco.vk/app-worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-app-hosting",
+          "topology.cisco.vk/device-name": "c9k-stdcopyfix-20261105",
+          "topology.cisco.vk/device-namespace": "cvk-stdcopyfix-20261105",
+          "topology.cisco.vk/device-uid": "d904e1a0-fc5c-4a5b-9b9b-6e249a90d009",
+          "topology.cisco.vk/lease-purpose": "config-family",
+          "topology.cisco.vk/managed": "true",
+          "topology.cisco.vk/network-worker-pod-name": "ud904e1a0-fc5c-4a5b-9b9b-6e249a90d009-network-77d599fd9d-7l426",
+          "topology.cisco.vk/network-worker-pod-uid": "c996abc8-f594-4c6b-b2bc-1e1621e0d785",
+          "topology.cisco.vk/network-worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-network-management",
+          "topology.cisco.vk/node-name": "c9k-stdcopyfix-20261105",
+          "topology.cisco.vk/node-uid": "2f9be910-1f41-4ce1-84c5-9e35a6cfa94a",
+          "topology.cisco.vk/retain-lease": "true",
+          "topology.cisco.vk/worker-protocol": "rollout-v1",
+          "topology.cisco.vk/worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-network-management"
+        },
+        "creationTimestamp": "2026-11-05T20:18:09Z",
+        "labels": {
+          "cisco.vk/device": "device-a6a123d578f69ec1",
+          "cisco.vk/family": "interface_switchport"
+        },
+        "name": "cvk-device-a6a123d578f69ec1-interface-switchport-9dd5a7ff",
+        "namespace": "cvk-stdcopyfix-20261105",
+        "resourceVersion": "1992",
+        "uid": "806c3b3b-84b4-4606-b1b3-902ed88aec62"
+      },
+      "spec": {}
+    },
+    {
+      "apiVersion": "coordination.k8s.io/v1",
+      "kind": "Lease",
+      "metadata": {
+        "annotations": {
+          "topology.cisco.vk/app-worker-pod-name": "c9k-stdcopyfix-20261105-vk-74b589d-jkrtp",
+          "topology.cisco.vk/app-worker-pod-uid": "abd977b5-fb36-4fdd-b0c9-d6e0ceaabafd",
+          "topology.cisco.vk/app-worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-app-hosting",
+          "topology.cisco.vk/device-name": "c9k-stdcopyfix-20261105",
+          "topology.cisco.vk/device-namespace": "cvk-stdcopyfix-20261105",
+          "topology.cisco.vk/device-uid": "d904e1a0-fc5c-4a5b-9b9b-6e249a90d009",
+          "topology.cisco.vk/lease-purpose": "config-family",
+          "topology.cisco.vk/managed": "true",
+          "topology.cisco.vk/network-worker-pod-name": "ud904e1a0-fc5c-4a5b-9b9b-6e249a90d009-network-77d599fd9d-7l426",
+          "topology.cisco.vk/network-worker-pod-uid": "c996abc8-f594-4c6b-b2bc-1e1621e0d785",
+          "topology.cisco.vk/network-worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-network-management",
+          "topology.cisco.vk/node-name": "c9k-stdcopyfix-20261105",
+          "topology.cisco.vk/node-uid": "2f9be910-1f41-4ce1-84c5-9e35a6cfa94a",
+          "topology.cisco.vk/retain-lease": "true",
+          "topology.cisco.vk/worker-protocol": "rollout-v1",
+          "topology.cisco.vk/worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-network-management"
+        },
+        "creationTimestamp": "2026-11-05T20:18:09Z",
+        "labels": {
+          "cisco.vk/device": "device-a6a123d578f69ec1",
+          "cisco.vk/family": "interface_tunnel"
+        },
+        "name": "cvk-device-a6a123d578f69ec1-interface-tunnel-0ea2bfe5",
+        "namespace": "cvk-stdcopyfix-20261105",
+        "resourceVersion": "1993",
+        "uid": "fddf7243-9971-4d86-8bdc-7d5c0b660f1b"
+      },
+      "spec": {}
+    },
+    {
+      "apiVersion": "coordination.k8s.io/v1",
+      "kind": "Lease",
+      "metadata": {
+        "annotations": {
+          "topology.cisco.vk/app-worker-pod-name": "c9k-stdcopyfix-20261105-vk-74b589d-jkrtp",
+          "topology.cisco.vk/app-worker-pod-uid": "abd977b5-fb36-4fdd-b0c9-d6e0ceaabafd",
+          "topology.cisco.vk/app-worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-app-hosting",
+          "topology.cisco.vk/device-name": "c9k-stdcopyfix-20261105",
+          "topology.cisco.vk/device-namespace": "cvk-stdcopyfix-20261105",
+          "topology.cisco.vk/device-uid": "d904e1a0-fc5c-4a5b-9b9b-6e249a90d009",
+          "topology.cisco.vk/lease-purpose": "config-family",
+          "topology.cisco.vk/managed": "true",
+          "topology.cisco.vk/network-worker-pod-name": "ud904e1a0-fc5c-4a5b-9b9b-6e249a90d009-network-77d599fd9d-7l426",
+          "topology.cisco.vk/network-worker-pod-uid": "c996abc8-f594-4c6b-b2bc-1e1621e0d785",
+          "topology.cisco.vk/network-worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-network-management",
+          "topology.cisco.vk/node-name": "c9k-stdcopyfix-20261105",
+          "topology.cisco.vk/node-uid": "2f9be910-1f41-4ce1-84c5-9e35a6cfa94a",
+          "topology.cisco.vk/retain-lease": "true",
+          "topology.cisco.vk/worker-protocol": "rollout-v1",
+          "topology.cisco.vk/worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-network-management"
+        },
+        "creationTimestamp": "2026-11-05T20:18:09Z",
+        "labels": {
+          "cisco.vk/device": "device-a6a123d578f69ec1",
+          "cisco.vk/family": "interface_virtual_port_group"
+        },
+        "name": "cvk-device-a6a123d578f69ec1-interface-virtual-port-group-bd60f14f",
+        "namespace": "cvk-stdcopyfix-20261105",
+        "resourceVersion": "1994",
+        "uid": "aaeb4da7-5f89-40a9-b3f3-f51ee82817ee"
+      },
+      "spec": {}
+    },
+    {
+      "apiVersion": "coordination.k8s.io/v1",
+      "kind": "Lease",
+      "metadata": {
+        "annotations": {
+          "topology.cisco.vk/app-worker-pod-name": "c9k-stdcopyfix-20261105-vk-74b589d-jkrtp",
+          "topology.cisco.vk/app-worker-pod-uid": "abd977b5-fb36-4fdd-b0c9-d6e0ceaabafd",
+          "topology.cisco.vk/app-worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-app-hosting",
+          "topology.cisco.vk/device-name": "c9k-stdcopyfix-20261105",
+          "topology.cisco.vk/device-namespace": "cvk-stdcopyfix-20261105",
+          "topology.cisco.vk/device-uid": "d904e1a0-fc5c-4a5b-9b9b-6e249a90d009",
+          "topology.cisco.vk/lease-purpose": "config-family",
+          "topology.cisco.vk/managed": "true",
+          "topology.cisco.vk/network-worker-pod-name": "ud904e1a0-fc5c-4a5b-9b9b-6e249a90d009-network-77d599fd9d-7l426",
+          "topology.cisco.vk/network-worker-pod-uid": "c996abc8-f594-4c6b-b2bc-1e1621e0d785",
+          "topology.cisco.vk/network-worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-network-management",
+          "topology.cisco.vk/node-name": "c9k-stdcopyfix-20261105",
+          "topology.cisco.vk/node-uid": "2f9be910-1f41-4ce1-84c5-9e35a6cfa94a",
+          "topology.cisco.vk/retain-lease": "true",
+          "topology.cisco.vk/worker-protocol": "rollout-v1",
+          "topology.cisco.vk/worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-network-management"
+        },
+        "creationTimestamp": "2026-11-05T20:18:09Z",
+        "labels": {
+          "cisco.vk/device": "device-a6a123d578f69ec1",
+          "cisco.vk/family": "interface_vlan"
+        },
+        "name": "cvk-device-a6a123d578f69ec1-interface-vlan-59deb9eb",
+        "namespace": "cvk-stdcopyfix-20261105",
+        "resourceVersion": "1995",
+        "uid": "3a1cfd9b-3851-4bdc-a5b3-bbf8e475a15e"
+      },
+      "spec": {}
+    },
+    {
+      "apiVersion": "coordination.k8s.io/v1",
+      "kind": "Lease",
+      "metadata": {
+        "annotations": {
+          "topology.cisco.vk/app-worker-pod-name": "c9k-stdcopyfix-20261105-vk-74b589d-jkrtp",
+          "topology.cisco.vk/app-worker-pod-uid": "abd977b5-fb36-4fdd-b0c9-d6e0ceaabafd",
+          "topology.cisco.vk/app-worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-app-hosting",
+          "topology.cisco.vk/device-name": "c9k-stdcopyfix-20261105",
+          "topology.cisco.vk/device-namespace": "cvk-stdcopyfix-20261105",
+          "topology.cisco.vk/device-uid": "d904e1a0-fc5c-4a5b-9b9b-6e249a90d009",
+          "topology.cisco.vk/lease-purpose": "config-family",
+          "topology.cisco.vk/managed": "true",
+          "topology.cisco.vk/network-worker-pod-name": "ud904e1a0-fc5c-4a5b-9b9b-6e249a90d009-network-77d599fd9d-7l426",
+          "topology.cisco.vk/network-worker-pod-uid": "c996abc8-f594-4c6b-b2bc-1e1621e0d785",
+          "topology.cisco.vk/network-worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-network-management",
+          "topology.cisco.vk/node-name": "c9k-stdcopyfix-20261105",
+          "topology.cisco.vk/node-uid": "2f9be910-1f41-4ce1-84c5-9e35a6cfa94a",
+          "topology.cisco.vk/retain-lease": "true",
+          "topology.cisco.vk/worker-protocol": "rollout-v1",
+          "topology.cisco.vk/worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-network-management"
+        },
+        "creationTimestamp": "2026-11-05T20:18:09Z",
+        "labels": {
+          "cisco.vk/device": "device-a6a123d578f69ec1",
+          "cisco.vk/family": "ip_as_path_access_list"
+        },
+        "name": "cvk-device-a6a123d578f69ec1-ip-as-path-access-list-941ed140",
+        "namespace": "cvk-stdcopyfix-20261105",
+        "resourceVersion": "1996",
+        "uid": "3d5f1c48-acdd-48c4-a4b0-1c042ba1e7bd"
+      },
+      "spec": {}
+    },
+    {
+      "apiVersion": "coordination.k8s.io/v1",
+      "kind": "Lease",
+      "metadata": {
+        "annotations": {
+          "topology.cisco.vk/app-worker-pod-name": "c9k-stdcopyfix-20261105-vk-74b589d-jkrtp",
+          "topology.cisco.vk/app-worker-pod-uid": "abd977b5-fb36-4fdd-b0c9-d6e0ceaabafd",
+          "topology.cisco.vk/app-worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-app-hosting",
+          "topology.cisco.vk/device-name": "c9k-stdcopyfix-20261105",
+          "topology.cisco.vk/device-namespace": "cvk-stdcopyfix-20261105",
+          "topology.cisco.vk/device-uid": "d904e1a0-fc5c-4a5b-9b9b-6e249a90d009",
+          "topology.cisco.vk/lease-purpose": "config-family",
+          "topology.cisco.vk/managed": "true",
+          "topology.cisco.vk/network-worker-pod-name": "ud904e1a0-fc5c-4a5b-9b9b-6e249a90d009-network-77d599fd9d-7l426",
+          "topology.cisco.vk/network-worker-pod-uid": "c996abc8-f594-4c6b-b2bc-1e1621e0d785",
+          "topology.cisco.vk/network-worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-network-management",
+          "topology.cisco.vk/node-name": "c9k-stdcopyfix-20261105",
+          "topology.cisco.vk/node-uid": "2f9be910-1f41-4ce1-84c5-9e35a6cfa94a",
+          "topology.cisco.vk/retain-lease": "true",
+          "topology.cisco.vk/worker-protocol": "rollout-v1",
+          "topology.cisco.vk/worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-network-management"
+        },
+        "creationTimestamp": "2026-11-05T20:18:09Z",
+        "labels": {
+          "cisco.vk/device": "device-a6a123d578f69ec1",
+          "cisco.vk/family": "ip_community_list"
+        },
+        "name": "cvk-device-a6a123d578f69ec1-ip-community-list-cf152a26",
+        "namespace": "cvk-stdcopyfix-20261105",
+        "resourceVersion": "1997",
+        "uid": "8f5b8e89-c2e0-458e-b541-157c02817b0f"
+      },
+      "spec": {}
+    },
+    {
+      "apiVersion": "coordination.k8s.io/v1",
+      "kind": "Lease",
+      "metadata": {
+        "annotations": {
+          "topology.cisco.vk/app-worker-pod-name": "c9k-stdcopyfix-20261105-vk-74b589d-jkrtp",
+          "topology.cisco.vk/app-worker-pod-uid": "abd977b5-fb36-4fdd-b0c9-d6e0ceaabafd",
+          "topology.cisco.vk/app-worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-app-hosting",
+          "topology.cisco.vk/device-name": "c9k-stdcopyfix-20261105",
+          "topology.cisco.vk/device-namespace": "cvk-stdcopyfix-20261105",
+          "topology.cisco.vk/device-uid": "d904e1a0-fc5c-4a5b-9b9b-6e249a90d009",
+          "topology.cisco.vk/lease-purpose": "config-family",
+          "topology.cisco.vk/managed": "true",
+          "topology.cisco.vk/network-worker-pod-name": "ud904e1a0-fc5c-4a5b-9b9b-6e249a90d009-network-77d599fd9d-7l426",
+          "topology.cisco.vk/network-worker-pod-uid": "c996abc8-f594-4c6b-b2bc-1e1621e0d785",
+          "topology.cisco.vk/network-worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-network-management",
+          "topology.cisco.vk/node-name": "c9k-stdcopyfix-20261105",
+          "topology.cisco.vk/node-uid": "2f9be910-1f41-4ce1-84c5-9e35a6cfa94a",
+          "topology.cisco.vk/retain-lease": "true",
+          "topology.cisco.vk/worker-protocol": "rollout-v1",
+          "topology.cisco.vk/worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-network-management"
+        },
+        "creationTimestamp": "2026-11-05T20:18:09Z",
+        "labels": {
+          "cisco.vk/device": "device-a6a123d578f69ec1",
+          "cisco.vk/family": "ip_domain"
+        },
+        "name": "cvk-device-a6a123d578f69ec1-ip-domain-f1b20072",
+        "namespace": "cvk-stdcopyfix-20261105",
+        "resourceVersion": "1998",
+        "uid": "5f7e61f9-c13b-4983-9279-c7963dcfebd4"
+      },
+      "spec": {}
+    },
+    {
+      "apiVersion": "coordination.k8s.io/v1",
+      "kind": "Lease",
+      "metadata": {
+        "annotations": {
+          "topology.cisco.vk/app-worker-pod-name": "c9k-stdcopyfix-20261105-vk-74b589d-jkrtp",
+          "topology.cisco.vk/app-worker-pod-uid": "abd977b5-fb36-4fdd-b0c9-d6e0ceaabafd",
+          "topology.cisco.vk/app-worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-app-hosting",
+          "topology.cisco.vk/device-name": "c9k-stdcopyfix-20261105",
+          "topology.cisco.vk/device-namespace": "cvk-stdcopyfix-20261105",
+          "topology.cisco.vk/device-uid": "d904e1a0-fc5c-4a5b-9b9b-6e249a90d009",
+          "topology.cisco.vk/lease-purpose": "config-family",
+          "topology.cisco.vk/managed": "true",
+          "topology.cisco.vk/network-worker-pod-name": "ud904e1a0-fc5c-4a5b-9b9b-6e249a90d009-network-77d599fd9d-7l426",
+          "topology.cisco.vk/network-worker-pod-uid": "c996abc8-f594-4c6b-b2bc-1e1621e0d785",
+          "topology.cisco.vk/network-worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-network-management",
+          "topology.cisco.vk/node-name": "c9k-stdcopyfix-20261105",
+          "topology.cisco.vk/node-uid": "2f9be910-1f41-4ce1-84c5-9e35a6cfa94a",
+          "topology.cisco.vk/retain-lease": "true",
+          "topology.cisco.vk/worker-protocol": "rollout-v1",
+          "topology.cisco.vk/worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-network-management"
+        },
+        "creationTimestamp": "2026-11-05T20:18:09Z",
+        "labels": {
+          "cisco.vk/device": "device-a6a123d578f69ec1",
+          "cisco.vk/family": "ip_http"
+        },
+        "name": "cvk-device-a6a123d578f69ec1-ip-http-a814e763",
+        "namespace": "cvk-stdcopyfix-20261105",
+        "resourceVersion": "1999",
+        "uid": "e740b81c-db5a-4cfa-b6b5-7cef0a1a87ae"
+      },
+      "spec": {}
+    },
+    {
+      "apiVersion": "coordination.k8s.io/v1",
+      "kind": "Lease",
+      "metadata": {
+        "annotations": {
+          "topology.cisco.vk/app-worker-pod-name": "c9k-stdcopyfix-20261105-vk-74b589d-jkrtp",
+          "topology.cisco.vk/app-worker-pod-uid": "abd977b5-fb36-4fdd-b0c9-d6e0ceaabafd",
+          "topology.cisco.vk/app-worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-app-hosting",
+          "topology.cisco.vk/device-name": "c9k-stdcopyfix-20261105",
+          "topology.cisco.vk/device-namespace": "cvk-stdcopyfix-20261105",
+          "topology.cisco.vk/device-uid": "d904e1a0-fc5c-4a5b-9b9b-6e249a90d009",
+          "topology.cisco.vk/lease-purpose": "config-family",
+          "topology.cisco.vk/managed": "true",
+          "topology.cisco.vk/network-worker-pod-name": "ud904e1a0-fc5c-4a5b-9b9b-6e249a90d009-network-77d599fd9d-7l426",
+          "topology.cisco.vk/network-worker-pod-uid": "c996abc8-f594-4c6b-b2bc-1e1621e0d785",
+          "topology.cisco.vk/network-worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-network-management",
+          "topology.cisco.vk/node-name": "c9k-stdcopyfix-20261105",
+          "topology.cisco.vk/node-uid": "2f9be910-1f41-4ce1-84c5-9e35a6cfa94a",
+          "topology.cisco.vk/retain-lease": "true",
+          "topology.cisco.vk/worker-protocol": "rollout-v1",
+          "topology.cisco.vk/worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-network-management"
+        },
+        "creationTimestamp": "2026-11-05T20:18:09Z",
+        "labels": {
+          "cisco.vk/device": "device-a6a123d578f69ec1",
+          "cisco.vk/family": "ip_name_server"
+        },
+        "name": "cvk-device-a6a123d578f69ec1-ip-name-server-40d50818",
+        "namespace": "cvk-stdcopyfix-20261105",
+        "resourceVersion": "2000",
+        "uid": "7abe211d-44bc-4582-a2d3-e8a63f94f665"
+      },
+      "spec": {}
+    },
+    {
+      "apiVersion": "coordination.k8s.io/v1",
+      "kind": "Lease",
+      "metadata": {
+        "annotations": {
+          "topology.cisco.vk/app-worker-pod-name": "c9k-stdcopyfix-20261105-vk-74b589d-jkrtp",
+          "topology.cisco.vk/app-worker-pod-uid": "abd977b5-fb36-4fdd-b0c9-d6e0ceaabafd",
+          "topology.cisco.vk/app-worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-app-hosting",
+          "topology.cisco.vk/device-name": "c9k-stdcopyfix-20261105",
+          "topology.cisco.vk/device-namespace": "cvk-stdcopyfix-20261105",
+          "topology.cisco.vk/device-uid": "d904e1a0-fc5c-4a5b-9b9b-6e249a90d009",
+          "topology.cisco.vk/lease-purpose": "config-family",
+          "topology.cisco.vk/managed": "true",
+          "topology.cisco.vk/network-worker-pod-name": "ud904e1a0-fc5c-4a5b-9b9b-6e249a90d009-network-77d599fd9d-7l426",
+          "topology.cisco.vk/network-worker-pod-uid": "c996abc8-f594-4c6b-b2bc-1e1621e0d785",
+          "topology.cisco.vk/network-worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-network-management",
+          "topology.cisco.vk/node-name": "c9k-stdcopyfix-20261105",
+          "topology.cisco.vk/node-uid": "2f9be910-1f41-4ce1-84c5-9e35a6cfa94a",
+          "topology.cisco.vk/retain-lease": "true",
+          "topology.cisco.vk/worker-protocol": "rollout-v1",
+          "topology.cisco.vk/worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-network-management"
+        },
+        "creationTimestamp": "2026-11-05T20:18:09Z",
+        "labels": {
+          "cisco.vk/device": "device-a6a123d578f69ec1",
+          "cisco.vk/family": "ip_nat_inside_source"
+        },
+        "name": "cvk-device-a6a123d578f69ec1-ip-nat-inside-source-9f67f47b",
+        "namespace": "cvk-stdcopyfix-20261105",
+        "resourceVersion": "2001",
+        "uid": "5be87e23-b2d7-4061-9c6d-b290a3e2e2da"
+      },
+      "spec": {}
+    },
+    {
+      "apiVersion": "coordination.k8s.io/v1",
+      "kind": "Lease",
+      "metadata": {
+        "annotations": {
+          "topology.cisco.vk/app-worker-pod-name": "c9k-stdcopyfix-20261105-vk-74b589d-jkrtp",
+          "topology.cisco.vk/app-worker-pod-uid": "abd977b5-fb36-4fdd-b0c9-d6e0ceaabafd",
+          "topology.cisco.vk/app-worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-app-hosting",
+          "topology.cisco.vk/device-name": "c9k-stdcopyfix-20261105",
+          "topology.cisco.vk/device-namespace": "cvk-stdcopyfix-20261105",
+          "topology.cisco.vk/device-uid": "d904e1a0-fc5c-4a5b-9b9b-6e249a90d009",
+          "topology.cisco.vk/lease-purpose": "config-family",
+          "topology.cisco.vk/managed": "true",
+          "topology.cisco.vk/network-worker-pod-name": "ud904e1a0-fc5c-4a5b-9b9b-6e249a90d009-network-77d599fd9d-7l426",
+          "topology.cisco.vk/network-worker-pod-uid": "c996abc8-f594-4c6b-b2bc-1e1621e0d785",
+          "topology.cisco.vk/network-worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-network-management",
+          "topology.cisco.vk/node-name": "c9k-stdcopyfix-20261105",
+          "topology.cisco.vk/node-uid": "2f9be910-1f41-4ce1-84c5-9e35a6cfa94a",
+          "topology.cisco.vk/retain-lease": "true",
+          "topology.cisco.vk/worker-protocol": "rollout-v1",
+          "topology.cisco.vk/worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-network-management"
+        },
+        "creationTimestamp": "2026-11-05T20:18:09Z",
+        "labels": {
+          "cisco.vk/device": "device-a6a123d578f69ec1",
+          "cisco.vk/family": "ip_nat_pool"
+        },
+        "name": "cvk-device-a6a123d578f69ec1-ip-nat-pool-1aadbc5a",
+        "namespace": "cvk-stdcopyfix-20261105",
+        "resourceVersion": "2002",
+        "uid": "b7ff6e61-cd98-4a8c-9a23-3de01e8e3dd6"
+      },
+      "spec": {}
+    },
+    {
+      "apiVersion": "coordination.k8s.io/v1",
+      "kind": "Lease",
+      "metadata": {
+        "annotations": {
+          "topology.cisco.vk/app-worker-pod-name": "c9k-stdcopyfix-20261105-vk-74b589d-jkrtp",
+          "topology.cisco.vk/app-worker-pod-uid": "abd977b5-fb36-4fdd-b0c9-d6e0ceaabafd",
+          "topology.cisco.vk/app-worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-app-hosting",
+          "topology.cisco.vk/device-name": "c9k-stdcopyfix-20261105",
+          "topology.cisco.vk/device-namespace": "cvk-stdcopyfix-20261105",
+          "topology.cisco.vk/device-uid": "d904e1a0-fc5c-4a5b-9b9b-6e249a90d009",
+          "topology.cisco.vk/lease-purpose": "config-family",
+          "topology.cisco.vk/managed": "true",
+          "topology.cisco.vk/network-worker-pod-name": "ud904e1a0-fc5c-4a5b-9b9b-6e249a90d009-network-77d599fd9d-7l426",
+          "topology.cisco.vk/network-worker-pod-uid": "c996abc8-f594-4c6b-b2bc-1e1621e0d785",
+          "topology.cisco.vk/network-worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-network-management",
+          "topology.cisco.vk/node-name": "c9k-stdcopyfix-20261105",
+          "topology.cisco.vk/node-uid": "2f9be910-1f41-4ce1-84c5-9e35a6cfa94a",
+          "topology.cisco.vk/retain-lease": "true",
+          "topology.cisco.vk/worker-protocol": "rollout-v1",
+          "topology.cisco.vk/worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-network-management"
+        },
+        "creationTimestamp": "2026-11-05T20:18:09Z",
+        "labels": {
+          "cisco.vk/device": "device-a6a123d578f69ec1",
+          "cisco.vk/family": "ip_ssh"
+        },
+        "name": "cvk-device-a6a123d578f69ec1-ip-ssh-56ae2910",
+        "namespace": "cvk-stdcopyfix-20261105",
+        "resourceVersion": "2003",
+        "uid": "89a7bf0b-44f3-4d77-a795-a54f3d165789"
+      },
+      "spec": {}
+    },
+    {
+      "apiVersion": "coordination.k8s.io/v1",
+      "kind": "Lease",
+      "metadata": {
+        "annotations": {
+          "topology.cisco.vk/app-worker-pod-name": "c9k-stdcopyfix-20261105-vk-74b589d-jkrtp",
+          "topology.cisco.vk/app-worker-pod-uid": "abd977b5-fb36-4fdd-b0c9-d6e0ceaabafd",
+          "topology.cisco.vk/app-worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-app-hosting",
+          "topology.cisco.vk/device-name": "c9k-stdcopyfix-20261105",
+          "topology.cisco.vk/device-namespace": "cvk-stdcopyfix-20261105",
+          "topology.cisco.vk/device-uid": "d904e1a0-fc5c-4a5b-9b9b-6e249a90d009",
+          "topology.cisco.vk/lease-purpose": "config-family",
+          "topology.cisco.vk/managed": "true",
+          "topology.cisco.vk/network-worker-pod-name": "ud904e1a0-fc5c-4a5b-9b9b-6e249a90d009-network-77d599fd9d-7l426",
+          "topology.cisco.vk/network-worker-pod-uid": "c996abc8-f594-4c6b-b2bc-1e1621e0d785",
+          "topology.cisco.vk/network-worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-network-management",
+          "topology.cisco.vk/node-name": "c9k-stdcopyfix-20261105",
+          "topology.cisco.vk/node-uid": "2f9be910-1f41-4ce1-84c5-9e35a6cfa94a",
+          "topology.cisco.vk/retain-lease": "true",
+          "topology.cisco.vk/worker-protocol": "rollout-v1",
+          "topology.cisco.vk/worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-network-management"
+        },
+        "creationTimestamp": "2026-11-05T20:18:09Z",
+        "labels": {
+          "cisco.vk/device": "device-a6a123d578f69ec1",
+          "cisco.vk/family": "ipv6_access_list_extended"
+        },
+        "name": "cvk-device-a6a123d578f69ec1-ipv6-access-list-extended-9b12af4a",
+        "namespace": "cvk-stdcopyfix-20261105",
+        "resourceVersion": "2004",
+        "uid": "96aa4c9f-6967-4b0a-a57e-01d056e8012e"
+      },
+      "spec": {}
+    },
+    {
+      "apiVersion": "coordination.k8s.io/v1",
+      "kind": "Lease",
+      "metadata": {
+        "annotations": {
+          "topology.cisco.vk/app-worker-pod-name": "c9k-stdcopyfix-20261105-vk-74b589d-jkrtp",
+          "topology.cisco.vk/app-worker-pod-uid": "abd977b5-fb36-4fdd-b0c9-d6e0ceaabafd",
+          "topology.cisco.vk/app-worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-app-hosting",
+          "topology.cisco.vk/device-name": "c9k-stdcopyfix-20261105",
+          "topology.cisco.vk/device-namespace": "cvk-stdcopyfix-20261105",
+          "topology.cisco.vk/device-uid": "d904e1a0-fc5c-4a5b-9b9b-6e249a90d009",
+          "topology.cisco.vk/lease-purpose": "config-family",
+          "topology.cisco.vk/managed": "true",
+          "topology.cisco.vk/network-worker-pod-name": "ud904e1a0-fc5c-4a5b-9b9b-6e249a90d009-network-77d599fd9d-7l426",
+          "topology.cisco.vk/network-worker-pod-uid": "c996abc8-f594-4c6b-b2bc-1e1621e0d785",
+          "topology.cisco.vk/network-worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-network-management",
+          "topology.cisco.vk/node-name": "c9k-stdcopyfix-20261105",
+          "topology.cisco.vk/node-uid": "2f9be910-1f41-4ce1-84c5-9e35a6cfa94a",
+          "topology.cisco.vk/retain-lease": "true",
+          "topology.cisco.vk/worker-protocol": "rollout-v1",
+          "topology.cisco.vk/worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-network-management"
+        },
+        "creationTimestamp": "2026-11-05T20:18:09Z",
+        "labels": {
+          "cisco.vk/device": "device-a6a123d578f69ec1",
+          "cisco.vk/family": "ipv6_access_list_standard"
+        },
+        "name": "cvk-device-a6a123d578f69ec1-ipv6-access-list-standard-49627389",
+        "namespace": "cvk-stdcopyfix-20261105",
+        "resourceVersion": "2005",
+        "uid": "a2b5301c-7795-40b9-98bb-2180add912de"
+      },
+      "spec": {}
+    },
+    {
+      "apiVersion": "coordination.k8s.io/v1",
+      "kind": "Lease",
+      "metadata": {
+        "annotations": {
+          "topology.cisco.vk/app-worker-pod-name": "c9k-stdcopyfix-20261105-vk-74b589d-jkrtp",
+          "topology.cisco.vk/app-worker-pod-uid": "abd977b5-fb36-4fdd-b0c9-d6e0ceaabafd",
+          "topology.cisco.vk/app-worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-app-hosting",
+          "topology.cisco.vk/device-name": "c9k-stdcopyfix-20261105",
+          "topology.cisco.vk/device-namespace": "cvk-stdcopyfix-20261105",
+          "topology.cisco.vk/device-uid": "d904e1a0-fc5c-4a5b-9b9b-6e249a90d009",
+          "topology.cisco.vk/lease-purpose": "config-family",
+          "topology.cisco.vk/managed": "true",
+          "topology.cisco.vk/network-worker-pod-name": "ud904e1a0-fc5c-4a5b-9b9b-6e249a90d009-network-77d599fd9d-7l426",
+          "topology.cisco.vk/network-worker-pod-uid": "c996abc8-f594-4c6b-b2bc-1e1621e0d785",
+          "topology.cisco.vk/network-worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-network-management",
+          "topology.cisco.vk/node-name": "c9k-stdcopyfix-20261105",
+          "topology.cisco.vk/node-uid": "2f9be910-1f41-4ce1-84c5-9e35a6cfa94a",
+          "topology.cisco.vk/retain-lease": "true",
+          "topology.cisco.vk/worker-protocol": "rollout-v1",
+          "topology.cisco.vk/worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-network-management"
+        },
+        "creationTimestamp": "2026-11-05T20:18:09Z",
+        "labels": {
+          "cisco.vk/device": "device-a6a123d578f69ec1",
+          "cisco.vk/family": "ipv6_pim"
+        },
+        "name": "cvk-device-a6a123d578f69ec1-ipv6-pim-a561252f",
+        "namespace": "cvk-stdcopyfix-20261105",
+        "resourceVersion": "2006",
+        "uid": "1b129f1c-9160-4763-8d84-c52be9b8814a"
+      },
+      "spec": {}
+    },
+    {
+      "apiVersion": "coordination.k8s.io/v1",
+      "kind": "Lease",
+      "metadata": {
+        "annotations": {
+          "topology.cisco.vk/app-worker-pod-name": "c9k-stdcopyfix-20261105-vk-74b589d-jkrtp",
+          "topology.cisco.vk/app-worker-pod-uid": "abd977b5-fb36-4fdd-b0c9-d6e0ceaabafd",
+          "topology.cisco.vk/app-worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-app-hosting",
+          "topology.cisco.vk/device-name": "c9k-stdcopyfix-20261105",
+          "topology.cisco.vk/device-namespace": "cvk-stdcopyfix-20261105",
+          "topology.cisco.vk/device-uid": "d904e1a0-fc5c-4a5b-9b9b-6e249a90d009",
+          "topology.cisco.vk/lease-purpose": "config-family",
+          "topology.cisco.vk/managed": "true",
+          "topology.cisco.vk/network-worker-pod-name": "ud904e1a0-fc5c-4a5b-9b9b-6e249a90d009-network-77d599fd9d-7l426",
+          "topology.cisco.vk/network-worker-pod-uid": "c996abc8-f594-4c6b-b2bc-1e1621e0d785",
+          "topology.cisco.vk/network-worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-network-management",
+          "topology.cisco.vk/node-name": "c9k-stdcopyfix-20261105",
+          "topology.cisco.vk/node-uid": "2f9be910-1f41-4ce1-84c5-9e35a6cfa94a",
+          "topology.cisco.vk/retain-lease": "true",
+          "topology.cisco.vk/worker-protocol": "rollout-v1",
+          "topology.cisco.vk/worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-network-management"
+        },
+        "creationTimestamp": "2026-11-05T20:18:09Z",
+        "labels": {
+          "cisco.vk/device": "device-a6a123d578f69ec1",
+          "cisco.vk/family": "ipv6_prefix_list"
+        },
+        "name": "cvk-device-a6a123d578f69ec1-ipv6-prefix-list-9f2c0d67",
+        "namespace": "cvk-stdcopyfix-20261105",
+        "resourceVersion": "2008",
+        "uid": "d4266df0-aa92-46b1-a6a8-a04318153ac7"
+      },
+      "spec": {}
+    },
+    {
+      "apiVersion": "coordination.k8s.io/v1",
+      "kind": "Lease",
+      "metadata": {
+        "annotations": {
+          "topology.cisco.vk/app-worker-pod-name": "c9k-stdcopyfix-20261105-vk-74b589d-jkrtp",
+          "topology.cisco.vk/app-worker-pod-uid": "abd977b5-fb36-4fdd-b0c9-d6e0ceaabafd",
+          "topology.cisco.vk/app-worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-app-hosting",
+          "topology.cisco.vk/device-name": "c9k-stdcopyfix-20261105",
+          "topology.cisco.vk/device-namespace": "cvk-stdcopyfix-20261105",
+          "topology.cisco.vk/device-uid": "d904e1a0-fc5c-4a5b-9b9b-6e249a90d009",
+          "topology.cisco.vk/lease-purpose": "config-family",
+          "topology.cisco.vk/managed": "true",
+          "topology.cisco.vk/network-worker-pod-name": "ud904e1a0-fc5c-4a5b-9b9b-6e249a90d009-network-77d599fd9d-7l426",
+          "topology.cisco.vk/network-worker-pod-uid": "c996abc8-f594-4c6b-b2bc-1e1621e0d785",
+          "topology.cisco.vk/network-worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-network-management",
+          "topology.cisco.vk/node-name": "c9k-stdcopyfix-20261105",
+          "topology.cisco.vk/node-uid": "2f9be910-1f41-4ce1-84c5-9e35a6cfa94a",
+          "topology.cisco.vk/retain-lease": "true",
+          "topology.cisco.vk/worker-protocol": "rollout-v1",
+          "topology.cisco.vk/worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-network-management"
+        },
+        "creationTimestamp": "2026-11-05T20:18:09Z",
+        "labels": {
+          "cisco.vk/device": "device-a6a123d578f69ec1",
+          "cisco.vk/family": "isis"
+        },
+        "name": "cvk-device-a6a123d578f69ec1-isis-21d33242",
+        "namespace": "cvk-stdcopyfix-20261105",
+        "resourceVersion": "2009",
+        "uid": "7e879f0f-ff64-45e4-9f75-f1e12c36a9a9"
+      },
+      "spec": {}
+    },
+    {
+      "apiVersion": "coordination.k8s.io/v1",
+      "kind": "Lease",
+      "metadata": {
+        "annotations": {
+          "topology.cisco.vk/app-worker-pod-name": "c9k-stdcopyfix-20261105-vk-74b589d-jkrtp",
+          "topology.cisco.vk/app-worker-pod-uid": "abd977b5-fb36-4fdd-b0c9-d6e0ceaabafd",
+          "topology.cisco.vk/app-worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-app-hosting",
+          "topology.cisco.vk/device-name": "c9k-stdcopyfix-20261105",
+          "topology.cisco.vk/device-namespace": "cvk-stdcopyfix-20261105",
+          "topology.cisco.vk/device-uid": "d904e1a0-fc5c-4a5b-9b9b-6e249a90d009",
+          "topology.cisco.vk/lease-purpose": "config-family",
+          "topology.cisco.vk/managed": "true",
+          "topology.cisco.vk/network-worker-pod-name": "ud904e1a0-fc5c-4a5b-9b9b-6e249a90d009-network-77d599fd9d-7l426",
+          "topology.cisco.vk/network-worker-pod-uid": "c996abc8-f594-4c6b-b2bc-1e1621e0d785",
+          "topology.cisco.vk/network-worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-network-management",
+          "topology.cisco.vk/node-name": "c9k-stdcopyfix-20261105",
+          "topology.cisco.vk/node-uid": "2f9be910-1f41-4ce1-84c5-9e35a6cfa94a",
+          "topology.cisco.vk/retain-lease": "true",
+          "topology.cisco.vk/worker-protocol": "rollout-v1",
+          "topology.cisco.vk/worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-network-management"
+        },
+        "creationTimestamp": "2026-11-05T20:18:09Z",
+        "labels": {
+          "cisco.vk/device": "device-a6a123d578f69ec1",
+          "cisco.vk/family": "line"
+        },
+        "name": "cvk-device-a6a123d578f69ec1-line-8fc3c7fb",
+        "namespace": "cvk-stdcopyfix-20261105",
+        "resourceVersion": "2010",
+        "uid": "bc1d77b0-12d8-415b-b573-9daafbb9666d"
+      },
+      "spec": {}
+    },
+    {
+      "apiVersion": "coordination.k8s.io/v1",
+      "kind": "Lease",
+      "metadata": {
+        "annotations": {
+          "topology.cisco.vk/app-worker-pod-name": "c9k-stdcopyfix-20261105-vk-74b589d-jkrtp",
+          "topology.cisco.vk/app-worker-pod-uid": "abd977b5-fb36-4fdd-b0c9-d6e0ceaabafd",
+          "topology.cisco.vk/app-worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-app-hosting",
+          "topology.cisco.vk/device-name": "c9k-stdcopyfix-20261105",
+          "topology.cisco.vk/device-namespace": "cvk-stdcopyfix-20261105",
+          "topology.cisco.vk/device-uid": "d904e1a0-fc5c-4a5b-9b9b-6e249a90d009",
+          "topology.cisco.vk/lease-purpose": "config-family",
+          "topology.cisco.vk/managed": "true",
+          "topology.cisco.vk/network-worker-pod-name": "ud904e1a0-fc5c-4a5b-9b9b-6e249a90d009-network-77d599fd9d-7l426",
+          "topology.cisco.vk/network-worker-pod-uid": "c996abc8-f594-4c6b-b2bc-1e1621e0d785",
+          "topology.cisco.vk/network-worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-network-management",
+          "topology.cisco.vk/node-name": "c9k-stdcopyfix-20261105",
+          "topology.cisco.vk/node-uid": "2f9be910-1f41-4ce1-84c5-9e35a6cfa94a",
+          "topology.cisco.vk/retain-lease": "true",
+          "topology.cisco.vk/worker-protocol": "rollout-v1",
+          "topology.cisco.vk/worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-network-management"
+        },
+        "creationTimestamp": "2026-11-05T20:18:09Z",
+        "labels": {
+          "cisco.vk/device": "device-a6a123d578f69ec1",
+          "cisco.vk/family": "lldp"
+        },
+        "name": "cvk-device-a6a123d578f69ec1-lldp-727accc1",
+        "namespace": "cvk-stdcopyfix-20261105",
+        "resourceVersion": "2011",
+        "uid": "103acfeb-591c-44f4-bd24-a55efa4739e8"
+      },
+      "spec": {}
+    },
+    {
+      "apiVersion": "coordination.k8s.io/v1",
+      "kind": "Lease",
+      "metadata": {
+        "annotations": {
+          "topology.cisco.vk/app-worker-pod-name": "c9k-stdcopyfix-20261105-vk-74b589d-jkrtp",
+          "topology.cisco.vk/app-worker-pod-uid": "abd977b5-fb36-4fdd-b0c9-d6e0ceaabafd",
+          "topology.cisco.vk/app-worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-app-hosting",
+          "topology.cisco.vk/device-name": "c9k-stdcopyfix-20261105",
+          "topology.cisco.vk/device-namespace": "cvk-stdcopyfix-20261105",
+          "topology.cisco.vk/device-uid": "d904e1a0-fc5c-4a5b-9b9b-6e249a90d009",
+          "topology.cisco.vk/lease-purpose": "config-family",
+          "topology.cisco.vk/managed": "true",
+          "topology.cisco.vk/network-worker-pod-name": "ud904e1a0-fc5c-4a5b-9b9b-6e249a90d009-network-77d599fd9d-7l426",
+          "topology.cisco.vk/network-worker-pod-uid": "c996abc8-f594-4c6b-b2bc-1e1621e0d785",
+          "topology.cisco.vk/network-worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-network-management",
+          "topology.cisco.vk/node-name": "c9k-stdcopyfix-20261105",
+          "topology.cisco.vk/node-uid": "2f9be910-1f41-4ce1-84c5-9e35a6cfa94a",
+          "topology.cisco.vk/retain-lease": "true",
+          "topology.cisco.vk/worker-protocol": "rollout-v1",
+          "topology.cisco.vk/worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-network-management"
+        },
+        "creationTimestamp": "2026-11-05T20:18:09Z",
+        "labels": {
+          "cisco.vk/device": "device-a6a123d578f69ec1",
+          "cisco.vk/family": "logging"
+        },
+        "name": "cvk-device-a6a123d578f69ec1-logging-cf8cd44b",
+        "namespace": "cvk-stdcopyfix-20261105",
+        "resourceVersion": "2012",
+        "uid": "4e8eb29c-181c-42ee-9167-b7467c07d36a"
+      },
+      "spec": {}
+    },
+    {
+      "apiVersion": "coordination.k8s.io/v1",
+      "kind": "Lease",
+      "metadata": {
+        "annotations": {
+          "topology.cisco.vk/app-worker-pod-name": "c9k-stdcopyfix-20261105-vk-74b589d-jkrtp",
+          "topology.cisco.vk/app-worker-pod-uid": "abd977b5-fb36-4fdd-b0c9-d6e0ceaabafd",
+          "topology.cisco.vk/app-worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-app-hosting",
+          "topology.cisco.vk/device-name": "c9k-stdcopyfix-20261105",
+          "topology.cisco.vk/device-namespace": "cvk-stdcopyfix-20261105",
+          "topology.cisco.vk/device-uid": "d904e1a0-fc5c-4a5b-9b9b-6e249a90d009",
+          "topology.cisco.vk/lease-purpose": "config-family",
+          "topology.cisco.vk/managed": "true",
+          "topology.cisco.vk/network-worker-pod-name": "ud904e1a0-fc5c-4a5b-9b9b-6e249a90d009-network-77d599fd9d-7l426",
+          "topology.cisco.vk/network-worker-pod-uid": "c996abc8-f594-4c6b-b2bc-1e1621e0d785",
+          "topology.cisco.vk/network-worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-network-management",
+          "topology.cisco.vk/node-name": "c9k-stdcopyfix-20261105",
+          "topology.cisco.vk/node-uid": "2f9be910-1f41-4ce1-84c5-9e35a6cfa94a",
+          "topology.cisco.vk/retain-lease": "true",
+          "topology.cisco.vk/worker-protocol": "rollout-v1",
+          "topology.cisco.vk/worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-network-management"
+        },
+        "creationTimestamp": "2026-11-05T20:18:09Z",
+        "labels": {
+          "cisco.vk/device": "device-a6a123d578f69ec1",
+          "cisco.vk/family": "multicast_routing"
+        },
+        "name": "cvk-device-a6a123d578f69ec1-multicast-routing-a278ae8d",
+        "namespace": "cvk-stdcopyfix-20261105",
+        "resourceVersion": "2013",
+        "uid": "40ebec2a-d8a0-4e9a-bb0e-8caa40ca193f"
+      },
+      "spec": {}
+    },
+    {
+      "apiVersion": "coordination.k8s.io/v1",
+      "kind": "Lease",
+      "metadata": {
+        "annotations": {
+          "topology.cisco.vk/app-worker-pod-name": "c9k-stdcopyfix-20261105-vk-74b589d-jkrtp",
+          "topology.cisco.vk/app-worker-pod-uid": "abd977b5-fb36-4fdd-b0c9-d6e0ceaabafd",
+          "topology.cisco.vk/app-worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-app-hosting",
+          "topology.cisco.vk/device-name": "c9k-stdcopyfix-20261105",
+          "topology.cisco.vk/device-namespace": "cvk-stdcopyfix-20261105",
+          "topology.cisco.vk/device-uid": "d904e1a0-fc5c-4a5b-9b9b-6e249a90d009",
+          "topology.cisco.vk/lease-purpose": "config-family",
+          "topology.cisco.vk/managed": "true",
+          "topology.cisco.vk/network-worker-pod-name": "ud904e1a0-fc5c-4a5b-9b9b-6e249a90d009-network-77d599fd9d-7l426",
+          "topology.cisco.vk/network-worker-pod-uid": "c996abc8-f594-4c6b-b2bc-1e1621e0d785",
+          "topology.cisco.vk/network-worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-network-management",
+          "topology.cisco.vk/node-name": "c9k-stdcopyfix-20261105",
+          "topology.cisco.vk/node-uid": "2f9be910-1f41-4ce1-84c5-9e35a6cfa94a",
+          "topology.cisco.vk/retain-lease": "true",
+          "topology.cisco.vk/worker-protocol": "rollout-v1",
+          "topology.cisco.vk/worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-network-management"
+        },
+        "creationTimestamp": "2026-11-05T20:18:09Z",
+        "labels": {
+          "cisco.vk/device": "device-a6a123d578f69ec1",
+          "cisco.vk/family": "ntp"
+        },
+        "name": "cvk-device-a6a123d578f69ec1-ntp-41f7bf6b",
+        "namespace": "cvk-stdcopyfix-20261105",
+        "resourceVersion": "2014",
+        "uid": "39156301-a6f0-40db-8acb-7f354379b76e"
+      },
+      "spec": {}
+    },
+    {
+      "apiVersion": "coordination.k8s.io/v1",
+      "kind": "Lease",
+      "metadata": {
+        "annotations": {
+          "topology.cisco.vk/app-worker-pod-name": "c9k-stdcopyfix-20261105-vk-74b589d-jkrtp",
+          "topology.cisco.vk/app-worker-pod-uid": "abd977b5-fb36-4fdd-b0c9-d6e0ceaabafd",
+          "topology.cisco.vk/app-worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-app-hosting",
+          "topology.cisco.vk/device-name": "c9k-stdcopyfix-20261105",
+          "topology.cisco.vk/device-namespace": "cvk-stdcopyfix-20261105",
+          "topology.cisco.vk/device-uid": "d904e1a0-fc5c-4a5b-9b9b-6e249a90d009",
+          "topology.cisco.vk/lease-purpose": "config-family",
+          "topology.cisco.vk/managed": "true",
+          "topology.cisco.vk/network-worker-pod-name": "ud904e1a0-fc5c-4a5b-9b9b-6e249a90d009-network-77d599fd9d-7l426",
+          "topology.cisco.vk/network-worker-pod-uid": "c996abc8-f594-4c6b-b2bc-1e1621e0d785",
+          "topology.cisco.vk/network-worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-network-management",
+          "topology.cisco.vk/node-name": "c9k-stdcopyfix-20261105",
+          "topology.cisco.vk/node-uid": "2f9be910-1f41-4ce1-84c5-9e35a6cfa94a",
+          "topology.cisco.vk/retain-lease": "true",
+          "topology.cisco.vk/worker-protocol": "rollout-v1",
+          "topology.cisco.vk/worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-network-management"
+        },
+        "creationTimestamp": "2026-11-05T20:18:09Z",
+        "labels": {
+          "cisco.vk/device": "device-a6a123d578f69ec1",
+          "cisco.vk/family": "ospf"
+        },
+        "name": "cvk-device-a6a123d578f69ec1-ospf-8ba876c9",
+        "namespace": "cvk-stdcopyfix-20261105",
+        "resourceVersion": "2015",
+        "uid": "593db0f2-fa99-40cd-b825-ee654c679467"
+      },
+      "spec": {}
+    },
+    {
+      "apiVersion": "coordination.k8s.io/v1",
+      "kind": "Lease",
+      "metadata": {
+        "annotations": {
+          "topology.cisco.vk/app-worker-pod-name": "c9k-stdcopyfix-20261105-vk-74b589d-jkrtp",
+          "topology.cisco.vk/app-worker-pod-uid": "abd977b5-fb36-4fdd-b0c9-d6e0ceaabafd",
+          "topology.cisco.vk/app-worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-app-hosting",
+          "topology.cisco.vk/device-name": "c9k-stdcopyfix-20261105",
+          "topology.cisco.vk/device-namespace": "cvk-stdcopyfix-20261105",
+          "topology.cisco.vk/device-uid": "d904e1a0-fc5c-4a5b-9b9b-6e249a90d009",
+          "topology.cisco.vk/lease-purpose": "config-family",
+          "topology.cisco.vk/managed": "true",
+          "topology.cisco.vk/network-worker-pod-name": "ud904e1a0-fc5c-4a5b-9b9b-6e249a90d009-network-77d599fd9d-7l426",
+          "topology.cisco.vk/network-worker-pod-uid": "c996abc8-f594-4c6b-b2bc-1e1621e0d785",
+          "topology.cisco.vk/network-worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-network-management",
+          "topology.cisco.vk/node-name": "c9k-stdcopyfix-20261105",
+          "topology.cisco.vk/node-uid": "2f9be910-1f41-4ce1-84c5-9e35a6cfa94a",
+          "topology.cisco.vk/retain-lease": "true",
+          "topology.cisco.vk/worker-protocol": "rollout-v1",
+          "topology.cisco.vk/worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-network-management"
+        },
+        "creationTimestamp": "2026-11-05T20:18:09Z",
+        "labels": {
+          "cisco.vk/device": "device-a6a123d578f69ec1",
+          "cisco.vk/family": "pim"
+        },
+        "name": "cvk-device-a6a123d578f69ec1-pim-cdd06b80",
+        "namespace": "cvk-stdcopyfix-20261105",
+        "resourceVersion": "2016",
+        "uid": "f915f54a-f3c9-44b2-8f34-87926c80fa3a"
+      },
+      "spec": {}
+    },
+    {
+      "apiVersion": "coordination.k8s.io/v1",
+      "kind": "Lease",
+      "metadata": {
+        "annotations": {
+          "topology.cisco.vk/app-worker-pod-name": "c9k-stdcopyfix-20261105-vk-74b589d-jkrtp",
+          "topology.cisco.vk/app-worker-pod-uid": "abd977b5-fb36-4fdd-b0c9-d6e0ceaabafd",
+          "topology.cisco.vk/app-worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-app-hosting",
+          "topology.cisco.vk/device-name": "c9k-stdcopyfix-20261105",
+          "topology.cisco.vk/device-namespace": "cvk-stdcopyfix-20261105",
+          "topology.cisco.vk/device-uid": "d904e1a0-fc5c-4a5b-9b9b-6e249a90d009",
+          "topology.cisco.vk/lease-purpose": "config-family",
+          "topology.cisco.vk/managed": "true",
+          "topology.cisco.vk/network-worker-pod-name": "ud904e1a0-fc5c-4a5b-9b9b-6e249a90d009-network-77d599fd9d-7l426",
+          "topology.cisco.vk/network-worker-pod-uid": "c996abc8-f594-4c6b-b2bc-1e1621e0d785",
+          "topology.cisco.vk/network-worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-network-management",
+          "topology.cisco.vk/node-name": "c9k-stdcopyfix-20261105",
+          "topology.cisco.vk/node-uid": "2f9be910-1f41-4ce1-84c5-9e35a6cfa94a",
+          "topology.cisco.vk/retain-lease": "true",
+          "topology.cisco.vk/worker-protocol": "rollout-v1",
+          "topology.cisco.vk/worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-network-management"
+        },
+        "creationTimestamp": "2026-11-05T20:18:09Z",
+        "labels": {
+          "cisco.vk/device": "device-a6a123d578f69ec1",
+          "cisco.vk/family": "policy_map"
+        },
+        "name": "cvk-device-a6a123d578f69ec1-policy-map-b01dae46",
+        "namespace": "cvk-stdcopyfix-20261105",
+        "resourceVersion": "2017",
+        "uid": "798f3887-e099-46c3-a921-2212e1350173"
+      },
+      "spec": {}
+    },
+    {
+      "apiVersion": "coordination.k8s.io/v1",
+      "kind": "Lease",
+      "metadata": {
+        "annotations": {
+          "topology.cisco.vk/app-worker-pod-name": "c9k-stdcopyfix-20261105-vk-74b589d-jkrtp",
+          "topology.cisco.vk/app-worker-pod-uid": "abd977b5-fb36-4fdd-b0c9-d6e0ceaabafd",
+          "topology.cisco.vk/app-worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-app-hosting",
+          "topology.cisco.vk/device-name": "c9k-stdcopyfix-20261105",
+          "topology.cisco.vk/device-namespace": "cvk-stdcopyfix-20261105",
+          "topology.cisco.vk/device-uid": "d904e1a0-fc5c-4a5b-9b9b-6e249a90d009",
+          "topology.cisco.vk/lease-purpose": "config-family",
+          "topology.cisco.vk/managed": "true",
+          "topology.cisco.vk/network-worker-pod-name": "ud904e1a0-fc5c-4a5b-9b9b-6e249a90d009-network-77d599fd9d-7l426",
+          "topology.cisco.vk/network-worker-pod-uid": "c996abc8-f594-4c6b-b2bc-1e1621e0d785",
+          "topology.cisco.vk/network-worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-network-management",
+          "topology.cisco.vk/node-name": "c9k-stdcopyfix-20261105",
+          "topology.cisco.vk/node-uid": "2f9be910-1f41-4ce1-84c5-9e35a6cfa94a",
+          "topology.cisco.vk/retain-lease": "true",
+          "topology.cisco.vk/worker-protocol": "rollout-v1",
+          "topology.cisco.vk/worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-network-management"
+        },
+        "creationTimestamp": "2026-11-05T20:18:09Z",
+        "labels": {
+          "cisco.vk/device": "device-a6a123d578f69ec1",
+          "cisco.vk/family": "prefix_list"
+        },
+        "name": "cvk-device-a6a123d578f69ec1-prefix-list-d5412528",
+        "namespace": "cvk-stdcopyfix-20261105",
+        "resourceVersion": "2018",
+        "uid": "f58b09ef-a6b7-4e12-b70a-08397d8d46d9"
+      },
+      "spec": {}
+    },
+    {
+      "apiVersion": "coordination.k8s.io/v1",
+      "kind": "Lease",
+      "metadata": {
+        "annotations": {
+          "topology.cisco.vk/app-worker-pod-name": "c9k-stdcopyfix-20261105-vk-74b589d-jkrtp",
+          "topology.cisco.vk/app-worker-pod-uid": "abd977b5-fb36-4fdd-b0c9-d6e0ceaabafd",
+          "topology.cisco.vk/app-worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-app-hosting",
+          "topology.cisco.vk/device-name": "c9k-stdcopyfix-20261105",
+          "topology.cisco.vk/device-namespace": "cvk-stdcopyfix-20261105",
+          "topology.cisco.vk/device-uid": "d904e1a0-fc5c-4a5b-9b9b-6e249a90d009",
+          "topology.cisco.vk/lease-purpose": "config-family",
+          "topology.cisco.vk/managed": "true",
+          "topology.cisco.vk/network-worker-pod-name": "ud904e1a0-fc5c-4a5b-9b9b-6e249a90d009-network-77d599fd9d-7l426",
+          "topology.cisco.vk/network-worker-pod-uid": "c996abc8-f594-4c6b-b2bc-1e1621e0d785",
+          "topology.cisco.vk/network-worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-network-management",
+          "topology.cisco.vk/node-name": "c9k-stdcopyfix-20261105",
+          "topology.cisco.vk/node-uid": "2f9be910-1f41-4ce1-84c5-9e35a6cfa94a",
+          "topology.cisco.vk/retain-lease": "true",
+          "topology.cisco.vk/worker-protocol": "rollout-v1",
+          "topology.cisco.vk/worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-network-management"
+        },
+        "creationTimestamp": "2026-11-05T20:18:09Z",
+        "labels": {
+          "cisco.vk/device": "device-a6a123d578f69ec1",
+          "cisco.vk/family": "radius_server"
+        },
+        "name": "cvk-device-a6a123d578f69ec1-radius-server-75034e89",
+        "namespace": "cvk-stdcopyfix-20261105",
+        "resourceVersion": "2019",
+        "uid": "eea212ee-ae69-4ae7-855d-668fd1052995"
+      },
+      "spec": {}
+    },
+    {
+      "apiVersion": "coordination.k8s.io/v1",
+      "kind": "Lease",
+      "metadata": {
+        "annotations": {
+          "topology.cisco.vk/app-worker-pod-name": "c9k-stdcopyfix-20261105-vk-74b589d-jkrtp",
+          "topology.cisco.vk/app-worker-pod-uid": "abd977b5-fb36-4fdd-b0c9-d6e0ceaabafd",
+          "topology.cisco.vk/app-worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-app-hosting",
+          "topology.cisco.vk/device-name": "c9k-stdcopyfix-20261105",
+          "topology.cisco.vk/device-namespace": "cvk-stdcopyfix-20261105",
+          "topology.cisco.vk/device-uid": "d904e1a0-fc5c-4a5b-9b9b-6e249a90d009",
+          "topology.cisco.vk/lease-purpose": "config-family",
+          "topology.cisco.vk/managed": "true",
+          "topology.cisco.vk/network-worker-pod-name": "ud904e1a0-fc5c-4a5b-9b9b-6e249a90d009-network-77d599fd9d-7l426",
+          "topology.cisco.vk/network-worker-pod-uid": "c996abc8-f594-4c6b-b2bc-1e1621e0d785",
+          "topology.cisco.vk/network-worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-network-management",
+          "topology.cisco.vk/node-name": "c9k-stdcopyfix-20261105",
+          "topology.cisco.vk/node-uid": "2f9be910-1f41-4ce1-84c5-9e35a6cfa94a",
+          "topology.cisco.vk/retain-lease": "true",
+          "topology.cisco.vk/worker-protocol": "rollout-v1",
+          "topology.cisco.vk/worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-network-management"
+        },
+        "creationTimestamp": "2026-11-05T20:18:09Z",
+        "labels": {
+          "cisco.vk/device": "device-a6a123d578f69ec1",
+          "cisco.vk/family": "route_map"
+        },
+        "name": "cvk-device-a6a123d578f69ec1-route-map-ec4f67e1",
+        "namespace": "cvk-stdcopyfix-20261105",
+        "resourceVersion": "2020",
+        "uid": "8d7566e7-b403-47a2-800b-139e39d111b3"
+      },
+      "spec": {}
+    },
+    {
+      "apiVersion": "coordination.k8s.io/v1",
+      "kind": "Lease",
+      "metadata": {
+        "annotations": {
+          "topology.cisco.vk/app-worker-pod-name": "c9k-stdcopyfix-20261105-vk-74b589d-jkrtp",
+          "topology.cisco.vk/app-worker-pod-uid": "abd977b5-fb36-4fdd-b0c9-d6e0ceaabafd",
+          "topology.cisco.vk/app-worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-app-hosting",
+          "topology.cisco.vk/device-name": "c9k-stdcopyfix-20261105",
+          "topology.cisco.vk/device-namespace": "cvk-stdcopyfix-20261105",
+          "topology.cisco.vk/device-uid": "d904e1a0-fc5c-4a5b-9b9b-6e249a90d009",
+          "topology.cisco.vk/lease-purpose": "config-family",
+          "topology.cisco.vk/managed": "true",
+          "topology.cisco.vk/network-worker-pod-name": "ud904e1a0-fc5c-4a5b-9b9b-6e249a90d009-network-77d599fd9d-7l426",
+          "topology.cisco.vk/network-worker-pod-uid": "c996abc8-f594-4c6b-b2bc-1e1621e0d785",
+          "topology.cisco.vk/network-worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-network-management",
+          "topology.cisco.vk/node-name": "c9k-stdcopyfix-20261105",
+          "topology.cisco.vk/node-uid": "2f9be910-1f41-4ce1-84c5-9e35a6cfa94a",
+          "topology.cisco.vk/retain-lease": "true",
+          "topology.cisco.vk/worker-protocol": "rollout-v1",
+          "topology.cisco.vk/worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-network-management"
+        },
+        "creationTimestamp": "2026-11-05T20:18:09Z",
+        "labels": {
+          "cisco.vk/device": "device-a6a123d578f69ec1",
+          "cisco.vk/family": "snmp_server"
+        },
+        "name": "cvk-device-a6a123d578f69ec1-snmp-server-7d66f6ed",
+        "namespace": "cvk-stdcopyfix-20261105",
+        "resourceVersion": "2021",
+        "uid": "4cdab678-26a6-4c52-83a1-7abe99bc82a3"
+      },
+      "spec": {}
+    },
+    {
+      "apiVersion": "coordination.k8s.io/v1",
+      "kind": "Lease",
+      "metadata": {
+        "annotations": {
+          "topology.cisco.vk/app-worker-pod-name": "c9k-stdcopyfix-20261105-vk-74b589d-jkrtp",
+          "topology.cisco.vk/app-worker-pod-uid": "abd977b5-fb36-4fdd-b0c9-d6e0ceaabafd",
+          "topology.cisco.vk/app-worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-app-hosting",
+          "topology.cisco.vk/device-name": "c9k-stdcopyfix-20261105",
+          "topology.cisco.vk/device-namespace": "cvk-stdcopyfix-20261105",
+          "topology.cisco.vk/device-uid": "d904e1a0-fc5c-4a5b-9b9b-6e249a90d009",
+          "topology.cisco.vk/lease-purpose": "config-family",
+          "topology.cisco.vk/managed": "true",
+          "topology.cisco.vk/network-worker-pod-name": "ud904e1a0-fc5c-4a5b-9b9b-6e249a90d009-network-77d599fd9d-7l426",
+          "topology.cisco.vk/network-worker-pod-uid": "c996abc8-f594-4c6b-b2bc-1e1621e0d785",
+          "topology.cisco.vk/network-worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-network-management",
+          "topology.cisco.vk/node-name": "c9k-stdcopyfix-20261105",
+          "topology.cisco.vk/node-uid": "2f9be910-1f41-4ce1-84c5-9e35a6cfa94a",
+          "topology.cisco.vk/retain-lease": "true",
+          "topology.cisco.vk/worker-protocol": "rollout-v1",
+          "topology.cisco.vk/worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-network-management"
+        },
+        "creationTimestamp": "2026-11-05T20:18:09Z",
+        "labels": {
+          "cisco.vk/device": "device-a6a123d578f69ec1",
+          "cisco.vk/family": "spanning_tree"
+        },
+        "name": "cvk-device-a6a123d578f69ec1-spanning-tree-37559f0a",
+        "namespace": "cvk-stdcopyfix-20261105",
+        "resourceVersion": "2022",
+        "uid": "974242ba-f90e-4ad8-a0fa-94ec34ff4e76"
+      },
+      "spec": {}
+    },
+    {
+      "apiVersion": "coordination.k8s.io/v1",
+      "kind": "Lease",
+      "metadata": {
+        "annotations": {
+          "topology.cisco.vk/app-worker-pod-name": "c9k-stdcopyfix-20261105-vk-74b589d-jkrtp",
+          "topology.cisco.vk/app-worker-pod-uid": "abd977b5-fb36-4fdd-b0c9-d6e0ceaabafd",
+          "topology.cisco.vk/app-worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-app-hosting",
+          "topology.cisco.vk/device-name": "c9k-stdcopyfix-20261105",
+          "topology.cisco.vk/device-namespace": "cvk-stdcopyfix-20261105",
+          "topology.cisco.vk/device-uid": "d904e1a0-fc5c-4a5b-9b9b-6e249a90d009",
+          "topology.cisco.vk/lease-purpose": "config-family",
+          "topology.cisco.vk/managed": "true",
+          "topology.cisco.vk/network-worker-pod-name": "ud904e1a0-fc5c-4a5b-9b9b-6e249a90d009-network-77d599fd9d-7l426",
+          "topology.cisco.vk/network-worker-pod-uid": "c996abc8-f594-4c6b-b2bc-1e1621e0d785",
+          "topology.cisco.vk/network-worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-network-management",
+          "topology.cisco.vk/node-name": "c9k-stdcopyfix-20261105",
+          "topology.cisco.vk/node-uid": "2f9be910-1f41-4ce1-84c5-9e35a6cfa94a",
+          "topology.cisco.vk/retain-lease": "true",
+          "topology.cisco.vk/worker-protocol": "rollout-v1",
+          "topology.cisco.vk/worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-network-management"
+        },
+        "creationTimestamp": "2026-11-05T20:18:09Z",
+        "labels": {
+          "cisco.vk/device": "device-a6a123d578f69ec1",
+          "cisco.vk/family": "static_route"
+        },
+        "name": "cvk-device-a6a123d578f69ec1-static-route-c26d43d0",
+        "namespace": "cvk-stdcopyfix-20261105",
+        "resourceVersion": "2023",
+        "uid": "db304acc-6d89-4f6e-b110-100a40613060"
+      },
+      "spec": {}
+    },
+    {
+      "apiVersion": "coordination.k8s.io/v1",
+      "kind": "Lease",
+      "metadata": {
+        "annotations": {
+          "topology.cisco.vk/app-worker-pod-name": "c9k-stdcopyfix-20261105-vk-74b589d-jkrtp",
+          "topology.cisco.vk/app-worker-pod-uid": "abd977b5-fb36-4fdd-b0c9-d6e0ceaabafd",
+          "topology.cisco.vk/app-worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-app-hosting",
+          "topology.cisco.vk/device-name": "c9k-stdcopyfix-20261105",
+          "topology.cisco.vk/device-namespace": "cvk-stdcopyfix-20261105",
+          "topology.cisco.vk/device-uid": "d904e1a0-fc5c-4a5b-9b9b-6e249a90d009",
+          "topology.cisco.vk/lease-purpose": "config-family",
+          "topology.cisco.vk/managed": "true",
+          "topology.cisco.vk/network-worker-pod-name": "ud904e1a0-fc5c-4a5b-9b9b-6e249a90d009-network-77d599fd9d-7l426",
+          "topology.cisco.vk/network-worker-pod-uid": "c996abc8-f594-4c6b-b2bc-1e1621e0d785",
+          "topology.cisco.vk/network-worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-network-management",
+          "topology.cisco.vk/node-name": "c9k-stdcopyfix-20261105",
+          "topology.cisco.vk/node-uid": "2f9be910-1f41-4ce1-84c5-9e35a6cfa94a",
+          "topology.cisco.vk/retain-lease": "true",
+          "topology.cisco.vk/worker-protocol": "rollout-v1",
+          "topology.cisco.vk/worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-network-management"
+        },
+        "creationTimestamp": "2026-11-05T20:18:09Z",
+        "labels": {
+          "cisco.vk/device": "device-a6a123d578f69ec1",
+          "cisco.vk/family": "system"
+        },
+        "name": "cvk-device-a6a123d578f69ec1-system-120355a9",
+        "namespace": "cvk-stdcopyfix-20261105",
+        "resourceVersion": "2024",
+        "uid": "812baa2f-fb3a-4960-9c0a-8a01b4d9cbe3"
+      },
+      "spec": {}
+    },
+    {
+      "apiVersion": "coordination.k8s.io/v1",
+      "kind": "Lease",
+      "metadata": {
+        "annotations": {
+          "topology.cisco.vk/app-worker-pod-name": "c9k-stdcopyfix-20261105-vk-74b589d-jkrtp",
+          "topology.cisco.vk/app-worker-pod-uid": "abd977b5-fb36-4fdd-b0c9-d6e0ceaabafd",
+          "topology.cisco.vk/app-worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-app-hosting",
+          "topology.cisco.vk/device-name": "c9k-stdcopyfix-20261105",
+          "topology.cisco.vk/device-namespace": "cvk-stdcopyfix-20261105",
+          "topology.cisco.vk/device-uid": "d904e1a0-fc5c-4a5b-9b9b-6e249a90d009",
+          "topology.cisco.vk/lease-purpose": "config-family",
+          "topology.cisco.vk/managed": "true",
+          "topology.cisco.vk/network-worker-pod-name": "ud904e1a0-fc5c-4a5b-9b9b-6e249a90d009-network-77d599fd9d-7l426",
+          "topology.cisco.vk/network-worker-pod-uid": "c996abc8-f594-4c6b-b2bc-1e1621e0d785",
+          "topology.cisco.vk/network-worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-network-management",
+          "topology.cisco.vk/node-name": "c9k-stdcopyfix-20261105",
+          "topology.cisco.vk/node-uid": "2f9be910-1f41-4ce1-84c5-9e35a6cfa94a",
+          "topology.cisco.vk/retain-lease": "true",
+          "topology.cisco.vk/worker-protocol": "rollout-v1",
+          "topology.cisco.vk/worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-network-management"
+        },
+        "creationTimestamp": "2026-11-05T20:18:09Z",
+        "labels": {
+          "cisco.vk/device": "device-a6a123d578f69ec1",
+          "cisco.vk/family": "tacacs_server"
+        },
+        "name": "cvk-device-a6a123d578f69ec1-tacacs-server-63059ccc",
+        "namespace": "cvk-stdcopyfix-20261105",
+        "resourceVersion": "2025",
+        "uid": "f41c0eb2-2040-4dfa-a9d1-26dc11378688"
+      },
+      "spec": {}
+    },
+    {
+      "apiVersion": "coordination.k8s.io/v1",
+      "kind": "Lease",
+      "metadata": {
+        "annotations": {
+          "topology.cisco.vk/app-worker-pod-name": "c9k-stdcopyfix-20261105-vk-74b589d-jkrtp",
+          "topology.cisco.vk/app-worker-pod-uid": "abd977b5-fb36-4fdd-b0c9-d6e0ceaabafd",
+          "topology.cisco.vk/app-worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-app-hosting",
+          "topology.cisco.vk/device-name": "c9k-stdcopyfix-20261105",
+          "topology.cisco.vk/device-namespace": "cvk-stdcopyfix-20261105",
+          "topology.cisco.vk/device-uid": "d904e1a0-fc5c-4a5b-9b9b-6e249a90d009",
+          "topology.cisco.vk/lease-purpose": "config-family",
+          "topology.cisco.vk/managed": "true",
+          "topology.cisco.vk/network-worker-pod-name": "ud904e1a0-fc5c-4a5b-9b9b-6e249a90d009-network-77d599fd9d-7l426",
+          "topology.cisco.vk/network-worker-pod-uid": "c996abc8-f594-4c6b-b2bc-1e1621e0d785",
+          "topology.cisco.vk/network-worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-network-management",
+          "topology.cisco.vk/node-name": "c9k-stdcopyfix-20261105",
+          "topology.cisco.vk/node-uid": "2f9be910-1f41-4ce1-84c5-9e35a6cfa94a",
+          "topology.cisco.vk/retain-lease": "true",
+          "topology.cisco.vk/worker-protocol": "rollout-v1",
+          "topology.cisco.vk/worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-network-management"
+        },
+        "creationTimestamp": "2026-11-05T20:18:09Z",
+        "labels": {
+          "cisco.vk/device": "device-a6a123d578f69ec1",
+          "cisco.vk/family": "track"
+        },
+        "name": "cvk-device-a6a123d578f69ec1-track-c386b770",
+        "namespace": "cvk-stdcopyfix-20261105",
+        "resourceVersion": "2026",
+        "uid": "5b5cea0c-3b36-4942-959b-9fb08e82d6ba"
+      },
+      "spec": {}
+    },
+    {
+      "apiVersion": "coordination.k8s.io/v1",
+      "kind": "Lease",
+      "metadata": {
+        "annotations": {
+          "topology.cisco.vk/app-worker-pod-name": "c9k-stdcopyfix-20261105-vk-74b589d-jkrtp",
+          "topology.cisco.vk/app-worker-pod-uid": "abd977b5-fb36-4fdd-b0c9-d6e0ceaabafd",
+          "topology.cisco.vk/app-worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-app-hosting",
+          "topology.cisco.vk/device-name": "c9k-stdcopyfix-20261105",
+          "topology.cisco.vk/device-namespace": "cvk-stdcopyfix-20261105",
+          "topology.cisco.vk/device-uid": "d904e1a0-fc5c-4a5b-9b9b-6e249a90d009",
+          "topology.cisco.vk/lease-purpose": "config-family",
+          "topology.cisco.vk/managed": "true",
+          "topology.cisco.vk/network-worker-pod-name": "ud904e1a0-fc5c-4a5b-9b9b-6e249a90d009-network-77d599fd9d-7l426",
+          "topology.cisco.vk/network-worker-pod-uid": "c996abc8-f594-4c6b-b2bc-1e1621e0d785",
+          "topology.cisco.vk/network-worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-network-management",
+          "topology.cisco.vk/node-name": "c9k-stdcopyfix-20261105",
+          "topology.cisco.vk/node-uid": "2f9be910-1f41-4ce1-84c5-9e35a6cfa94a",
+          "topology.cisco.vk/retain-lease": "true",
+          "topology.cisco.vk/worker-protocol": "rollout-v1",
+          "topology.cisco.vk/worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-network-management"
+        },
+        "creationTimestamp": "2026-11-05T20:18:09Z",
+        "labels": {
+          "cisco.vk/device": "device-a6a123d578f69ec1",
+          "cisco.vk/family": "username"
+        },
+        "name": "cvk-device-a6a123d578f69ec1-username-23eb3030",
+        "namespace": "cvk-stdcopyfix-20261105",
+        "resourceVersion": "2027",
+        "uid": "11989b7b-3542-4652-87ed-45ace4c4b71d"
+      },
+      "spec": {}
+    },
+    {
+      "apiVersion": "coordination.k8s.io/v1",
+      "kind": "Lease",
+      "metadata": {
+        "annotations": {
+          "topology.cisco.vk/app-worker-pod-name": "c9k-stdcopyfix-20261105-vk-74b589d-jkrtp",
+          "topology.cisco.vk/app-worker-pod-uid": "abd977b5-fb36-4fdd-b0c9-d6e0ceaabafd",
+          "topology.cisco.vk/app-worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-app-hosting",
+          "topology.cisco.vk/device-name": "c9k-stdcopyfix-20261105",
+          "topology.cisco.vk/device-namespace": "cvk-stdcopyfix-20261105",
+          "topology.cisco.vk/device-uid": "d904e1a0-fc5c-4a5b-9b9b-6e249a90d009",
+          "topology.cisco.vk/lease-purpose": "config-family",
+          "topology.cisco.vk/managed": "true",
+          "topology.cisco.vk/network-worker-pod-name": "ud904e1a0-fc5c-4a5b-9b9b-6e249a90d009-network-77d599fd9d-7l426",
+          "topology.cisco.vk/network-worker-pod-uid": "c996abc8-f594-4c6b-b2bc-1e1621e0d785",
+          "topology.cisco.vk/network-worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-network-management",
+          "topology.cisco.vk/node-name": "c9k-stdcopyfix-20261105",
+          "topology.cisco.vk/node-uid": "2f9be910-1f41-4ce1-84c5-9e35a6cfa94a",
+          "topology.cisco.vk/retain-lease": "true",
+          "topology.cisco.vk/worker-protocol": "rollout-v1",
+          "topology.cisco.vk/worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-network-management"
+        },
+        "creationTimestamp": "2026-11-05T20:18:09Z",
+        "labels": {
+          "cisco.vk/device": "device-a6a123d578f69ec1",
+          "cisco.vk/family": "vlan"
+        },
+        "name": "cvk-device-a6a123d578f69ec1-vlan-2a841ba1",
+        "namespace": "cvk-stdcopyfix-20261105",
+        "resourceVersion": "2028",
+        "uid": "fa506efe-7b57-45a5-a190-0091e8d04967"
+      },
+      "spec": {}
+    },
+    {
+      "apiVersion": "coordination.k8s.io/v1",
+      "kind": "Lease",
+      "metadata": {
+        "annotations": {
+          "topology.cisco.vk/app-worker-pod-name": "c9k-stdcopyfix-20261105-vk-74b589d-jkrtp",
+          "topology.cisco.vk/app-worker-pod-uid": "abd977b5-fb36-4fdd-b0c9-d6e0ceaabafd",
+          "topology.cisco.vk/app-worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-app-hosting",
+          "topology.cisco.vk/device-name": "c9k-stdcopyfix-20261105",
+          "topology.cisco.vk/device-namespace": "cvk-stdcopyfix-20261105",
+          "topology.cisco.vk/device-uid": "d904e1a0-fc5c-4a5b-9b9b-6e249a90d009",
+          "topology.cisco.vk/lease-purpose": "config-family",
+          "topology.cisco.vk/managed": "true",
+          "topology.cisco.vk/network-worker-pod-name": "ud904e1a0-fc5c-4a5b-9b9b-6e249a90d009-network-77d599fd9d-7l426",
+          "topology.cisco.vk/network-worker-pod-uid": "c996abc8-f594-4c6b-b2bc-1e1621e0d785",
+          "topology.cisco.vk/network-worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-network-management",
+          "topology.cisco.vk/node-name": "c9k-stdcopyfix-20261105",
+          "topology.cisco.vk/node-uid": "2f9be910-1f41-4ce1-84c5-9e35a6cfa94a",
+          "topology.cisco.vk/retain-lease": "true",
+          "topology.cisco.vk/worker-protocol": "rollout-v1",
+          "topology.cisco.vk/worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-network-management"
+        },
+        "creationTimestamp": "2026-11-05T20:18:09Z",
+        "labels": {
+          "cisco.vk/device": "device-a6a123d578f69ec1",
+          "cisco.vk/family": "vrf"
+        },
+        "name": "cvk-device-a6a123d578f69ec1-vrf-a3ebf8f5",
+        "namespace": "cvk-stdcopyfix-20261105",
+        "resourceVersion": "2029",
+        "uid": "a74ac869-9d5a-4558-81bd-3c462d9d8d80"
+      },
+      "spec": {}
+    }
+  ],
+  "pods": [
+    {
+      "apiVersion": "v1",
+      "kind": "Pod",
+      "metadata": {
+        "annotations": {
+          "topology.cisco.vk/app-worker-pod-name": "c9k-stdcopyfix-20261105-vk-74b589d-jkrtp",
+          "topology.cisco.vk/app-worker-pod-uid": "abd977b5-fb36-4fdd-b0c9-d6e0ceaabafd",
+          "topology.cisco.vk/app-worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-app-hosting"
+        },
+        "creationTimestamp": "2026-11-05T21:00:36Z",
+        "generateName": "cvk-stdcopyfix-fixture-dc9fd8cd6-",
+        "generation": 1,
+        "labels": {
+          "app": "cvk-stdcopyfix-fixture",
+          "cert-case": "refresh",
+          "pod-template-hash": "dc9fd8cd6",
+          "qualification": "20261105-stdcopyfix",
+          "topology.kubernetes.io/region": "lab",
+          "topology.kubernetes.io/zone": "ux-agx"
+        },
+        "name": "cvk-stdcopyfix-fixture-dc9fd8cd6-mwp6w",
+        "namespace": "cvk-stdcopyfix-apps-20261105",
+        "ownerReferences": [
+          {
+            "apiVersion": "apps/v1",
+            "blockOwnerDeletion": true,
+            "controller": true,
+            "kind": "ReplicaSet",
+            "name": "cvk-stdcopyfix-fixture-dc9fd8cd6",
+            "uid": "4495ab4b-b18a-4845-ab5c-b8ef9a8f0f64"
+          }
+        ],
+        "resourceVersion": "8563",
+        "uid": "302b286a-f469-4fe7-92a4-2d963d266570"
+      },
+      "spec": {
+        "affinity": {
+          "nodeAffinity": {
+            "requiredDuringSchedulingIgnoredDuringExecution": {
+              "nodeSelectorTerms": [
+                {
+                  "matchFields": [
+                    {
+                      "key": "metadata.name",
+                      "operator": "In",
+                      "values": [
+                        "c9k-stdcopyfix-20261105"
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        },
+        "containers": [
+          {
+            "image": "https://192.168.129.111:18475/refresh.tar",
+            "imagePullPolicy": "Always",
+            "name": "agent",
+            "ports": [
+              {
+                "containerPort": 8080,
+                "protocol": "TCP"
+              }
+            ],
+            "resources": {
+              "limits": {
+                "memory": "128Mi"
+              },
+              "requests": {
+                "memory": "128Mi"
+              }
+            },
+            "terminationMessagePath": "/dev/termination-log",
+            "terminationMessagePolicy": "File",
+            "volumeMounts": [
+              {
+                "mountPath": "/var/run/secrets/kubernetes.io/serviceaccount",
+                "name": "kube-api-access-t9w7x",
+                "readOnly": true
+              }
+            ]
+          }
+        ],
+        "dnsPolicy": "ClusterFirst",
+        "enableServiceLinks": true,
+        "nodeName": "c9k-stdcopyfix-20261105",
+        "preemptionPolicy": "PreemptLowerPriority",
+        "priority": 0,
+        "restartPolicy": "Always",
+        "schedulerName": "default-scheduler",
+        "securityContext": {},
+        "serviceAccount": "default",
+        "serviceAccountName": "default",
+        "terminationGracePeriodSeconds": 30,
+        "tolerations": [
+          {
+            "effect": "NoSchedule",
+            "key": "cisco.vk/device",
+            "operator": "Exists"
+          },
+          {
+            "effect": "NoExecute",
+            "key": "node.kubernetes.io/not-ready",
+            "operator": "Exists",
+            "tolerationSeconds": 300
+          },
+          {
+            "effect": "NoExecute",
+            "key": "node.kubernetes.io/unreachable",
+            "operator": "Exists",
+            "tolerationSeconds": 300
+          }
+        ],
+        "volumes": [
+          {
+            "name": "kube-api-access-t9w7x",
+            "projected": {
+              "defaultMode": 420,
+              "sources": [
+                {
+                  "serviceAccountToken": {
+                    "expirationSeconds": 3607,
+                    "path": "token"
+                  }
+                },
+                {
+                  "configMap": {
+                    "items": [
+                      {
+                        "key": "ca.crt",
+                        "path": "ca.crt"
+                      }
+                    ],
+                    "name": "kube-root-ca.crt"
+                  }
+                },
+                {
+                  "downwardAPI": {
+                    "items": [
+                      {
+                        "fieldRef": {
+                          "apiVersion": "v1",
+                          "fieldPath": "metadata.namespace"
+                        },
+                        "path": "namespace"
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "status": {
+        "conditions": [
+          {
+            "lastProbeTime": null,
+            "lastTransitionTime": "2026-11-05T21:55:52Z",
+            "status": "False",
+            "type": "Initialized"
+          },
+          {
+            "lastProbeTime": null,
+            "lastTransitionTime": "2026-11-05T21:55:52Z",
+            "status": "False",
+            "type": "Ready"
+          },
+          {
+            "lastProbeTime": null,
+            "lastTransitionTime": "2026-11-05T21:55:52Z",
+            "status": "True",
+            "type": "PodScheduled"
+          }
+        ],
+        "containerStatuses": [
+          {
+            "image": "https://192.168.129.111:18475/refresh.tar",
+            "imageID": "https://192.168.129.111:18475/refresh.tar",
+            "lastState": {},
+            "name": "agent",
+            "ready": false,
+            "restartCount": 0,
+            "state": {
+              "waiting": {
+                "message": "Container has not yet been created on the device",
+                "reason": "ContainerCreating"
+              }
+            }
+          }
+        ],
+        "hostIP": "10.1.1.1",
+        "phase": "Pending",
+        "podIP": "0.0.0.0",
+        "podIPs": [
+          {
+            "ip": "0.0.0.0"
+          }
+        ],
+        "qosClass": "Burstable",
+        "startTime": "2026-11-05T21:55:52Z"
+      }
+    }
+  ],
+  "events": [
+    {
+      "apiVersion": "v1",
+      "count": 20,
+      "eventTime": null,
+      "firstTimestamp": "2026-11-05T21:00:36Z",
+      "involvedObject": {
+        "apiVersion": "v1",
+        "kind": "Pod",
+        "name": "cvk-stdcopyfix-fixture-dc9fd8cd6-mwp6w",
+        "namespace": "cvk-stdcopyfix-apps-20261105",
+        "resourceVersion": "4606",
+        "uid": "302b286a-f469-4fe7-92a4-2d963d266570"
+      },
+      "kind": "Event",
+      "lastTimestamp": "2026-11-06T06:50:32Z",
+      "message": "Pulling image https://192.168.129.111:18475/refresh.tar",
+      "metadata": {
+        "creationTimestamp": "2026-11-05T21:00:36Z",
+        "name": "cvk-stdcopyfix-fixture-dc9fd8cd6-mwp6w.18e541db36fd87a2",
+        "namespace": "cvk-stdcopyfix-apps-20261105",
+        "resourceVersion": "45402",
+        "uid": "bb3fcba5-e94a-49d9-91e6-a487ce42edf1"
+      },
+      "reason": "Pulling",
+      "reportingComponent": "cisco-virtual-kubelet",
+      "reportingInstance": "",
+      "source": {
+        "component": "cisco-virtual-kubelet"
+      },
+      "type": "Normal"
+    }
+  ],
+  "deployment": [
+    {
+      "apiVersion": "apps/v1",
+      "kind": "Deployment",
+      "metadata": {
+        "annotations": {
+          "deployment.kubernetes.io/revision": "3"
+        },
+        "creationTimestamp": "2026-11-05T20:19:08Z",
+        "generation": 7,
+        "labels": {
+          "qualification": "20261105-stdcopyfix"
+        },
+        "name": "cvk-stdcopyfix-fixture",
+        "namespace": "cvk-stdcopyfix-apps-20261105",
+        "resourceVersion": "5341",
+        "uid": "d6765439-a9ff-474f-adb2-2735359bbeb8"
+      },
+      "spec": {
+        "progressDeadlineSeconds": 600,
+        "replicas": 1,
+        "revisionHistoryLimit": 10,
+        "selector": {
+          "matchLabels": {
+            "app": "cvk-stdcopyfix-fixture"
+          }
+        },
+        "strategy": {
+          "type": "Recreate"
+        },
+        "template": {
+          "metadata": {
+            "labels": {
+              "app": "cvk-stdcopyfix-fixture",
+              "cert-case": "refresh",
+              "qualification": "20261105-stdcopyfix"
+            }
+          },
+          "spec": {
+            "affinity": {
+              "nodeAffinity": {
+                "requiredDuringSchedulingIgnoredDuringExecution": {
+                  "nodeSelectorTerms": [
+                    {
+                      "matchFields": [
+                        {
+                          "key": "metadata.name",
+                          "operator": "In",
+                          "values": [
+                            "c9k-stdcopyfix-20261105"
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              }
+            },
+            "containers": [
+              {
+                "image": "https://192.168.129.111:18475/refresh.tar",
+                "imagePullPolicy": "Always",
+                "name": "agent",
+                "ports": [
+                  {
+                    "containerPort": 8080,
+                    "protocol": "TCP"
+                  }
+                ],
+                "resources": {
+                  "limits": {
+                    "memory": "128Mi"
+                  },
+                  "requests": {
+                    "memory": "128Mi"
+                  }
+                },
+                "terminationMessagePath": "/dev/termination-log",
+                "terminationMessagePolicy": "File"
+              }
+            ],
+            "dnsPolicy": "ClusterFirst",
+            "restartPolicy": "Always",
+            "schedulerName": "default-scheduler",
+            "securityContext": {},
+            "terminationGracePeriodSeconds": 30,
+            "tolerations": [
+              {
+                "effect": "NoSchedule",
+                "key": "cisco.vk/device",
+                "operator": "Exists"
+              }
+            ]
+          }
+        }
+      },
+      "status": {
+        "conditions": [
+          {
+            "lastTransitionTime": "2026-11-05T21:00:36Z",
+            "lastUpdateTime": "2026-11-05T21:00:36Z",
+            "message": "Deployment does not have minimum availability.",
+            "reason": "MinimumReplicasUnavailable",
+            "status": "False",
+            "type": "Available"
+          },
+          {
+            "lastTransitionTime": "2026-11-05T21:10:37Z",
+            "lastUpdateTime": "2026-11-05T21:10:37Z",
+            "message": "ReplicaSet \"cvk-stdcopyfix-fixture-dc9fd8cd6\" has timed out progressing.",
+            "reason": "ProgressDeadlineExceeded",
+            "status": "False",
+            "type": "Progressing"
+          }
+        ],
+        "observedGeneration": 7,
+        "replicas": 1,
+        "terminatingReplicas": 0,
+        "unavailableReplicas": 1,
+        "updatedReplicas": 1
+      }
+    }
+  ],
+  "nodes": [
+    {
+      "apiVersion": "v1",
+      "kind": "Node",
+      "metadata": {
+        "annotations": {
+          "topology.cisco.vk/app-worker-pod-name": "c9k-stdcopyfix-20261105-vk-74b589d-jkrtp",
+          "topology.cisco.vk/app-worker-pod-uid": "abd977b5-fb36-4fdd-b0c9-d6e0ceaabafd",
+          "topology.cisco.vk/app-worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-app-hosting",
+          "topology.cisco.vk/device-name": "c9k-stdcopyfix-20261105",
+          "topology.cisco.vk/device-namespace": "cvk-stdcopyfix-20261105",
+          "topology.cisco.vk/device-uid": "d904e1a0-fc5c-4a5b-9b9b-6e249a90d009",
+          "topology.cisco.vk/managed": "true",
+          "topology.cisco.vk/managed-taints": "",
+          "topology.cisco.vk/network-worker-pod-name": "ud904e1a0-fc5c-4a5b-9b9b-6e249a90d009-network-77d599fd9d-7l426",
+          "topology.cisco.vk/network-worker-pod-uid": "c996abc8-f594-4c6b-b2bc-1e1621e0d785",
+          "topology.cisco.vk/network-worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-network-management",
+          "topology.cisco.vk/node-uid": "2f9be910-1f41-4ce1-84c5-9e35a6cfa94a",
+          "topology.cisco.vk/projected-keys": "kubernetes.io/hostname,platform,provider,topology.kubernetes.io/region,topology.kubernetes.io/zone,type",
+          "topology.cisco.vk/projection-hash": "sha256:e809d0cf19b8726458a1f87a32b18eb23bf305beee9cafcccd447dcc9e2de02a",
+          "topology.cisco.vk/worker-observed-revision": "sha256:99d726ce46e12717e574155bd5c34888767a382474d7aba13da7e2dcd898d300",
+          "topology.cisco.vk/worker-protocol": "rollout-v1",
+          "topology.cisco.vk/worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-app-hosting",
+          "virtual-kubelet.io/last-applied-node-status": "{\"capacity\":{\"memory\":\"2Gi\",\"pods\":\"1\",\"storage\":\"112487Mi\"},\"allocatable\":{\"memory\":\"2Gi\",\"pods\":\"1\",\"storage\":\"112487Mi\"},\"conditions\":[{\"type\":\"Ready\",\"status\":\"True\",\"lastHeartbeatTime\":\"2026-11-06T07:14:07Z\",\"lastTransitionTime\":\"2026-11-05T20:24:32Z\",\"reason\":\"KubeletReady\",\"message\":\"Cisco IOx is enabled and reachable\"},{\"type\":\"CiscoVirtualKubeletManagedReady\",\"status\":\"True\",\"lastHeartbeatTime\":\"2026-11-06T07:14:07Z\",\"lastTransitionTime\":\"2026-11-05T20:24:32Z\",\"reason\":\"StatusOnlyRolloutV1\",\"message\":\"worker is enforcing the rollout-v1 status-only Node writer contract\"},{\"type\":\"DiskPressure\",\"status\":\"False\",\"lastHeartbeatTime\":\"2026-11-06T07:14:07Z\",\"lastTransitionTime\":\"2026-11-05T20:24:32Z\",\"reason\":\"StorageAvailable\",\"message\":\"Sufficient storage available\"}],\"addresses\":[{\"type\":\"InternalIP\",\"address\":\"10.78.0.8\"}],\"daemonEndpoints\":{\"kubeletEndpoint\":{\"Port\":10250}},\"nodeInfo\":{\"machineID\":\"FCW2247C1AJ\",\"systemUUID\":\"FCW2247C1AJ\",\"bootID\":\"\",\"kernelVersion\":\"17.18.1\",\"osImage\":\"IOS-XE\",\"containerRuntimeVersion\":\"\",\"kubeletVersion\":\"v1.12.0\",\"kubeProxyVersion\":\"\",\"operatingSystem\":\"Cisco\",\"architecture\":\"C9300-24UX\"}}",
+          "virtual-kubelet.io/last-applied-object-meta": "{\"name\":\"c9k-stdcopyfix-20261105\",\"uid\":\"2f9be910-1f41-4ce1-84c5-9e35a6cfa94a\"}"
+        },
+        "creationTimestamp": "2026-11-05T20:18:05Z",
+        "labels": {
+          "kubernetes.io/hostname": "c9k-stdcopyfix-20261105",
+          "platform": "cisco-ios-xe",
+          "provider": "cisco-apphosting",
+          "topology.kubernetes.io/region": "lab",
+          "topology.kubernetes.io/zone": "ux-agx",
+          "type": "virtual-kubelet"
+        },
+        "name": "c9k-stdcopyfix-20261105",
+        "resourceVersion": "47018",
+        "uid": "2f9be910-1f41-4ce1-84c5-9e35a6cfa94a"
+      },
+      "spec": {},
+      "status": {
+        "addresses": [
+          {
+            "address": "10.78.0.8",
+            "type": "InternalIP"
+          }
+        ],
+        "allocatable": {
+          "memory": "2Gi",
+          "pods": "1",
+          "storage": "112487Mi"
+        },
+        "capacity": {
+          "memory": "2Gi",
+          "pods": "1",
+          "storage": "112487Mi"
+        },
+        "conditions": [
+          {
+            "lastHeartbeatTime": "2026-11-06T07:14:07Z",
+            "lastTransitionTime": "2026-11-05T20:24:32Z",
+            "message": "Cisco IOx is enabled and reachable",
+            "reason": "KubeletReady",
+            "status": "True",
+            "type": "Ready"
+          },
+          {
+            "lastHeartbeatTime": "2026-11-06T07:14:07Z",
+            "lastTransitionTime": "2026-11-05T20:24:32Z",
+            "message": "worker is enforcing the rollout-v1 status-only Node writer contract",
+            "reason": "StatusOnlyRolloutV1",
+            "status": "True",
+            "type": "CiscoVirtualKubeletManagedReady"
+          },
+          {
+            "lastHeartbeatTime": "2026-11-06T07:14:07Z",
+            "lastTransitionTime": "2026-11-05T20:24:32Z",
+            "message": "Sufficient storage available",
+            "reason": "StorageAvailable",
+            "status": "False",
+            "type": "DiskPressure"
+          }
+        ],
+        "daemonEndpoints": {
+          "kubeletEndpoint": {
+            "Port": 10250
+          }
+        },
+        "nodeInfo": {
+          "architecture": "C9300-24UX",
+          "bootID": "",
+          "containerRuntimeVersion": "",
+          "kernelVersion": "17.18.1",
+          "kubeProxyVersion": "",
+          "kubeletVersion": "v1.12.0",
+          "machineID": "FCW2247C1AJ",
+          "operatingSystem": "Cisco",
+          "osImage": "IOS-XE",
+          "systemUUID": "FCW2247C1AJ"
+        }
+      }
+    }
+  ],
+  "journals": [],
+  "journalRoles": [],
+  "journalBindings": [],
+  "workers": [
+    {
+      "name": "c9k-stdcopyfix-20261105-vk-74b589d-jkrtp",
+      "uid": "abd977b5-fb36-4fdd-b0c9-d6e0ceaabafd",
+      "annotations": {
+        "cisco.vk/config-hash": "50a3f9f4",
+        "cisco.vk/credential-resource-version": "448",
+        "cisco.vk/device-tls-ca-resource-version": "450",
+        "topology.cisco.vk/worker-config-revision": "sha256:99d726ce46e12717e574155bd5c34888767a382474d7aba13da7e2dcd898d300"
+      },
+      "serviceAccount": "cvk-stdcopyfix-cisco-virtual-kubelet-app-hosting",
+      "status": {
+        "conditions": [
+          {
+            "lastProbeTime": null,
+            "lastTransitionTime": "2026-11-05T20:24:30Z",
+            "observedGeneration": 1,
+            "status": "True",
+            "type": "PodReadyToStartContainers"
+          },
+          {
+            "lastProbeTime": null,
+            "lastTransitionTime": "2026-11-05T20:24:18Z",
+            "observedGeneration": 1,
+            "status": "True",
+            "type": "Initialized"
+          },
+          {
+            "lastProbeTime": null,
+            "lastTransitionTime": "2026-11-05T20:24:30Z",
+            "observedGeneration": 1,
+            "status": "True",
+            "type": "Ready"
+          },
+          {
+            "lastProbeTime": null,
+            "lastTransitionTime": "2026-11-05T20:24:30Z",
+            "observedGeneration": 1,
+            "status": "True",
+            "type": "ContainersReady"
+          },
+          {
+            "lastProbeTime": null,
+            "lastTransitionTime": "2026-11-05T20:24:18Z",
+            "observedGeneration": 1,
+            "status": "True",
+            "type": "PodScheduled"
+          }
+        ],
+        "containerStatuses": [
+          {
+            "containerID": "containerd://8b4d039909ff6d0d5e4188caa05956f63ecb0671890feacc35eadb630e55a57d",
+            "image": "docker.io/library/cvk-stdcopyfix-qual:20261105-b55c3b3f6aed",
+            "imageID": "sha256:40a7e2843b2650363374b6a78785075d88b846d69c1b236a3ff29fd5cba32d71",
+            "lastState": {},
+            "name": "cisco-vk",
+            "ready": true,
+            "resources": {},
+            "restartCount": 0,
+            "started": true,
+            "state": {
+              "running": {
+                "startedAt": "2026-11-05T20:24:29Z"
+              }
+            },
+            "user": {
+              "linux": {
+                "gid": 65532,
+                "supplementalGroups": [
+                  65532
+                ],
+                "uid": 65532
+              }
+            },
+            "volumeMounts": [
+              {
+                "mountPath": "/etc/virtual-kubelet/config.yaml",
+                "name": "device-config",
+                "readOnly": true,
+                "recursiveReadOnly": "Disabled"
+              },
+              {
+                "mountPath": "/var/lib/virtual-kubelet",
+                "name": "tls-gen"
+              },
+              {
+                "mountPath": "/tmp",
+                "name": "tmp"
+              },
+              {
+                "mountPath": "/var/run/secrets/cisco-vk/device-tls-ca",
+                "name": "device-tls-ca",
+                "readOnly": true,
+                "recursiveReadOnly": "Disabled"
+              },
+              {
+                "mountPath": "/var/run/secrets/kubernetes.io/serviceaccount",
+                "name": "kube-api-access-btjkx",
+                "readOnly": true,
+                "recursiveReadOnly": "Disabled"
+              }
+            ]
+          }
+        ],
+        "hostIP": "172.17.0.3",
+        "hostIPs": [
+          {
+            "ip": "172.17.0.3"
+          }
+        ],
+        "observedGeneration": 1,
+        "phase": "Running",
+        "podIP": "10.78.0.8",
+        "podIPs": [
+          {
+            "ip": "10.78.0.8"
+          }
+        ],
+        "qosClass": "BestEffort",
+        "startTime": "2026-11-05T20:24:18Z"
+      }
+    }
+  ],
+  "nativeConfigAppIDs": [
+    "iris"
+  ],
+  "nativeApps": [
+    {
+      "appID": "iris",
+      "details": {
+        "state": "RUNNING"
+      }
+    },
+    {
+      "appID": "c9ktest",
+      "details": {
+        "state": "DEPLOYED"
+      }
+    }
+  ],
+  "probes": []
+}

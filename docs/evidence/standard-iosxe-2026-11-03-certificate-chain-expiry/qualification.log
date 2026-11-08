@@ -1,0 +1,66 @@
+namespace/cvk-stdchain-apps-20261103 created
+PASS native NTP clock/chain validity: baseline
+PASS native NTP clock/chain validity: valid-root-before
+deployment.apps/cvk-stdchain-fixture created
+{"atUTC": "2026-11-03T22:52:10.696501+00:00", "label": "valid-root-control", "release": "A", "podUIDs": ["4a4fad83-4b46-4fa7-a54b-1ff0d0758d83"], "nativeStates": {"iris": "RUNNING", "c9ktest": "DEPLOYED"}, "ready": false, "httpReleaseConfirmed": false, "oldNativeAppsAbsent": false, "artifactJournalCount": 0}
+{"atUTC": "2026-11-03T22:52:37.565085+00:00", "label": "valid-root-control", "release": "A", "podUIDs": ["4a4fad83-4b46-4fa7-a54b-1ff0d0758d83"], "nativeStates": {"iris": "RUNNING", "c9ktest": "DEPLOYED", "cvk0000_4a4fad834b464fa7a54b1ff0d0758d83": "RUNNING"}, "ready": true, "httpReleaseConfirmed": false, "oldNativeAppsAbsent": true, "artifactJournalCount": 0}
+PASS valid-root-control Ready/HTTP A without artifacts or journal
+PASS native NTP clock/chain validity: valid-root-after
+deployment.apps/cvk-stdchain-fixture scaled
+2026-11-03T22:53:01.502393+00:00 valid-root normal deletion pending; guard 2026-11-03 23:23:54.738477+00:00
+deployment.apps/cvk-stdchain-fixture configured
+{"atUTC": "2026-11-03T22:53:50.659851+00:00", "label": "valid-intermediate-control", "release": "A", "podUIDs": ["de95a383-b1f0-488a-8021-a68ca416a222"], "nativeStates": {"iris": "RUNNING", "c9ktest": "DEPLOYED"}, "ready": false, "httpReleaseConfirmed": false, "oldNativeAppsAbsent": false, "artifactJournalCount": 0}
+{"atUTC": "2026-11-03T22:54:17.622061+00:00", "label": "valid-intermediate-control", "release": "A", "podUIDs": ["de95a383-b1f0-488a-8021-a68ca416a222"], "nativeStates": {"iris": "RUNNING", "c9ktest": "DEPLOYED", "cvk0000_de95a383b1f0488a8021a68ca416a222": "RUNNING"}, "ready": true, "httpReleaseConfirmed": false, "oldNativeAppsAbsent": true, "artifactJournalCount": 0}
+{"atUTC": "2026-11-03T22:54:44.611257+00:00", "label": "valid-intermediate-control", "release": "A", "podUIDs": ["de95a383-b1f0-488a-8021-a68ca416a222"], "nativeStates": {"iris": "RUNNING", "c9ktest": "DEPLOYED", "cvk0000_de95a383b1f0488a8021a68ca416a222": "RUNNING"}, "ready": true, "httpReleaseConfirmed": false, "oldNativeAppsAbsent": true, "artifactJournalCount": 0}
+{"atUTC": "2026-11-03T22:55:11.428311+00:00", "label": "valid-intermediate-control", "release": "A", "podUIDs": ["de95a383-b1f0-488a-8021-a68ca416a222"], "nativeStates": {"iris": "RUNNING", "c9ktest": "DEPLOYED", "cvk0000_de95a383b1f0488a8021a68ca416a222": "RUNNING"}, "ready": true, "httpReleaseConfirmed": true, "oldNativeAppsAbsent": true, "artifactJournalCount": 0}
+PASS valid-intermediate-control Ready/HTTP A without artifacts or journal
+deployment.apps/cvk-stdchain-fixture scaled
+2026-11-03T22:55:20.758046+00:00 valid-intermediate normal deletion pending; guard 2026-11-03 23:26:14.096681+00:00
+2026-11-03T22:56:07.736656+00:00 waiting for natural test-root expiry and measurement margin 2026-11-03T23:09:14+00:00
+2026-11-03T22:57:07.736967+00:00 waiting for natural test-root expiry and measurement margin 2026-11-03T23:09:14+00:00
+2026-11-03T22:58:07.737342+00:00 waiting for natural test-root expiry and measurement margin 2026-11-03T23:09:14+00:00
+2026-11-03T22:59:07.737678+00:00 waiting for natural test-root expiry and measurement margin 2026-11-03T23:09:14+00:00
+2026-11-03T23:00:07.738018+00:00 waiting for natural test-root expiry and measurement margin 2026-11-03T23:09:14+00:00
+2026-11-03T23:01:07.738402+00:00 waiting for natural test-root expiry and measurement margin 2026-11-03T23:09:14+00:00
+2026-11-03T23:02:07.738703+00:00 waiting for natural test-root expiry and measurement margin 2026-11-03T23:09:14+00:00
+2026-11-03T23:03:07.738993+00:00 waiting for natural test-root expiry and measurement margin 2026-11-03T23:09:14+00:00
+2026-11-03T23:04:07.739314+00:00 waiting for natural test-root expiry and measurement margin 2026-11-03T23:09:14+00:00
+2026-11-03T23:05:07.739606+00:00 waiting for natural test-root expiry and measurement margin 2026-11-03T23:09:14+00:00
+2026-11-03T23:06:07.739869+00:00 waiting for natural test-root expiry and measurement margin 2026-11-03T23:09:14+00:00
+2026-11-03T23:07:07.740163+00:00 waiting for natural test-root expiry and measurement margin 2026-11-03T23:09:14+00:00
+2026-11-03T23:08:07.740456+00:00 waiting for natural test-root expiry and measurement margin 2026-11-03T23:09:14+00:00
+2026-11-03T23:09:07.740792+00:00 waiting for natural test-root expiry and measurement margin 2026-11-03T23:09:14+00:00
+PASS native NTP clock/chain validity: root-before
+deployment.apps/cvk-stdchain-fixture configured
+{"atUTC": "2026-11-03T23:09:17.068743+00:00", "case": "root", "invalidCertificateMode": "root-old", "podUIDs": ["cd3e421f-5d68-4846-ae96-953b4d37f18a"], "ready": false, "nativeRunning": false, "tlsRejections": 1, "packageHTTPRequests": 0, "leaseRenewAgeSeconds": 1.687954, "leaseExpiresUTC": "2026-11-03T23:40:15.380560+00:00", "artifactJournals": 0}
+{"atUTC": "2026-11-03T23:10:04.644700+00:00", "case": "root", "invalidCertificateMode": "root-old", "podUIDs": ["cd3e421f-5d68-4846-ae96-953b4d37f18a"], "ready": false, "nativeRunning": false, "tlsRejections": 1, "packageHTTPRequests": 0, "leaseRenewAgeSeconds": 19.2364, "leaseExpiresUTC": "2026-11-03T23:40:45.408038+00:00", "artifactJournals": 0}
+{"atUTC": "2026-11-03T23:10:51.828880+00:00", "case": "root", "invalidCertificateMode": "root-old", "podUIDs": ["cd3e421f-5d68-4846-ae96-953b4d37f18a"], "ready": false, "nativeRunning": false, "tlsRejections": 1, "packageHTTPRequests": 0, "leaseRenewAgeSeconds": 6.42378, "leaseExpiresUTC": "2026-11-03T23:41:45.404852+00:00", "artifactJournals": 0}
+{"atUTC": "2026-11-03T23:11:38.956173+00:00", "case": "root", "invalidCertificateMode": "root-old", "podUIDs": ["cd3e421f-5d68-4846-ae96-953b4d37f18a"], "ready": false, "nativeRunning": false, "tlsRejections": 1, "packageHTTPRequests": 0, "leaseRenewAgeSeconds": 23.54851, "leaseExpiresUTC": "2026-11-03T23:42:15.407417+00:00", "artifactJournals": 0}
+{"atUTC": "2026-11-03T23:12:26.292989+00:00", "case": "root", "invalidCertificateMode": "root-old", "podUIDs": ["cd3e421f-5d68-4846-ae96-953b4d37f18a"], "ready": false, "nativeRunning": false, "tlsRejections": 2, "packageHTTPRequests": 0, "leaseRenewAgeSeconds": 10.885002, "leaseExpiresUTC": "2026-11-03T23:43:15.407726+00:00", "artifactJournals": 0}
+{"atUTC": "2026-11-03T23:13:14.343504+00:00", "case": "root", "invalidCertificateMode": "root-old", "podUIDs": ["cd3e421f-5d68-4846-ae96-953b4d37f18a"], "ready": false, "nativeRunning": false, "tlsRejections": 2, "packageHTTPRequests": 0, "leaseRenewAgeSeconds": 58.935587, "leaseExpiresUTC": "2026-11-03T23:43:15.407726+00:00", "artifactJournals": 0}
+{"atUTC": "2026-11-03T23:14:01.706861+00:00", "case": "root", "invalidCertificateMode": "root-old", "podUIDs": ["cd3e421f-5d68-4846-ae96-953b4d37f18a"], "ready": false, "nativeRunning": false, "tlsRejections": 2, "packageHTTPRequests": 0, "leaseRenewAgeSeconds": 106.298972, "leaseExpiresUTC": "2026-11-03T23:43:15.407726+00:00", "artifactJournals": 0}
+PASS native NTP clock/chain validity: root-boundary
+Traceback (most recent call last):
+  File "/tmp/cvk-stdchain-20261103/repair_root.py", line 5, in <module>
+    old=p.proof(ROOT_TP,'root-old');p.cmd('configure terminal');p.authenticate(ROOT_TP,'root-renewed');p.cmd('end');new=p.proof(ROOT_TP,'root-renewed');other=p.proof(INT_TP,'intermediate-root')
+                                                                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "pki_io.py", line 19, in authenticate
+    output='\n'.join(parts);self.records.append({'command':'authenticate '+tp+' using '+cert+'.crt','output':output});assert sent and 'successfully imported' in output,output
+                                                                                                                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: crypto pki authenticate CVK-STDCHAIN-ROOT-20261103
+% Please delete your existing CA certificate first.
+% You must use 'no crypto pki trustpoint <trustpoint-name>' to delete the CA certificate.
+Edge-9K(config)#
+Traceback (most recent call last):
+  File "/tmp/cvk-stdchain-20261103/qualify.py", line 86, in <module>
+    validRepair(case);clock(case+'-after-repair',case)
+    ^^^^^^^^^^^^^^^^^
+  File "/tmp/cvk-stdchain-20261103/qualify.py", line 29, in validRepair
+    if case=='root':run(['python3',str(R/'repair_root.py')])
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "control_functions.py", line 7, in run
+    def run(a,**kw):return subprocess.run(a,check=True,**kw)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/subprocess.py", line 571, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['python3', '/tmp/cvk-stdchain-20261103/repair_root.py']' returned non-zero exit status 1.

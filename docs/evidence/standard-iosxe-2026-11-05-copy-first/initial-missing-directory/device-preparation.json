@@ -1,0 +1,76 @@
+{
+  "atUTC": "2026-11-05T20:17:20.519013+00:00",
+  "commands": [
+    {
+      "command": "terminal length 0",
+      "output": "terminal length 0\nEdge-9K"
+    },
+    {
+      "command": "terminal width 511",
+      "output": "terminal width 511\nEdge-9K"
+    },
+    {
+      "command": "configure terminal",
+      "output": "configure terminal\nEnter configuration commands, one per line.  End with CNTL/Z.\nEdge-9K(config)"
+    },
+    {
+      "command": "ip http secure-trustpoint cvk-gnoi-20260904",
+      "output": "ip http secure-trustpoint cvk-gnoi-20260904\nEdge-9K(config)"
+    },
+    {
+      "command": "crypto pki trustpoint CVK-STDCOPYFIX-20261105",
+      "output": "crypto pki trustpoint CVK-STDCOPYFIX-20261105\nEdge-9K(ca-trustpoint)"
+    },
+    {
+      "command": "enrollment terminal pem",
+      "output": "enrollment terminal pem\nEdge-9K(ca-trustpoint)"
+    },
+    {
+      "command": "revocation-check none",
+      "output": "revocation-check none\nEdge-9K(ca-trustpoint)"
+    },
+    {
+      "command": "exit",
+      "output": "exit\nEdge-9K(config)"
+    },
+    {
+      "command": "authenticate CVK-STDCOPYFIX-20261105 using root.crt",
+      "output": "crypto pki authenticate CVK-STDCOPYFIX-20261105\n\nEnter the base\n 64 encoded CA certificate.\nEnd with a blank line or the word \"quit\" on a line by itself\n\n-----BEGIN CERTIFICATE-----\nMIIDWDCCAkCgAwIBAgIUM37H4bGYhV7Yz98zISXQkd2+KyIwDQYJKoZIhvcNAQEL\nBQAwMjEwMC4GA1UEAwwnQ1ZLIFN0YW5kYXJkIGNvcHkgZml4IHJvb3QgM2JiNDdk\nZDVjNjE4MB4XDTI2MTEwNDIwMTcxM1oXDTI2MTExMjIwMTcxM1owMjEwMC4GA1UE\nAwwnQ1ZLIFN0YW5kYXJkIGNvcHkgZml4IHJvb3QgM2JiNDdkZDVjNjE4MIIBIjAN\nBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAmiToFkw6wkIta+E0vDZQzY3+/X9m\nh3ZkawMaL2FbRqR1aSnKJ0r4JoE7xzo8Ykrbuz5hEc3FWbUu8vU94Tkm7mvT28Ik\nof5R7e3eeqbHBKvWwXXcSJRGBS31ph1WbRZ6bVM61SBweDfixq1TMcgYdU8cwPwr\nJiMe42cd75KyycA4Nv6SqRLKaxExY8VbkpLMT+C07/dFKdM3SJzsSm0skysCut3H\nx9ggU1c5HREU3FaZZAMjOmUeF+PYNT/oDHHM942Nr/wqSWd8PDJ1tgqbgZFwouvE\ny2h+7avX+O78BsFevaAtQp2OMybwO3y8Mpw0tRHIocODXR97PyDE5yo5nwIDAQAB\no2YwZDASBgNVHRMBAf8ECDAGAQH/AgEBMB0GA1UdDgQWBBR3eln1GHf9Sq++OcV4\nRhdhP0fA1TAfBgNVHSMEGDAWgBR3eln1GHf9Sq++OcV4RhdhP0fA1TAOBgNVHQ8B\nAf8EBAMCAQYwDQYJKoZIhvcNAQELBQADggEBAGz0xhx5VBpY0IXNnow7ceVREGUV\nEQFV0dhbnlkXTc5OTwlINt0TGUiIxE4iIWWxgxrMQkgZnSqMwD6gxIlsvAPCG8Lr\nYCvlufd0WWHtEH6WMjdsqx9rkpVhQ0AGdD98oAVoebxjunbj0VNqs5pnp9M0chBZ\nTE7V+IG987gaV+U1TFh5XxYyVvWcRQhfTEpnVVhmoA6G6+DY8Wd1o+fo2F8QMfRg\nfjx2HMOT4z+tWjqVcpKouHHubmkx2Kl5qtcwcnn6206XlUmoP+bH3ViGi8wb9CGB\nJxNMYXwRdp7paeCngBPxGACV1LHV/00ny0lEwPNN+PhkLEcRRa5y+cNF664=\n-----END CERTIFICATE-----\nquit\nCertificate has the following attributes:\n       Fingerprint MD5: 2E6641F0 808E53A7 9397A8FA 33AFC374 \n      Fingerprint SHA1: AC0EF669 73B3D675 AC425C5E 5CFF17E5 E52E8AD1 \n\n% Do you accept this certificate? [yes/no]:\n[accepted run-owned CA import/overwrite]\n yes\nTrustpoint CA certificate accepted.\n% Certificate successfully imported\n\nEdge-9K(config)#"
+    },
+    {
+      "command": "crypto pki trustpoint CVK-STDCOPYFIX-20261105",
+      "output": "crypto pki trustpoint CVK-STDCOPYFIX-20261105\nEdge-9K(ca-trustpoint)"
+    },
+    {
+      "command": "revocation-check crl",
+      "output": "revocation-check crl\nEdge-9K(ca-trustpoint)"
+    },
+    {
+      "command": "exit",
+      "output": "exit\nEdge-9K(config)"
+    },
+    {
+      "command": "end",
+      "output": "end\nEdge-9K"
+    },
+    {
+      "command": "show crypto pki certificates pem CVK-STDCOPYFIX-20261105",
+      "output": "show crypto pki certificates pem CVK-STDCOPYFIX-20261105\n------Trustpoint: CVK-STDCOPYFIX-20261105------\n% The specified trustpoint is not enrolled (CVK-STDCOPYFIX-20261105).\n% Only export the CA certificate in PEM format.\n% CA certificate:\n-----BEGIN CERTIFICATE-----\nMIIDWDCCAkCgAwIBAgIUM37H4bGYhV7Yz98zISXQkd2+KyIwDQYJKoZIhvcNAQEL\nBQAwMjEwMC4GA1UEAwwnQ1ZLIFN0YW5kYXJkIGNvcHkgZml4IHJvb3QgM2JiNDdk\nZDVjNjE4MB4XDTI2MTEwNDIwMTcxM1oXDTI2MTExMjIwMTcxM1owMjEwMC4GA1UE\nAwwnQ1ZLIFN0YW5kYXJkIGNvcHkgZml4IHJvb3QgM2JiNDdkZDVjNjE4MIIBIjAN\nBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAmiToFkw6wkIta+E0vDZQzY3+/X9m\nh3ZkawMaL2FbRqR1aSnKJ0r4JoE7xzo8Ykrbuz5hEc3FWbUu8vU94Tkm7mvT28Ik\nof5R7e3eeqbHBKvWwXXcSJRGBS31ph1WbRZ6bVM61SBweDfixq1TMcgYdU8cwPwr\nJiMe42cd75KyycA4Nv6SqRLKaxExY8VbkpLMT+C07/dFKdM3SJzsSm0skysCut3H\nx9ggU1c5HREU3FaZZAMjOmUeF+PYNT/oDHHM942Nr/wqSWd8PDJ1tgqbgZFwouvE\ny2h+7avX+O78BsFevaAtQp2OMybwO3y8Mpw0tRHIocODXR97PyDE5yo5nwIDAQAB\no2YwZDASBgNVHRMBAf8ECDAGAQH/AgEBMB0GA1UdDgQWBBR3eln1GHf9Sq++OcV4\nRhdhP0fA1TAfBgNVHSMEGDAWgBR3eln1GHf9Sq++OcV4RhdhP0fA1TAOBgNVHQ8B\nAf8EBAMCAQYwDQYJKoZIhvcNAQELBQADggEBAGz0xhx5VBpY0IXNnow7ceVREGUV\nEQFV0dhbnlkXTc5OTwlINt0TGUiIxE4iIWWxgxrMQkgZnSqMwD6gxIlsvAPCG8Lr\nYCvlufd0WWHtEH6WMjdsqx9rkpVhQ0AGdD98oAVoebxjunbj0VNqs5pnp9M0chBZ\nTE7V+IG987gaV+U1TFh5XxYyVvWcRQhfTEpnVVhmoA6G6+DY8Wd1o+fo2F8QMfRg\nfjx2HMOT4z+tWjqVcpKouHHubmkx2Kl5qtcwcnn6206XlUmoP+bH3ViGi8wb9CGB\nJxNMYXwRdp7paeCngBPxGACV1LHV/00ny0lEwPNN+PhkLEcRRa5y+cNF664=\n-----END CERTIFICATE-----\n\nEdge-9K"
+    },
+    {
+      "command": "show running-config all | section ^crypto pki trustpoint CVK-STDCOPYFIX",
+      "output": "show running-config all | section ^crypto pki trustpoint CVK-STDCOPYFIX\ncrypto pki trustpoint CVK-STDCOPYFIX-20261105\n enrollment retry count 999\n enrollment retry period 1\n enrollment terminal pem\n revocation-check crl\n hash sha512\nEdge-9K"
+    }
+  ],
+  "certificateProofs": [
+    {
+      "trustpoint": "CVK-STDCOPYFIX-20261105",
+      "certificate": "root",
+      "sha256": "c20968dfb371604267b4125ef38f8526a445e49ef8be06b445185ed74efa7500",
+      "nativeCertificateMatched": true
+    }
+  ],
+  "onlyRootsTrusted": true,
+  "intermediateExplicitlyTrusted": false,
+  "clockChanged": false
+}

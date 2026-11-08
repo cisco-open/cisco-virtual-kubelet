@@ -1,0 +1,12 @@
+from pathlib import Path
+import subprocess,json,hashlib,tarfile,io,datetime
+R=Path('/tmp/cvk-stdgc-20261106');q=json.loads((R/'candidate.json').read_text());assert hashlib.sha256((R/'cisco-vk').read_bytes()).hexdigest()==q['binarySHA256'];tag=q['imageTag'];subprocess.run(['docker','build','--pull=false','-f',str(R/'Dockerfile.qual'),'-t',tag,str(R)],check=True);d=json.loads(subprocess.check_output(['docker','image','inspect',tag],text=True))[0];assert d['Config']['Labels']['apphosting.cisco.com/source-sha256']==q['dirtySourceSHA256'];subprocess.run(['docker','save','-o',str(R/'image.tar'),tag],check=True)
+with tarfile.open(R/'image.tar') as t:
+ m=json.load(t.extractfile('manifest.json'))[0];cfg=t.extractfile(m['Config']).read();assert 'sha256:'+hashlib.sha256(cfg).hexdigest()==d['Id'];found=[]
+ for layer in m['Layers']:
+  raw=t.extractfile(layer).read()
+  with tarfile.open(fileobj=io.BytesIO(raw)) as lt:
+   for member in lt:
+    if member.name.lstrip('./')=='usr/local/bin/cisco-vk':found.append(hashlib.sha256(lt.extractfile(member).read()).hexdigest())
+ assert found and found[-1]==q['binarySHA256']
+q.update({'dockerImageID':d['Id'],'dockerImageInspection':d,'imageArchiveSHA256':hashlib.sha256((R/'image.tar').read_bytes()).hexdigest(),'imageBinarySHA256':found[-1],'builtAtUTC':datetime.datetime.now(datetime.timezone.utc).isoformat()});(R/'candidate.json').write_text(json.dumps(q,indent=2)+'\n');print('PASS candidate',d['Id'],flush=True)

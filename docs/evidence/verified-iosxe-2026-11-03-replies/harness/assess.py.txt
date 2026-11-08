@@ -1,0 +1,28 @@
+import pathlib,json,datetime
+R=pathlib.Path('/private/tmp/cvk-replies-20261103')
+def read(n):return json.loads((R/(n+'.json')).read_text())
+q=read('qualification-result');assert q['passed'];candidate=read('candidate');cleanup=read('final-cleanup');assert cleanup['passed'];events=[json.loads(l) for l in (R/'relay-events.jsonl').read_text().splitlines()];assert not any(e['kind'] in ['scope-or-replay-rejected','rejected','relay-error'] for e in events)
+rec=lambda s:[json.loads(v) for j in s['journals'] for v in j.get('data',{}).values()]
+summary=[];leaseuids=set();juids=set()
+for c in q['cases']:
+ op=c['operation'];uid=c['podUID'];aid=c['appID'];fault=read('lost-'+op+'-response');assert fault['clientResponseHeadersSent'] is False and fault['clientResponseBodyBytesSent']==0 and fault['upstreamTLSVerified'];assert 200<=fault['upstreamStatus']<300;assert fault['pendingBeforeDispatch']['record']['phase']==op+'Pending'
+ snaps=[read('snapshot-'+op+'-after-lost-reply'),read(op+'-replacement-still-fenced'),read('snapshot-'+op+'-recovered'),read('snapshot-'+op+'-normal-cleanup')]
+ for s,phase in zip(snaps,[op+'Pending',op+'Pending','running','deleted']):
+  r=next(r for r in rec(s) if r['podUID']==uid);assert r['phase']==phase and r['appID']==aid and r['identity']==fault['pendingBeforeDispatch']['record']['identity'];assert [j['metadata']['uid'] for j in s['journals']]==[c['journalUID']];juids.add(c['journalUID'])
+  for w in s['workers']:assert all(x['imageID']==candidate['dockerConfigID'] for x in w['status']['containerStatuses'])
+ assert snaps[0]['workers'][0]['uid']==c['oldWorkerUID'];assert snaps[1]['workers'][0]['uid']==c['newWorkerUID'] and snaps[2]['workers'][0]['uid']==c['newWorkerUID'];status=snaps[2]['pods'][0]['status'];assert status['phase']=='Running' and not status.get('reason') and not status.get('message')
+ assert snaps[2]['assertions']['passed'] and snaps[2]['assertions']['podUIDs']==[uid]
+ leases=[read(op+'-lease-'+n) for n in ['after-lost-reply','replacement-still-fenced','after-recovery','after-cleanup']];leaseuids.update(l['metadata']['uid'] for l in leases);assert leases[0]['spec']['holderIdentity']==leases[1]['spec']['holderIdentity'] and leases[0]['spec']['renewTime']==leases[1]['spec']['renewTime'];assert all(not l.get('spec',{}).get('holderIdentity') for l in leases[2:])
+ counts={op2:sum(e['kind']=='forwarded' and e.get('appID')==aid and e.get('operation')==op2 for e in events) for op2 in ['copy','configuration','install','activate','start']};assert counts==dict.fromkeys(['copy','configuration','install','activate','start'],1)
+ for op2 in ['install','activate','start']:
+  ev=next(e for e in events if e['kind']=='forwarded' and e.get('appID')==aid and e.get('operation')==op2);assert ev['pendingBeforeDispatch']['record']['phase']==op2+'Pending';assert 200<=ev['upstreamStatus']<300
+ obs=[json.loads(l) for l in (R/(op+'-fenced-observations.jsonl')).read_text().splitlines()];assert len(obs)==c['fencedObservationCount'] and len(obs)>2
+ for e in obs:
+  assert e['podUID']==uid and e['journalUID']==c['journalUID'] and e['workerUID']==c['newWorkerUID'] and e['phase']==op+'Pending' and e['ready'] is False;assert e['leaseHolder']==leases[0]['spec']['holderIdentity'] and e['leaseRenewTime']==leases[0]['spec']['renewTime'];assert e['forwarded']['start']==(0 if op=='activate' else 1)
+ if op=='start':assert all(e['nativeState']=='RUNNING' for e in obs) and any(e['httpHealthy'] for e in obs)
+ for n in ['pending','recovered']:assert read(op+'-'+n+'-checksum')['result']['success']
+ dep=read(op+'-deployment-available');assert dep['status']['availableReplicas']==1 and all(any(x['type']==t and x['status']=='True' for x in dep['status']['conditions']) for t in ['Available','Progressing'])
+ summary.append({'operation':op,'fencedSamples':len(obs),'nativeTarget':fault['nativeState'],'forwarded':counts,'topLevelFailureTextCleared':True,'podUID':uid,'journalUID':c['journalUID'],'oldWorkerUID':c['oldWorkerUID'],'newWorkerUID':c['newWorkerUID'],'httpHealthyWhilePending':any(e['httpHealthy'] for e in obs)})
+assert len(leaseuids)==1 and len(juids)==1 and len(summary)==2
+result={'status':'lost-activation-and-start-replies-qualified','dateUTC':'2026-11-03','defaultMode':'Standard','governed':'deferred','target':{'model':'C9300-24UX','serial':'FCW2247C1AJ','iosXeVersion':'17.18.1 RELEASE fc2'},'candidate':candidate,'cases':summary,'leaseObjectUID':next(iter(leaseuids)),'journalObjectUID':next(iter(juids)),'manualLeaseOrJournalMutation':False,'staleStatusFixed':True,'cleanupPassed':True,'scope':'Two independent accepted replies suppressed before downstream headers/body; native target observed; managed worker replacement; untouched original lease expires naturally; recovery observes without replay.','limits':['One physical device/firmware and Linux/amd64 fixture; no fleet-wide qualification.','Existing Standard behavior covered by automated tests; separate physical Standard control not run.','One-replica Recreate; no uninterrupted service or stateful migration claim.','Native package-signature verification disabled at baseline and preserved.','One forwarded CVK request measured; native installer-internal counters unavailable.','Retained SHA512 measures staged package, not running root filesystem; no specific CVE fix claim.'],'finishedAtUTC':cleanup['finishedAtUTC']}
+(R/'qualification-assessed.json').write_text(json.dumps(result,indent=2)+'\n');print('PASS independent evidence assessment for both lost replies and clean status')

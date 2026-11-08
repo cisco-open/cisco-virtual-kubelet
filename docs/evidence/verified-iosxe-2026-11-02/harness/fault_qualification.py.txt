@@ -1,0 +1,39 @@
+import pathlib,subprocess,json,time,datetime,hashlib,re,os
+r=pathlib.Path('/tmp/cvk-verified-qual-20261102');k=['kubectl','--kubeconfig',str(r/'kubeconfig')];ns='cvk-qual-20261102';apps='cvk-qual-apps-20261102'
+def run(a,**kw):return subprocess.run(a,check=True,**kw)
+def get(a):return json.loads(subprocess.check_output(k+a,text=True))
+def snapshot(label):
+ run(['python3',str(r/'snapshot.py'),label],stdout=subprocess.DEVNULL);return json.loads((r/('snapshot-'+label+'.json')).read_text())
+def native(s):return {a['appID']:a['details'].get('state') for a in s['nativeApps']}
+assert json.loads((r/'positive-lifecycle-result.json').read_text())['passed']
+run(k+['-n',apps,'scale','deployment/cvk-verified-fixture','--replicas=0'])
+for i in range(60):
+ s=snapshot('pre-fault-cleanup');recs=[json.loads(v) for j in s['journals'] for v in (j.get('data') or {}).values()]
+ if native(s)=={'iris':'RUNNING','c9ktest':'DEPLOYED'} and not s['pods'] and all(x['phase']=='deleted' for x in recs):break
+ time.sleep(5)
+else:raise RuntimeError('Previous positive fixture not fully cleaned; fault not attempted')
+old={w['uid'] for w in s['workers']};start=datetime.datetime.now(datetime.timezone.utc).isoformat()
+run(k+['-n',ns,'patch','ciscodevice','c9k-verified-20261102','--type=merge','-p',json.dumps({'spec':{'appArtifacts':{'storeURL':'https://192.168.129.111:18444'}}})])
+for i in range(60):
+ workers=[p for p in get(['-n',ns,'get','pods','-o','json'])['items'] if p['metadata']['name'].startswith('c9k-verified-20261102-vk-') and not p['metadata'].get('deletionTimestamp')]
+ if len(workers)==1 and workers[0]['metadata']['uid'] not in old and all(c.get('ready') for c in workers[0].get('status',{}).get('containerStatuses',[]) or [{}]):break
+ time.sleep(5)
+else:raise RuntimeError('Fault origin worker rollout did not finish; no fault Pod created')
+run(['python3',str(r/'workload.py'),'A','fault']);expected=next(x for x in json.loads((r/'releases.json').read_text()) if x['release']=='A')
+for i in range(60):
+ s=snapshot('transfer-corruption-poll-'+str(i));pods=[p for p in s['pods'] if not p['metadata'].get('deletionTimestamp')];uids={p['metadata']['uid'] for p in pods};recs=[json.loads(v) for j in s['journals'] for v in (j.get('data') or {}).values() if json.loads(v).get('podUID') in uids]
+ logs=subprocess.check_output(k+['-n',ns,'logs','deployment/c9k-verified-20261102-vk','--since=5m'],text=True)
+ if len(recs)==1 and recs[0]['phase']=='staging' and 'on-device application package SHA512 mismatch' in logs:break
+ time.sleep(5)
+else:raise RuntimeError('No conclusive post-copy checksum rejection')
+assert len(pods)==1 and not any(c['type']=='Ready' and c['status']=='True' for c in pods[0].get('status',{}).get('conditions',[]));assert native(s)=={'iris':'RUNNING','c9ktest':'DEPLOYED'}
+record=recs[0];assert record['packageDigest']==expected['package']['digest'];path=record['stagedPath'];assert re.fullmatch(r'flash:cvk-[a-f0-9]{16}-[a-f0-9]{64}\.tar',path)
+probe=subprocess.run([str(r/'checksum-probe'),'-path',path,'-size',str(expected['package']['sizeBytes']),'-sha512',expected['sha512']],text=True,capture_output=True);assert probe.returncode==1 and 'SHA512 mismatch' in probe.stdout
+cli=subprocess.run(['python3',str(r/'device_cli.py')],input=json.dumps(['dir '+path,'verify /sha512 '+path]),text=True,capture_output=True,check=True);output=json.loads(cli.stdout)
+raw=bytearray((r/'release-a-final'/'package.tar').read_bytes());raw[-1]^=1;bad=hashlib.sha512(raw).hexdigest();assert bad!=expected['sha512'];assert '= '+bad in output['commands'][1]['output']
+s['assertions']={'passed':True,'case':'same-size device-only transfer corruption','startedAtUTC':start,'archiveSize':len(raw),'expectedSHA512':expected['sha512'],'deviceCorruptSHA512':bad,'podNotReady':True,'nativeFixtureAbsent':True,'journalPhase':'staging','workerReceivedCorrectBytes':True,'deviceReceivedSameSizeCorruptBytes':True,'noInstallGatePassed':True}
+(r/'snapshot-transfer-corruption.json').write_text(json.dumps(s,indent=2)+'\n');(r/'transfer-corruption-checksum.json').write_text(json.dumps({'productionVerifier':json.loads(probe.stdout),'nativeCommands':output,'assertions':s['assertions']},indent=2)+'\n')
+# Retain the conservative fence and failed journal. Cleanup quiesces workers
+# before removing only owned staging files; no failed install is retried.
+lease=get(['-n',ns,'get','lease','cvk-device-77c5286ea9b30e32-device-disruptive-mutation-a553792b','-o','json']);assert lease.get('spec',{}).get('holderIdentity');(r/'lease-transfer-corruption.json').write_text(json.dumps(lease,indent=2)+'\n')
+print('PASS device-only same-size corruption rejected before app installation; retained safety fence',flush=True)

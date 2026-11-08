@@ -1,0 +1,4 @@
+FROM cvk-replies-qual:20261103-529e98f251b3
+COPY --chmod=0755 cisco-vk /usr/local/bin/cisco-vk
+LABEL apphosting.cisco.com/qualification="20261105-stdcopyfix"
+LABEL apphosting.cisco.com/source-sha256="f31b516f5dafd468c2dee968cd62e68dfd366344924876834500e2a9b18f81ab"

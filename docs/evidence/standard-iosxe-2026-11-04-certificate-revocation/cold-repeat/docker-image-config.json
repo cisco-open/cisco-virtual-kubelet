@@ -1,0 +1,34 @@
+{
+  "architecture": "amd64",
+  "os": "linux",
+  "created": "2026-11-04T17:12:46.406195Z",
+  "config": {
+    "User": "65532:65532",
+    "ExposedPorts": {
+      "8080/tcp": {}
+    },
+    "Env": [
+      "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+    ],
+    "Entrypoint": [
+      "/app"
+    ],
+    "WorkingDir": "/",
+    "Labels": {
+      "apphosting.cisco.com/qualification": "20261104-stdrevoke-cold",
+      "apphosting.cisco.com/release": "REVOCATION-COLD-20261104-35d8a9c90cb2"
+    }
+  },
+  "rootfs": {
+    "type": "layers",
+    "diff_ids": [
+      "sha256:dc78be3c3975209b7a2b8d5170dcd7dd6274ec1b72134883d23c9b3265b8f00c"
+    ]
+  },
+  "history": [
+    {
+      "created": "2026-11-04T17:12:46.406195Z",
+      "created_by": "Run-owned uncached revocation fixture; static Go HTTP release endpoint"
+    }
+  ]
+}

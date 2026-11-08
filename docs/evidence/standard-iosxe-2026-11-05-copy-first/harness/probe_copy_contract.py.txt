@@ -1,0 +1,27 @@
+import pathlib,json,subprocess,os,datetime,threading,http.server,ssl,urllib.request,base64,time
+R=pathlib.Path('/tmp/cvk-stdcopyprobe-20261105');R.mkdir(mode=0o700,exist_ok=True);os.chmod(R,0o700);P=pathlib.Path('/tmp/cvk-verified-qual-20261102/release-a-final/package.tar');dest='flash:cvkstd-copy-probe-20261105.tar';sysroot=pathlib.Path('/tmp/cvk-intrefresh-20261105');ns={};exec(compile((sysroot/'pki_io.py').read_text(),'pinned-cli','exec'),ns);CLI=ns['CLI'];report={'atUTC':datetime.datetime.now(datetime.timezone.utc).isoformat(),'testOnly':True,'installsIssued':0,'destination':dest};p=CLI();server=None
+try:
+ v=p.cmd('show app-hosting list');assert 'cvk0000_' not in v and 'iris' in v and 'c9ktest' in v
+ v=p.cmd('show ip http server status | include trustpoint');assert 'HTTP secure server trustpoint: TP-self-signed-806566997' in v
+ p.cmd('configure terminal');p.cmd('ip http secure-trustpoint cvk-gnoi-20260904');p.cmd('end')
+ class Handler(http.server.BaseHTTPRequestHandler):
+  def log_message(self,*args):pass
+  def do_GET(self):
+   b=P.read_bytes();self.send_response(200);self.send_header('Content-Length',str(len(b)));self.end_headers();self.wfile.write(b)
+ server=http.server.ThreadingHTTPServer(('0.0.0.0',18478),Handler);threading.Thread(target=server.serve_forever,daemon=True).start();ctx=ssl.create_default_context(cafile='/tmp/cvk-verified-qual-20261101/device-ca.crt');ctx.verify_flags|=ssl.VERIFY_X509_PARTIAL_CHAIN
+ headers={'Authorization':'Basic '+base64.b64encode(('cisco:'+os.environ['CVK_QUAL_DEVICE_PASSWORD']).encode()).decode(),'Content-Type':'application/yang-data+json','Accept':'application/yang-data+json'}
+ for attempt in range(20):
+  try:
+   ready=urllib.request.Request('https://10.1.1.1/restconf/data/Cisco-IOS-XE-native:native/hostname',headers=headers)
+   with urllib.request.urlopen(ready,context=ctx,timeout=10) as response:assert response.status==200
+   break
+  except OSError:time.sleep(2)
+ else:raise RuntimeError('Verified management TLS did not become ready')
+ body=json.dumps({'Cisco-IOS-XE-rpc:copy':{'source-drop-node-name':'http://192.168.129.111:18478/probe.tar','destination-drop-node-name':dest}}).encode();req=urllib.request.Request('https://10.1.1.1/restconf/operations/Cisco-IOS-XE-rpc:copy',data=body,headers=headers,method='POST')
+ with urllib.request.urlopen(req,context=ctx,timeout=120) as response:report['copyHTTPStatus']=response.status;report['copyResponse']=json.loads(response.read())
+ report['stagedFile']=p.cmd('dir '+dest);p.cmd('delete /force '+dest);report['destinationRemoved']=True
+finally:
+ if server:server.shutdown();server.server_close()
+ try:p.cmd('configure terminal');p.cmd('ip http secure-trustpoint TP-self-signed-806566997');p.cmd('end');report['managementSelectorRestored']=True
+ finally:report['commands']=p.records;p.close();(R/'probe.json').write_text(json.dumps(report,indent=2)+'\n')
+print(json.dumps(report,indent=2))

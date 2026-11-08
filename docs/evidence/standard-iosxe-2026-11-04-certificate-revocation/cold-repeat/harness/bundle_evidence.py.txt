@@ -1,0 +1,16 @@
+import pathlib,json,tarfile,sys
+R=pathlib.Path('/tmp/cvk-stdrevoke-20261104/cold');assert json.loads((R/'qualification-result.json').read_text())['executionComplete'];m=json.loads((R/'pki-manifest.json').read_text());names=['payload-provenance.json','host-smoke.json','pki-manifest.json','device-preparation.json','offline-certificate-controls.json','independent-tls-controls.json','qualification-result.json','qualification.log','server-events.jsonl','unprimed-image-boundary.json','release-before-replacement.json','release-after-certificate-only-replacement.json','release-after-fresh-deployment.json','certificate-replaced.json','invalid-lease.json','invalid-server-events.json','worker-diagnostics.json','snapshot-invalid-boundary.json','invalid-observations.jsonl','deployment-control-input.yaml','deployment-cold-input.yaml','main.go','all-crls.pem','root-with-crls.pem']
+names += [n+'.crt' for n in m['certificates']]+[n+'-chain.pem' for n in m['chains']]+[n+e for n in m['crls'] for e in ['.crl','.crl.pem']]
+names += ['pki-'+label+'.json' for label in ['baseline','valid-control','before','boundary','after-repair','complete']]
+for label in ['valid-control','corrected-recovery','fresh-replacement']:
+ for prefix,ext in [('snapshot-','.json'),('controls-','.json'),('deployment-','.json'),('native-','.json'),('leases-','.json'),('wait-','.jsonl')]:
+  n=prefix+label+ext
+  if (R/n).exists():names.append(n)
+for label in ['baseline']+[c+'-normal-cleanup' for c in ['control','recovery','fresh']]:
+ names.append('controls-'+label+'.json')
+ if label!='baseline':names+=['snapshot-'+label+'.json','leases-'+label+'.json']
+if (R/'guarded-observations.jsonl').exists():names.append('guarded-observations.jsonl')
+for p in R.glob('snapshot-existing-runtime-after-repair-*.json'):names.append(p.name)
+with tarfile.open(fileobj=sys.stdout.buffer,mode='w|') as t:
+ for n in names:
+  assert (R/n).is_file(),n;t.add(R/n,arcname=n)

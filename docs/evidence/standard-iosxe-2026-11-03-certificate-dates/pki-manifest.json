@@ -1,0 +1,42 @@
+{
+  "generatedAtUTC": "2026-11-03T19:21:56.306473+00:00",
+  "nonce": "9706897dbab7",
+  "roots": {
+    "trusted": {
+      "subject": "CN=CVK Standard date CA 9706897dbab7",
+      "sha256": "9bb90cfcae35f0ba05256107aa56b93c1c9510997cf092750ae1b29c585aa752",
+      "validFromUTC": "2026-10-04T19:21:56+00:00",
+      "validUntilUTC": "2026-12-03T19:21:56+00:00",
+      "intendedDeviceTrust": true
+    }
+  },
+  "leaves": {
+    "valid": {
+      "issuer": "trusted",
+      "leafSHA256": "a18103a080eef6e85c2e1b198b4fbbcebe2da75982b45497790e21333d9f2af2",
+      "subject": "CN=192.168.129.111",
+      "SAN": "<SubjectAlternativeName(<GeneralNames([<IPAddress(value=192.168.129.111)>])>)>",
+      "URLHostnameMatches": true,
+      "validFromUTC": "2026-11-02T19:21:56+00:00",
+      "validUntilUTC": "2026-11-10T19:21:56+00:00"
+    },
+    "expired": {
+      "issuer": "trusted",
+      "leafSHA256": "efd56ef3d60f885e8ba34fdf7f384e962f2182a10befc699e8fa53e57b405185",
+      "subject": "CN=192.168.129.111",
+      "SAN": "<SubjectAlternativeName(<GeneralNames([<IPAddress(value=192.168.129.111)>])>)>",
+      "URLHostnameMatches": true,
+      "validFromUTC": "2026-10-31T19:21:56+00:00",
+      "validUntilUTC": "2026-11-01T19:21:56+00:00"
+    },
+    "future": {
+      "issuer": "trusted",
+      "leafSHA256": "70dcea671292e764d315999110af72f31aa565d49b46568e4aa90890455da404",
+      "subject": "CN=192.168.129.111",
+      "SAN": "<SubjectAlternativeName(<GeneralNames([<IPAddress(value=192.168.129.111)>])>)>",
+      "URLHostnameMatches": true,
+      "validFromUTC": "2026-11-05T19:21:56+00:00",
+      "validUntilUTC": "2026-11-06T19:21:56+00:00"
+    }
+  }
+}

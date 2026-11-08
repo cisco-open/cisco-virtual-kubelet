@@ -1,0 +1,25 @@
+import pathlib,subprocess,ssl,urllib.request,urllib.error,json,time,datetime
+R=pathlib.Path('/tmp/cvk-stdrevoke-20261104')
+with (R/'servers.log').open('wb') as out:p=subprocess.Popen(['python3',str(R/'servers.py')],stdout=out,stderr=subprocess.STDOUT,start_new_session=True)
+(R/'servers.pid').write_text(str(p.pid));results=[]
+for case,port,root,expect in [('disabled',18459,'disabled-root',False),('valid-leaf',18460,'leaf-root',True),('valid-chain',18461,'chain-root',True),('leaf',18462,'leaf-root',False),('intermediate',18463,'chain-root',False)]:
+ ctx=ssl.create_default_context(cafile=str(R/(root+'-with-crls.pem')));ctx.verify_flags|=ssl.VERIFY_CRL_CHECK_CHAIN
+ for i in range(30):
+  try:
+   with urllib.request.urlopen('https://192.168.129.111:'+str(port)+'/_probe',context=ctx,timeout=5) as resp:assert resp.status==200
+   assert expect;results.append({'case':case,'CRLChecking':True,'accepted':True});break
+  except urllib.error.URLError as e:
+   if isinstance(e.reason,ssl.SSLCertVerificationError):
+    assert not expect and e.reason.verify_code==23;results.append({'case':case,'CRLChecking':True,'accepted':False,'verificationCode':e.reason.verify_code,'verificationMessage':e.reason.verify_message});break
+   time.sleep(1)
+  except OSError:time.sleep(1)
+ else:raise RuntimeError('Origin control failed '+case)
+ctx=ssl.create_default_context(cafile=str(R/'disabled-root.crt'))
+with urllib.request.urlopen('https://192.168.129.111:18459/_probe',context=ctx,timeout=5) as resp:assert resp.status==200
+results.append({'case':'disabled-without-check','CRLChecking':False,'accepted':True})
+manifest=json.loads((R/'pki-manifest.json').read_text())
+for name,c in manifest['crls'].items():
+ with urllib.request.urlopen(c['url'],timeout=5) as resp:body=resp.read()
+ import hashlib
+ assert hashlib.sha256(body).hexdigest()==c['sha256']
+(R/'independent-tls-controls.json').write_text(json.dumps({'atUTC':datetime.datetime.now(datetime.timezone.utc).isoformat(),'testClient':'ux-agx Python SSL; explicit CRL-check flags; separate from native C9K results','cases':results,'signedCRLHTTPContentVerified':True},indent=2)+'\n');print('PASS six independent TLS controls and five exact signed CRL HTTP payloads',flush=True)

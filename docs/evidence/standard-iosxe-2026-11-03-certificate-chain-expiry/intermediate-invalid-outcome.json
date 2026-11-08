@@ -1,0 +1,11 @@
+{
+  "atUTC": "2026-11-04T06:56:39.331620+00:00",
+  "case": "intermediate",
+  "classification": "expired-ca-rejected",
+  "rejectionQualified": true,
+  "appHealthyUnderExpiredCA": false,
+  "packageURL": "https://192.168.129.111:18458/intermediate-agent-a.tar",
+  "serverModeAtObservation": "intermediate-expired",
+  "leafRemainedValid": true,
+  "artifactConfigurationRequired": false
+}

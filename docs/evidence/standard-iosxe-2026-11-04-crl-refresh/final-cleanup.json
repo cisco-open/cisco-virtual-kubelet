@@ -1,0 +1,133 @@
+{
+  "startedAtUTC": "2026-11-04T20:28:22.329495+00:00",
+  "passed": true,
+  "commands": [
+    {
+      "command": "terminal length 0",
+      "output": "terminal length 0\nEdge-9K"
+    },
+    {
+      "command": "terminal width 511",
+      "output": "terminal width 511\nEdge-9K"
+    },
+    {
+      "command": "show app-hosting list",
+      "output": "show app-hosting list\nApp id                                   State\n---------------------------------------------------------\niris                                     RUNNING\nc9ktest                                  DEPLOYED\n\nEdge-9K"
+    },
+    {
+      "command": "dir flash:/virtual-kubelet/cvk0000_123d675aafac4470b58e95ada003373d.tar",
+      "output": "dir flash:/virtual-kubelet/cvk0000_123d675aafac4470b58e95ada003373d.tar\n%Error opening flash:/virtual-kubelet/cvk0000_123d675aafac4470b58e95ada003373d.tar (No such file or directory)\nEdge-9K"
+    },
+    {
+      "command": "dir flash:/virtual-kubelet/cvk0000_25d133f14d8f43609db74c5cd6f57bae.tar",
+      "output": "dir flash:/virtual-kubelet/cvk0000_25d133f14d8f43609db74c5cd6f57bae.tar\n%Error opening flash:/virtual-kubelet/cvk0000_25d133f14d8f43609db74c5cd6f57bae.tar (No such file or directory)\nEdge-9K"
+    },
+    {
+      "command": "dir flash:/virtual-kubelet/cvk0000_354497f307ed4e59a7c16745a03a7151.tar",
+      "output": "dir flash:/virtual-kubelet/cvk0000_354497f307ed4e59a7c16745a03a7151.tar\n%Error opening flash:/virtual-kubelet/cvk0000_354497f307ed4e59a7c16745a03a7151.tar (No such file or directory)\nEdge-9K"
+    },
+    {
+      "command": "dir flash:/virtual-kubelet/cvk0000_dec2eb0a632b409990bf22918214a19b.tar",
+      "output": "dir flash:/virtual-kubelet/cvk0000_dec2eb0a632b409990bf22918214a19b.tar\n%Error opening flash:/virtual-kubelet/cvk0000_dec2eb0a632b409990bf22918214a19b.tar (No such file or directory)\nEdge-9K"
+    },
+    {
+      "command": "dir flash:/virtual-kubelet/cvk0000_ed40154932914da69cfe130b1fd9e475.tar",
+      "output": "dir flash:/virtual-kubelet/cvk0000_ed40154932914da69cfe130b1fd9e475.tar\n%Error opening flash:/virtual-kubelet/cvk0000_ed40154932914da69cfe130b1fd9e475.tar (No such file or directory)\nEdge-9K"
+    },
+    {
+      "command": "configure terminal",
+      "output": "configure terminal\nEnter configuration commands, one per line.  End with CNTL/Z.\nEdge-9K(config)"
+    },
+    {
+      "command": "ip http secure-trustpoint TP-self-signed-806566997",
+      "output": "ip http secure-trustpoint TP-self-signed-806566997\nEdge-9K(config)"
+    },
+    {
+      "command": "no crypto pki trustpoint CVK-CRLREFRESH-20261104",
+      "output": "no crypto pki trustpoint CVK-CRLREFRESH-20261104\n% Removing an enrolled trustpoint will destroy all certificates\n received from the related Certificate Authority.\n\nAre you sure you want to do this? [confirmed owned cleanup]\n yes\n% Be sure to ask the CA administrator to revoke your certificates.\n\nEdge-9K(config)"
+    },
+    {
+      "command": "end",
+      "output": "end\nEdge-9K"
+    },
+    {
+      "command": "show ip http server status | include trustpoint",
+      "output": "show ip http server status | include trustpoint\nHTTP secure server trustpoint: TP-self-signed-806566997\nHTTP secure server peer validation trustpoint: \nEdge-9K"
+    },
+    {
+      "command": "show running-config | include ^ip http secure-trustpoint|^ip http client secure-trustpoint|^crypto pki trustpoint CVK-CRLREFRESH",
+      "output": "show running-config | include ^ip http secure-trustpoint|^ip http client secure-trustpoint|^crypto pki trustpoint CVK-CRLREFRESH\nip http secure-trustpoint TP-self-signed-806566997\nip http client secure-trustpoint IRIS\nEdge-9K"
+    },
+    {
+      "command": "show crypto pki crls",
+      "output": "show crypto pki crls\nCRL Issuer Name: \n    cn=CVK CRL refresh root f9561e3ce389\n    LastUpdate: 19:39:53 UTC Nov 4 2026\n    NextUpdate: 21:39:58 UTC Nov 4 2026\n\n    CRL downloaded at: 19:48:30 UTC Nov 4 2026\n\n    Retrieved from CRL Distribution Point: \n      http://192.168.129.111:18470/issuer.crl\n\n CRL DER is 481 bytes\n CRL is stored in parsed CRL cache\n\n\nParsed CRL cache current size is 481 bytes\nParsed CRL cache maximum size is 65536 bytes\n\nEdge-9K"
+    },
+    {
+      "command": "clear crypto pki crl",
+      "output": "clear crypto pki crl\nEdge-9K"
+    },
+    {
+      "command": "show crypto pki crls",
+      "output": "show crypto pki crls\nEdge-9K"
+    },
+    {
+      "command": "show app-hosting list",
+      "output": "show app-hosting list\nApp id                                   State\n---------------------------------------------------------\niris                                     RUNNING\nc9ktest                                  DEPLOYED\n\nEdge-9K"
+    },
+    {
+      "command": "show app-hosting infra",
+      "output": "show app-hosting infra\nIOX version: 2.13.0\nApp signature verification: disabled\nCAF Health: Stable\nInternal working directory: /vol/usb1/iox\n\nApplication Interface Mapping\nAppGigabitEthernet Port #  Interface Name                 Port Type            Bandwidth  \n           1               AppGigabitEthernet1/0/1        KR Port - Internal   1G\n        \n\nCPU:\n  Quota: 25(Percentage) \n  Available: 23(Percentage)\n  Quota: 7400(Units)\n  Available: 7000(Units)\n\nEdge-9K"
+    },
+    {
+      "command": "dir flash:/virtual-kubelet/cvk0000_123d675aafac4470b58e95ada003373d.tar",
+      "output": "dir flash:/virtual-kubelet/cvk0000_123d675aafac4470b58e95ada003373d.tar\n%Error opening flash:/virtual-kubelet/cvk0000_123d675aafac4470b58e95ada003373d.tar (No such file or directory)\nEdge-9K"
+    },
+    {
+      "command": "dir flash:/virtual-kubelet/cvk0000_25d133f14d8f43609db74c5cd6f57bae.tar",
+      "output": "dir flash:/virtual-kubelet/cvk0000_25d133f14d8f43609db74c5cd6f57bae.tar\n%Error opening flash:/virtual-kubelet/cvk0000_25d133f14d8f43609db74c5cd6f57bae.tar (No such file or directory)\nEdge-9K"
+    },
+    {
+      "command": "dir flash:/virtual-kubelet/cvk0000_354497f307ed4e59a7c16745a03a7151.tar",
+      "output": "dir flash:/virtual-kubelet/cvk0000_354497f307ed4e59a7c16745a03a7151.tar\n%Error opening flash:/virtual-kubelet/cvk0000_354497f307ed4e59a7c16745a03a7151.tar (No such file or directory)\nEdge-9K"
+    },
+    {
+      "command": "dir flash:/virtual-kubelet/cvk0000_dec2eb0a632b409990bf22918214a19b.tar",
+      "output": "dir flash:/virtual-kubelet/cvk0000_dec2eb0a632b409990bf22918214a19b.tar\n%Error opening flash:/virtual-kubelet/cvk0000_dec2eb0a632b409990bf22918214a19b.tar (No such file or directory)\nEdge-9K"
+    },
+    {
+      "command": "dir flash:/virtual-kubelet/cvk0000_ed40154932914da69cfe130b1fd9e475.tar",
+      "output": "dir flash:/virtual-kubelet/cvk0000_ed40154932914da69cfe130b1fd9e475.tar\n%Error opening flash:/virtual-kubelet/cvk0000_ed40154932914da69cfe130b1fd9e475.tar (No such file or directory)\nEdge-9K"
+    }
+  ],
+  "ownedPaths": [
+    "flash:/virtual-kubelet/cvk0000_123d675aafac4470b58e95ada003373d.tar",
+    "flash:/virtual-kubelet/cvk0000_25d133f14d8f43609db74c5cd6f57bae.tar",
+    "flash:/virtual-kubelet/cvk0000_354497f307ed4e59a7c16745a03a7151.tar",
+    "flash:/virtual-kubelet/cvk0000_dec2eb0a632b409990bf22918214a19b.tar",
+    "flash:/virtual-kubelet/cvk0000_ed40154932914da69cfe130b1fd9e475.tar"
+  ],
+  "manualLeaseOrJournalChanges": false,
+  "globalImageCachePruned": false,
+  "CRLCacheEntriesBeforeCleanup": 1,
+  "allCRLCacheEntriesOwned": true,
+  "cacheClearedOnlyAfterQualificationAndWorkerStop": true,
+  "CRLCacheEntriesAfterCleanup": 0,
+  "originImagesRemoved": [
+    "cvk-crlrefresh-20261104/valid:a674b004ffa2",
+    "cvk-crlrefresh-20261104/cached:a674b004ffa2",
+    "cvk-crlrefresh-20261104/refresh:a674b004ffa2"
+  ],
+  "listeners": {
+    "16456": false,
+    "18469": false,
+    "18470": false,
+    "18471": false
+  },
+  "sharedHostNodeReady": true,
+  "ephemeralPrivateKeysRemoved": [
+    "root.key",
+    "original.key",
+    "replacement.key"
+  ],
+  "finishedAtUTC": "2026-11-04T20:28:29.779096+00:00"
+}

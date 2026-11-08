@@ -1,0 +1,11 @@
+{
+  "atUTC": "2026-11-04T17:27:24.332437+00:00",
+  "onlyIntermediateCertificateSerialReplaced": true,
+  "rootOrLeafChanged": false,
+  "CRLChanged": false,
+  "revokedSerialRemoved": false,
+  "revocationPolicyChanged": false,
+  "URLChanged": false,
+  "payloadChanged": false,
+  "independentCRLCheckingTLSProbePassed": true
+}

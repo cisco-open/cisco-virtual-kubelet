@@ -36,16 +36,23 @@ config:
 ---
 flowchart LR
     Pod["Pod<br/>image: http://passthrough:8080/docker/nginx_latest.tar"] --> VK["CVK virtual kubelet"]
-    VK -->|"install RPC or copy RPC"| Dev["Cisco device"]
+    VK -->|"RESTCONF copy, then local install"| Dev["Cisco IOS-XE device"]
     Dev -->|"HTTP GET .tar"| PT["docker-http-passthrough"]
     PT -->|"registry V2 API"| Reg["Registry<br/>Docker Hub, GHCR, private"]
 ```
 
-The **device** downloads the image. Either the device pulls the URL natively,
-or, if that times out, the VK's copy RPC makes the device download it to
-flash. The passthrough must therefore be reachable **from the device**. It
-does not need to be reachable from the VK or from other cluster pods, and the
-VK never fetches the tar itself.
+In default **Standard** mode on IOS-XE, the **device** downloads the package to
+flash through the existing synchronous RESTCONF copy RPC. CVK requires confirmed
+copy completion before configuring the app or installing from that local file.
+A failed or unconfirmed copy blocks installation; native RUNNING alone cannot
+prove that the requested release was downloaded. The passthrough must therefore
+be reachable **from the device**. Standard does not require the worker to fetch
+the tar itself or configure artifact metadata or an installation journal.
+
+Optional [Verified artifact delivery](verified-artifact-preflight.md) adds signed
+package identity, worker-side package validation, on-device checksums and durable
+recovery. In that mode the worker also needs access to the configured artifact
+store. Standard remains the default, and Governed is deferred.
 
 ## Run the passthrough
 
@@ -98,13 +105,16 @@ credential-free. The passthrough README documents the
 
 - `imagePullPolicy: Never` rejects HTTP URLs. Use `IfNotPresent` (default) or
   `Always`.
-- The passthrough prepares all layers before it sends the first byte. A large
-  image can therefore exceed the device-native pull wait (default 3 minutes)
-  and trigger the copy fallback. Raise the wait with the
-  `cisco.io/apphost-package-timeout` annotation; see
+- The passthrough prepares all layers before it sends the first byte. Large
+  images must fit the device copy and operation deadlines. The copy RPC is
+  synchronous; CVK does not proceed through a native URL-install fallback.
+  The `cisco.io/apphost-package-timeout` annotation controls application
+  lifecycle waits; see
   [Pod annotations for the copy path](CONFIGURATION.md#pod-annotations-for-the-copy-path).
-- When the native pull succeeds, no tar is kept on flash, so `IfNotPresent`
-  re-downloads on every deploy. See
+- A new remote installation copies successfully under either `IfNotPresent`
+  or `Always`. Existing app reconciliation remains supported. Proven-owned
+  temporary tars are cleaned after consumption; preloaded files and explicit
+  caller destinations are retained. See
   [Image delivery](CONFIGURATION.md#imagepullpolicy).
 
 ## Limitations and security

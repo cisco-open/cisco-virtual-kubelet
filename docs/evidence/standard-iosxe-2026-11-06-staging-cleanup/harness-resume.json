@@ -1,0 +1,8 @@
+{
+  "atUTC": "2026-11-06T11:50:01.464859+00:00",
+  "reason": "harness-only correlation omission; full original evidence copied before continuation",
+  "existingRecoveredPodUID": "428e7765-56b4-4b6c-91da-23691cfc809e",
+  "newMutationBeforeReadOnlyRecheck": false,
+  "productionSourceChanged": false,
+  "manualLeaseOrJournalChanges": false
+}

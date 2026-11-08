@@ -1,0 +1,45 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    qualification: 20261104-stdrevoke-cold
+  name: cvk-stdrevoke-fixture
+  namespace: cvk-stdrevoke-apps-20261104
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cvk-stdrevoke-fixture
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: cvk-stdrevoke-fixture
+        cert-case: control
+        qualification: 20261104-stdrevoke-cold
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchFields:
+              - key: metadata.name
+                operator: In
+                values:
+                - c9k-stdrevoke-20261104
+      containers:
+      - image: https://192.168.129.111:18465/control-agent.tar
+        imagePullPolicy: Always
+        name: agent
+        ports:
+        - containerPort: 8080
+        resources:
+          limits:
+            memory: 128Mi
+          requests:
+            memory: 128Mi
+      tolerations:
+      - effect: NoSchedule
+        key: cisco.vk/device
+        operator: Exists

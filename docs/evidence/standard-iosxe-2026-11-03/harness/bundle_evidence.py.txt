@@ -1,0 +1,8 @@
+"""Stream an explicit evidence allowlist; never include Secrets, kubeconfig or keys."""
+import pathlib,json,tarfile,sys
+R=pathlib.Path('/tmp/cvk-standard-20261103');assert json.loads((R/'qualification-result.json').read_text())['passed'];assert json.loads((R/'final-cleanup.json').read_text())['passed']
+names=['device-baseline.json','device-preparation.json','transport-controls.json','qualification-result.json','worker-replacement-result.json','snapshot-normal-cleanup.json','controls-baseline.json','controls-normal-cleanup.json','leases-normal-cleanup.json','final-cleanup.json','store-requests.jsonl','device-input.yaml','deployment-input.yaml','values.yaml']
+for label in ['initial-a','worker-replacement-a','updated-b','rollback-a']:names += [prefix+label+ext for prefix,ext in [('snapshot-','.json'),('controls-','.json'),('leases-','.json'),('deployment-','.json'),('native-','.json'),('wait-','.jsonl')]]
+with tarfile.open(fileobj=sys.stdout.buffer,mode='w|') as t:
+ for n in names:
+  assert (R/n).is_file(),n;t.add(R/n,arcname=n)

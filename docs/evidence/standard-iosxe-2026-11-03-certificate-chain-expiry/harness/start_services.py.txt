@@ -1,0 +1,17 @@
+import pathlib,subprocess,ssl,urllib.request,urllib.error,json,time,datetime
+R=pathlib.Path('/tmp/cvk-stdchain-20261103')
+with (R/'servers.log').open('wb') as out:p=subprocess.Popen(['python3',str(R/'servers.py')],stdout=out,stderr=subprocess.STDOUT,start_new_session=True)
+(R/'servers.pid').write_text(str(p.pid));results=[]
+for case,port,ca,expect in [('valid-root',18455,'root-old',True),('valid-intermediate',18456,'intermediate-root',True),('root',18457,'root-old',True),('intermediate',18458,'intermediate-root',False)]:
+ ctx=ssl.create_default_context(cafile=str(R/(ca+'.crt')))
+ for i in range(20):
+  try:
+   with urllib.request.urlopen('https://192.168.129.111:'+str(port)+'/_probe',context=ctx,timeout=5) as res:assert res.status==200
+   assert expect;results.append({'case':case,'accepted':True,'rootCertificate':ca});break
+  except urllib.error.URLError as e:
+   if isinstance(e.reason,ssl.SSLCertVerificationError):
+    assert not expect and e.reason.verify_code==10;results.append({'case':case,'accepted':False,'verificationCode':e.reason.verify_code,'verificationMessage':e.reason.verify_message,'rootCertificate':ca});break
+   time.sleep(1)
+  except OSError:time.sleep(1)
+ else:raise RuntimeError('Origin control failed '+case)
+(R/'independent-tls-controls.json').write_text(json.dumps({'atUTC':datetime.datetime.now(datetime.timezone.utc).isoformat(),'testClient':'ux-agx Python SSL; separate from native C9K results','cases':results},indent=2)+'\n');print('PASS valid-root, valid chain and expired intermediate independent TLS controls',flush=True)

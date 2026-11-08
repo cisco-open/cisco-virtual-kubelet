@@ -1,0 +1,51 @@
+{
+  "status": "standard-copy-first-failed-download-and-recovery-qualified",
+  "executionComplete": true,
+  "failedDownloadExecutionBlocked": true,
+  "originalActorAdmissionStopPreserved": true,
+  "renewedCurrentCRLBeforeRecovery": 3,
+  "revokedSerialRetainedDuringRenewal": true,
+  "managerDrivenWorkerReplacement": true,
+  "freshExecutionBlockingQualified": true,
+  "revocationDiscoveryQualified": true,
+  "nativeSerialSpecificPKIRejections": [
+    "2026-11-05T21:00:36.436000+00:00"
+  ],
+  "firstNativePKIRejectionUTC": "2026-11-05T21:00:36.436000+00:00",
+  "firstOriginTLSAlertUTC": "2026-11-05T21:31:37.207539+00:00",
+  "cacheWindowOutcome": "fresh-image-accepted-using-cached-unrevoked-CRL",
+  "publicationUTC": "2026-11-05T20:51:48.178429+00:00",
+  "originalCRLNextUpdateUTC": "2026-11-05T21:00:28+00:00",
+  "firstRevokedCRLNativeFetchUTC": "2026-11-05T21:00:36.426890+00:00",
+  "publicationToNativeFetchSeconds": 528.248461,
+  "originalNextUpdateToNativeFetchSeconds": 8.42689,
+  "freshImageAcceptedDuringCachedWindow": true,
+  "noPackageGETBeforeCertificateReplacement": true,
+  "noAppConfigurationOrRuntimeAfterCopyFailure": true,
+  "releaseBeforeReplacement": [],
+  "releaseAfterReplacement": [
+    {
+      "appID": "cvk0000_302b286af4694fe792a42d963d266570",
+      "release": "STD-COPYFIX-REFRESH-20261105-0609ed4e6d25",
+      "ip": "192.168.129.206"
+    }
+  ],
+  "samePodRecoveryPassed": true,
+  "negativeWorkerRestartPassed": true,
+  "localNeverAndWorkerRestartPassed": true,
+  "freshDeploymentAndDeletionPassed": true,
+  "invalidObservations": 27,
+  "guardedObservations": 103,
+  "canonicalMutationLeaseUID": "9a7919b7-3d1c-46e8-865e-e306c6be3e6f",
+  "manualLeaseOrJournalChanges": false,
+  "forcedCRLRefreshOrFlushDuringQualification": false,
+  "defaultCachePolicyUnchanged": true,
+  "baselineCleanupPassed": true,
+  "earlierEvidencePreserved": true,
+  "defaultMode": "Standard",
+  "artifactMetadataOrJournalRequired": false,
+  "governed": "deferred",
+  "startedAtUTC": "2026-11-05T20:50:26.750619+00:00",
+  "finishedAtUTC": "2026-11-06T08:05:54.023499+00:00",
+  "scope": "C9300-24UX / IOS-XE 17.18.1 fc2; existing synchronous RESTCONF Copy, HTTPS DockerResource deployment with intermediate CRL discovery; same-Pod repair after natural fence, fresh positive and local Never/restart. Standard still depends on device TLS/cache policy and copy completion; no cryptographic artifact attestation."
+}

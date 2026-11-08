@@ -1,0 +1,31 @@
+import pathlib,json,ssl,threading,http.server,datetime,time,hashlib
+R=pathlib.Path('/tmp/cvk-stdrevoke-20261104/cold');A=pathlib.Path('/tmp/cvk-verified-qual-20261102/release-a-final/package.tar');C=R/'package.tar';provenance=json.loads((R/'payload-provenance.json').read_text());assert hashlib.sha256(C.read_bytes()).hexdigest()==provenance['packageSHA256'];manifest=json.loads((R/'pki-manifest.json').read_text());LOCK=threading.Lock();CONTEXT={}
+def event(v):
+ v['atUTC']=datetime.datetime.now(datetime.timezone.utc).isoformat()
+ with LOCK:
+  with (R/'server-events.jsonl').open('a') as f:f.write(json.dumps(v)+'\n')
+for case in ['control','cold']:
+ for mode in ['control','bad','good']:
+  key='control-leaf' if mode=='control' else 'leaf';ctx=ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER);ctx.minimum_version=ssl.TLSVersion.TLSv1_2;ctx.options|=ssl.OP_NO_TICKET;ctx.num_tickets=0;ctx.load_cert_chain(str(R/(mode+'-chain.pem')),str(R/(key+'.key')));CONTEXT[(case,mode)]=ctx
+class TLS(http.server.ThreadingHTTPServer):
+ def get_request(self):
+  raw,peer=self.socket.accept();raw.settimeout(20);mode=json.loads((R/'server-mode.json').read_text())[self.case]
+  try:
+   s=CONTEXT[(self.case,mode)].wrap_socket(raw,server_side=True);s._mode=mode;event({'kind':'tls-established','case':self.case,'certMode':mode,'client':peer[0],'clientPort':peer[1],'serverPort':self.server_port,'sessionReused':s.session_reused,'tlsVersion':s.version()});return s,peer
+  except ssl.SSLError as e:event({'kind':'tls-rejected','case':self.case,'certMode':mode,'client':peer[0],'clientPort':peer[1],'serverPort':self.server_port,'stage':'handshake','errorReason':e.reason,'error':str(e)});raw.close();raise
+class Package(http.server.BaseHTTPRequestHandler):
+ def log_message(self,*args):pass
+ def handle(self):
+  try:super().handle()
+  except ssl.SSLError as e:event({'kind':'tls-rejected','case':self.server.case,'certMode':getattr(self.connection,'_mode',None),'client':self.client_address[0],'clientPort':self.client_address[1],'serverPort':self.server.server_port,'stage':'HTTP-read','errorReason':e.reason,'error':str(e)});raise
+ def do_GET(self):
+  pkg=self.path=='/'+self.server.case+'-agent.tar';p=A if self.server.case=='control' else C;mode=self.connection._mode;status=200 if pkg or self.path=='/_probe' else 404;body=p.read_bytes() if pkg else b'';event({'kind':'http-request','case':self.server.case,'certMode':mode,'client':self.client_address[0],'clientPort':self.client_address[1],'path':self.path,'status':status,'package':pkg});self.send_response(status);self.send_header('Content-Length',str(len(body)));self.end_headers()
+  if pkg:self.wfile.write(body);self.wfile.flush();event({'kind':'package-sent','case':self.server.case,'certMode':mode,'client':self.client_address[0],'bytes':len(body),'sha256':hashlib.sha256(body).hexdigest()})
+class CRL(http.server.BaseHTTPRequestHandler):
+ def log_message(self,*args):pass
+ def do_GET(self):
+  name=next((n for n in manifest['crls'] if self.path=='/'+n+'.crl'),None);body=(R/(name+'.crl')).read_bytes() if name else b'';self.send_response(200 if name else 404);self.send_header('Content-Type','application/pkix-crl');self.send_header('Content-Length',str(len(body)));self.end_headers();self.wfile.write(body);self.wfile.flush();event({'kind':'crl-served','client':self.client_address[0],'path':self.path,'crl':name,'status':200 if name else 404,'sha256':hashlib.sha256(body).hexdigest() if name else None,'bytes':len(body)})
+for case,port in [('control',18465),('cold',18467)]:
+ s=TLS(('0.0.0.0',port),Package);s.case=case;threading.Thread(target=s.serve_forever,daemon=True).start()
+s=http.server.ThreadingHTTPServer(('0.0.0.0',18466),CRL);threading.Thread(target=s.serve_forever,daemon=True).start();event({'kind':'servers-ready','TLSports':[18465,18467],'CRLport':18466,'coldImageSHA256':provenance['packageSHA256']})
+while True:time.sleep(60)

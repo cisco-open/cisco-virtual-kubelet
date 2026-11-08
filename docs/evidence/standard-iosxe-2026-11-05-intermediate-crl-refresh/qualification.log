@@ -1,0 +1,46 @@
+PUBLISHED CRL {"publishedAtUTC": "2026-11-05T06:39:48.541983+00:00", "version": 1, "sha256": "922fa380b7a436ce3149a0794e49a7ee25f7f091448716f47ff5256c40cfa2a5", "bytes": 435, "lastUpdateUTC": "2026-11-05T06:39:43+00:00", "nextUpdateUTC": "2026-11-05T06:49:48+00:00", "revokedSerialsHex": [], "certificateOrPolicyChanged": false, "manualRefreshOrFlushIssued": false}
+PASS offline chain controls v 1
+PASS read-only native PKI baseline published 1
+deployment.apps/cvk-intrefresh-fixture created
+{"atUTC": "2026-11-05T06:39:53.872453+00:00", "label": "valid", "release": "INT-REFRESH-VALID-20261105-4cd216c69bce", "podUIDs": ["713b810b-0a45-4dea-9fab-c5f8e26bbd31"], "nativeStates": {"iris": "RUNNING", "c9ktest": "DEPLOYED"}, "ready": false, "httpReleaseConfirmed": false, "oldNativeAppsAbsent": false, "artifactJournalCount": 0}
+{"atUTC": "2026-11-05T06:40:20.610268+00:00", "label": "valid", "release": "INT-REFRESH-VALID-20261105-4cd216c69bce", "podUIDs": ["713b810b-0a45-4dea-9fab-c5f8e26bbd31"], "nativeStates": {"iris": "RUNNING", "c9ktest": "DEPLOYED", "cvk0000_713b810b0a454dea9fabc5f8e26bbd31": "RUNNING"}, "ready": true, "httpReleaseConfirmed": false, "oldNativeAppsAbsent": true, "artifactJournalCount": 0}
+{"atUTC": "2026-11-05T06:40:47.490954+00:00", "label": "valid", "release": "INT-REFRESH-VALID-20261105-4cd216c69bce", "podUIDs": ["713b810b-0a45-4dea-9fab-c5f8e26bbd31"], "nativeStates": {"iris": "RUNNING", "c9ktest": "DEPLOYED", "cvk0000_713b810b0a454dea9fabc5f8e26bbd31": "RUNNING"}, "ready": true, "httpReleaseConfirmed": false, "oldNativeAppsAbsent": true, "artifactJournalCount": 0}
+PASS valid Ready/HTTP INT-REFRESH-VALID-20261105-4cd216c69bce without artifacts or journal
+PASS read-only native PKI valid published 1
+PUBLISHED CRL {"publishedAtUTC": "2026-11-05T06:41:12.784144+00:00", "version": 2, "sha256": "7ed5e8f4e68e49595c07805243c64a04ee6da00a649753284f2190250123c12a", "bytes": 490, "lastUpdateUTC": "2026-11-05T06:41:07+00:00", "nextUpdateUTC": "2026-11-05T08:41:12+00:00", "revokedSerialsHex": ["2f2f8ee2e9c17c3c502f6cb3b13ab373f892c0f9"], "certificateOrPolicyChanged": false, "manualRefreshOrFlushIssued": false}
+PASS offline chain controls v 2
+PASS read-only native PKI just-published published 2
+deployment.apps/cvk-intrefresh-fixture scaled
+2026-11-05T06:41:24.122238+00:00 valid normal deletion pending 2026-11-05 07:12:17.180115+00:00
+deployment.apps/cvk-intrefresh-fixture configured
+{"atUTC": "2026-11-05T06:43:38.111632+00:00", "label": "cached", "release": "INT-REFRESH-CACHED-20261105-4cd216c69bce", "podUIDs": ["24a38429-fdef-486a-bf48-9f4598dce7a0"], "nativeStates": {"iris": "RUNNING", "c9ktest": "DEPLOYED", "cvk0000_24a38429fdef486abf489f4598dce7a0": "RUNNING"}, "ready": true, "httpReleaseConfirmed": true, "oldNativeAppsAbsent": true, "artifactJournalCount": 0}
+PASS cached Ready/HTTP INT-REFRESH-CACHED-20261105-4cd216c69bce without artifacts or journal
+PASS read-only native PKI cached-boundary published 2
+2026-11-05T06:43:42.836049+00:00 CACHE WINDOW fresh-image-accepted-using-cached-unrevoked-CRL [{'appID': 'cvk0000_24a38429fdef486abf489f4598dce7a0', 'release': 'INT-REFRESH-CACHED-20261105-4cd216c69bce', 'ip': '192.168.129.240'}]
+PASS read-only native PKI idle-cache-0 published 2
+PASS read-only native PKI idle-cache-1 published 2
+PASS read-only native PKI idle-cache-2 published 2
+PASS read-only native PKI idle-cache-3 published 2
+PASS read-only native PKI idle-cache-4 published 2
+PASS read-only native PKI idle-cache-5 published 2
+PASS read-only native PKI idle-cache-6 published 2
+PASS read-only native PKI idle-cache-7 published 2
+PASS read-only native PKI idle-cache-8 published 2
+PASS read-only native PKI idle-cache-9 published 2
+PASS read-only native PKI idle-cache-10 published 2
+PASS read-only native PKI idle-cache-11 published 2
+deployment.apps/cvk-intrefresh-fixture scaled
+2026-11-05T06:48:15.528388+00:00 cached normal deletion pending 2026-11-05 07:19:10.801650+00:00
+PASS read-only native PKI expiry-wait-0 published 2
+PASS read-only native PKI expiry-wait-1 published 2
+PASS read-only native PKI expiry-wait-2 published 2
+PASS read-only native PKI before-refresh-demand published 2
+deployment.apps/cvk-intrefresh-fixture configured
+{"atUTC": "2026-11-05T06:49:57.597577+00:00", "podUIDs": ["635c7b93-fadf-4f69-8335-fafe65ce40aa"], "ready": false, "nativeRunning": false, "actualReleases": [], "newCRLNativeRetrievals": 1, "TLSRejections": 0, "packageRequests": 0, "leaseRenewAgeSeconds": 1.729398, "leaseExpiresUTC": "2026-11-05T07:20:55.868153+00:00", "artifactJournals": 0}
+PASS read-only native PKI revoked-boundary published 2
+2026-11-05T06:50:24.875542+00:00 SEALED REFRESH OUTCOME runtime-observed-without-fresh-image-transfer
+PASS read-only native PKI after-replacement published 2
+{"atUTC": "2026-11-05T06:50:29.031832+00:00", "label": "recovery", "release": "INT-REFRESH-REFRESH-20261105-4cd216c69bce", "podUIDs": ["635c7b93-fadf-4f69-8335-fafe65ce40aa"], "nativeStates": {"iris": "RUNNING", "c9ktest": "DEPLOYED", "cvk0000_635c7b93fadf4f698335fafe65ce40aa": "RUNNING"}, "ready": true, "httpReleaseConfirmed": false, "oldNativeAppsAbsent": true, "artifactJournalCount": 0}
+{"atUTC": "2026-11-05T06:50:56.114732+00:00", "label": "recovery", "release": "INT-REFRESH-REFRESH-20261105-4cd216c69bce", "podUIDs": ["635c7b93-fadf-4f69-8335-fafe65ce40aa"], "nativeStates": {"iris": "RUNNING", "c9ktest": "DEPLOYED", "cvk0000_635c7b93fadf4f698335fafe65ce40aa": "RUNNING"}, "ready": true, "httpReleaseConfirmed": false, "oldNativeAppsAbsent": true, "artifactJournalCount": 0}
+{"atUTC": "2026-11-05T06:51:23.607011+00:00", "label": "recovery", "release": "INT-REFRESH-REFRESH-20261105-4cd216c69bce", "podUIDs": ["635c7b93-fadf-4f69-8335-fafe65ce40aa"], "nativeStates": {"iris": "RUNNING", "c9ktest": "DEPLOYED", "cvk0000_635c7b93fadf4f698335fafe65ce40aa": "RUNNING"}, "ready": true, "httpReleaseConfirmed": false, "oldNativeAppsAbsent": true, "artifactJournalCount": 0}
+{"atUTC": "2026-11-05T06:51:51.020252+00:00", "label": "recovery", "release": "INT-REFRESH-REFRESH-20261105-4cd216c69bce", "podUIDs": ["635c7b93-fadf-4f69-8335-fafe65ce40aa"], "nativeStates": {"iris": "RUNNING", "c9ktest": "DEPLOYED", "cvk0000_635c7b93fadf4f698335fafe65ce40aa": "RUNNING"}, "ready": true, "httpReleaseConfirmed": false, "oldNativeAppsAbsent": true, "artifactJournalCount": 0}

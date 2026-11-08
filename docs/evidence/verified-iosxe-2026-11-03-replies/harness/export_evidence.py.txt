@@ -1,0 +1,22 @@
+import pathlib,json,re,shutil,hashlib,subprocess
+R=pathlib.Path('/private/tmp/cvk-replies-20261103');OUT=pathlib.Path('/Users/johalley/Git/cisco-virtual-kubelet/docs/evidence/verified-iosxe-2026-11-03-replies');OUT.mkdir(exist_ok=True)
+scope={};exec(compile((R/'sanitize_evidence.py').read_text().split('for name in sys.argv[1:]')[0],'sanitize_evidence.py','exec'),scope)
+files=['candidate.json','device-baseline.json','device-preparation.json','releases.json','relay-tls-controls.json','relay-network-scope.json','relay-discovery-controls.json','relay-scope-tests.json','chart-source-verification.json','qualification-result.json','lease-after-normal-cleanup.json','final-cleanup.json','test-results.json','retained-producer-provenance.json']
+for op in ['activate','start']:
+ files += ['lost-'+op+'-response.json',op+'-result.json','snapshot-'+op+'-after-lost-reply.json',op+'-replacement-still-fenced.json','snapshot-'+op+'-recovered.json','snapshot-'+op+'-normal-cleanup.json']
+ files += [op+'-lease-'+x+'.json' for x in ['after-lost-reply','replacement-still-fenced','after-recovery','after-cleanup']]
+ files += [op+'-'+x+'.json' for x in ['native-pending','native-recovered','pending-checksum','recovered-checksum','deployment-available']]
+for n in files:scope['export'](n)
+q=scope['clean'](json.loads((R/'qualification-assessed.json').read_text()));(OUT/'qualification.json').write_text(json.dumps(q,indent=2)+'\n')
+for n in ['relay-events.jsonl','activate-fenced-observations.jsonl','start-fenced-observations.jsonl','wait-activate-recovered.jsonl','wait-start-recovered.jsonl']:
+ (OUT/n).write_text(''.join(json.dumps(scope['clean'](json.loads(l)))+'\n' for l in (R/n).read_text().splitlines()))
+shutil.copyfile(R/'qualification.log',OUT/'qualification.log');shutil.copytree(R/'harness',OUT/'harness',dirs_exist_ok=True)
+for n in ['assess.py','sanitize_evidence.py','export_evidence.py']:shutil.copyfile(R/n,OUT/'harness'/(n+'.txt'))
+shutil.copyfile(pathlib.Path('/Users/johalley/Git/cisco-virtual-kubelet/docs/evidence/verified-iosxe-2026-11-03/harness/checksum-probe.go.txt'),OUT/'harness/checksum-probe.go.txt')
+# Actual secret material/header shapes, anchored so regex source does not match itself.
+pattern=re.compile(r'^-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----|^\s*client-key-data:\s*[A-Za-z0-9+/]{24,}|password\s*[=:]\s*cisco\b|^Authorization:\s*(?:Basic|Bearer)\s+\S',re.I|re.M)
+for f in OUT.rglob('*'):
+ if f.is_file():assert not pattern.search(f.read_text()),str(f)
+# Do not treat the old candidate's base commit as the new source identity.
+c=json.loads((OUT/'candidate.json').read_text());c.update({'dirtyWorktree':True,'buildCommand':'GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -trimpath -o cisco-vk ./cmd/cisco-vk','goVersion':'go1.26.7','sourceDigestAlgorithm':'Sorted unique git ls-files -co --exclude-standard regular files under api/, cmd/, internal/, charts/, plus go.mod, go.sum, Dockerfile, Makefile; SHA256 of UTF-8 relative path, NUL, lowercase file SHA256, newline. Tests included; docs excluded.'});(OUT/'candidate.json').write_text(json.dumps(c,indent=2)+'\n')
+manifest=''.join(hashlib.sha256(f.read_bytes()).hexdigest()+'  '+str(f.relative_to(OUT))+'\n' for f in sorted(OUT.rglob('*')) if f.is_file() and f.name!='SHA256SUMS');(OUT/'SHA256SUMS').write_text(manifest);print('PASS exported',len(manifest.splitlines()),'sanitized evidence files')

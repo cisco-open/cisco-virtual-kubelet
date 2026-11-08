@@ -1,0 +1,121 @@
+{
+  "generatedAtUTC": "2026-11-04T17:20:18.187287+00:00",
+  "nonce": "067753481674",
+  "certificates": {
+    "cold-root": {
+      "sha256": "d89351b734c50d7c6f67dc7b95430d3c2edeb4d90cd3b98c05513e81e0d69567",
+      "SPKISHA256": "72bb896c2acf4e3e70291370456924dd81af1d49bd9a4422bff90e834c31f3a1",
+      "subject": "CN=CVK revoke cold-root 067753481674",
+      "issuer": "CN=CVK revoke cold-root 067753481674",
+      "serialHex": "370e957ca7390d5150c16fe148fc0b5570db607a",
+      "validFromUTC": "2026-11-03T17:20:18+00:00",
+      "validUntilUTC": "2026-12-04T17:20:18+00:00",
+      "ca": true
+    },
+    "bad": {
+      "sha256": "f01e5730bd6328bbd92ad646154b653d55f237f3d19252e156987253b99d4c19",
+      "SPKISHA256": "b5f0465538ab5cf5cc1ae68d7593d4cd5dd999d76bd4cc8ca99d0d6a1d2fbb3d",
+      "subject": "CN=CVK revoke cold-test-intermediate 067753481674",
+      "issuer": "CN=CVK revoke cold-root 067753481674",
+      "serialHex": "acaf990e1eb6f6595e22f4573b7f8e98de99349",
+      "validFromUTC": "2026-11-03T17:20:18+00:00",
+      "validUntilUTC": "2026-12-04T17:20:18+00:00",
+      "ca": true
+    },
+    "good": {
+      "sha256": "3111a83e2f74094f0fabcf83e636a149de1bf558492c51ff91277b2800d4444d",
+      "SPKISHA256": "b5f0465538ab5cf5cc1ae68d7593d4cd5dd999d76bd4cc8ca99d0d6a1d2fbb3d",
+      "subject": "CN=CVK revoke cold-test-intermediate 067753481674",
+      "issuer": "CN=CVK revoke cold-root 067753481674",
+      "serialHex": "7deb52e8f2d544945edf932f830510659ae5a600",
+      "validFromUTC": "2026-11-03T17:20:18+00:00",
+      "validUntilUTC": "2026-12-04T17:20:18+00:00",
+      "ca": true
+    },
+    "leaf": {
+      "sha256": "736b8cc43af0606dd0e1d45ea67a4a071715b69a1a9be7ade71e55965e9e9fac",
+      "SPKISHA256": "f4d2a9318904d38ea0d3691d5b126f989a514e4a44d7b691c08a9174bf941adb",
+      "subject": "CN=192.168.129.111",
+      "issuer": "CN=CVK revoke cold-test-intermediate 067753481674",
+      "serialHex": "13b05fc6d23446bd425ca634859727ffb1333597",
+      "validFromUTC": "2026-11-03T17:20:18+00:00",
+      "validUntilUTC": "2026-11-11T17:20:18+00:00",
+      "ca": false
+    },
+    "control-intermediate": {
+      "sha256": "3c94c9884fb2f0c33613f979ff969f233ca23baf7b38b118a14c741bfb66ae34",
+      "SPKISHA256": "5ebe8c4bc2ccf999b5b7822c791ab5ec938b2bfdb77ac0d42436f0fe91a6ac20",
+      "subject": "CN=CVK revoke cold-control-intermediate 067753481674",
+      "issuer": "CN=CVK revoke cold-root 067753481674",
+      "serialHex": "100efd01bd9e0af533ffe402f4a54a39e179993",
+      "validFromUTC": "2026-11-03T17:20:18+00:00",
+      "validUntilUTC": "2026-12-04T17:20:18+00:00",
+      "ca": true
+    },
+    "control-leaf": {
+      "sha256": "d9a07c4e8d8c241a7a06e1148325dcd397fc410d5b86093ddbaa6c2f7abf869e",
+      "SPKISHA256": "56c758bdc179189de0c704062ca7d4c535f265718895683a22276f8ee25c200b",
+      "subject": "CN=192.168.129.111",
+      "issuer": "CN=CVK revoke cold-control-intermediate 067753481674",
+      "serialHex": "643d68e4a5b02f6891e763603b89d315ec19fb6e",
+      "validFromUTC": "2026-11-03T17:20:18+00:00",
+      "validUntilUTC": "2026-11-11T17:20:18+00:00",
+      "ca": false
+    }
+  },
+  "crls": {
+    "cold-root": {
+      "sha256": "a84d01fa52f339d288c5697d53e2ba6b3cc6802684369a097d85cfa1e26c0ba9",
+      "issuer": "CN=CVK revoke cold-root 067753481674",
+      "lastUpdateUTC": "2026-11-04T17:15:18+00:00",
+      "nextUpdateUTC": "2026-11-06T17:20:18+00:00",
+      "number": 1,
+      "url": "http://192.168.129.111:18466/cold-root.crl",
+      "revokedSerialsHex": [
+        "acaf990e1eb6f6595e22f4573b7f8e98de99349"
+      ]
+    },
+    "intermediate": {
+      "sha256": "98f1c4947b9df729ab84c43b540e8e4163f115eb3de00f9c8102226b812238a1",
+      "issuer": "CN=CVK revoke cold-test-intermediate 067753481674",
+      "lastUpdateUTC": "2026-11-04T17:15:18+00:00",
+      "nextUpdateUTC": "2026-11-06T17:20:18+00:00",
+      "number": 1,
+      "url": "http://192.168.129.111:18466/intermediate.crl",
+      "revokedSerialsHex": []
+    },
+    "control-intermediate": {
+      "sha256": "9c8a6e4e859cd108490ab3b19a9159fac74f44660309d2c02dcf91648a610b37",
+      "issuer": "CN=CVK revoke cold-control-intermediate 067753481674",
+      "lastUpdateUTC": "2026-11-04T17:15:18+00:00",
+      "nextUpdateUTC": "2026-11-06T17:20:18+00:00",
+      "number": 1,
+      "url": "http://192.168.129.111:18466/control-intermediate.crl",
+      "revokedSerialsHex": []
+    }
+  },
+  "chains": {
+    "bad": [
+      "leaf",
+      "bad"
+    ],
+    "good": [
+      "leaf",
+      "good"
+    ],
+    "control": [
+      "control-leaf",
+      "control-intermediate"
+    ]
+  },
+  "ephemeralPrivateKeys": [
+    "cold-root.key",
+    "cold-intermediate.key",
+    "leaf.key",
+    "control-intermediate.key",
+    "control-leaf.key"
+  ],
+  "CRLsChangedDuringReplacement": false,
+  "newRootAndIntermediateAvoidPreviouslyCachedValidCertificate": true,
+  "intermediateRevocationReason": "superseded; not CA-key compromise"
+}

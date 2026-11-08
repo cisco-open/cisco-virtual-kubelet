@@ -67,6 +67,9 @@ type nxosAppAction struct {
 }
 
 func NewAppHostingDriver(ctx context.Context, spec *v1alpha1.DeviceSpec) (*NXOSDriver, error) {
+	if err := spec.AppArtifacts.Validate(); err != nil {
+		return nil, fmt.Errorf("appArtifacts: %w", err)
+	}
 	client, err := newNXAPIClient(spec)
 	if err != nil {
 		return nil, err
@@ -82,7 +85,7 @@ func NewAppHostingDriver(ctx context.Context, spec *v1alpha1.DeviceSpec) (*NXOSD
 	if err := d.CheckConnection(ctx); err != nil {
 		return nil, err
 	}
-	if spec.AllowUnsignedApps {
+	if spec.AllowUnsignedApps && spec.AppArtifacts.EffectiveMode() == v1alpha1.AppArtifactModeStandard {
 		if err := d.ConfigureSignVerification(ctx, false); err != nil {
 			log.G(ctx).WithError(err).Warn("allowUnsignedApps=true but failed to disable NX-OS app-hosting sign-verification; unsigned installs may be blocked")
 		}
@@ -248,6 +251,11 @@ func (d *NXOSDriver) GetGlobalOperationalData(ctx context.Context) (*common.AppH
 }
 
 func (d *NXOSDriver) ConfigureSignVerification(ctx context.Context, enabled bool) error {
+	if !enabled {
+		if err := common.RequireStandardAppArtifacts(d.config); err != nil {
+			return err
+		}
+	}
 	mode := "disable"
 	if enabled {
 		mode = "enable"

@@ -1,0 +1,75 @@
+import pathlib,json,subprocess,time,datetime,sys
+R=pathlib.Path('/tmp/cvk-pending-20261103');K=['kubectl','--kubeconfig',str(R/'kubeconfig')];NS='cvk-pending-20261103';APPS='cvk-pending-apps-20261103';DEV='c9k-pending-20261103'
+def now():return datetime.datetime.now(datetime.timezone.utc).isoformat()
+def get(a):return json.loads(subprocess.check_output(K+a,text=True,stderr=subprocess.DEVNULL,timeout=30))
+def run(a,**kw):return subprocess.run(a,check=True,**kw)
+def snap(label):
+ run(['python3',str(R/'snapshot.py'),label],stdout=subprocess.DEVNULL);return json.loads((R/('snapshot-'+label+'.json')).read_text())
+def records(s):return [json.loads(v) for j in s['journals'] for v in (j.get('data') or {}).values()]
+EVENT_OFFSET=len((R/'relay-events.jsonl').read_text().splitlines())
+(R/'qualification-event-offset.json').write_text(json.dumps({'atUTC':now(),'lineOffset':EVENT_OFFSET})+'\n')
+def counts():
+ e=[json.loads(x) for x in (R/'relay-events.jsonl').read_text().splitlines()[EVENT_OFFSET:]];assert not any(x['kind'] in ['scope-or-replay-rejected','rejected','relay-error'] for x in e),[x for x in e if x['kind'] in ['scope-or-replay-rejected','relay-error']]
+ return {op:sum(x['kind']=='forwarded' and x.get('operation')==op for x in e) for op in ['copy','configuration','install','activate','start']}
+def pending(s,uid,juid,aid):
+ assert len(s['pods'])==1 and s['pods'][0]['metadata']['uid']==uid
+ assert not any(c['type']=='Ready' and c['status']=='True' for c in s['pods'][0].get('status',{}).get('conditions',[]))
+ rec=records(s);assert len(rec)==1 and rec[0]['phase']=='installPending' and rec[0]['podUID']==uid
+ assert [j['metadata']['uid'] for j in s['journals']]==[juid]
+ assert {x['appID']:x['details'].get('state') for x in s['nativeApps']}=={'iris':'RUNNING','c9ktest':'DEPLOYED',aid:'DEPLOYED'}
+ assert counts()=={'copy':1,'configuration':1,'install':1,'activate':0,'start':0}
+ return rec[0]
+start=now();base=snap('before-fixture');assert len(base['pods'])<=1 and not records(base);assert {a['appID']:a['details'].get('state') for a in base['nativeApps']}=={'iris':'RUNNING','c9ktest':'DEPLOYED'}
+# A relay preparation failure rejected a read before any device mutation.
+# Preserve its empty journal and conservative Lease; never reset either.
+preleases=get(['-n',NS,'get','leases','-o','json'])['items']
+prelease=next(x for x in preleases if x.get('metadata',{}).get('labels',{}).get('cisco.vk/family')=='device-disruptive-mutation')
+if prelease.get('spec',{}).get('holderIdentity'):
+ (R/'preparation-retained-lease.json').write_text(json.dumps(prelease,indent=2)+'\n')
+ preholder=prelease['spec']['holderIdentity'];prerenew=prelease['spec']['renewTime'];preexpiry=datetime.datetime.fromisoformat(prerenew.replace('Z','+00:00'))+datetime.timedelta(seconds=prelease['spec']['leaseDurationSeconds'])
+ assert not any(json.loads(x).get('kind')=='forwarded' for x in (R/'relay-events.jsonl').read_text().splitlines())
+ print(now(),'Read-only preparation hold; waiting for normal expiry',preexpiry.isoformat(),flush=True)
+ while datetime.datetime.now(datetime.timezone.utc)<preexpiry:
+  x=snap('preparation-fenced');assert not records(x);assert {a['appID']:a['details'].get('state') for a in x['nativeApps']}=={'iris':'RUNNING','c9ktest':'DEPLOYED'}
+  l=get(['-n',NS,'get','lease',prelease['metadata']['name'],'-o','json']);assert l['spec']['holderIdentity']==preholder and l['spec']['renewTime']==prerenew
+  time.sleep(min(30,max(0,(preexpiry-datetime.datetime.now(datetime.timezone.utc)).total_seconds())))
+ print(now(),'Preparation lease expired normally; fault case may proceed',flush=True)
+
+run(['python3',str(R/'workload.py'),'A'])
+for i in range(150):
+ if (R/'lost-install-response.json').exists():break
+ if i%10==0:print(now(),'Waiting for accepted native install and suppressed reply',flush=True)
+ time.sleep(2)
+else:raise RuntimeError('No conclusive lost-install-response event')
+fault=json.loads((R/'lost-install-response.json').read_text());uid=fault['pendingBeforeDispatch']['record']['podUID'];juid=fault['pendingBeforeDispatch']['journalUID'];aid=fault['appID'];assert fault['clientResponseBodyBytesSent']==0 and not fault['clientResponseHeadersSent'];assert fault['nativeState']=='DEPLOYED'
+s=snap('after-lost-reply');rec=pending(s,uid,juid,aid);old=s['workers'];assert len(old)==1
+lease=next(x for x in get(['-n',NS,'get','leases','-o','json'])['items'] if x.get('metadata',{}).get('labels',{}).get('cisco.vk/family')=='device-disruptive-mutation');assert lease['spec'].get('holderIdentity');(R/'lease-after-lost-reply.json').write_text(json.dumps(lease,indent=2)+'\n');name=lease['metadata']['name'];holder=lease['spec']['holderIdentity']
+print(now(),'Accepted install reply lost; journal installPending and native DEPLOYED; rolling worker through manager',flush=True)
+run(K+['-n',NS,'patch','ciscodevice',DEV,'--type=merge','-p','{"spec":{"logLevel":"warn"}}'])
+for i in range(90):
+ workers=[p for p in get(['-n',NS,'get','pods','-o','json'])['items'] if p['metadata']['name'].startswith(DEV+'-vk-')]
+ if len(workers)==1 and workers[0]['metadata']['uid']!=old[0]['uid'] and not workers[0]['metadata'].get('deletionTimestamp') and workers[0].get('status',{}).get('containerStatuses') and all(c.get('ready') for c in workers[0]['status']['containerStatuses']):break
+ time.sleep(3)
+else:raise RuntimeError('Manager-controlled worker replacement did not converge')
+s=snap('replacement-still-fenced');pending(s,uid,juid,aid);new=s['workers'][0];assert new['uid']!=old[0]['uid'];assert s['pods'][0]['metadata']['annotations']['topology.cisco.vk/app-worker-pod-uid']==new['uid']
+lease=get(['-n',NS,'get','lease',name,'-o','json']);assert lease['spec']['holderIdentity']==holder;renew=lease['spec']['renewTime'];expiry=datetime.datetime.fromisoformat(renew.replace('Z','+00:00'))+datetime.timedelta(seconds=lease['spec']['leaseDurationSeconds']);(R/'lease-replacement-still-fenced.json').write_text(json.dumps(lease,indent=2)+'\n');assert datetime.datetime.now(datetime.timezone.utc)<expiry
+print(now(),'New worker bound; pending journal and native app unchanged. Normal fence expiry:',expiry.isoformat(),flush=True)
+iteration=0
+while datetime.datetime.now(datetime.timezone.utc)<expiry:
+ s=snap('fenced-poll-'+str(iteration));pending(s,uid,juid,aid);l=get(['-n',NS,'get','lease',name,'-o','json']);assert l['spec']['holderIdentity']==holder and l['spec']['renewTime']==renew
+ summary={'atUTC':now(),'podUID':uid,'journalUID':juid,'phase':'installPending','ready':False,'nativeState':'DEPLOYED','workerUID':new['uid'],'leaseHolder':holder,'leaseRenewTime':renew,'leaseExpiresUTC':expiry.isoformat(),'forwarded':counts()}
+ with (R/'fenced-observations.jsonl').open('a') as f:f.write(json.dumps(summary)+'\n')
+ if iteration%2==0:print(now(),'Fenced correctly; no install replay, activation or start',flush=True)
+ iteration+=1;time.sleep(min(15,max(0,(expiry-datetime.datetime.now(datetime.timezone.utc)).total_seconds())))
+print(now(),'Original lease expired naturally; observing guarded recovery',flush=True)
+run(['python3',str(R/'wait_health.py'),'recovered-a','A']);s=json.loads((R/'snapshot-recovered-a.json').read_text());assert s['assertions']['passed'] and s['assertions']['podUIDs']==[uid];assert [j['metadata']['uid'] for j in s['journals']]==[juid];assert s['workers'][0]['uid']==new['uid'];assert counts()=={'copy':1,'configuration':1,'install':1,'activate':1,'start':1}
+rec=records(s)[0];assert rec['phase']=='running' and rec['appID']==aid
+expected=json.loads((R/'releases.json').read_text())[0];q=subprocess.run(['/tmp/cvk-verified-qual-20261102/checksum-probe','-path',rec['stagedPath'],'-size',str(expected['package']['sizeBytes']),'-sha512',expected['sha512']],capture_output=True,text=True);assert q.returncode==0,q.stderr;(R/'recovered-native-checksum.json').write_text(json.dumps({'atUTC':now(),'exitCode':q.returncode,'result':json.loads(q.stdout)},indent=2)+'\n')
+for i in range(20):
+ l=get(['-n',NS,'get','lease',name,'-o','json'])
+ if not l.get('spec',{}).get('holderIdentity'):break
+ time.sleep(1)
+else:raise RuntimeError('Recovered operation did not release its own lease')
+(R/'lease-after-recovery.json').write_text(json.dumps(l,indent=2)+'\n')
+report={'passed':True,'startedAtUTC':start,'finishedAtUTC':now(),'fault':'accepted install reply lost before client headers/body','candidateChanged':False,'podUID':uid,'appID':aid,'journalUID':juid,'oldWorkerUID':old[0]['uid'],'newWorkerUID':new['uid'],'expiryUTC':expiry.isoformat(),'fencedObservationCount':iteration,'forwardedLifecycleCounts':counts(),'samePodAppJournalRetained':True,'normalGuardedRecovery':True,'ready':True,'httpRelease':'A','defaultMode':'Standard','governed':'deferred','scope':'installPending lost reply, with subsequent activate/start observed once each; lost activate/start replies not injected'}
+(R/'qualification-result.json').write_text(json.dumps(report,indent=2)+'\n');print('PASS pending install lost-response worker recovery without replay',flush=True)

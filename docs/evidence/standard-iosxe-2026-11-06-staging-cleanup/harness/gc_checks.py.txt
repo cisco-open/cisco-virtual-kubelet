@@ -1,0 +1,30 @@
+"""Independent exact-key observations and preloaded byte preservation proofs."""
+import ssl,urllib.request,urllib.error,base64,os,json,uuid,re,subprocess,hashlib,datetime
+GCROOT=R
+GCCTX=ssl.create_default_context(cafile='/tmp/cvk-verified-qual-20261101/device-ca.crt');GCCTX.verify_flags|=ssl.VERIFY_X509_PARTIAL_CHAIN
+GCH={'Authorization':'Basic '+base64.b64encode(('cisco:'+os.environ['CVK_QUAL_DEVICE_PASSWORD']).encode()).decode(),'Content-Type':'application/yang-data+json','Accept':'application/yang-data+json'}
+def gcRequest(path,body=None):
+ req=urllib.request.Request('https://10.1.1.1'+path,headers=GCH,data=json.dumps(body).encode() if body is not None else None,method='POST' if body is not None else 'GET')
+ try:
+  with urllib.request.urlopen(req,context=GCCTX,timeout=120) as response:return {'status':response.status,'body':json.loads(response.read(1<<20))}
+ except urllib.error.HTTPError as e:return {'status':e.code,'body':e.read().decode()}
+def fileStat(file):
+ assert re.fullmatch(r'flash:/cvk-stage-[a-f0-9]{32}\.tar',file)
+ return gcRequest('/restconf/data/Cisco-IOS-XE-platform-software-oper:cisco-platform-software/q-filesystem=fru-rp,0,0,-1/partitions=flash%3A/partition-content='+file.split('/')[-1]+'?fields=full-path;size;type')
+def nativeFiles(label,files,preload=False):
+ commands=['dir '+file for file in files]
+ if preload:commands+=['verify /sha512 '+files[0]]
+ q=subprocess.run(['python3',str(R/'device_cli.py')],input=json.dumps(commands),text=True,capture_output=True,check=True);obj=json.loads(q.stdout);save('files-native-'+label,obj);return obj
+
+def createPreloaded():
+ file='flash:/cvk-stage-'+uuid.uuid4().hex+'.tar';assert fileStat(file)['status']==404
+ response=gcRequest('/restconf/operations/Cisco-IOS-XE-rpc:copy',{'Cisco-IOS-XE-rpc:copy':{'source-drop-node-name':'https://192.168.129.111:18482/a.tar','destination-drop-node-name':file}})
+ assert response['status']==200 and response['body']['Cisco-IOS-XE-rpc:output']['result']=='RPC request successful';report={'atUTC':now(),'path':file,'creationResponse':response,'packageSHA512':hashlib.sha512((R/'a/package.tar').read_bytes()).hexdigest(),'packageSHA256':P['phases']['a']['packageSHA256'],'packageBytes':P['phases']['a']['packageBytes'],'ownedBy':'qualification caller; never adopted by worker cleanup','resemblesManagedStagingFilename':True};save('preloaded-provenance',report);preservePreloaded('created');return file
+
+def preservePreloaded(label):
+ report=json.loads((R/'preloaded-provenance.json').read_text());file=report['path'];stat=fileStat(file);assert stat['status']==200;entry=stat['body']['Cisco-IOS-XE-platform-software-oper:partition-content'][0];assert entry['full-path']==file.split('/')[-1] and entry['type']=='file' and int(entry['size'])==report['packageBytes'];proof=nativeFiles('preloaded-'+label,[file],True);text=proof['commands'][-1]['output'];assert report['packageSHA512'].lower() in text.lower();save('preloaded-preserved-'+label,{'atUTC':now(),'passed':True,'path':file,'stat':stat,'sha512':report['packageSHA512'],'nativeProof':'files-native-preloaded-'+label+'.json'});return file
+
+def confirmOwnedGone(label,files):
+ assert files and len(set(files))==len(files)
+ preload=json.loads((R/'preloaded-provenance.json').read_text())['path'];assert preload not in files
+ stats={file:fileStat(file) for file in files};assert all(v['status']==404 and 'uri keypath not found' in v['body'] for v in stats.values());proof=nativeFiles(label,files);assert all('No such file or directory' in v['output'] for v in proof['commands']);save('staging-absent-'+label,{'atUTC':now(),'passed':True,'files':stats,'automaticCleanupOnly':True,'manualDeletionUsed':False});preservePreloaded(label)

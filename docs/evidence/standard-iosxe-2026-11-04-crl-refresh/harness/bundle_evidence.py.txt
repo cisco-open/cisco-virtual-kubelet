@@ -1,0 +1,7 @@
+"""Public/results top-level allowlist; never keys, Secrets, kubeconfig or binaries."""
+import pathlib,json,tarfile,sys
+R=pathlib.Path('/tmp/cvk-crlrefresh-20261104');assert json.loads((R/'qualification-result.json').read_text())['executionComplete'];assert json.loads((R/'final-cleanup.json').read_text())['passed'];names=[p.name for p in R.iterdir() if p.is_file() and (p.suffix in ['.json','.jsonl','.yaml','.crt','.crl','.pem'] or p.name in ['qualification.log','continuation.log','continuation.py','discovery.log','discovery.py','publish_discovery_crl.py'])]
+with tarfile.open(fileobj=sys.stdout.buffer,mode='w|') as t:
+ for n in sorted(names):t.add(R/n,arcname=n)
+ for p in sorted((R/'prepublication-attempt').iterdir()):
+  assert p.is_file();t.add(p,arcname='prepublication-attempt/'+p.name)

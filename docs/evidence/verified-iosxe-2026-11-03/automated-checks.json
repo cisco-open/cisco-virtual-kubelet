@@ -1,0 +1,42 @@
+[
+  {
+    "check": "targeted-recovery-race",
+    "result": "PASS",
+    "command": "go test -race ./internal/drivers/iosxe ./internal/provider/maintenance ./internal/devicecoordination",
+    "logSHA256": "fa777232e87ad8231110ee10f256088e140de5df33115c9a6b629ba6a08de35f",
+    "output": [
+      "ok  \tgithub.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe\t(cached)",
+      "ok  \tgithub.com/cisco/virtual-kubelet-cisco/internal/provider/maintenance\t(cached)",
+      "ok  \tgithub.com/cisco/virtual-kubelet-cisco/internal/devicecoordination\t(cached)"
+    ]
+  },
+  {
+    "check": "relay-scope",
+    "result": "PASS",
+    "evidence": "relay-scope-tests.json"
+  },
+  {
+    "check": "relay-tls-and-read-controls",
+    "result": "PASS",
+    "evidence": [
+      "relay-tls-controls.json",
+      "relay-read-controls.json"
+    ]
+  },
+  {
+    "check": "strict-mkdocs",
+    "result": "PASS",
+    "logSHA256": "3f9808e1d47d5bd7e9e6d92aea9a33f6a2ccec9dd8c3ae66c86ceeec00db8c34",
+    "tail": [
+      "INFO    -  Removed unused non-English lunr language assets",
+      "INFO    -  Vendored exact Mermaid and ResizeObserver runtime assets",
+      "INFO    -  Documentation built in 2.89 seconds"
+    ]
+  },
+  {
+    "check": "cross-evidence-assessment",
+    "result": "PASS",
+    "scope": "same lease/journal/Pod/app identities, real accepted install with zero reply bytes, 108 fenced observations, no duplicate attempts, Ready/HTTP A, Deployment Available/Progressing and baseline cleanup",
+    "assessor": "harness/assess.py.txt"
+  }
+]

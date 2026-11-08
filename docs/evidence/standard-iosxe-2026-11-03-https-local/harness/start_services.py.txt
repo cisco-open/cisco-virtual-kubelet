@@ -1,0 +1,14 @@
+import pathlib,subprocess,ssl,urllib.request,socket,time,json,datetime,hashlib
+R=pathlib.Path('/tmp/cvk-stdtls-20261103');OLD=pathlib.Path('/tmp/cvk-verified-qual-20261102')
+with (R/'store.log').open('wb') as out:p=subprocess.Popen(['python3',str(R/'store.py')],stdout=out,stderr=subprocess.STDOUT,start_new_session=True)
+(R/'store.pid').write_text(str(p.pid));ctx=ssl.create_default_context(cafile=str(OLD/'ca.crt'))
+for i in range(20):
+ try:
+  with urllib.request.urlopen('https://192.168.129.111:18448/_tls_probe',context=ctx,timeout=5) as resp:assert resp.status==200
+  break
+ except OSError:time.sleep(1)
+else:raise RuntimeError('Owned HTTPS origin did not become ready')
+try:
+ sock=ctx.wrap_socket(socket.create_connection(('192.168.129.111',18448),timeout=5),server_hostname='wrong.example.invalid');sock.close();raise AssertionError('Wrong origin hostname accepted by lab client')
+except ssl.SSLCertVerificationError:pass
+(R/'origin-tls-controls.json').write_text(json.dumps({'atUTC':datetime.datetime.now(datetime.timezone.utc).isoformat(),'origin':'https://192.168.129.111:18448','testClient':'ux-agx Python SSL, not the C9K installer','trustedOriginProbe':True,'wrongHostnameRejected':True,'originCA_PEM_SHA256':hashlib.sha256((OLD/'ca.crt').read_bytes()).hexdigest(),'originLeaf_PEM_SHA256':hashlib.sha256((OLD/'store.crt').read_bytes()).hexdigest(),'serverMinimumTLS':'1.2','artifactMetadataAPI':False,'c9kInvalidCertificateTestsExecuted':False},indent=2)+'\n');print('PASS ordinary HTTPS origin and independent certificate controls',flush=True)

@@ -1,0 +1,43 @@
+{
+  "atUTC": "2026-11-04T10:16:38.398639+00:00",
+  "testClient": "ux-agx Python SSL; explicit CRL-check flags; separate from native C9K results",
+  "cases": [
+    {
+      "case": "disabled",
+      "CRLChecking": true,
+      "accepted": false,
+      "verificationCode": 23,
+      "verificationMessage": "certificate revoked"
+    },
+    {
+      "case": "valid-leaf",
+      "CRLChecking": true,
+      "accepted": true
+    },
+    {
+      "case": "valid-chain",
+      "CRLChecking": true,
+      "accepted": true
+    },
+    {
+      "case": "leaf",
+      "CRLChecking": true,
+      "accepted": false,
+      "verificationCode": 23,
+      "verificationMessage": "certificate revoked"
+    },
+    {
+      "case": "intermediate",
+      "CRLChecking": true,
+      "accepted": false,
+      "verificationCode": 23,
+      "verificationMessage": "certificate revoked"
+    },
+    {
+      "case": "disabled-without-check",
+      "CRLChecking": false,
+      "accepted": true
+    }
+  ],
+  "signedCRLHTTPContentVerified": true
+}

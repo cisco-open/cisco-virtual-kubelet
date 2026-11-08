@@ -1,0 +1,15 @@
+"""Export public qualification data only; never keys, kubeconfig, Secret or image binaries."""
+from pathlib import Path
+import json,tarfile,hashlib,re
+r=Path('/tmp/cvk-stdcopyfix-20261105');assert json.loads((r/'final-cleanup.json').read_text())['passed'];files=[]
+for p in sorted(r.iterdir()):
+ if p.is_file() and (p.suffix in ['.json','.jsonl','.yaml','.crt','.crl','.pem','.py'] or p.name in ['qualification.log','continuation.log','rearm.log','main.go','Dockerfile.qual']):files.append(p)
+for phase in ['valid','cached','refresh']:
+ for n in ['docker-config.json','docker-manifest.json']:files.append(r/phase/n)
+files.extend(p for p in sorted((r/'initial-missing-directory').rglob('*')) if p.is_file())
+assert all(not p.name.endswith('.key') and 'kubeconfig' not in p.name and p.name!='package.tar' for p in files)
+for p in files:
+ if p.suffix!='.crl':assert not re.search(rb'(?m)^-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----',p.read_bytes()),p
+with tarfile.open(r/'evidence-input.tar.gz','w:gz') as t:
+ for p in files:t.add(p,arcname=str(p.relative_to(r)),recursive=False)
+print('Bundled',len(files),'public inputs',hashlib.sha256((r/'evidence-input.tar.gz').read_bytes()).hexdigest())

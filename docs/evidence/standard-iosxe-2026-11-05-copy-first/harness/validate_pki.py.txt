@@ -1,0 +1,7 @@
+import pathlib,json,subprocess,datetime,sys
+R=pathlib.Path('/tmp/cvk-stdcopyfix-20261105');version=int(sys.argv[1]);cases=[]
+for chain,crl in [('original',False),('original',True),('replacement',True)]:
+ cmd=['openssl','verify','-CAfile',str(R/'root-current-crl.pem'),'-untrusted',str(R/(chain+'.crt'))]+(['-crl_check_all'] if crl else [])+[str(R/'leaf.crt')];x=subprocess.run(cmd,capture_output=True,text=True);expected=not(version==2 and chain=='original' and crl);assert (x.returncode==0)==expected,(cmd,x.stdout,x.stderr)
+ if not expected:assert 'error 23 at 1 depth' in x.stdout+x.stderr,x.stderr
+ cases.append({'chain':chain,'CRLChecking':crl,'expectedSuccess':expected,'exitCode':x.returncode,'stdout':x.stdout,'stderr':x.stderr})
+(R/('offline-controls-v'+str(version)+'.json')).write_text(json.dumps({'atUTC':datetime.datetime.now(datetime.timezone.utc).isoformat(),'passed':True,'cases':cases,'intermediateOnlyRevocationDepth':1,'C9KContacted':False},indent=2)+'\n');print('PASS offline chain controls v',version)

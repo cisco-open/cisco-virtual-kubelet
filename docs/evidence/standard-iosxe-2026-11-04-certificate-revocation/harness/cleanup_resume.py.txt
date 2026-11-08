@@ -1,0 +1,43 @@
+import pathlib,subprocess,json,time,datetime,os,re,socket,pexpect
+R=pathlib.Path('/tmp/cvk-stdrevoke-20261104');cold=R/'cold';name='cvk-stdrevoke-k3s-20261103'
+report=json.loads((R/'cleanup-first-attempt.json').read_text());assert report['passed'] is False
+report['unsupportedPluralClearCommand']=True;report['supportedClearCommand']='clear crypto pki crl';report['resumedAfterNativeHelp']=True
+paths=report['ownedPaths']
+assert json.loads(subprocess.check_output(['docker','inspect',name],text=True))[0]['State']['Running'] is False
+p=pexpect.spawn('ssh',['-o','StrictHostKeyChecking=yes','-o','UserKnownHostsFile=/tmp/cvk-verified-qual-20261101/switch_known_hosts','-o','GlobalKnownHostsFile=/dev/null','-o','HostKeyAlgorithms=rsa-sha2-512,rsa-sha2-256','cisco@10.1.1.1'],encoding='utf-8',timeout=120)
+try:
+ p.expect('(?i)password:');p.sendline(os.environ['CVK_QUAL_DEVICE_PASSWORD']);p.expect(r'[>#] ?$')
+ for c in ['terminal length 0','terminal width 511']:p.sendline(c);p.expect(r'[>#] ?$')
+ def cli(c,confirm=False):
+  p.sendline(c)
+  if confirm:
+   i=p.expect([r'(?i)\[yes/no\]\s*:',r'(?i)\[confirm\]',r'[>#] ?$']);v=p.before
+   if i in [0,1]:p.sendline('yes' if i==0 else '');p.expect(r'[>#] ?$');v+='[confirmed run-owned CA/CRL cleanup]\n'+p.before
+  else:p.expect(r'[>#] ?$');v=p.before
+  v=v.replace('\r','');report['commands'].append({'command':c,'output':v});(R/'cleanup-progress.json').write_text(json.dumps(report,indent=2)+'\n');return v
+ manifest=json.loads((R/'pki-manifest.json').read_text());coldManifest=json.loads((cold/'pki-manifest.json').read_text());v=cli('show crypto pki crls');blocks=[b for b in re.split(r'(?m)(?=^[ \t]*CRL Issuer Name:)',v) if re.search(r'(?m)^[ \t]*CRL Issuer Name:',b)]
+ for b in blocks:assert any(n in b for n in [manifest['nonce'],coldManifest['nonce']]) and any(u in b for u in ['http://192.168.129.111:18464/','http://192.168.129.111:18466/']),'Unrelated CRL present; refuse global cache purge'
+ report['CRLCachePurgeAfterQualificationOnly']=True;report['allCRLCacheEntriesRunOwnedBeforePurge']=True;report['cachedCRLRecordsBeforePurge']=len(blocks)
+ if blocks:cli('clear crypto pki crl',True)
+ v=cli('show crypto pki crls');assert not re.search(r'(?m)^[ \t]*CRL Issuer Name:',v);report['cachedCRLRecordsAfterPurge']=0
+ v=cli('show app-hosting list');assert 'cvk0000_' not in v and re.search(r'^iris\s+RUNNING\s*$',v,re.M) and re.search(r'^c9ktest\s+DEPLOYED\s*$',v,re.M)
+ v=cli('show app-hosting infra');assert 'CAF Health: Stable' in v and 'App signature verification: disabled' in v
+ for path in paths:assert not re.search(r'\s-rw-\s',cli('dir '+path))
+ p.sendline('exit')
+finally:p.close(force=True)
+for serviceRoot in [R,cold]:
+ pid=int((serviceRoot/'servers.pid').read_text());proc=pathlib.Path('/proc')/str(pid)/'cmdline'
+ if proc.exists():
+  raw=proc.read_bytes().replace(b'\0',b' ').decode()
+  if str(serviceRoot/'servers.py') in raw:os.kill(pid,15)
+payload=json.loads((cold/'payload-provenance.json').read_text());image=json.loads(subprocess.check_output(['docker','image','inspect',payload['repoTag']],text=True))[0];assert image['Id']==payload['dockerConfigID'] and image['Config']['Labels']['apphosting.cisco.com/qualification']=='20261104-stdrevoke-cold';subprocess.run(['docker','image','rm',payload['repoTag']],check=True,capture_output=True);report['ownedColdOriginImageRemoved']=True
+subprocess.run(['docker','rm',name],check=True,capture_output=True);time.sleep(1);report['listeners']={}
+for port in [16455,18459,18460,18461,18462,18463,18464,18465,18466,18467,18468]:
+ sock=socket.socket();sock.settimeout(1);report['listeners'][str(port)]=sock.connect_ex(('127.0.0.1',port))==0;sock.close()
+assert not any(report['listeners'].values());node=next(n for n in json.loads(subprocess.check_output(['kubectl','get','nodes','-o','json'],text=True))['items'] if n['metadata']['name']=='cisco');assert any(c['type']=='Ready' and c['status']=='True' for c in node['status']['conditions']);report['sharedHostNode']={'name':'cisco','ready':True};report['passed']=True;report['finishedAtUTC']=datetime.datetime.now(datetime.timezone.utc).isoformat();report['ephemeralTLSPrivateKeysRemoved']=[]
+for keyRoot in [R,cold]:
+ for keyName in json.loads((keyRoot/'pki-manifest.json').read_text())['ephemeralPrivateKeys']:
+  assert '/' not in keyName and keyName.endswith('.key');keyPath=keyRoot/keyName
+  if keyPath.exists():keyPath.unlink()
+  report['ephemeralTLSPrivateKeysRemoved'].append(str(keyPath.relative_to(R)))
+report['configurationDelta']='Original explicit self-signed HTTPS selector and IRIS client trustpoint restored. Four temporary ordinary origin CAs, owned staging archives, two HTTPS/CRL servers, cold origin image and isolated cluster removed; internal IOx/Docker layer cache was not globally pruned; unrelated apps, native signature policy and CAF health preserved. No artifact journal or grant, relay or injected NAT existed.';(R/'final-cleanup.json').write_text(json.dumps(report,indent=2)+'\n');print('PASS Standard certificate-test baseline cleanup',flush=True)

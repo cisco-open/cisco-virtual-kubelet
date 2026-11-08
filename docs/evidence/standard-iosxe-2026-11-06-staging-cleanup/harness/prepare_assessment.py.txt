@@ -1,0 +1,34 @@
+from pathlib import Path
+r=Path('/private/tmp/cvk-stdgc-20261106');s=Path('/private/tmp/cvk-stdupgrade-20261106/assess.py').read_text().replace('cvk-stdupgrade-20261106','cvk-stdgc-20261106').replace('18479','18482')
+s=s.replace("assert c['dirtySourceSHA256']=='f31b516f5dafd468c2dee968cd62e68dfd366344924876834500e2a9b18f81ab'", "assert c['dirtySourceSHA256']==read('static-checks')['dirtySourceSHA256'];assert c['imageBinarySHA256']==c['binarySHA256']")
+s=s.replace("['qualify.py','servers.py','control_functions.py','snapshot.py','cleanup.py']", "['qualify.py','servers.py','control_functions.py','snapshot.py','cleanup.py','gc_checks.py']")
+s=s.replace("labels=['initial-a','upgrade-b','rollback-a','failed-upgrade-rollback-a','retry-upgrade-b','final-rollback-a'];phases=['a','b','a','a','b','a']", "labels=['preloaded-before','initial-a','upgrade-b','rollback-a','failed-upgrade-rollback-a','retry-upgrade-b','final-rollback-a','preloaded-after'];phases=['a','a','b','a','a','b','a','a']")
+s=s.replace("assert pod['spec']['containers'][0]['image']=='https://192.168.129.111:18482/'+phase+'.tar' and pod['spec']['containers'][0]['imagePullPolicy']=='Always'", "assert pod['spec']['containers'][0]['image']==(q['preloadedPath'] if case['preloaded'] else 'https://192.168.129.111:18482/'+phase+'.tar') and pod['spec']['containers'][0]['imagePullPolicy']==('Never' if case['preloaded'] else 'Always')")
+a=s.index(" sent=[e for e in trace if e['kind']=='package-sent'",s.index('for label,phase,case'));b=s.index('\n ls=[v for v in read',a)
+s=s[:a]+''' log=read('worker-'+label);installed=[i for i,v in enumerate(log['lines']) if 'Installing app '+aid in v];assert installed
+ if case['preloaded']:
+  assert log['preloadedNever'] and all('from package: '+q['preloadedPath'] in log['lines'][i] for i in installed)
+ else:
+  sent=[e for e in trace if e['kind']=='package-sent' and e.get('phase')==phase and dt(lastBoundary)<dt(e['atUTC'])<dt(case['atUTC'])];assert sent,(label,'fresh copy missing');assert log['copyBeforeLocalInstallConfirmed'] and log['automaticCleanupConfirmed'];copied=[i for i,v in enumerate(log['lines']) if 'Copy operation completed successfully' in v];assert copied and min(copied)<min(installed);assert all(re.search(r'from package: flash:/cvk-stage-[a-f0-9]{32}\\.tar',log['lines'][i]) for i in installed);gone=read('staging-absent-'+label);assert gone['passed'] and gone['automaticCleanupOnly'] and not gone['manualDeletionUsed']
+ lastBoundary=case['atUTC'];assert read('preloaded-preserved-'+label)['passed']
+'''+s[b:]
+s=s.replace('len(set(podUIDs))==6','len(set(podUIDs))==8').replace("e.get('status')==404", "e.get('truncated')==True")
+a=s.index("retention=read('retired-staging-observation')");b=s.index("out={'status'",a)
+s=s[:a]+'''assert q['automaticCleanupQualified'] and q['preloadedBeforeAndAfterQualified'];assert cleanup['preloadedPreservedThroughAllFlows'] and cleanup['testOwnedPreloadedCanaryRemovedAfterProof'] and cleanup['preexistingTarInventoryPreserved'] and not cleanup['automaticCleanupPathsManuallyDeleted']
+paths=q['ownedStagingPaths'];assert len(paths)==len(set(paths))==7 and q['preloadedPath'] not in paths;assert all(re.fullmatch(r'flash:/cvk-stage-[a-f0-9]{32}\\.tar',v) for v in paths)
+assert not any(v['command']=='delete /force '+file for file in paths for v in cleanup['commands']);assert any(v['command']=='delete /force '+q['preloadedPath'] for v in cleanup['commands'])
+failedGone=read('staging-absent-failed-upgrade');assert failedGone['passed'] and failedGone['automaticCleanupOnly'];assert read('preloaded-preserved-final-normal-cleanup')['passed']
+for filename in R.glob('staging-absent-*.json'):
+ value=json.loads(filename.read_text());assert value['passed'] and all(v['status']==404 and 'uri keypath not found' in v['body'] for v in value['files'].values())
+pre=read('preloaded-provenance');assert pre['path']==q['preloadedPath'] and pre['resemblesManagedStagingFilename'] and pre['packageSHA256']==p['phases']['a']['packageSHA256'];assert pre['packageSHA512']==hashlib.sha512((R/'a/package.tar').read_bytes()).hexdigest()
+'''+s[b:]
+s=s.replace("'standard-copy-first-upgrade-and-history-rollback-qualified'", "'standard-owned-staging-cleanup-qualified'")
+s=s.replace("'failedHTTPS404UpgradeBlocked':True", "'failedTruncatedHTTPSUpgradeBlocked':True")
+s=s.replace("'productionSourceUnchanged':True", "'productionSourceMatchesTestedCandidate':True")
+s=s.replace("'retiredStagingFilesRetainedAfterNativeAppDeletion':retention['retainedFiles'],'automaticFlashGarbageCollectionQualified':False,'retiredStagingFilesRemovedByLabCleanup':True", "'ownedStagingPaths':paths,'automaticOwnedStagingCleanupQualified':True,'ownedStagingFilesRemovedManually':False,'preloadedPath':q['preloadedPath'],'preloadedNeverBeforeAndAfterQualified':True,'preloadedSHA512Unchanged':True,'preexistingTarInventoryPreserved':True,'testOwnedPreloadedCanaryRemovedAfterProof':True,'workerRestartOrUncertainCopyGarbageCollectionQualified':False,'physicalPartialResidueDeletionProven':False")
+s=s.replace('HTTP 404 injection under valid TLS','Truncated HTTPS package injection under valid TLS; failed download left no file on this firmware; unit tests cover definitive-error partial-file deletion')
+s=s.replace('PASS independent upgrade/rollback assessment','PASS independent ownership cleanup and upgrade/rollback assessment')
+(r/'assess.py').write_text(s)
+# Export only inspected public evidence; preserve compressed snapshot reproducibility.
+s=Path('/private/tmp/cvk-stdupgrade-20261106/export_evidence.py').read_text().replace('cvk-stdupgrade-20261106','cvk-stdgc-20261106').replace('standard-iosxe-2026-11-06-upgrade-rollback','standard-iosxe-2026-11-06-staging-cleanup').replace("['qualification.log','main.go']", "['qualification.log','main.go','race.log']")
+(r/'export_evidence.py').write_text(s)

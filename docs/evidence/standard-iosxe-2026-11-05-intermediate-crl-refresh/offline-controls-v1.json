@@ -1,0 +1,32 @@
+{
+  "atUTC": "2026-11-05T06:39:48.626610+00:00",
+  "passed": true,
+  "cases": [
+    {
+      "chain": "original",
+      "CRLChecking": false,
+      "expectedSuccess": true,
+      "exitCode": 0,
+      "stdout": "/tmp/cvk-intrefresh-20261105/leaf.crt: OK\n",
+      "stderr": ""
+    },
+    {
+      "chain": "original",
+      "CRLChecking": true,
+      "expectedSuccess": true,
+      "exitCode": 0,
+      "stdout": "/tmp/cvk-intrefresh-20261105/leaf.crt: OK\n",
+      "stderr": ""
+    },
+    {
+      "chain": "replacement",
+      "CRLChecking": true,
+      "expectedSuccess": true,
+      "exitCode": 0,
+      "stdout": "/tmp/cvk-intrefresh-20261105/leaf.crt: OK\n",
+      "stderr": ""
+    }
+  ],
+  "intermediateOnlyRevocationDepth": 1,
+  "C9KContacted": false
+}

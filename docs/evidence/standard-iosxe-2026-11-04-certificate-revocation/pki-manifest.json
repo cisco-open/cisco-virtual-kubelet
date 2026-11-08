@@ -1,0 +1,234 @@
+{
+  "generatedAtUTC": "2026-11-04T10:16:33.036886+00:00",
+  "nonce": "4723f9294e02",
+  "certificates": {
+    "disabled-root": {
+      "sha256": "1781e306657cfbdbd517bdbed06e56262854deefeb089e0a49f593d34dcce594",
+      "SPKISHA256": "a79c5aee0a155c18f954e69bfa214dc6c146c3368a55a43da5135771d18a5467",
+      "subject": "CN=CVK revoke disabled-root 4723f9294e02",
+      "issuer": "CN=CVK revoke disabled-root 4723f9294e02",
+      "serialHex": "631ef3620a2e515a10ac4a0b7588c18f72177235",
+      "validFromUTC": "2026-11-03T10:16:33+00:00",
+      "validUntilUTC": "2026-12-04T10:16:33+00:00",
+      "ca": true
+    },
+    "leaf-root": {
+      "sha256": "1f7d37710d2b6105f25cb0251c412c4d1d5fde01072924c715fec78ac09f6bbd",
+      "SPKISHA256": "eeb7551e07389bb7b5799dc8cdd28ba88e25d025fd7765f6213450fcf71d2c58",
+      "subject": "CN=CVK revoke leaf-root 4723f9294e02",
+      "issuer": "CN=CVK revoke leaf-root 4723f9294e02",
+      "serialHex": "7e66f09efa1a7c6c8fe387d6773090319e70e07a",
+      "validFromUTC": "2026-11-03T10:16:33+00:00",
+      "validUntilUTC": "2026-12-04T10:16:33+00:00",
+      "ca": true
+    },
+    "chain-root": {
+      "sha256": "7973025a6120150232f9eab7f1caa986b2666b0242816bc4f72dbab3e941486c",
+      "SPKISHA256": "f1c094e1b49ad8c4700c1ad908a6a95475508c15b6bbad8f5115f771400f3328",
+      "subject": "CN=CVK revoke chain-root 4723f9294e02",
+      "issuer": "CN=CVK revoke chain-root 4723f9294e02",
+      "serialHex": "4736435a0b2ae94ec29370d8715c8ebdb6f71b00",
+      "validFromUTC": "2026-11-03T10:16:33+00:00",
+      "validUntilUTC": "2026-12-04T10:16:33+00:00",
+      "ca": true
+    },
+    "disabled-bad": {
+      "sha256": "ada5819e2beb6c271f181e9db8d484ef5b7d572a23aff9f6feb4ddb9bd55ecf5",
+      "SPKISHA256": "54eee7e5f4b3f45031c3fb53b2b7cb26f9371ecd42fbab2c04a90e454c301b7c",
+      "subject": "CN=192.168.129.111",
+      "issuer": "CN=CVK revoke disabled-root 4723f9294e02",
+      "serialHex": "62aab3cdfc59c62395773d54931068574b2ab81",
+      "validFromUTC": "2026-11-03T10:16:33+00:00",
+      "validUntilUTC": "2026-11-11T10:16:33+00:00",
+      "ca": false
+    },
+    "disabled-good": {
+      "sha256": "0df33081981cc0a5afb7ff2208fa75f74f441c1a9fc3f76a6d27f121444e6b88",
+      "SPKISHA256": "5c58eadafcd8197d196b750f2c6611992c2a9ea2a00359b77bfd449544e393d2",
+      "subject": "CN=192.168.129.111",
+      "issuer": "CN=CVK revoke disabled-root 4723f9294e02",
+      "serialHex": "65cd6cd47e76f656c7e113e3ff50c432cc313bb3",
+      "validFromUTC": "2026-11-03T10:16:33+00:00",
+      "validUntilUTC": "2026-11-11T10:16:33+00:00",
+      "ca": false
+    },
+    "leaf-bad": {
+      "sha256": "004ccecae4a136d86038716f9ec9b18dc040f8b8529c8309ef60149bb3f41ce3",
+      "SPKISHA256": "d9ccc798a60d49f166ffe87656add3ee8f3352b3146cb5c4de503f0bcbee7dcb",
+      "subject": "CN=192.168.129.111",
+      "issuer": "CN=CVK revoke leaf-root 4723f9294e02",
+      "serialHex": "1d4a15deb098445d0a164fa41fe7f5a54d2dd00",
+      "validFromUTC": "2026-11-03T10:16:33+00:00",
+      "validUntilUTC": "2026-11-11T10:16:33+00:00",
+      "ca": false
+    },
+    "leaf-good": {
+      "sha256": "f0b4862bcbe0da958eeb15a9cec412d1eb8f3ae79b72b288dbb3faa0d582bd0a",
+      "SPKISHA256": "cfe21fc3baccb7a36445a55878253104157a1305ee994fe89d2c34e595c31372",
+      "subject": "CN=192.168.129.111",
+      "issuer": "CN=CVK revoke leaf-root 4723f9294e02",
+      "serialHex": "4b658568a178ca27c75bffd735b1d2e537fddb15",
+      "validFromUTC": "2026-11-03T10:16:33+00:00",
+      "validUntilUTC": "2026-11-11T10:16:33+00:00",
+      "ca": false
+    },
+    "leaf-control": {
+      "sha256": "c90912cfa488c1c1c63b6b77516db47b655c4097274a46b99514584278f7c1d9",
+      "SPKISHA256": "28e0bae938e437692dfc6138731ade39a0742337587cc8c509ab6ae809d7f3f0",
+      "subject": "CN=192.168.129.111",
+      "issuer": "CN=CVK revoke leaf-root 4723f9294e02",
+      "serialHex": "15c68b69bcd4c078dd92bc1114e126dbfab1e829",
+      "validFromUTC": "2026-11-03T10:16:33+00:00",
+      "validUntilUTC": "2026-11-11T10:16:33+00:00",
+      "ca": false
+    },
+    "intermediate-bad": {
+      "sha256": "7e69f6d738d942b66c4316c95116452ac6503582f1dafcef49ecd69fc3191f6f",
+      "SPKISHA256": "5abc97f7ec92c9a61079dfc5e87872eab27c5c68bcf16ca878310b17ae03ec3a",
+      "subject": "CN=CVK revoke test-intermediate 4723f9294e02",
+      "issuer": "CN=CVK revoke chain-root 4723f9294e02",
+      "serialHex": "18a4220659fcfbb8dbf1a56a1074c2fdfb19d97",
+      "validFromUTC": "2026-11-03T10:16:33+00:00",
+      "validUntilUTC": "2026-12-04T10:16:33+00:00",
+      "ca": true
+    },
+    "intermediate-good": {
+      "sha256": "1569b475dec8a2567ac92fc2e46551f3b144bd9f9511c1221c4a68b50539db06",
+      "SPKISHA256": "5abc97f7ec92c9a61079dfc5e87872eab27c5c68bcf16ca878310b17ae03ec3a",
+      "subject": "CN=CVK revoke test-intermediate 4723f9294e02",
+      "issuer": "CN=CVK revoke chain-root 4723f9294e02",
+      "serialHex": "33938e923ccc0cb6e03748f33cb1a39b2308ec76",
+      "validFromUTC": "2026-11-03T10:16:33+00:00",
+      "validUntilUTC": "2026-12-04T10:16:33+00:00",
+      "ca": true
+    },
+    "intermediate-leaf": {
+      "sha256": "b52fa3c5559fc5ea365fc0367fdd22a2662265497bc57d025ac1f694079b6d93",
+      "SPKISHA256": "41298b908298c87fb00dfdaed6b792cf84baf91b6f27ef132c3b83e78a60b16e",
+      "subject": "CN=192.168.129.111",
+      "issuer": "CN=CVK revoke test-intermediate 4723f9294e02",
+      "serialHex": "56f937c0189aca46d0e8eb1a5f7421f51162e737",
+      "validFromUTC": "2026-11-03T10:16:33+00:00",
+      "validUntilUTC": "2026-11-11T10:16:33+00:00",
+      "ca": false
+    },
+    "control-intermediate": {
+      "sha256": "85bcb28b6e40053eb1326c1e41fed1898aac4c57d9b8c6c32d327cbd830f5114",
+      "SPKISHA256": "48f05f33a3e04a35f105e5486a095322e047011c2b669d84c95c3671bb565f5f",
+      "subject": "CN=CVK revoke control-intermediate 4723f9294e02",
+      "issuer": "CN=CVK revoke chain-root 4723f9294e02",
+      "serialHex": "484361e13f57b16a6635260edc7a27d4a0189f86",
+      "validFromUTC": "2026-11-03T10:16:33+00:00",
+      "validUntilUTC": "2026-12-04T10:16:33+00:00",
+      "ca": true
+    },
+    "control-leaf": {
+      "sha256": "0473ca03c34ff399623ffd6eba6cace1cc10329ad7796f0a8f327adea92e2397",
+      "SPKISHA256": "ea4e2d29f751b88e8566abffc32732d1765ed4b60e4fc6fa313f94ec1f7b8d4e",
+      "subject": "CN=192.168.129.111",
+      "issuer": "CN=CVK revoke control-intermediate 4723f9294e02",
+      "serialHex": "71eb5f9ed29f66e2b9a6695b116f7046ce2e72d2",
+      "validFromUTC": "2026-11-03T10:16:33+00:00",
+      "validUntilUTC": "2026-11-11T10:16:33+00:00",
+      "ca": false
+    }
+  },
+  "crls": {
+    "disabled-root": {
+      "sha256": "1a3b6e716316b19ec990231f3199082222c4f2f8f2e79aa1a1416f8b0630b7d2",
+      "issuer": "CN=CVK revoke disabled-root 4723f9294e02",
+      "lastUpdateUTC": "2026-11-04T10:11:33+00:00",
+      "nextUpdateUTC": "2026-11-06T10:16:33+00:00",
+      "number": 1,
+      "url": "http://192.168.129.111:18464/disabled-root.crl",
+      "revokedSerialsHex": [
+        "62aab3cdfc59c62395773d54931068574b2ab81"
+      ]
+    },
+    "leaf-root": {
+      "sha256": "96eff17dc7b65ed54225d6413680fd4db41dce809e4a9f80ceac3f8e6855f02f",
+      "issuer": "CN=CVK revoke leaf-root 4723f9294e02",
+      "lastUpdateUTC": "2026-11-04T10:11:33+00:00",
+      "nextUpdateUTC": "2026-11-06T10:16:33+00:00",
+      "number": 1,
+      "url": "http://192.168.129.111:18464/leaf-root.crl",
+      "revokedSerialsHex": [
+        "1d4a15deb098445d0a164fa41fe7f5a54d2dd00"
+      ]
+    },
+    "chain-root": {
+      "sha256": "c5fc4a5ed3c7a897b3a4c05fc7cf922c3d56869457f7a5e72a840997b01b3d7a",
+      "issuer": "CN=CVK revoke chain-root 4723f9294e02",
+      "lastUpdateUTC": "2026-11-04T10:11:33+00:00",
+      "nextUpdateUTC": "2026-11-06T10:16:33+00:00",
+      "number": 1,
+      "url": "http://192.168.129.111:18464/chain-root.crl",
+      "revokedSerialsHex": [
+        "18a4220659fcfbb8dbf1a56a1074c2fdfb19d97"
+      ]
+    },
+    "intermediate": {
+      "sha256": "9f2b995734cb7d330e69e03501709fb86a034bb094f180177a45ef3e72350f2a",
+      "issuer": "CN=CVK revoke test-intermediate 4723f9294e02",
+      "lastUpdateUTC": "2026-11-04T10:11:33+00:00",
+      "nextUpdateUTC": "2026-11-06T10:16:33+00:00",
+      "number": 1,
+      "url": "http://192.168.129.111:18464/intermediate.crl",
+      "revokedSerialsHex": []
+    },
+    "control-intermediate": {
+      "sha256": "c1c2a5caf31ea752293723155c2d2d807b3ed3e01c2eccae4517305731f664a8",
+      "issuer": "CN=CVK revoke control-intermediate 4723f9294e02",
+      "lastUpdateUTC": "2026-11-04T10:11:33+00:00",
+      "nextUpdateUTC": "2026-11-06T10:16:33+00:00",
+      "number": 1,
+      "url": "http://192.168.129.111:18464/control-intermediate.crl",
+      "revokedSerialsHex": []
+    }
+  },
+  "chains": {
+    "disabled-bad": [
+      "disabled-bad"
+    ],
+    "disabled-good": [
+      "disabled-good"
+    ],
+    "leaf-bad": [
+      "leaf-bad"
+    ],
+    "leaf-good": [
+      "leaf-good"
+    ],
+    "leaf-control": [
+      "leaf-control"
+    ],
+    "intermediate-bad": [
+      "intermediate-leaf",
+      "intermediate-bad"
+    ],
+    "intermediate-good": [
+      "intermediate-leaf",
+      "intermediate-good"
+    ],
+    "control-intermediate": [
+      "control-leaf",
+      "control-intermediate"
+    ]
+  },
+  "ephemeralPrivateKeys": [
+    "disabled-root.key",
+    "leaf-root.key",
+    "chain-root.key",
+    "disabled-bad.key",
+    "disabled-good.key",
+    "leaf-bad.key",
+    "leaf-good.key",
+    "leaf-control.key",
+    "intermediate-ca.key",
+    "intermediate-leaf.key",
+    "control-intermediate.key",
+    "control-leaf.key"
+  ],
+  "CRLsChangedDuringReplacement": false,
+  "intermediateReplacementScope": "Non-compromise/superseded CA certificate; new serial, same key/subject and unchanged leaf; not CA-key-compromise remediation."
+}

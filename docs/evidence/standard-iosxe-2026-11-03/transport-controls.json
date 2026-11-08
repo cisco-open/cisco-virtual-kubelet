@@ -1,0 +1,10 @@
+{
+  "atUTC": "2026-11-03T13:39:35.335335+00:00",
+  "directRESTCONF": true,
+  "tlsVerified": true,
+  "serverName": "10.1.1.1",
+  "relayUsed": false,
+  "NATInjected": false,
+  "artifactStoreCAInstalled": false,
+  "nativeSignaturePolicyChanged": false
+}

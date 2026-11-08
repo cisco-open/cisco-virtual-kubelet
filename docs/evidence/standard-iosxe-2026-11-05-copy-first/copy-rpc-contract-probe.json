@@ -1,0 +1,65 @@
+{
+  "atUTC": "2026-11-05T20:07:13.227223+00:00",
+  "testOnly": true,
+  "installsIssued": 0,
+  "destination": "flash:cvkstd-copy-probe-20261105.tar",
+  "copyHTTPStatus": 200,
+  "copyResponse": {
+    "Cisco-IOS-XE-rpc:output": {
+      "result": "RPC request successful"
+    }
+  },
+  "stagedFile": "dir flash:cvkstd-copy-probe-20261105.tar\nDirectory of flash:/cvkstd-copy-probe-20261105.tar\n\n254040  -rw-          5963776   Nov 5 2026 20:07:20 +00:00  cvkstd-copy-probe-20261105.tar\n\n11353194496 bytes total (5392539648 bytes free)\nEdge-9K",
+  "destinationRemoved": true,
+  "managementSelectorRestored": true,
+  "commands": [
+    {
+      "command": "terminal length 0",
+      "output": "terminal length 0\nEdge-9K"
+    },
+    {
+      "command": "terminal width 511",
+      "output": "terminal width 511\nEdge-9K"
+    },
+    {
+      "command": "show app-hosting list",
+      "output": "show app-hosting list\nApp id                                   State\n---------------------------------------------------------\niris                                     RUNNING\nc9ktest                                  DEPLOYED\n\nEdge-9K"
+    },
+    {
+      "command": "show ip http server status | include trustpoint",
+      "output": "show ip http server status | include trustpoint\nHTTP secure server trustpoint: TP-self-signed-806566997\nHTTP secure server peer validation trustpoint: \nEdge-9K"
+    },
+    {
+      "command": "configure terminal",
+      "output": "configure terminal\nEnter configuration commands, one per line.  End with CNTL/Z.\nEdge-9K(config)"
+    },
+    {
+      "command": "ip http secure-trustpoint cvk-gnoi-20260904",
+      "output": "ip http secure-trustpoint cvk-gnoi-20260904\nEdge-9K(config)"
+    },
+    {
+      "command": "end",
+      "output": "end\nEdge-9K"
+    },
+    {
+      "command": "dir flash:cvkstd-copy-probe-20261105.tar",
+      "output": "dir flash:cvkstd-copy-probe-20261105.tar\nDirectory of flash:/cvkstd-copy-probe-20261105.tar\n\n254040  -rw-          5963776   Nov 5 2026 20:07:20 +00:00  cvkstd-copy-probe-20261105.tar\n\n11353194496 bytes total (5392539648 bytes free)\nEdge-9K"
+    },
+    {
+      "command": "delete /force flash:cvkstd-copy-probe-20261105.tar",
+      "output": "delete /force flash:cvkstd-copy-probe-20261105.tar\nEdge-9K"
+    },
+    {
+      "command": "configure terminal",
+      "output": "configure terminal\nEnter configuration commands, one per line.  End with CNTL/Z.\nEdge-9K(config)"
+    },
+    {
+      "command": "ip http secure-trustpoint TP-self-signed-806566997",
+      "output": "ip http secure-trustpoint TP-self-signed-806566997\nEdge-9K(config)"
+    },
+    {
+      "command": "end",
+      "output": "end\nEdge-9K"
+    }
+  ]
+}

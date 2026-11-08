@@ -1,0 +1,123 @@
+{
+  "status": "standard-control-qualified",
+  "defaultMode": "Standard",
+  "governed": "deferred",
+  "target": {
+    "model": "C9300-24UX",
+    "serial": "FCW2247C1AJ",
+    "iosXeVersion": "17.18.1 fc2"
+  },
+  "candidate": {
+    "atUTC": "2026-11-03T08:45:28.205503+00:00",
+    "baseCommit": "1791a7e1634961936233ee94170f1c63cea1b64c",
+    "branch": "pr/johalley/verified-app-artifacts",
+    "dirtySourceSHA256": "d07b6ea671fb9508e3eb648014e642eabf845d5fe45d1bd339557cf8b0c098ac",
+    "sourceFiles": 1555,
+    "binarySHA256": "529e98f251b320567712d7077dcf9b54e5d93737e36100252cf809b2b6db2040",
+    "standardDefault": true,
+    "governed": "deferred",
+    "dockerConfigID": "sha256:6d5cda316de797b803829a9ae9ac9302ea2eda984c40ecf7e2878a3be9b2527d",
+    "imageTag": "cvk-replies-qual:20261103-529e98f251b3",
+    "containerdManifestDigest": "sha256:2dd4dc81a1f4c6ca3b3360ba7ce5cdd025819000938d261d1f79d9474f898dfe",
+    "chartMatchesCurrentSource": true,
+    "physicalControl": "Standard default with appArtifacts omitted",
+    "priorCandidateEvidence": "../verified-iosxe-2026-11-03-replies/candidate.json"
+  },
+  "startedAtUTC": "2026-11-03T14:27:05.334389+00:00",
+  "finishedAtUTC": "2026-11-03T14:34:17.771264+00:00",
+  "cases": [
+    {
+      "case": "initial-a",
+      "release": "A",
+      "podUID": "7d849564-b492-4031-b9db-0759968c7053",
+      "appID": "cvk0000_7d849564b4924031b9db0759968c7053",
+      "ready": true,
+      "httpRelease": "A",
+      "deploymentAvailable": true,
+      "artifactJournals": 0,
+      "observations": 14
+    },
+    {
+      "case": "worker-replacement-a",
+      "release": "A",
+      "podUID": "7d849564-b492-4031-b9db-0759968c7053",
+      "appID": "cvk0000_7d849564b4924031b9db0759968c7053",
+      "ready": true,
+      "httpRelease": "A",
+      "deploymentAvailable": true,
+      "artifactJournals": 0,
+      "observations": 1
+    },
+    {
+      "case": "updated-b",
+      "release": "B",
+      "podUID": "fc4d0ff0-ee20-40b2-bafc-0296ae34f7c4",
+      "appID": "cvk0000_fc4d0ff0ee2040b2bafc0296ae34f7c4",
+      "ready": true,
+      "httpRelease": "B",
+      "deploymentAvailable": true,
+      "artifactJournals": 0,
+      "observations": 13
+    },
+    {
+      "case": "rollback-a",
+      "release": "A",
+      "podUID": "35755dc6-8419-4d3a-84c1-e57122353af1",
+      "appID": "cvk0000_35755dc684194d3a84c1e57122353af1",
+      "ready": true,
+      "httpRelease": "A",
+      "deploymentAvailable": true,
+      "artifactJournals": 0,
+      "observations": 21
+    }
+  ],
+  "artifactConfigurationRequired": false,
+  "artifactJournalOrGrantCreated": false,
+  "packageMetadataOrSignatureEndpointUsed": false,
+  "standardRequiresNewServices": false,
+  "packageServerPurpose": "Ordinary external HTTP package source; no artifact API. It is the fixture source, not a new CVK runtime requirement.",
+  "workerReplacement": {
+    "passed": true,
+    "oldWorkerUID": "439b2102-7725-49c8-a7e5-006afd6ee56b",
+    "newWorkerUID": "187047a5-73c0-48b0-9226-506ae67e1777",
+    "podUID": "7d849564-b492-4031-b9db-0759968c7053",
+    "sameAppID": true,
+    "packageRequestsBefore": 1,
+    "packageRequestsAfter": 1,
+    "journalConfigured": false
+  },
+  "packageDownloads": [
+    {
+      "atUTC": "2026-11-03T14:27:07.565344+00:00",
+      "method": "GET",
+      "path": "/standard-agent-a.tar",
+      "client": "10.1.1.1",
+      "status": 200
+    },
+    {
+      "atUTC": "2026-11-03T14:30:21.629305+00:00",
+      "method": "GET",
+      "path": "/standard-agent-b.tar",
+      "client": "10.1.1.1",
+      "status": 200
+    },
+    {
+      "atUTC": "2026-11-03T14:31:55.511993+00:00",
+      "method": "GET",
+      "path": "/standard-agent-a.tar",
+      "client": "10.1.1.1",
+      "status": 200
+    }
+  ],
+  "cleanupPassed": true,
+  "cleanupFinishedAtUTC": "2026-11-03T14:38:22.118688+00:00",
+  "limits": [
+    "One physical device/firmware and Linux/amd64 Docker-save fixture; no fleet-wide qualification.",
+    "One-replica Recreate; no uninterrupted service, stateful migration or Service-routing claim.",
+    "No lost-reply or pending-operation fault was injected into Standard.",
+    "Ordinary HTTP package URLs qualified; HTTPS package URLs and preloaded device-local files were not exercised in this control.",
+    "No artifact authenticity or device checksum gate was claimed or required for Standard.",
+    "Native signature verification disabled at baseline and preserved."
+  ],
+  "toolingInterruption": "Before any fixture was created, SCP staging approval failed with capacity/timeouts. User explicitly approved execution and cleanup; direct SSH execution subsequently passed automatic review. No approval check was bypassed."
+}

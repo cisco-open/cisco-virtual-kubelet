@@ -1,0 +1,29 @@
+{
+  "executionComplete": true,
+  "startedAtUTC": "2026-11-04T19:38:18.025585+00:00",
+  "finishedAtUTC": "2026-11-04T20:27:35.107852+00:00",
+  "classification": "inconclusive-refresh",
+  "cacheWindowOutcome": "fresh-image-accepted-using-cached-unrevoked-CRL",
+  "revocationDiscoveryQualified": false,
+  "publicationUTC": "2026-11-04T19:39:59.477841+00:00",
+  "originalCRLNextUpdateUTC": "2026-11-04T19:48:19+00:00",
+  "firstVersion2NativeFetchUTC": "2026-11-04T19:48:30.261617+00:00",
+  "firstRejectionUTC": "2026-11-04T19:51:31.254300+00:00",
+  "samePodRecoveryPassed": true,
+  "freshDeploymentPassed": true,
+  "normalDeletionPassed": true,
+  "podUIDs": [
+    "123d675a-afac-4470-b58e-95ada003373d",
+    "25d133f1-4d8f-4360-9db7-4c5cd6f57bae",
+    "354497f3-07ed-4e59-a7c1-6745a03a7151",
+    "dec2eb0a-632b-4099-90bf-22918214a19b",
+    "ed401549-3291-4da6-9cfe-130b1fd9e475"
+  ],
+  "defaultMode": "Standard",
+  "governed": "deferred",
+  "metadataAndJournalOmitted": true,
+  "manualLeaseOrJournalChanges": false,
+  "forcedCRLRefreshOrFlushDuringQualification": false,
+  "cachePolicyChanged": false,
+  "clockChanged": false
+}

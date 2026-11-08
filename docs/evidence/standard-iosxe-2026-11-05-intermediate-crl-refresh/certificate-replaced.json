@@ -1,0 +1,9 @@
+{
+  "atUTC": "2026-11-05T06:50:24.883287+00:00",
+  "onlyServedIntermediateCertificateChanged": true,
+  "rootOrLeafChanged": false,
+  "intermediateSubjectOrKeyChanged": false,
+  "CRLOrPolicyChanged": false,
+  "URLOrPayloadChanged": false,
+  "revokedSerialRemoved": false
+}

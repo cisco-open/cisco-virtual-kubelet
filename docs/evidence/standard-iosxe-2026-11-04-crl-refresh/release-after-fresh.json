@@ -1,0 +1,11 @@
+{
+  "atUTC": "2026-11-04T20:26:38.336568+00:00",
+  "actualReleases": [
+    {
+      "appID": "cvk0000_ed40154932914da69cfe130b1fd9e475",
+      "release": "CRL-REFRESH-REFRESH-20261104-a674b004ffa2",
+      "ip": "192.168.129.224"
+    }
+  ],
+  "passed": true
+}

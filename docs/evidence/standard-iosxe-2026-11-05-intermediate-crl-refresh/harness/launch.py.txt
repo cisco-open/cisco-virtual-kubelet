@@ -1,0 +1,4 @@
+import pathlib,subprocess,json,hashlib,datetime,os
+R=pathlib.Path('/tmp/cvk-intrefresh-20261105');assert (R/'transport-controls.json').exists() and (R/'device-input.yaml').exists();K=['kubectl','--kubeconfig',str(R/'kubeconfig')];node=json.loads(subprocess.check_output(K+['get','node','c9k-intrefresh-20261105','-o','json'],text=True));assert any(c['type']=='Ready' and c['status']=='True' for c in node['status']['conditions']);assert not (R/'qualification.pid').exists();(R/'executed-source-hashes.json').write_text(json.dumps({p.name:hashlib.sha256(p.read_bytes()).hexdigest() for p in R.glob('*.py')},indent=2)+'\n')
+with (R/'qualification.log').open('wb') as out:p=subprocess.Popen(['python3','-u',str(R/'qualify.py')],stdout=out,stderr=subprocess.STDOUT,start_new_session=True)
+(R/'qualification.pid').write_text(str(p.pid));print('Launched qualification PID',p.pid,'UTC',datetime.datetime.now(datetime.timezone.utc).isoformat())

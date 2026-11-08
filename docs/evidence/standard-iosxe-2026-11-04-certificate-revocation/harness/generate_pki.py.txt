@@ -1,0 +1,37 @@
+"""Fresh PKI with prepublished signed CRLs; revoked serials stay revoked through repair."""
+import pathlib,datetime,uuid,json,os,ipaddress,hashlib
+from cryptography import x509
+from cryptography.x509.oid import NameOID,ExtendedKeyUsageOID
+from cryptography.hazmat.primitives import hashes,serialization
+from cryptography.hazmat.primitives.asymmetric import rsa
+R=pathlib.Path('/tmp/cvk-stdrevoke-20261104');now=datetime.datetime.now(datetime.timezone.utc);nonce=uuid.uuid4().hex[:12];certs={};keys={};crls={};CDP='http://192.168.129.111:18464/'
+def write(n,data):
+ p=R/n;p.write_bytes(data);os.chmod(p,0o600)
+def key(n):
+ k=rsa.generate_private_key(65537,2048);keys[n]=k;write(n+'.key',k.private_bytes(serialization.Encoding.PEM,serialization.PrivateFormat.PKCS8,serialization.NoEncryption()));return k
+def name(n):return x509.Name([x509.NameAttribute(NameOID.COMMON_NAME,'CVK revoke '+n+' '+nonce)])
+def cert(n,k,subject,issuer,ik,ca,path=None,cdp=None):
+ b=x509.CertificateBuilder().subject_name(subject).issuer_name(issuer).public_key(k.public_key()).serial_number(x509.random_serial_number()).not_valid_before(now-datetime.timedelta(days=1)).not_valid_after(now+datetime.timedelta(days=30 if ca else 7)).add_extension(x509.BasicConstraints(ca=ca,path_length=path),True).add_extension(x509.SubjectKeyIdentifier.from_public_key(k.public_key()),False).add_extension(x509.AuthorityKeyIdentifier.from_issuer_public_key(ik.public_key()),False)
+ if ca:b=b.add_extension(x509.KeyUsage(False,False,False,False,False,True,True,False,False),True)
+ else:b=b.add_extension(x509.SubjectAlternativeName([x509.IPAddress(ipaddress.ip_address('192.168.129.111'))]),False).add_extension(x509.KeyUsage(True,False,True,False,False,False,False,False,False),True).add_extension(x509.ExtendedKeyUsage([ExtendedKeyUsageOID.SERVER_AUTH]),False)
+ if cdp:b=b.add_extension(x509.CRLDistributionPoints([x509.DistributionPoint(full_name=[x509.UniformResourceIdentifier(CDP+cdp+'.crl')],relative_name=None,reasons=None,crl_issuer=None)]),False)
+ c=b.sign(ik,hashes.SHA256());certs[n]=c;write(n+'.crt',c.public_bytes(serialization.Encoding.PEM));return c
+for root in ['disabled-root','leaf-root','chain-root']:
+ k=key(root);nm=name(root);cert(root,k,nm,nm,k,True,1 if root=='chain-root' else 0)
+for n,root in [('disabled-bad','disabled-root'),('disabled-good','disabled-root'),('leaf-bad','leaf-root'),('leaf-good','leaf-root'),('leaf-control','leaf-root')]:cert(n,key(n),x509.Name([x509.NameAttribute(NameOID.COMMON_NAME,'192.168.129.111')]),certs[root].subject,keys[root],False,cdp=root)
+ik=key('intermediate-ca');inn=name('test-intermediate')
+for n in ['intermediate-bad','intermediate-good']:cert(n,ik,inn,certs['chain-root'].subject,keys['chain-root'],True,0,'chain-root')
+cert('intermediate-leaf',key('intermediate-leaf'),x509.Name([x509.NameAttribute(NameOID.COMMON_NAME,'192.168.129.111')]),inn,ik,False,cdp='intermediate')
+ck=key('control-intermediate');cn=name('control-intermediate');cert('control-intermediate',ck,cn,certs['chain-root'].subject,keys['chain-root'],True,0,'chain-root');cert('control-leaf',key('control-leaf'),x509.Name([x509.NameAttribute(NameOID.COMMON_NAME,'192.168.129.111')]),cn,ck,False,cdp='control-intermediate')
+for label,issuer,k,revoked,reason in [('disabled-root',certs['disabled-root'].subject,keys['disabled-root'],['disabled-bad'],x509.ReasonFlags.key_compromise),('leaf-root',certs['leaf-root'].subject,keys['leaf-root'],['leaf-bad'],x509.ReasonFlags.key_compromise),('chain-root',certs['chain-root'].subject,keys['chain-root'],['intermediate-bad'],x509.ReasonFlags.superseded),('intermediate',inn,ik,[],None),('control-intermediate',cn,ck,[],None)]:
+ b=x509.CertificateRevocationListBuilder().issuer_name(issuer).last_update(now-datetime.timedelta(minutes=5)).next_update(now+datetime.timedelta(days=2)).add_extension(x509.CRLNumber(1),False).add_extension(x509.AuthorityKeyIdentifier.from_issuer_public_key(k.public_key()),False)
+ for revokedName in revoked:b=b.add_revoked_certificate(x509.RevokedCertificateBuilder().serial_number(certs[revokedName].serial_number).revocation_date(now-datetime.timedelta(minutes=10)).add_extension(x509.CRLReason(reason),False).build())
+ c=b.sign(k,hashes.SHA256());crls[label]=c;write(label+'.crl',c.public_bytes(serialization.Encoding.DER));write(label+'.crl.pem',c.public_bytes(serialization.Encoding.PEM))
+chains={'disabled-bad':['disabled-bad'],'disabled-good':['disabled-good'],'leaf-bad':['leaf-bad'],'leaf-good':['leaf-good'],'leaf-control':['leaf-control'],'intermediate-bad':['intermediate-leaf','intermediate-bad'],'intermediate-good':['intermediate-leaf','intermediate-good'],'control-intermediate':['control-leaf','control-intermediate']}
+for label,parts in chains.items():write(label+'-chain.pem',b''.join(certs[p].public_bytes(serialization.Encoding.PEM) for p in parts))
+allCRLs=b''.join(c.public_bytes(serialization.Encoding.PEM) for c in crls.values());write('all-crls.pem',allCRLs)
+for root in ['disabled-root','leaf-root','chain-root']:write(root+'-with-crls.pem',certs[root].public_bytes(serialization.Encoding.PEM)+allCRLs)
+manifest={'generatedAtUTC':now.isoformat(),'nonce':nonce,'certificates':{},'crls':{},'chains':chains,'ephemeralPrivateKeys':[n+'.key' for n in keys],'CRLsChangedDuringReplacement':False,'intermediateReplacementScope':'Non-compromise/superseded CA certificate; new serial, same key/subject and unchanged leaf; not CA-key-compromise remediation.'}
+for n,c in certs.items():manifest['certificates'][n]={'sha256':c.fingerprint(hashes.SHA256()).hex(),'SPKISHA256':hashlib.sha256(c.public_key().public_bytes(serialization.Encoding.DER,serialization.PublicFormat.SubjectPublicKeyInfo)).hexdigest(),'subject':c.subject.rfc4514_string(),'issuer':c.issuer.rfc4514_string(),'serialHex':format(c.serial_number,'x'),'validFromUTC':c.not_valid_before.replace(tzinfo=datetime.timezone.utc).isoformat(),'validUntilUTC':c.not_valid_after.replace(tzinfo=datetime.timezone.utc).isoformat(),'ca':c.extensions.get_extension_for_class(x509.BasicConstraints).value.ca}
+for n,c in crls.items():manifest['crls'][n]={'sha256':hashlib.sha256(c.public_bytes(serialization.Encoding.DER)).hexdigest(),'issuer':c.issuer.rfc4514_string(),'lastUpdateUTC':c.last_update.replace(tzinfo=datetime.timezone.utc).isoformat(),'nextUpdateUTC':c.next_update.replace(tzinfo=datetime.timezone.utc).isoformat(),'number':1,'url':CDP+n+'.crl','revokedSerialsHex':[format(x.serial_number,'x') for x in c]}
+(R/'pki-manifest.json').write_text(json.dumps(manifest,indent=2)+'\n');(R/'server-mode.json').write_text(json.dumps({'disabled':'disabled-bad','valid-leaf':'leaf-control','valid-chain':'control-intermediate','leaf':'leaf-bad','intermediate':'intermediate-bad'}));print('PASS fresh revocation fixtures:',len(certs),'certificates,',len(crls),'signed CRLs,',len(keys),'private keys',flush=True)

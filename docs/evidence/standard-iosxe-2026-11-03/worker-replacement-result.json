@@ -1,0 +1,10 @@
+{
+  "passed": true,
+  "oldWorkerUID": "439b2102-7725-49c8-a7e5-006afd6ee56b",
+  "newWorkerUID": "187047a5-73c0-48b0-9226-506ae67e1777",
+  "podUID": "7d849564-b492-4031-b9db-0759968c7053",
+  "sameAppID": true,
+  "packageRequestsBefore": 1,
+  "packageRequestsAfter": 1,
+  "journalConfigured": false
+}

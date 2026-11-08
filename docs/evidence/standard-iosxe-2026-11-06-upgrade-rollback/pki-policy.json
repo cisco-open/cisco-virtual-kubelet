@@ -1,0 +1,14 @@
+{
+  "atUTC": "2026-11-06T08:27:25.557661+00:00",
+  "passed": true,
+  "policies": {
+    "intermediate": {
+      "trustpoint": "CVK-STDUPGRADE-20261106",
+      "revocationCheck": "none",
+      "ordinaryOriginWithoutCDP": true,
+      "runningConfig": "crypto pki trustpoint CVK-STDUPGRADE-20261106\n enrollment retry count 999\n enrollment retry period 1\n enrollment terminal pem\n revocation-check none\n hash sha512\nEdge-9K"
+    }
+  },
+  "globalPolicyChanged": false,
+  "CRLCacheManuallyCleared": false
+}

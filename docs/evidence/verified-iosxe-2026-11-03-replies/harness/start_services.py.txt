@@ -1,0 +1,26 @@
+import pathlib,subprocess,ssl,http.client,socket,json,os,datetime,time,base64,hashlib
+R=pathlib.Path('/tmp/cvk-replies-20261103');OLD=pathlib.Path('/tmp/cvk-verified-qual-20261102');R.joinpath('releases.json').write_bytes((OLD/'releases.json').read_bytes())
+report={'atUTC':datetime.datetime.now(datetime.timezone.utc).isoformat(),'tlsVerificationDisabled':False}
+auth='Basic '+base64.b64encode(('cisco:'+os.environ['CVK_QUAL_DEVICE_PASSWORD']).encode()).decode()
+ctx=ssl.create_default_context(cafile='/tmp/cvk-verified-qual-20261101/device-ca.crt');ctx.verify_flags|=ssl.VERIFY_X509_PARTIAL_CHAIN
+for i in range(15):
+ try:
+  c=http.client.HTTPSConnection('10.1.1.1',443,context=ctx,timeout=10);c.request('GET','/restconf/data/Cisco-IOS-XE-native:native/hostname',headers={'Authorization':auth,'Accept':'application/yang-data+json'});a=c.getresponse();assert a.status==200 and 'Edge-9K' in a.read().decode();c.close();break
+ except (ConnectionError,OSError):time.sleep(2)
+else:raise RuntimeError('Authenticated upstream HTTPS unavailable')
+for name in ['store','relay']:
+ with (R/(name+'.log')).open('wb') as out:p=subprocess.Popen(['python3',str(R/(name+'.py'))],stdout=out,stderr=subprocess.STDOUT,start_new_session=True)
+ (R/(name+'.pid')).write_text(str(p.pid))
+time.sleep(2)
+worker=ssl.create_default_context(cafile=str(R/'worker-ca.pem'));worker.verify_flags|=ssl.VERIFY_X509_PARTIAL_CHAIN
+c=http.client.HTTPSConnection('10.1.1.1',443,context=worker,timeout=20)
+c.connect=lambda:setattr(c,'sock',worker.wrap_socket(socket.create_connection(('172.17.0.1',18446),timeout=20),server_hostname='10.1.1.1'))
+c.request('GET','/restconf/data/Cisco-IOS-XE-native:native/hostname',headers={'Authorization':auth,'Accept':'application/yang-data+json'});a=c.getresponse();assert a.status==200 and 'Edge-9K' in a.read().decode();c.close();report['authenticatedRelayHostnameProbe']=True
+try:
+ s=worker.wrap_socket(socket.create_connection(('172.17.0.1',18446),timeout=10),server_hostname='wrong.example.test');s.close();raise AssertionError('Wrong hostname accepted')
+except ssl.SSLCertVerificationError:report['wrongRelayHostnameRejected']=True
+report['relayCA_SHA256']=hashlib.sha256((R/'relay-ca.crt').read_bytes()).hexdigest();R.joinpath('relay-tls-controls.json').write_text(json.dumps(report,indent=2)+'\n')
+# Apply only inside the owned cluster's network namespace. The host/shared
+# cluster routes, port 22, and device-to-store HTTPS are unaffected.
+cmd=['docker','exec','cvk-replies-k3s-20261103','iptables','-t','nat','-I','PREROUTING','1','-s','10.60.0.0/16','-d','10.1.1.1','-p','tcp','--dport','443','-j','DNAT','--to-destination','172.17.0.1:18446'];subprocess.run(cmd,check=True)
+R.joinpath('relay-network-scope.json').write_text(json.dumps({'scope':'owned isolated cluster network namespace only','rule':cmd,'hostRulesModified':False,'sshPortRedirected':False},indent=2)+'\n');print('PASS authenticated relay, wrong-hostname rejection and isolated RESTCONF routing',flush=True)

@@ -1,0 +1,10 @@
+{
+  "label": "rollback-a",
+  "phase": "a",
+  "release": "STD-UPGRADE-A-20261106-8f0d26f6c543",
+  "podUID": "5d78c63f-63ba-45a0-9f57-c732e3cd8549",
+  "revision": "3",
+  "deploymentUID": "6d61f17e-a446-4456-8bee-163e6dec33b0",
+  "generation": 3,
+  "atUTC": "2026-11-06T08:34:26.954467+00:00"
+}

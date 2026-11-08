@@ -1,0 +1,40 @@
+{
+  "apiVersion": "coordination.k8s.io/v1",
+  "kind": "Lease",
+  "metadata": {
+    "annotations": {
+      "topology.cisco.vk/app-worker-pod-name": "c9k-stdcopyfix-20261105-vk-74b589d-jkrtp",
+      "topology.cisco.vk/app-worker-pod-uid": "abd977b5-fb36-4fdd-b0c9-d6e0ceaabafd",
+      "topology.cisco.vk/app-worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-app-hosting",
+      "topology.cisco.vk/device-name": "c9k-stdcopyfix-20261105",
+      "topology.cisco.vk/device-namespace": "cvk-stdcopyfix-20261105",
+      "topology.cisco.vk/device-uid": "d904e1a0-fc5c-4a5b-9b9b-6e249a90d009",
+      "topology.cisco.vk/lease-purpose": "device-mutation",
+      "topology.cisco.vk/managed": "true",
+      "topology.cisco.vk/network-worker-pod-name": "ud904e1a0-fc5c-4a5b-9b9b-6e249a90d009-network-77d599fd9d-7l426",
+      "topology.cisco.vk/network-worker-pod-uid": "c996abc8-f594-4c6b-b2bc-1e1621e0d785",
+      "topology.cisco.vk/network-worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-network-management",
+      "topology.cisco.vk/node-name": "c9k-stdcopyfix-20261105",
+      "topology.cisco.vk/node-uid": "2f9be910-1f41-4ce1-84c5-9e35a6cfa94a",
+      "topology.cisco.vk/retain-lease": "true",
+      "topology.cisco.vk/worker-protocol": "rollout-v1",
+      "topology.cisco.vk/worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-network-management"
+    },
+    "creationTimestamp": "2026-11-05T20:18:05Z",
+    "labels": {
+      "cisco.vk/device": "device-a6a123d578f69ec1",
+      "cisco.vk/family": "device-disruptive-mutation"
+    },
+    "name": "cvk-device-a6a123d578f69ec1-device-disruptive-mutation-72ac365f",
+    "namespace": "cvk-stdcopyfix-20261105",
+    "resourceVersion": "4611",
+    "uid": "9a7919b7-3d1c-46e8-865e-e306c6be3e6f"
+  },
+  "spec": {
+    "acquireTime": "2026-11-05T21:00:36.339114Z",
+    "holderIdentity": "device-write/68c4be01-f893-413e-a4e7-751862574970",
+    "leaseDurationSeconds": 1860,
+    "leaseTransitions": 10,
+    "renewTime": "2026-11-05T21:00:36.339114Z"
+  }
+}

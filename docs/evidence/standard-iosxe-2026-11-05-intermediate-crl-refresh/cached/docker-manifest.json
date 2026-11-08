@@ -1,0 +1,11 @@
+[
+  {
+    "Config": "70b3a0c2884c4d99c6d976618824d73eeb6e3259ab56c32a5e467aa790eaaeb6.json",
+    "Layers": [
+      "2d05aae84e97cb86384893ed92a4854bc89fc6dbf5b1e10febd4b649b47832bd/layer.tar"
+    ],
+    "RepoTags": [
+      "cvk-intrefresh-20261105/cached:4cd216c69bce"
+    ]
+  }
+]

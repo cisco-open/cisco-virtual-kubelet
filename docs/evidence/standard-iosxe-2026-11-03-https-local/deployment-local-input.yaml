@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    qualification: 20261103-stdtls
+  name: cvk-stdtls-fixture
+  namespace: cvk-stdtls-apps-20261103
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cvk-stdtls-fixture
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: cvk-stdtls-fixture
+        qualification: 20261103-stdtls
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchFields:
+              - key: metadata.name
+                operator: In
+                values:
+                - c9k-stdtls-20261103
+      containers:
+      - image: flash:cvk-stdtls-20261103-a.tar
+        imagePullPolicy: Never
+        name: agent
+        ports:
+        - containerPort: 8080
+        resources:
+          limits:
+            memory: 128Mi
+          requests:
+            memory: 128Mi
+      tolerations:
+      - effect: NoSchedule
+        key: cisco.vk/device
+        operator: Exists

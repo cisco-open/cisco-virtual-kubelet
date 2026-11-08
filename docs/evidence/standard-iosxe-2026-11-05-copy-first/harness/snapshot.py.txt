@@ -1,0 +1,44 @@
+import subprocess,pathlib,json,datetime,ssl,urllib.request,urllib.error,base64,os,sys
+root=pathlib.Path('/tmp/cvk-stdcopyfix-20261105');label=sys.argv[1];ns='cvk-stdcopyfix-20261105';apps='cvk-stdcopyfix-apps-20261105';k=['kubectl','--kubeconfig','/tmp/cvk-stdcopyfix-20261105/kubeconfig']
+def get(kind,namespace=None):
+ cmd=k+(['-n',namespace] if namespace else [])+['get',kind,'-o','json'];r=subprocess.run(cmd,capture_output=True,text=True,timeout=30)
+ if r.returncode:return {'error':r.stderr}
+ return json.loads(r.stdout)
+report={'collectedAtUTC':datetime.datetime.now(datetime.timezone.utc).isoformat(),'case':label}
+d=get('ciscodevices',ns);report['devices']=[{'name':i['metadata']['name'],'uid':i['metadata']['uid'],'status':i.get('status'),'artifactConfig':i['spec'].get('appArtifacts'),'artifactConfigPresent':'appArtifacts' in i['spec']} for i in d.get('items',[])]
+report['leaseInventory']=get('leases',ns).get('items',[])
+report['pods']=get('pods',apps).get('items',[])
+report['events']=get('events',apps).get('items',[])
+report['deployment']=get('deployments',apps).get('items',[])
+report['nodes']=[i for i in get('nodes').get('items',[]) if i['metadata']['name']=='c9k-stdcopyfix-20261105']
+report['journals']=[i for i in get('configmaps',ns).get('items',[]) if i['metadata']['name'].startswith('cvk-artifacts-')]
+report['journalRoles']=[i for i in get('roles',ns).get('items',[]) if i['metadata']['name'].startswith('cvk-artifacts-')]
+report['journalBindings']=[i for i in get('rolebindings',ns).get('items',[]) if i.get('roleRef',{}).get('name','').startswith('cvk-artifacts-')]
+report['workers']=[{'name':i['metadata']['name'],'uid':i['metadata']['uid'],'annotations':i['metadata'].get('annotations'),'serviceAccount':i['spec'].get('serviceAccountName'),'status':i.get('status')} for i in get('pods',ns).get('items',[]) if i['metadata']['name'].startswith('c9k-stdcopyfix-20261105-vk-')]
+ctx=ssl.create_default_context(cafile='/tmp/cvk-verified-qual-20261101/device-ca.crt');ctx.verify_flags|=ssl.VERIFY_X509_PARTIAL_CHAIN
+headers={'Authorization':'Basic '+base64.b64encode(('cisco:'+os.environ['CVK_QUAL_DEVICE_PASSWORD']).encode()).decode(),'Accept':'application/yang-data+json'}
+def native(path):
+ try:
+  req=urllib.request.Request('https://10.1.1.1'+path,headers=headers)
+  with urllib.request.urlopen(req,context=ctx,timeout=30) as r:return json.loads(r.read())
+ except Exception as e:return {'error':str(e)}
+x=native('/restconf/data/Cisco-IOS-XE-app-hosting-oper:app-hosting-oper-data')
+oper=x.get('Cisco-IOS-XE-app-hosting-oper:app-hosting-oper-data',{}).get('app',[])
+cfg=native('/restconf/data/Cisco-IOS-XE-app-hosting-cfg:app-hosting-cfg-data');report['nativeConfigAppIDs']=[a.get('application-name') for a in cfg.get('Cisco-IOS-XE-app-hosting-cfg:app-hosting-cfg-data',{}).get('apps',{}).get('app',[])]
+report['nativeApps']=[{'appID':i.get('name'),'details':{k:v for k,v in i.get('details',{}).items() if k in ['state','version','application-type']},'networkInterfaces':i.get('network-interfaces')} for i in oper]
+if 'error' in x:report['nativeError']=x['error']
+report['probes']=[]
+for pod in report['pods']:
+ app='cvk0000_'+pod['metadata']['uid'].replace('-','')
+ for i in report['nativeApps']:
+  if i['appID']!=app:continue
+  for iface in (i.get('networkInterfaces') or {}).get('network-interface',[]):
+   ip=iface.get('ipv4-address')
+   if ip and ip!='0.0.0.0':
+    probe={'appID':app,'ip':ip}
+    try:
+     with urllib.request.urlopen('http://'+ip+':8080/',timeout=5) as r:probe.update(status=r.status,body=r.read(4096).decode())
+    except Exception as e:probe['error']=str(e)
+    report['probes'].append(probe)
+(root/('snapshot-'+label+'.json')).write_text(json.dumps(report,indent=2)+'\n')
+print(json.dumps({'case':label,'pods':[{'name':p['metadata']['name'],'uid':p['metadata']['uid'],'phase':p.get('status',{}).get('phase'),'statuses':p.get('status',{}).get('containerStatuses')} for p in report['pods']],'journalRecords':[i.get('data') for i in report['journals']],'nativeApps':report.get('nativeApps'),'probes':report['probes']}))

@@ -1,0 +1,30 @@
+from pathlib import Path
+import urllib.parse,json,subprocess,os,datetime,threading,http.server,ssl,urllib.request,urllib.error,base64,time,uuid
+R=Path('/tmp/cvk-stdgc-20261106-probe4');R.mkdir(mode=0o700,exist_ok=False);ns={};exec(compile(Path('/tmp/cvk-stdupgrade-20261106/pki_io.py').read_text(),'pinned-cli','exec'),ns);p=ns['CLI']();nonce=uuid.uuid4().hex;dest='flash:/cvk-gc-probe-'+nonce+'.tar';report={'startedAtUTC':datetime.datetime.now(datetime.timezone.utc).isoformat(),'path':dest,'installsIssued':0,'commands':[]};server=None
+try:
+ assert 'cvk0000_' not in p.cmd('show app-hosting list');assert 'HTTP secure server trustpoint: TP-self-signed-806566997' in p.cmd('show ip http server status | include trustpoint');assert 'No such file' in p.cmd('dir '+dest);p.cmd('configure terminal');p.cmd('ip http secure-trustpoint cvk-gnoi-20260904');p.cmd('end');ctx=ssl.create_default_context(cafile='/tmp/cvk-verified-qual-20261101/device-ca.crt');ctx.verify_flags|=ssl.VERIFY_X509_PARTIAL_CHAIN;headers={'Authorization':'Basic '+base64.b64encode(('cisco:'+os.environ['CVK_QUAL_DEVICE_PASSWORD']).encode()).decode(),'Content-Type':'application/yang-data+json','Accept':'application/yang-data+json'}
+ def req(path,body=None):
+  request=urllib.request.Request('https://10.1.1.1'+path,headers=headers,data=json.dumps(body).encode() if body is not None else None,method='POST' if body is not None else 'GET')
+  try:
+   with urllib.request.urlopen(request,context=ctx,timeout=60) as response:return {'status':response.status,'body':json.loads(response.read(1<<20))}
+  except urllib.error.HTTPError as e:return {'status':e.code,'body':e.read().decode()}
+ for i in range(20):
+  try:
+   v=req('/restconf/data/Cisco-IOS-XE-native:native/hostname');assert v['status']==200;break
+  except OSError:time.sleep(2)
+ else:raise RuntimeError('Verified RESTCONF not ready')
+ report['filesystemBefore']=req('/restconf/data/Cisco-IOS-XE-platform-software-oper:cisco-platform-software/q-filesystem?fields=fru;slot;bay;chassis;partitions(name;is-writable)')
+ class Handler(http.server.BaseHTTPRequestHandler):
+  def log_message(self,*a):pass
+  def do_GET(self):
+   b=('CVK owned GC probe '+nonce).encode();self.send_response(200);self.send_header('Content-Length',str(len(b)));self.end_headers();self.wfile.write(b)
+ server=http.server.ThreadingHTTPServer(('0.0.0.0',18481),Handler);threading.Thread(target=server.serve_forever,daemon=True).start();report['copy']=req('/restconf/operations/Cisco-IOS-XE-rpc:copy',{'Cisco-IOS-XE-rpc:copy':{'source-drop-node-name':'http://192.168.129.111:18481/probe','destination-drop-node-name':dest}});report['nativeAfterCopy']=p.cmd('dir '+dest);(R/'progress.json').write_text(json.dumps(report,indent=2)+'\n');report['exactAfterCopy']=req('/restconf/data/Cisco-IOS-XE-platform-software-oper:cisco-platform-software/q-filesystem=fru-rp,0,0,-1/partitions=flash%3A/partition-content='+urllib.parse.quote(dest.split('/')[-1],safe='')+'?fields=full-path;size;type');report['delete']=req('/restconf/operations/Cisco-IOS-XE-rpc:delete',{'Cisco-IOS-XE-rpc:delete':{'filename-drop-node-name':dest}});report['nativeAfterDelete']=p.cmd('dir '+dest);report['deleteMissing']=req('/restconf/operations/Cisco-IOS-XE-rpc:delete',{'Cisco-IOS-XE-rpc:delete':{'filename-drop-node-name':dest}});report['exactAfterDelete']=req('/restconf/data/Cisco-IOS-XE-platform-software-oper:cisco-platform-software/q-filesystem=fru-rp,0,0,-1/partitions=flash%3A/partition-content='+urllib.parse.quote(dest.split('/')[-1],safe='')+'?fields=full-path;size;type')
+finally:
+ if server:server.shutdown();server.server_close()
+ try:
+  v=p.cmd('dir '+dest)
+  if 'No such file' not in v:p.cmd('delete /force '+dest)
+  p.cmd('configure terminal');p.cmd('ip http secure-trustpoint TP-self-signed-806566997');p.cmd('end');report['managementSelectorRestored']=True;report['commands']=p.records
+ finally:p.close();(R/'probe.json').write_text(json.dumps(report,indent=2)+'\n')
+print(json.dumps({k:v for k,v in report.items() if not k.startswith('filesystem') and k!='commands'},indent=2))
+print('filesystem schemas',json.dumps({k:v for k,v in report.items() if k.startswith('filesystem')})[:15000])

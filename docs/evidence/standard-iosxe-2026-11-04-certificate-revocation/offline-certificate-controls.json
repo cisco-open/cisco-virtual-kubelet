@@ -1,0 +1,237 @@
+{
+  "atUTC": "2026-11-04T10:16:37.167008+00:00",
+  "passed": true,
+  "deviceClockOrTrustChanged": false,
+  "cases": [
+    {
+      "case": "disabled-without-revocation",
+      "command": [
+        "openssl",
+        "verify",
+        "-CAfile",
+        "/tmp/cvk-stdrevoke-20261104/disabled-root.crt",
+        "-purpose",
+        "sslserver",
+        "-verify_ip",
+        "192.168.129.111",
+        "/tmp/cvk-stdrevoke-20261104/disabled-bad.crt"
+      ],
+      "expectedSuccess": true,
+      "exitCode": 0,
+      "stdout": "/tmp/cvk-stdrevoke-20261104/disabled-bad.crt: OK\n",
+      "stderr": ""
+    },
+    {
+      "case": "disabled-revoked-with-check",
+      "command": [
+        "openssl",
+        "verify",
+        "-CAfile",
+        "/tmp/cvk-stdrevoke-20261104/disabled-root.crt",
+        "-purpose",
+        "sslserver",
+        "-verify_ip",
+        "192.168.129.111",
+        "-crl_check_all",
+        "-CRLfile",
+        "/tmp/cvk-stdrevoke-20261104/all-crls.pem",
+        "/tmp/cvk-stdrevoke-20261104/disabled-bad.crt"
+      ],
+      "expectedSuccess": false,
+      "exitCode": 2,
+      "stdout": "",
+      "stderr": "CN = 192.168.129.111\nerror 23 at 0 depth lookup: certificate revoked\nerror /tmp/cvk-stdrevoke-20261104/disabled-bad.crt: verification failed\n"
+    },
+    {
+      "case": "disabled-replacement",
+      "command": [
+        "openssl",
+        "verify",
+        "-CAfile",
+        "/tmp/cvk-stdrevoke-20261104/disabled-root.crt",
+        "-purpose",
+        "sslserver",
+        "-verify_ip",
+        "192.168.129.111",
+        "-crl_check_all",
+        "-CRLfile",
+        "/tmp/cvk-stdrevoke-20261104/all-crls.pem",
+        "/tmp/cvk-stdrevoke-20261104/disabled-good.crt"
+      ],
+      "expectedSuccess": true,
+      "exitCode": 0,
+      "stdout": "/tmp/cvk-stdrevoke-20261104/disabled-good.crt: OK\n",
+      "stderr": ""
+    },
+    {
+      "case": "valid-leaf",
+      "command": [
+        "openssl",
+        "verify",
+        "-CAfile",
+        "/tmp/cvk-stdrevoke-20261104/leaf-root.crt",
+        "-purpose",
+        "sslserver",
+        "-verify_ip",
+        "192.168.129.111",
+        "-crl_check_all",
+        "-CRLfile",
+        "/tmp/cvk-stdrevoke-20261104/all-crls.pem",
+        "/tmp/cvk-stdrevoke-20261104/leaf-control.crt"
+      ],
+      "expectedSuccess": true,
+      "exitCode": 0,
+      "stdout": "/tmp/cvk-stdrevoke-20261104/leaf-control.crt: OK\n",
+      "stderr": ""
+    },
+    {
+      "case": "revoked-leaf-without-check",
+      "command": [
+        "openssl",
+        "verify",
+        "-CAfile",
+        "/tmp/cvk-stdrevoke-20261104/leaf-root.crt",
+        "-purpose",
+        "sslserver",
+        "-verify_ip",
+        "192.168.129.111",
+        "/tmp/cvk-stdrevoke-20261104/leaf-bad.crt"
+      ],
+      "expectedSuccess": true,
+      "exitCode": 0,
+      "stdout": "/tmp/cvk-stdrevoke-20261104/leaf-bad.crt: OK\n",
+      "stderr": ""
+    },
+    {
+      "case": "revoked-leaf",
+      "command": [
+        "openssl",
+        "verify",
+        "-CAfile",
+        "/tmp/cvk-stdrevoke-20261104/leaf-root.crt",
+        "-purpose",
+        "sslserver",
+        "-verify_ip",
+        "192.168.129.111",
+        "-crl_check_all",
+        "-CRLfile",
+        "/tmp/cvk-stdrevoke-20261104/all-crls.pem",
+        "/tmp/cvk-stdrevoke-20261104/leaf-bad.crt"
+      ],
+      "expectedSuccess": false,
+      "exitCode": 2,
+      "stdout": "",
+      "stderr": "CN = 192.168.129.111\nerror 23 at 0 depth lookup: certificate revoked\nerror /tmp/cvk-stdrevoke-20261104/leaf-bad.crt: verification failed\n"
+    },
+    {
+      "case": "replaced-leaf",
+      "command": [
+        "openssl",
+        "verify",
+        "-CAfile",
+        "/tmp/cvk-stdrevoke-20261104/leaf-root.crt",
+        "-purpose",
+        "sslserver",
+        "-verify_ip",
+        "192.168.129.111",
+        "-crl_check_all",
+        "-CRLfile",
+        "/tmp/cvk-stdrevoke-20261104/all-crls.pem",
+        "/tmp/cvk-stdrevoke-20261104/leaf-good.crt"
+      ],
+      "expectedSuccess": true,
+      "exitCode": 0,
+      "stdout": "/tmp/cvk-stdrevoke-20261104/leaf-good.crt: OK\n",
+      "stderr": ""
+    },
+    {
+      "case": "valid-chain",
+      "command": [
+        "openssl",
+        "verify",
+        "-CAfile",
+        "/tmp/cvk-stdrevoke-20261104/chain-root.crt",
+        "-purpose",
+        "sslserver",
+        "-verify_ip",
+        "192.168.129.111",
+        "-untrusted",
+        "/tmp/cvk-stdrevoke-20261104/control-intermediate.crt",
+        "-crl_check_all",
+        "-CRLfile",
+        "/tmp/cvk-stdrevoke-20261104/all-crls.pem",
+        "/tmp/cvk-stdrevoke-20261104/control-leaf.crt"
+      ],
+      "expectedSuccess": true,
+      "exitCode": 0,
+      "stdout": "/tmp/cvk-stdrevoke-20261104/control-leaf.crt: OK\n",
+      "stderr": ""
+    },
+    {
+      "case": "revoked-intermediate-without-check",
+      "command": [
+        "openssl",
+        "verify",
+        "-CAfile",
+        "/tmp/cvk-stdrevoke-20261104/chain-root.crt",
+        "-purpose",
+        "sslserver",
+        "-verify_ip",
+        "192.168.129.111",
+        "-untrusted",
+        "/tmp/cvk-stdrevoke-20261104/intermediate-bad.crt",
+        "/tmp/cvk-stdrevoke-20261104/intermediate-leaf.crt"
+      ],
+      "expectedSuccess": true,
+      "exitCode": 0,
+      "stdout": "/tmp/cvk-stdrevoke-20261104/intermediate-leaf.crt: OK\n",
+      "stderr": ""
+    },
+    {
+      "case": "revoked-intermediate",
+      "command": [
+        "openssl",
+        "verify",
+        "-CAfile",
+        "/tmp/cvk-stdrevoke-20261104/chain-root.crt",
+        "-purpose",
+        "sslserver",
+        "-verify_ip",
+        "192.168.129.111",
+        "-untrusted",
+        "/tmp/cvk-stdrevoke-20261104/intermediate-bad.crt",
+        "-crl_check_all",
+        "-CRLfile",
+        "/tmp/cvk-stdrevoke-20261104/all-crls.pem",
+        "/tmp/cvk-stdrevoke-20261104/intermediate-leaf.crt"
+      ],
+      "expectedSuccess": false,
+      "exitCode": 2,
+      "stdout": "",
+      "stderr": "CN = CVK revoke test-intermediate 4723f9294e02\nerror 23 at 1 depth lookup: certificate revoked\nerror /tmp/cvk-stdrevoke-20261104/intermediate-leaf.crt: verification failed\n"
+    },
+    {
+      "case": "replaced-intermediate",
+      "command": [
+        "openssl",
+        "verify",
+        "-CAfile",
+        "/tmp/cvk-stdrevoke-20261104/chain-root.crt",
+        "-purpose",
+        "sslserver",
+        "-verify_ip",
+        "192.168.129.111",
+        "-untrusted",
+        "/tmp/cvk-stdrevoke-20261104/intermediate-good.crt",
+        "-crl_check_all",
+        "-CRLfile",
+        "/tmp/cvk-stdrevoke-20261104/all-crls.pem",
+        "/tmp/cvk-stdrevoke-20261104/intermediate-leaf.crt"
+      ],
+      "expectedSuccess": true,
+      "exitCode": 0,
+      "stdout": "/tmp/cvk-stdrevoke-20261104/intermediate-leaf.crt: OK\n",
+      "stderr": ""
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "physicalStandardControl": "passed: deployment, managed worker replacement, A/B/A replacement and normal deletion",
+  "independentEvidenceAssessment": "passed",
+  "sourceFingerprintMatchesPriorQualifiedCandidate": true,
+  "productionCodeChangedForThisControl": false,
+  "priorRaceRun": "../verified-iosxe-2026-11-03-replies/test-results.json",
+  "goTestsRerun": false,
+  "strictDocumentationBuild": {
+    "command": ".venv/bin/mkdocs build --strict",
+    "passed": true
+  },
+  "whitespace": {
+    "command": "git diff --check",
+    "passed": true
+  },
+  "historicalEvidenceManifestsUnchanged": true
+}

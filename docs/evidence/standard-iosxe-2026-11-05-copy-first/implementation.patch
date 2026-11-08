@@ -1,0 +1,677 @@
+--- a/internal/drivers/iosxe/client.go
++++ b/internal/drivers/iosxe/client.go
+@@ -38,132 +38,97 @@
+ 	d.eventRecorder.Eventf(appConfig.Metadata.Pod, eventType, reason, messageFmt, args...)
+ }
+ 
+-// CreateAppHostingApp creates a single IOS-XE AppHosting app from an AppHostingConfig.
+-//
+-// Pull policy is honoured as follows:
+-//
+-//	Never           – image must already be on flash; HTTP URLs are rejected before any RPC.
+-//	IfNotPresent    – primary device-native pull attempted first; on timeout, tries to install
+-//	                  from the cached flash destination before downloading again.
+-//	Always (default)– primary device-native pull attempted first; on timeout, always re-downloads
+-//	                  via the copy RPC regardless of what is on flash.
++// CreateAppHostingApp deploys Standard apps. Remote packages are copied to an
++// explicit device path before app configuration or installation. IOS-XE may
++// report a URL install as DEPLOYED after a failed download and reuse stale
++// package data, so operational state alone cannot establish transfer success.
+ func (d *XEDriver) CreateAppHostingApp(ctx context.Context, appConfig *AppHostingConfig) error {
+ 	if err := common.RequireStandardAppArtifacts(d.config); err != nil {
+ 		return err
+ 	}
+-	log.G(ctx).Infof("Creating AppHosting app: %s for container: %s", appConfig.AppName(), appConfig.ContainerName())
+-
+ 	timeout := appConfig.PackageTimeout()
+ 	if timeout == 0 {
+ 		timeout = defaultPackageTimeout
+ 	}
+-	policy := appConfig.ImagePullPolicy()
+-
+-	// Never + HTTP URL: the image must already be on flash. Fail before touching the device.
+-	if policy == v1.PullNever && isHTTPURL(appConfig.ImagePath()) {
+-		return fmt.Errorf("app %s: imagePullPolicy is Never but image is an HTTP URL — image must be pre-loaded on flash",
+-			appConfig.AppName())
+-	}
+-
++	packagePath, err := d.stageStandardPackage(ctx, appConfig)
++	if err != nil {
++		return err
++	}
+ 	cfgPath := "/restconf/data/Cisco-IOS-XE-app-hosting-cfg:app-hosting-cfg-data/apps"
+-
+ 	if err := d.client.Post(ctx, cfgPath, appConfig.Spec.DeviceConfig, d.marshaller); err != nil {
+-		if isRESTCONFDataExists(err) {
+-			log.G(ctx).Infof("AppHosting config for app %s already exists; reconciling existing app", appConfig.AppName())
+-			if handled, convergeErr := d.convergeExistingApp(ctx, appConfig, timeout); handled {
+-				return convergeErr
++		if !isRESTCONFDataExists(err) {
++			return fmt.Errorf("AppHosting config failed for app %s: %w", appConfig.AppName(), err)
++		}
++		if handled, convergeErr := d.convergeExistingApp(ctx, appConfig, timeout); handled {
++			return convergeErr
++		}
++	}
++	if err := d.InstallApp(ctx, appConfig.AppName(), packagePath); !acceptedOrAmbiguousAppHostingRPC(ctx, appConfig.AppName(), "install", err) {
++		return fmt.Errorf("failed to install app %s: %w", appConfig.AppName(), err)
++	}
++	if appConfig.Spec.RequiresTwoPhaseStart {
++		if err := d.WaitForAppStatus(ctx, appConfig.AppName(), "DEPLOYED", timeout); err != nil {
++			return fmt.Errorf("app %s did not reach DEPLOYED state: %w", appConfig.AppName(), err)
++		}
++		if err := d.activateAndStart(ctx, appConfig, timeout); err != nil {
++			return err
++		}
++	} else if err := d.WaitForAppStatus(ctx, appConfig.AppName(), "RUNNING", timeout); err != nil {
++		return fmt.Errorf("app %s did not reach RUNNING after local install: %w", appConfig.AppName(), err)
++	}
++	log.G(ctx).Infof("Successfully installed app %s from device-local package", appConfig.AppName())
++	return nil
++}
++
++// stageStandardPackage reuses the synchronous RESTCONF copy RPC. A new remote
++// install (Always or IfNotPresent) must complete a copy; installing an unchecked
++// cache filename is unsafe because IOS-XE can reuse stale data even if it is
++// missing. Existing running apps remain handled by lifecycle reconciliation.
++// Local paths, including Never, retain their existing offline workflow.
++func (d *XEDriver) stageStandardPackage(ctx context.Context, appConfig *AppHostingConfig) (string, error) {
++	source := appConfig.ImagePath()
++	parsed, err := url.Parse(source)
++	if err != nil {
++		return "", fmt.Errorf("invalid package location for app %s", appConfig.AppName())
++	}
++	remote := isHTTPURL(source)
++	if !remote {
++		switch strings.ToLower(parsed.Scheme) {
++		case "ftp", "tftp", "scp":
++			remote = true // The existing device copy RPC supports these sources.
++		case "", "flash", "bootflash", "harddisk", "nvram", "usb", "usbflash0", "usbflash1":
++			if parsed.Host != "" {
++				return "", fmt.Errorf("invalid device package location for app %s", appConfig.AppName())
+ 			}
+-		} else {
+-			return fmt.Errorf("AppHosting config failed for app %s: %w", appConfig.AppName(), err)
+-		}
+-	}
+-
+-	// For all paths (local and HTTP), call InstallApp
+-	if err := d.InstallApp(ctx, appConfig.AppName(), appConfig.ImagePath()); !acceptedOrAmbiguousAppHostingRPC(ctx, appConfig.AppName(), "install", err) {
+-		return fmt.Errorf("failed to install app %s: %w", appConfig.AppName(), err)
+-	}
+-
+-	// Handle two-phase deployment for DockerResource apps
+-	if appConfig.Spec.RequiresTwoPhaseStart {
+-		// For non-HTTP (flash) images, just wait DEPLOYED then activate and start.
+-		if !isHTTPURL(appConfig.ImagePath()) {
+-			if err := d.WaitForAppStatus(ctx, appConfig.AppName(), "DEPLOYED", timeout); err != nil {
+-				return fmt.Errorf("app %s did not reach DEPLOYED state for phase 2: %w", appConfig.AppName(), err)
+-			}
+-			if err := d.activateAndStart(ctx, appConfig, timeout); err != nil {
+-				return err
+-			}
+-			log.G(ctx).Infof("Successfully installed app %s (two-phase, local path)", appConfig.AppName())
+-			return nil
+-		}
+-
+-		// HTTP image + DockerResource: try device-native pull, fall back to copy.
+-		d.emitEvent(appConfig, v1.EventTypeNormal, "Pulling", "Pulling image %s", imageReferenceForLog(appConfig.ImagePath()))
+-		deployErr := d.WaitForAppStatus(ctx, appConfig.AppName(), "DEPLOYED", timeout)
+-		if deployErr == nil {
+-			if err := d.activateAndStart(ctx, appConfig, timeout); err != nil {
+-				return err
+-			}
+-			log.G(ctx).Infof("Successfully installed app %s (two-phase)", appConfig.AppName())
+-			return nil
+-		}
+-
+-		log.G(ctx).Warnf("App %s did not reach DEPLOYED after install: %v", appConfig.AppName(), deployErr)
+-		d.emitEvent(appConfig, v1.EventTypeWarning, "ImagePullFallback", "Device-native pull timed out after %s; falling back to copy-then-install", timeout)
+-
+-		if err := d.copyFallbackToFlash(ctx, appConfig, cfgPath, policy, timeout); err != nil {
+-			return err
+-		}
+-		if err := d.activateAndStart(ctx, appConfig, timeout); err != nil {
+-			d.clearPodRecovering(appConfig.PodUID())
+-			return err
+-		}
+-		d.clearPodRecovering(appConfig.PodUID())
+-		d.emitEvent(appConfig, v1.EventTypeNormal, "Started", "App %s is running", appConfig.AppName())
+-		log.G(ctx).Infof("Successfully installed app %s via two-phase copy fallback", appConfig.AppName())
+-		return nil
+-	}
+-
+-	// For non-HTTP image paths (flash, bootflash, etc.) without DockerResource,
+-	// the device auto-advances from DEPLOYED to RUNNING because Start=true is set.
+-	// Wait for RUNNING directly; no explicit activate/start RPCs are needed.
+-	if !isHTTPURL(appConfig.ImagePath()) {
+-		if err := d.WaitForAppStatus(ctx, appConfig.AppName(), "RUNNING", timeout); err != nil {
+-			return fmt.Errorf("app %s did not reach RUNNING after flash install: %w", appConfig.AppName(), err)
+-		}
+-		log.G(ctx).Infof("Successfully installed app %s (single-phase local path)", appConfig.AppName())
+-		return nil
+-	}
+-
+-	// ── PRIMARY PATH (HTTP image, non-DockerResource) ────────────────────────
+-	// The device can pull and activate the image itself (Start=true). Wait for RUNNING.
+-	d.emitEvent(appConfig, v1.EventTypeNormal, "Pulling", "Pulling image %s", imageReferenceForLog(appConfig.ImagePath()))
+-	waitErr := d.WaitForAppStatus(ctx, appConfig.AppName(), "RUNNING", timeout)
+-	if waitErr == nil {
+-		log.G(ctx).Infof("Successfully created and installed app %s", appConfig.AppName())
+-		return nil
+-	}
+-
+-	log.G(ctx).Warnf("App %s did not reach RUNNING state after install: %v", appConfig.AppName(), waitErr)
+-	d.emitEvent(appConfig, v1.EventTypeWarning, "ImagePullFallback", "Device-native pull timed out after %s; falling back to copy-then-install", timeout)
+-
+-	if err := d.copyFallbackToFlash(ctx, appConfig, cfgPath, policy, timeout); err != nil {
+-		return err
+-	}
+-
+-	if err := d.activateAndStart(ctx, appConfig, timeout); err != nil {
+-		d.clearPodRecovering(appConfig.PodUID())
+-		return err
+-	}
+-
+-	d.clearPodRecovering(appConfig.PodUID())
+-	d.emitEvent(appConfig, v1.EventTypeNormal, "Started", "App %s is running", appConfig.AppName())
+-	log.G(ctx).Infof("Successfully installed app %s via copy fallback", appConfig.AppName())
+-	return nil
++			return source, nil
++		default:
++			return "", fmt.Errorf("unsupported package location for app %s", appConfig.AppName())
++		}
++	}
++	if appConfig.ImagePullPolicy() == v1.PullNever {
++		return "", fmt.Errorf("app %s: imagePullPolicy is Never but image is an HTTP URL — image must be pre-loaded on flash", appConfig.AppName())
++	}
++	authenticated := source
++	if isHTTPURL(source) {
++		authenticated, err = d.maybeAddAuthToURL(ctx, source, appConfig.ImagePullSecrets())
++	}
++	if err != nil {
++		return "", fmt.Errorf("cannot resolve image credentials for app %s", appConfig.AppName())
++	}
++	dest := appConfig.PackageDest()
++	if dest == "" {
++		dest = fmt.Sprintf("flash:/cvk-%s.tar", appConfig.AppName())
++	}
++	d.emitEvent(appConfig, v1.EventTypeNormal, "Pulling", "Pulling image %s", imageReferenceForLog(source))
++	if err := d.copyRPC(ctx, authenticated, dest); err != nil {
++		return "", fmt.Errorf("copy failed for app %s: %w", appConfig.AppName(), err)
++	}
++	d.emitEvent(appConfig, v1.EventTypeNormal, "Pulled", "Image copied to %s", dest)
++	return dest, nil
+ }
+ 
+ // activateAndStart performs the activate → wait ACTIVATED → start → wait RUNNING sequence
+-// required for all DockerResource (two-phase) apps and copy-fallback paths.
++// required for all DockerResource (two-phase) apps.
+ func (d *XEDriver) activateAndStart(ctx context.Context, appConfig *AppHostingConfig, timeout time.Duration) error {
+ 	if err := d.ActivateApp(ctx, appConfig.AppName()); !acceptedOrAmbiguousAppHostingRPC(ctx, appConfig.AppName(), "activate", err) {
+ 		return fmt.Errorf("failed to activate app %s: %w", appConfig.AppName(), err)
+@@ -235,91 +200,6 @@
+ 	}
+ 	msg := err.Error()
+ 	return strings.Contains(msg, "409 Conflict") && strings.Contains(msg, "data-exists")
+-}
+-
+-// copyFallbackToFlash performs the HTTP-to-flash copy fallback sequence:
+-// DeleteApp → re-POST (Start=false) → optional IfNotPresent cache check → copyRPC → InstallApp → wait DEPLOYED.
+-// On return the app is in DEPLOYED state; the caller is responsible for starting it.
+-func (d *XEDriver) copyFallbackToFlash(ctx context.Context, appConfig *AppHostingConfig, cfgPath string, policy v1.PullPolicy, timeout time.Duration) error {
+-	dest := appConfig.PackageDest()
+-	if dest == "" {
+-		dest = fmt.Sprintf("flash:/virtual-kubelet/%s.tar", appConfig.AppName())
+-	}
+-	log.G(ctx).Infof("Falling back to copy-then-install for app %s (dest: %s)", appConfig.AppName(), dest)
+-
+-	d.markPodRecovering(appConfig.PodUID())
+-
+-	src, authErr := d.maybeAddAuthToURL(ctx, appConfig.ImagePath(), appConfig.ImagePullSecrets())
+-	if authErr != nil {
+-		log.G(ctx).Warnf("Failed to resolve auth for app %s: %v (continuing without credentials)", appConfig.AppName(), authErr)
+-		src = appConfig.ImagePath()
+-	}
+-
+-	if delErr := d.DeleteApp(ctx, appConfig.AppName()); delErr != nil {
+-		log.G(ctx).Warnf("Failed to delete app %s before copy recovery (continuing): %v", appConfig.AppName(), delErr)
+-	}
+-
+-	gapp := appConfig.Spec.DeviceConfig.App[appConfig.AppName()]
+-	origStart := gapp.Start
+-	falseVal := false
+-	gapp.Start = &falseVal
+-	postErr := d.client.Post(ctx, cfgPath, appConfig.Spec.DeviceConfig, d.marshaller)
+-	gapp.Start = origStart
+-	if postErr != nil {
+-		d.clearPodRecovering(appConfig.PodUID())
+-		return fmt.Errorf("failed to re-post config (Start=false) for app %s: %w", appConfig.AppName(), postErr)
+-	}
+-
+-	installedFromCache := false
+-	if policy == v1.PullIfNotPresent {
+-		log.G(ctx).Infof("imagePullPolicy=IfNotPresent: checking for cached image at %s", dest)
+-		d.emitEvent(appConfig, v1.EventTypeNormal, "Pulling", "Checking for cached image at %s", dest)
+-		installErr := d.InstallApp(ctx, appConfig.AppName(), dest)
+-		if acceptedOrAmbiguousAppHostingRPC(ctx, appConfig.AppName(), "install", installErr) {
+-			if cacheWaitErr := d.WaitForAppStatus(ctx, appConfig.AppName(), "DEPLOYED", timeout); cacheWaitErr == nil {
+-				installedFromCache = true
+-				log.G(ctx).Infof("App %s: using cached image at %s (skipping download)", appConfig.AppName(), dest)
+-				d.emitEvent(appConfig, v1.EventTypeNormal, "Pulled", "Using cached image from %s", dest)
+-			} else {
+-				d.clearPodRecovering(appConfig.PodUID())
+-				return fmt.Errorf("accepted cached install did not converge for app %s; refusing destructive fallback: %w", appConfig.AppName(), cacheWaitErr)
+-			}
+-		}
+-		if !installedFromCache {
+-			log.G(ctx).Infof("App %s: no usable cached image at %s, downloading", appConfig.AppName(), dest)
+-			if delErr := d.DeleteApp(ctx, appConfig.AppName()); delErr != nil {
+-				log.G(ctx).Warnf("Failed to delete app %s after failed cache attempt (continuing): %v", appConfig.AppName(), delErr)
+-			}
+-			gapp.Start = &falseVal
+-			if repostErr := d.client.Post(ctx, cfgPath, appConfig.Spec.DeviceConfig, d.marshaller); repostErr != nil {
+-				gapp.Start = origStart
+-				d.clearPodRecovering(appConfig.PodUID())
+-				return fmt.Errorf("failed to re-post config after cache miss for app %s: %w", appConfig.AppName(), repostErr)
+-			}
+-			gapp.Start = origStart
+-		}
+-	}
+-
+-	if !installedFromCache {
+-		d.emitEvent(appConfig, v1.EventTypeNormal, "Copying", "Copying image %s to %s (may take several minutes)", imageReferenceForLog(appConfig.ImagePath()), dest)
+-		if err := d.copyRPC(ctx, src, dest); err != nil {
+-			d.clearPodRecovering(appConfig.PodUID())
+-			return fmt.Errorf("copy failed for app %s: %w", appConfig.AppName(), err)
+-		}
+-		d.emitEvent(appConfig, v1.EventTypeNormal, "Pulled", "Image successfully copied to %s", dest)
+-
+-		if err := d.InstallApp(ctx, appConfig.AppName(), dest); !acceptedOrAmbiguousAppHostingRPC(ctx, appConfig.AppName(), "install", err) {
+-			d.clearPodRecovering(appConfig.PodUID())
+-			return fmt.Errorf("failed to reinstall app %s from flash: %w", appConfig.AppName(), err)
+-		}
+-
+-		if err := d.WaitForAppStatus(ctx, appConfig.AppName(), "DEPLOYED", timeout); err != nil {
+-			d.clearPodRecovering(appConfig.PodUID())
+-			return fmt.Errorf("app %s did not reach DEPLOYED after flash install: %w", appConfig.AppName(), err)
+-		}
+-	}
+-
+-	return nil
+ }
+ 
+ const appHostingRPCPath = "/restconf/operations/Cisco-IOS-XE-rpc:app-hosting"
+@@ -865,9 +745,19 @@
+ 	path := "/restconf/operations/Cisco-IOS-XE-rpc:copy"
+ 	jsonMarshaller := func(v any) ([]byte, error) { return json.Marshal(v) }
+ 
+-	if err := d.client.Post(ctx, path, payload, jsonMarshaller); err != nil {
++	client, ok := d.client.(postWithResultClient)
++	if !ok {
++		return fmt.Errorf("copy RPC requires response decoding")
++	}
++	var response appHostingRPCOutput
++	if err := client.PostWithResult(ctx, path, payload, &response, jsonMarshaller, decodeAppHostingRPCOutput); err != nil {
+ 		log.G(ctx).Errorf("Copy RPC failed - source: %s, destination: %s, error: %v", safeSource, safeDestination, err)
+ 		return fmt.Errorf("copy RPC failed (%s -> %s): %w", safeSource, safeDestination, err)
++	}
++	// Qualified synchronous copy contract on IOS-XE 17.18. A 2xx envelope
++	// alone, an empty reply, or arbitrary device text is not completion.
++	if !response.Present || strings.TrimSpace(response.Result) != "RPC request successful" {
++		return fmt.Errorf("copy RPC did not confirm completion (%s -> %s)", safeSource, safeDestination)
+ 	}
+ 
+ 	log.G(ctx).Infof("Copy operation completed successfully: %s -> %s", safeSource, safeDestination)
+--- a/internal/drivers/iosxe/reconciler.go
++++ b/internal/drivers/iosxe/reconciler.go
+@@ -173,10 +173,16 @@
+ 				appConfig.Status.Message = "no image path available for install"
+ 				return
+ 			}
++			localPath, err := d.stageStandardPackage(ctx, appConfig)
++			if err != nil {
++				appConfig.Status.Phase = AppPhaseError
++				appConfig.Status.Message = fmt.Sprintf("image transfer failed: %v", err)
++				return
++			}
+ 			appConfig.Status.Phase = AppPhaseConverging
+ 			appConfig.Status.Message = "Re-issuing install"
+ 			log.G(ctx).Debugf("ReconcileApp %s: no oper data; re-issuing install (image: %s)", appID, imageReferenceForLog(imagePath))
+-			if err := d.InstallApp(ctx, appID, imagePath); !recordPendingAppOperation(ctx, appConfig, "install", obs, err) {
++			if err := d.InstallApp(ctx, appID, localPath); !recordPendingAppOperation(ctx, appConfig, "install", obs, err) {
+ 				log.G(ctx).Warnf("ReconcileApp %s: install failed: %v", appID, err)
+ 				appConfig.Status.Phase = AppPhaseError
+ 				appConfig.Status.Message = fmt.Sprintf("install failed: %v", err)
+--- a/internal/drivers/iosxe/client_test.go
++++ b/internal/drivers/iosxe/client_test.go
+@@ -77,7 +77,14 @@
+ 		}
+ 	}
+ 	if postHook != nil {
+-		return postHook(path, payload)
++		if err := postHook(path, payload); err != nil {
++			return err
++		}
++	}
++	if path == "/restconf/operations/Cisco-IOS-XE-rpc:copy" {
++		output := result.(*appHostingRPCOutput)
++		output.Present = true
++		output.Result = "RPC request successful"
+ 	}
+ 	return nil
+ }
+@@ -697,7 +704,7 @@
+ 
+ // ── Install / recovery integration tests ─────────────────────────────────────
+ 
+-func TestCreateAppHostingApp_PrimaryPullSucceeds(t *testing.T) {
++func TestCreateAppHostingApp_StagedSinglePhaseSucceeds(t *testing.T) {
+ 	fc := &fakeNetworkClient{
+ 		getHook: func(_ string, result any) error {
+ 			root, ok := result.(*Cisco_IOS_XEAppHostingOper_AppHostingOperData)
+@@ -735,7 +742,7 @@
+ 	}
+ }
+ 
+-func TestCreateAppHostingApp_FallbackCopyFailure(t *testing.T) {
++func TestCreateAppHostingApp_CopyFailure(t *testing.T) {
+ 	copyErr := errors.New("network unreachable")
+ 	fc := &fakeNetworkClient{
+ 		getHook: func(_ string, result any) error { return nil }, // empty → timeout
+@@ -747,7 +754,7 @@
+ 		},
+ 	}
+ 	d := newTestDriver(fc)
+-	cfg := minimalAppConfig("http://registry.example.com/app.tar", v1.PullAlways, 50*time.Millisecond)
++	cfg := minimalDockerResourceConfig("http://registry.example.com/app.tar", v1.PullAlways, 50*time.Millisecond)
+ 
+ 	err := d.CreateAppHostingApp(context.Background(), cfg)
+ 	if err == nil {
+@@ -758,9 +765,9 @@
+ 	}
+ }
+ 
+-func TestCreateAppHostingApp_FallbackCopyAfterPrimaryTimeout(t *testing.T) {
+-	// stage 0 → empty oper data (primary RUNNING wait times out)
+-	// stage 1 → DEPLOYED (after copy RPC + install; during DEPLOYED wait in copyFallbackToFlash)
++func TestCreateAppHostingApp_CopyThenLocalInstall(t *testing.T) {
++	// stage 0 → no staged package; copy must run before any install
++	// stage 1 → DEPLOYED after the successful copy and local install
+ 	// stage 2 → ACTIVATED (after ActivateApp)
+ 	// stage 3 → RUNNING (after StartApp)
+ 	var (
+@@ -813,10 +820,10 @@
+ 	}
+ 
+ 	d := newTestDriver(fc)
+-	cfg := minimalAppConfig("http://registry.example.com/app.tar", v1.PullAlways, 50*time.Millisecond)
++	cfg := minimalDockerResourceConfig("http://registry.example.com/app.tar", v1.PullAlways, 50*time.Millisecond)
+ 
+ 	if err := d.CreateAppHostingApp(context.Background(), cfg); err != nil {
+-		t.Errorf("expected success via copy fallback, got: %v", err)
++		t.Errorf("expected success via staged copy, got: %v", err)
+ 	}
+ 
+ 	mu.Lock()
+@@ -827,84 +834,6 @@
+ 	}
+ 	if d.isPodRecovering("test-uid") {
+ 		t.Error("recovering flag should be cleared after successful fallback")
+-	}
+-}
+-
+-func TestCopyFallbackDoesNotDisruptAcceptedCachedInstall(t *testing.T) {
+-	const cfgPath = "/restconf/data/Cisco-IOS-XE-app-hosting-cfg:app-hosting-cfg-data/apps"
+-	cacheSubmitted := false
+-	installs, copies, deletes := 0, 0, 0
+-	fc := &fakeNetworkClient{
+-		getHook: func(_ string, result any) error {
+-			root := result.(*Cisco_IOS_XEAppHostingOper_AppHostingOperData)
+-			if cacheSubmitted {
+-				*root = *operResponse("test-app", "INSTALLING")
+-			}
+-			return nil
+-		},
+-		postHook: func(path string, payload any) error {
+-			switch path {
+-			case appHostingRPCPath:
+-				if payload.(map[string]interface{})["install"] != nil {
+-					installs++
+-					cacheSubmitted = true
+-				}
+-			case "/restconf/operations/Cisco-IOS-XE-rpc:copy":
+-				copies++
+-			}
+-			return nil
+-		},
+-		deleteHook: func(string) error { deletes++; return nil },
+-	}
+-	d := newTestDriver(fc)
+-	cfg := minimalDockerResourceConfig("https://registry.example/app.tar", v1.PullIfNotPresent, time.Minute)
+-	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
+-	defer cancel()
+-	err := d.copyFallbackToFlash(ctx, cfg, cfgPath, v1.PullIfNotPresent, time.Minute)
+-	if err == nil || !strings.Contains(err.Error(), "refusing destructive fallback") {
+-		t.Fatalf("error=%v, want accepted-install convergence failure", err)
+-	}
+-	if installs != 1 || copies != 0 || deletes != 1 {
+-		t.Fatalf("installs=%d copies=%d deletes=%d, want 1/0/1 (initial cleanup only)", installs, copies, deletes)
+-	}
+-}
+-
+-func TestCopyFallbackDoesNotDisruptAmbiguousCachedInstall(t *testing.T) {
+-	const cfgPath = "/restconf/data/Cisco-IOS-XE-app-hosting-cfg:app-hosting-cfg-data/apps"
+-	installs, copies, deletes := 0, 0, 0
+-	fc := &fakeNetworkClient{
+-		getHook: func(_ string, _ any) error { return nil },
+-		postWithResultHook: func(path string, payload, result any) error {
+-			if path != appHostingRPCPath {
+-				return nil
+-			}
+-			input := payload.(map[string]any)["Cisco-IOS-XE-rpc:app-hosting"].(map[string]any)
+-			if input["install"] != nil {
+-				installs++
+-				response := result.(*appHostingRPCOutput)
+-				response.Result = "RPC request successful"
+-				response.Present = true
+-			}
+-			return nil
+-		},
+-		postHook: func(path string, _ any) error {
+-			if path == "/restconf/operations/Cisco-IOS-XE-rpc:copy" {
+-				copies++
+-			}
+-			return nil
+-		},
+-		deleteHook: func(string) error { deletes++; return nil },
+-	}
+-	d := newTestDriver(fc)
+-	cfg := minimalDockerResourceConfig("https://registry.example/app.tar", v1.PullIfNotPresent, time.Minute)
+-	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
+-	defer cancel()
+-	err := d.copyFallbackToFlash(ctx, cfg, cfgPath, v1.PullIfNotPresent, time.Minute)
+-	if err == nil || !strings.Contains(err.Error(), "refusing destructive fallback") {
+-		t.Fatalf("error=%v, want ambiguous-install convergence failure", err)
+-	}
+-	if installs != 1 || copies != 0 || deletes != 1 {
+-		t.Fatalf("installs=%d copies=%d deletes=%d, want 1/0/1 (initial cleanup only)", installs, copies, deletes)
+ 	}
+ }
+ 
+@@ -1078,8 +1007,8 @@
+ 	}
+ }
+ 
+-func TestCreateAppHostingApp_DockerResource_HTTPPrimarySuccess(t *testing.T) {
+-	// DockerResource + HTTP: device pull succeeds → DEPLOYED → ActivateApp → wait ACTIVATED → StartApp → RUNNING
++func TestCreateAppHostingApp_DockerResource_StagedSuccess(t *testing.T) {
++	// DockerResource + HTTP: copy → local install → DEPLOYED → activate → start → RUNNING
+ 	var (
+ 		mu        sync.Mutex
+ 		rpcOrder  []string
+@@ -1140,8 +1069,8 @@
+ 	}
+ }
+ 
+-func TestCreateAppHostingApp_DockerResource_HTTPFallbackCopy(t *testing.T) {
+-	// DockerResource + HTTP: device pull times out → copy fallback → ActivateApp → ACTIVATED → StartApp → RUNNING
++func TestCreateAppHostingApp_DockerResource_CopyThenLocalInstall(t *testing.T) {
++	// DockerResource + HTTP: stage successfully before local install and explicit activation/start
+ 	var (
+ 		mu    sync.Mutex
+ 		stage int // 0=empty, 1=DEPLOYED (after copy), 2=ACTIVATED, 3=RUNNING
+@@ -1192,7 +1121,7 @@
+ 	cfg := minimalDockerResourceConfig("http://registry.example.com/app.tar", v1.PullAlways, 50*time.Millisecond)
+ 
+ 	if err := d.CreateAppHostingApp(context.Background(), cfg); err != nil {
+-		t.Errorf("expected success via DockerResource copy fallback, got: %v", err)
++		t.Errorf("expected success via staged DockerResource install, got: %v", err)
+ 	}
+ 
+ 	mu.Lock()
+--- /dev/null
++++ b/internal/drivers/iosxe/standard_transfer_test.go
+@@ -0,0 +1,142 @@
++// Copyright 2026 Cisco Systems Inc.
++// SPDX-License-Identifier: Apache-2.0
++package iosxe
++
++import (
++	"context"
++	"errors"
++	"fmt"
++	"reflect"
++	"testing"
++	"time"
++
++	v1 "k8s.io/api/core/v1"
++)
++
++// Model the observed firmware behavior: any install would succeed from stale
++// data, including an unchecked local cache path. A failed transfer must never
++// reach configuration, install, activation, or start, under either pull policy.
++func TestStandardFailedDownloadCannotLaunchStalePackage(t *testing.T) {
++	for _, policy := range []v1.PullPolicy{v1.PullAlways, v1.PullIfNotPresent} {
++		for _, twoPhase := range []bool{false, true} {
++			t.Run(fmt.Sprintf("%s/twoPhase=%v", policy, twoPhase), func(t *testing.T) {
++				copies, otherWrites := 0, 0
++				client := &fakeNetworkClient{postHook: func(path string, _ any) error {
++					if path == "/restconf/operations/Cisco-IOS-XE-rpc:copy" {
++						copies++
++						return errors.New("certificate revoked")
++					}
++					otherWrites++
++					return nil
++				}, getHook: func(_ string, result any) error {
++					if root, ok := result.(*Cisco_IOS_XEAppHostingOper_AppHostingOperData); ok {
++						*root = *operResponse("test-app", "RUNNING")
++					}
++					return nil
++				}}
++				d := newTestDriver(client)
++				cfg := minimalAppConfig("https://origin/new.tar", policy, time.Second)
++				cfg.Spec.RequiresTwoPhaseStart = twoPhase
++				if err := d.CreateAppHostingApp(context.Background(), cfg); err == nil {
++					t.Fatal("failed copy reported success")
++				}
++				if copies != 1 || otherWrites != 0 {
++					t.Fatalf("copies=%d app writes=%d", copies, otherWrites)
++				}
++			})
++		}
++	}
++}
++
++func TestStandardTransferPrecedesConfigurationAndInstallsOnlyLocalFile(t *testing.T) {
++	order := []string{}
++	state := ""
++	dest := "flash:/cvk-test-app.tar"
++	client := &fakeNetworkClient{postHook: func(path string, payload any) error {
++		switch path {
++		case "/restconf/operations/Cisco-IOS-XE-rpc:copy":
++			order = append(order, "copy")
++			input := payload.(map[string]any)["Cisco-IOS-XE-rpc:copy"].(map[string]string)
++			if input["destination-drop-node-name"] != dest {
++				t.Fatal(input)
++			}
++		case appHostingRPCPath:
++			input := payload.(map[string]any)
++			if v := input["install"]; v != nil {
++				if v.(map[string]string)["package"] != dest {
++					t.Fatalf("install used %v", v)
++				}
++				order = append(order, "install")
++				state = "DEPLOYED"
++			} else if input["activate"] != nil {
++				order = append(order, "activate")
++				state = "ACTIVATED"
++			} else if input["start"] != nil {
++				order = append(order, "start")
++				state = "RUNNING"
++			}
++		default:
++			order = append(order, "config")
++		}
++		return nil
++	}, getHook: func(_ string, result any) error {
++		if state != "" {
++			*result.(*Cisco_IOS_XEAppHostingOper_AppHostingOperData) = *operResponse("test-app", state)
++		}
++		return nil
++	}}
++	d := newTestDriver(client)
++	cfg := minimalDockerResourceConfig("https://origin/new.tar", v1.PullIfNotPresent, time.Second)
++	if err := d.CreateAppHostingApp(context.Background(), cfg); err != nil {
++		t.Fatal(err)
++	}
++	if !reflect.DeepEqual(order, []string{"copy", "config", "install", "activate", "start"}) {
++		t.Fatal(order)
++	}
++}
++
++func TestStandardReconciliationCannotBypassFailedDownload(t *testing.T) {
++	installs := 0
++	client := &fakeNetworkClient{getHook: func(_ string, _ any) error { return nil }, postHook: func(path string, _ any) error {
++		if path == "/restconf/operations/Cisco-IOS-XE-rpc:copy" {
++			return errors.New("404 download failed")
++		}
++		installs++
++		return nil
++	}}
++	d := newTestDriver(client)
++	cfg := minimalDockerResourceConfig("https://origin/missing.tar", v1.PullAlways, time.Second)
++	d.ReconcileApp(context.Background(), cfg)
++	if cfg.Status.Phase != AppPhaseError || installs != 0 {
++		t.Fatalf("phase=%s installs=%d", cfg.Status.Phase, installs)
++	}
++}
++
++func TestStandardCopyRequiresQualifiedCompletionResponse(t *testing.T) {
++	for _, result := range []string{"", "%Error opening source", "Copy operation failed", "queued", "RPC request successful"} {
++		t.Run(result, func(t *testing.T) {
++			d := newTestDriver(&fakeNetworkClient{postWithResultHook: func(_ string, _ any, out any) error {
++				response := out.(*appHostingRPCOutput)
++				response.Present = result != ""
++				response.Result = result
++				return nil
++			}})
++			err := d.copyRPC(context.Background(), "https://origin/source.tar", "flash:/target.tar")
++			if (err == nil) != (result == "RPC request successful") {
++				t.Fatalf("result %q error %v", result, err)
++			}
++		})
++	}
++}
++
++func TestStandardCannotPassMalformedRemoteLocationsToNativeInstall(t *testing.T) {
++	for _, source := range []string{"https:missing-host", "https://origin/%bad%", "//origin/path", "unknown://origin/path"} {
++		t.Run(source, func(t *testing.T) {
++			writes := 0
++			d := newTestDriver(&fakeNetworkClient{postHook: func(_ string, _ any) error { writes++; return nil }})
++			if err := d.CreateAppHostingApp(context.Background(), minimalAppConfig(source, v1.PullAlways, time.Second)); err == nil || writes != 0 {
++				t.Fatalf("error=%v writes=%d", err, writes)
++			}
++		})
++	}
++}

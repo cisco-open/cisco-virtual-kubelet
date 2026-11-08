@@ -1,0 +1,29 @@
+"""Resume after preserving a harness-only UID correlation failure; never replay successful cases."""
+from pathlib import Path
+import json,hashlib,datetime,shutil,subprocess
+R=Path('/tmp/cvk-stdgc-20261106');backup=R/'initial-harness-stop';backup.mkdir(exist_ok=False);files=[]
+for p in sorted(R.iterdir()):
+ if p.is_file() and (p.suffix in ['.json','.jsonl','.yaml','.crt','.pem','.py','.log'] or p.name=='main.go'):
+  data=p.read_bytes();(backup/p.name).write_bytes(data);files.append({'name':p.name,'bytes':len(data),'sha256':hashlib.sha256(data).hexdigest()})
+(R/'harness-stop-preservation.json').write_text(json.dumps({'capturedAtUTC':datetime.datetime.now(datetime.timezone.utc).isoformat(),'files':files,'failure':'health trace selected only Pod/app UID, excluding copy completion lines from detached missing-container recovery','productionChanged':False,'guardChanged':False,'backupDirectory':'initial-harness-stop'},indent=2)+'\n')
+text=(R/'qualify.py').read_text();prefix=text[:text.index('started=now();baseline=')]
+# Correlate the exact freshly installed staging path as well as the app/Pod UID.
+anchor='installed=[i for i,v in enumerate(lines) if \'Installing app \'+appid in v];assert installed'
+replacement=anchor+'''
+ files={m.group(0) for i in installed for m in re.finditer(r'flash:/cvk-stage-[a-f0-9]{32}\\.tar',lines[i])}
+ if files:
+  lines=[v for v in allLines if appid in v or new['metadata']['uid'] in v or any(file in v for file in files)]
+  installed=[i for i,v in enumerate(lines) if 'Installing app '+appid in v];assert installed
+'''
+assert prefix.count(anchor)==1;prefix=prefix.replace(anchor,replacement);exec(compile(prefix,'resumed-helpers','exec'))
+order=['preloaded-before','initial-a','upgrade-b','rollback-a'];CASES=[json.loads((R/('case-'+v+'.json')).read_text()) for v in order];DEPUID=CASES[0]['deploymentUID'];PRELOADED=json.loads((R/'preloaded-provenance.json').read_text())['path'];started=json.loads((R/'snapshot-baseline.json').read_text())['collectedAtUTC'];badUID=json.loads((R/'failed-upgrade-result.json').read_text())['podUID'];STAGED=[]
+for label in ['initial-a','upgrade-b','rollback-a','failed-upgrade']:STAGED.extend(json.loads((R/('staging-absent-'+label+'.json')).read_text())['files'])
+for file in R.glob('snapshot-*.json'):
+ for pod in json.loads(file.read_text()).get('pods',[]):SEEN.add(pod['metadata']['uid'])
+assert len(STAGED)==4 and len(set(STAGED))==4
+save('harness-resume',{'atUTC':now(),'reason':'harness-only correlation omission; full original evidence copied before continuation','existingRecoveredPodUID':'428e7765-56b4-4b6c-91da-23691cfc809e','newMutationBeforeReadOnlyRecheck':False,'productionSourceChanged':False,'manualLeaseOrJournalChanges':False})
+# This step observes the already recovered app; no apply/undo precedes it.
+a3,ca3=health('failed-upgrade-rollback-a','a',{c['podUID'] for c in CASES}|{badUID});assert ca3['podUID']=='428e7765-56b4-4b6c-91da-23691cfc809e';assertNewTransfer('a',json.loads((R/'rollback-under-fence.json').read_text())['atUTC'])
+tmp=R/'mode-next.json';tmp.write_text(json.dumps({'bAvailable':True}));os.replace(tmp,R/'server-mode.json');save('source-restored',{'atUTC':now(),'onlyHTTPAvailabilityChanged':True,'BPackageIdentityUnchanged':True});t0=now();deploy('b');b2,cb2=health('retry-upgrade-b','b',SEEN.copy());assertNewTransfer('b',t0);t0=now();undo('final-rollback-a',ca3['revision']);a4,ca4=health('final-rollback-a','a',SEEN.copy());assertNewTransfer('a',t0);deploy('a',True);post,postCase=health('preloaded-after','a',SEEN.copy(),True);deleteFinal();preservePreloaded('final-normal-cleanup');save('qualification-result',{'ownedStagingPaths':STAGED,'preloadedPath':PRELOADED,'automaticCleanupQualified':True,'preloadedBeforeAndAfterQualified':True,'executionComplete':True,'passed':True,'startedAtUTC':started,'finishedAtUTC':now(),'initialDeploymentA':True,'upgradeAToB':True,'historyRollbackBToA':True,'failedUpgradeDownloadBlocked':True,'historyRollbackAfterFailedUpgrade':True,'retryUpgradeAfterSourceRepair':True,'finalHistoryRollbackA':True,'normalDeletionPassed':True,'deploymentUID':DEPUID,'cases':CASES,'failedPodUID':badUID,'podUIDs':sorted(SEEN),'manualLeaseOrJournalChanges':False,'globalImageCachePruned':False,'artifactMetadataAndJournalOmitted':True,'defaultMode':'Standard','governed':'deferred','strategy':'Recreate','harnessOnlyTraceCorrection':True,'originalFailedHarnessEvidencePreserved':True,'baselineApplicationPreservationRequired':True});print('COMPLETE resumed Standard staging cleanup qualification',flush=True)
+for item in files:assert hashlib.sha256((backup/item['name']).read_bytes()).hexdigest()==item['sha256']
+for script in ['cleanup.py','verify_earlier.py','bundle_remote.py']:run(['python3',str(R/script)])

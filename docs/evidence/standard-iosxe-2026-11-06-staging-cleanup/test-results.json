@@ -1,0 +1,21 @@
+{
+  "atUTC": "2026-11-06T10:31:48.464537+00:00",
+  "passed": true,
+  "command": "go test -race ./...",
+  "packagesPassed": 62,
+  "candidateSourceSHA256": "32b4472e3204549536fc131ed3c89da2d797e3e9a36b68cb920611233c8feb7f",
+  "binarySHA256": "3a83652613439b6dc9bbf51cbd629cd197cb311c33a17ad53c1fce803cb3acc4",
+  "logFile": "race.log",
+  "logSHA256": "74c28caea77bb34a135c635e9dff8a7cff89a3d666665dc98505d1e5b1cb1e83",
+  "safetyCoverage": [
+    "definitive-error partial destination cleanup",
+    "unknown/lost copy reply retention",
+    "delete acknowledgment and post-delete absence",
+    "lost delete reply quarantine/no replay",
+    "local and explicit caller destination preservation",
+    "no prefix-based ownership or restart adoption",
+    "non-regular or malformed observation refusal",
+    "install consumption boundary",
+    "unsupported filesystem fallback without extra configuration"
+  ]
+}

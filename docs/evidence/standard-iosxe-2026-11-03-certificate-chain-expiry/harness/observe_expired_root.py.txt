@@ -1,0 +1,6 @@
+"""Read-only proof that the naturally expired test root is still stored."""
+import pathlib,datetime,json,re
+R=pathlib.Path('/tmp/cvk-stdchain-20261103');exec(compile((R/'pki_io.py').read_text(),'pki_io.py','exec'));manifest=json.loads((R/'pki-manifest.json').read_text());expiry=datetime.datetime.fromisoformat(manifest['rootExpiresAtUTC']);assert datetime.datetime.now(datetime.timezone.utc)>expiry+datetime.timedelta(seconds=30);assert json.loads((R/'device-root-mode.json').read_text())['mode']=='root-old';p=CLI()
+try:
+ clock=p.cmd('show clock detail');match=re.search(r'(\d{2}:\d{2}:\d{2}\.\d+) UTC \w{3} (\w{3}) +(\d{1,2}) +(\d{4})',clock);assert match and 'Time source is NTP' in clock;native=datetime.datetime.strptime(match[4]+' '+match[2]+' '+match[3]+' '+match[1],'%Y %b %d %H:%M:%S.%f').replace(tzinfo=datetime.timezone.utc);assert native>expiry;old=p.proof(ROOT_TP,'root-old');other=p.proof(INT_TP,'intermediate-root');report={'atUTC':datetime.datetime.now(datetime.timezone.utc).isoformat(),'passed':True,'deviceWritesIssued':0,'deviceUTC':native.isoformat(),'rootNotAfterUTC':expiry.isoformat(),'expiredRootStillStored':True,'certificateProofs':[old,other],'commands':p.records};(R/'root-expired-native-ca.json').write_text(json.dumps(report,indent=2)+'\n');print('PASS expired root still present; native NTP time and PEM fingerprint matched')
+finally:p.close()

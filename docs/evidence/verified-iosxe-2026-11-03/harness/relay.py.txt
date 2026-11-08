@@ -1,0 +1,85 @@
+"""Lab-only authenticated RESTCONF relay. No production flags or TLS bypass."""
+import http.server,http.client,ssl,socket,pathlib,json,subprocess,datetime,hashlib,threading,re,os,time
+R=pathlib.Path('/tmp/cvk-pending-20261103');K=['kubectl','--kubeconfig',str(R/'kubeconfig')];NS='cvk-pending-20261103';APPS='cvk-pending-apps-20261103';DEVICE='c9k-pending-20261103'
+CTX=ssl.create_default_context(cafile='/tmp/cvk-verified-qual-20261101/device-ca.crt');CTX.verify_flags|=ssl.VERIFY_X509_PARTIAL_CHAIN;CTX.minimum_version=ssl.TLSVersion.TLSv1_2
+LOCK=threading.Lock();COUNTS={};EXPECTED=json.loads((R/'releases.json').read_text())[0]
+def now():return datetime.datetime.now(datetime.timezone.utc).isoformat()
+def event(x):
+ x['atUTC']=now()
+ with (R/'relay-events.jsonl').open('a') as f:f.write(json.dumps(x)+'\n')
+def get(args):return json.loads(subprocess.check_output(K+args,text=True,stderr=subprocess.DEVNULL,timeout=15))
+def fixture():
+ pods=get(['-n',APPS,'get','pods','-l','qualification=20261103','-o','json'])['items'];
+ if not pods and (R/'cleanup-authorized').exists():
+  pods=[json.loads((R/'fixture-binding.json').read_text())]
+ assert len(pods)==1
+ p=pods[0];assert p['spec'].get('nodeName')==DEVICE and len(p['spec']['containers'])==1 and p['spec']['containers'][0]['image']==EXPECTED['packageURL'];uid=p['metadata']['uid'];aid='cvk0000_'+uid.replace('-','');path='flash:cvk-'+hashlib.sha256(uid.encode()).hexdigest()[:16]+'-'+EXPECTED['package']['digest'][7:]+'.tar'
+ 
+ if not (R/'fixture-binding.json').exists():(R/'fixture-binding.json').write_text(json.dumps(p,indent=2)+'\n')
+ else:assert json.loads((R/'fixture-binding.json').read_text())['metadata']['uid']==uid
+ return p,aid,path
+# Mutation validation is deliberately restricted to this one live fixture UID.
+def authorize(method,path,body):
+ p,aid,staged=fixture();raw=json.loads(body) if body else {};operation='configuration';text=json.dumps(raw)
+ if method=='POST' and path=='/restconf/operations/Cisco-IOS-XE-rpc:copy':
+  v=raw['Cisco-IOS-XE-rpc:copy'];assert v=={'source-drop-node-name':EXPECTED['packageURL'],'destination-drop-node-name':staged};operation='copy'
+ elif method=='POST' and path=='/restconf/operations/Cisco-IOS-XE-rpc:app-hosting':
+  v=raw['Cisco-IOS-XE-rpc:app-hosting'];assert len(v)==1;operation=next(iter(v));assert operation in ['install','activate','start','stop','deactivate','uninstall'];assert v[operation].get('appid')==aid;assert set(v[operation])<= {'appid','package'}
+  if operation=='install':assert v[operation].get('package')==staged
+ elif method=='POST' and path=='/restconf/data/Cisco-IOS-XE-app-hosting-cfg:app-hosting-cfg-data/apps':
+  names=re.findall(r'"application-name"\s*:\s*"([^"]+)"',text);assert names==[aid];assert set(raw)=={'Cisco-IOS-XE-app-hosting-cfg:app'} and len(raw['Cisco-IOS-XE-app-hosting-cfg:app'])==1
+ elif method=='DELETE' and path=='/restconf/data/Cisco-IOS-XE-app-hosting-cfg:app-hosting-cfg-data/apps/app='+aid:operation='delete-configuration'
+ else:raise ValueError('write outside exact fixture scope')
+ return p,aid,staged,operation
+class Handler(http.server.BaseHTTPRequestHandler):
+ protocol_version='HTTP/1.1'
+ def log_message(self,*args):pass
+ def do_GET(self):self.forward()
+ def do_POST(self):self.forward()
+ def do_DELETE(self):self.forward()
+ def do_PATCH(self):self.reject()
+ def do_PUT(self):self.reject()
+ def reject(self):
+  self.send_response(403);self.send_header('Content-Length','0');self.end_headers();event({'kind':'rejected','method':self.command,'path':self.path})
+ def forward(self):
+  if (not self.path.startswith('/restconf/') and not (self.command=='GET' and self.path=='/.well-known/host-meta')) or ('?' in self.path and self.command!='GET') or len(self.path)>2048:return self.reject()
+  n=int(self.headers.get('Content-Length','0'))
+  if n<0 or n>1048576:return self.reject()
+  body=self.rfile.read(n);aid=None;operation=None;pending=None
+  if self.command!='GET':
+   try:
+    p,aid,staged,operation=authorize(self.command,self.path,body)
+    if operation in ['install','activate','start']:
+     with LOCK:
+      key=(aid,operation);COUNTS[key]=COUNTS.get(key,0)+1;assert COUNTS[key]==1,'duplicate lifecycle request'
+     cm=next(c for c in get(['-n',NS,'get','configmaps','-o','json'])['items'] if c['metadata']['name'].startswith('cvk-artifacts-'))
+     record=json.loads(cm['data']['app-'+hashlib.sha256(aid.encode()).hexdigest()]);assert record['phase']==operation+'Pending' and record['podUID']==p['metadata']['uid']
+     pending={'journalName':cm['metadata']['name'],'journalUID':cm['metadata']['uid'],'resourceVersion':cm['metadata']['resourceVersion'],'record':record}
+   except Exception as e:
+    event({'kind':'scope-or-replay-rejected','operation':operation,'appID':aid,'errorType':type(e).__name__});return self.reject()
+  try:
+   conn=http.client.HTTPSConnection('10.1.1.1',443,context=CTX,timeout=240);headers={k:v for k,v in self.headers.items() if k.lower() not in ['host','connection','transfer-encoding','accept-encoding']};headers['Host']='10.1.1.1';headers['Connection']='close'
+   conn.request(self.command,self.path,body=body or None,headers=headers);resp=conn.getresponse();raw=resp.read(8*1024*1024+1);assert len(raw)<=8*1024*1024
+   if aid:event({'kind':'forwarded','method':self.command,'path':self.path,'operation':operation,'appID':aid,'upstreamStatus':resp.status,'responseSHA256':hashlib.sha256(raw).hexdigest(),'pendingBeforeDispatch':pending})
+   if operation=='install' and 200<=resp.status<300:
+    result=json.loads(raw);text=json.dumps(result);assert aid in text and ('installed successfully' in text or ('Installing package' in text and 'show app-hosting list' in text))
+    # Independently observe the real device through authenticated upstream TLS.
+    for attempt in range(90):
+     check=http.client.HTTPSConnection('10.1.1.1',443,context=CTX,timeout=30);check.request('GET','/restconf/data/Cisco-IOS-XE-app-hosting-oper:app-hosting-oper-data',headers={k:v for k,v in headers.items() if k.lower() in ['authorization','accept']});obs=check.getresponse();assert obs.status==200;native=json.loads(obs.read());check.close();apps=native['Cisco-IOS-XE-app-hosting-oper:app-hosting-oper-data'].get('app',[]);state=next((a['details']['state'] for a in apps if a['name']==aid),None)
+     if state=='DEPLOYED':break
+     time.sleep(2)
+    else:raise RuntimeError('Accepted install did not reach DEPLOYED; no conclusive injected loss')
+    fault={'atUTC':now(),'operation':'install','appID':aid,'upstreamStatus':resp.status,'nativeReply':result,'nativeState':state,'pendingBeforeDispatch':pending,'upstreamTLSVerified':True,'upstreamServerName':'10.1.1.1','clientResponseHeadersSent':False,'clientResponseBodyBytesSent':0,'responseSHA256':hashlib.sha256(raw).hexdigest(),'responseBytes':len(raw)}
+    (R/'lost-install-response.json').write_text(json.dumps(fault,indent=2)+'\n');event({'kind':'install-reply-suppressed','appID':aid,'nativeState':state});conn.close();self.close_connection=True
+    try:self.connection.shutdown(socket.SHUT_RDWR)
+    except OSError:pass
+    self.connection.close();return
+   self.send_response(resp.status)
+   for k,v in resp.getheaders():
+    if k.lower() not in ['connection','transfer-encoding','content-length','server','date']:self.send_header(k,v)
+   self.send_header('Content-Length',str(len(raw)));self.end_headers();self.wfile.write(raw);conn.close()
+  except Exception as e:
+   event({'kind':'relay-error','operation':operation,'appID':aid,'errorType':type(e).__name__});self.close_connection=True
+   try:self.connection.shutdown(socket.SHUT_RDWR)
+   except OSError:pass
+server=http.server.ThreadingHTTPServer(('172.17.0.1',18445),Handler);tls=ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER);tls.minimum_version=ssl.TLSVersion.TLSv1_2;tls.load_cert_chain(str(R/'relay.crt'),str(R/'relay.key'));server.socket=tls.wrap_socket(server.socket,server_side=True);event({'kind':'relay-start','upstreamTLSVerification':True,'minimumTLS':'1.2'});server.serve_forever()

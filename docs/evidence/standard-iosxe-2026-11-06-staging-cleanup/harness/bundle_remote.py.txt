@@ -1,0 +1,10 @@
+from pathlib import Path
+import json,tarfile,hashlib,re
+R=Path('/tmp/cvk-stdgc-20261106');assert json.loads((R/'final-cleanup.json').read_text())['passed'];files=[p for p in sorted(R.iterdir()) if p.is_file() and (p.suffix in ['.json','.jsonl','.yaml','.crt','.pem','.py'] or p.name in ['qualification.log','main.go'])]
+for phase in ['a','b']:
+ for n in ['docker-config.json','docker-manifest.json']:files.append(R/phase/n)
+assert all(not p.name.endswith('.key') and 'kubeconfig' not in p.name for p in files)
+for p in files:assert not re.search(rb'(?m)^-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----',p.read_bytes()),p
+with tarfile.open(R/'evidence-input.tar.gz','w:gz') as t:
+ for p in files:t.add(p,arcname=str(p.relative_to(R)),recursive=False)
+print('Bundled',len(files),'public files SHA256',hashlib.sha256((R/'evidence-input.tar.gz').read_bytes()).hexdigest())

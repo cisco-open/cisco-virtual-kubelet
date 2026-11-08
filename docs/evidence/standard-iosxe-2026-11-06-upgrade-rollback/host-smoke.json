@@ -1,0 +1,20 @@
+{
+  "atUTC": "2026-11-06T08:27:18.642611+00:00",
+  "passed": true,
+  "loopbackOnly": true,
+  "C9KImagesPrimed": false,
+  "checks": [
+    {
+      "phase": "a",
+      "expectedRelease": "STD-UPGRADE-A-20261106-8f0d26f6c543",
+      "actualRelease": "STD-UPGRADE-A-20261106-8f0d26f6c543",
+      "dockerConfigID": "sha256:6867fbf05d7a5df0d11ab7c023b9a5e5a5389a171c309d8327abe23c0981859f"
+    },
+    {
+      "phase": "b",
+      "expectedRelease": "STD-UPGRADE-B-20261106-8f0d26f6c543",
+      "actualRelease": "STD-UPGRADE-B-20261106-8f0d26f6c543",
+      "dockerConfigID": "sha256:8d061560f2f7eb048a082a6b0c53fd5c9ba1b9820a2314f492abbab4efba60af"
+    }
+  ]
+}

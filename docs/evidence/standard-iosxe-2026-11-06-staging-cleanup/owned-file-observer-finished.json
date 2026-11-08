@@ -1,0 +1,14 @@
+{
+  "atUTC": "2026-11-06T12:00:25.901724+00:00",
+  "readOnly": true,
+  "pathsObserved": [
+    "flash:/cvk-stage-151a5d41f06c42c69937948d7e775094.tar",
+    "flash:/cvk-stage-20a78343233a42b0b54422b4cfc91ba4.tar",
+    "flash:/cvk-stage-2554f120d741402c8a19dcc9e5755582.tar",
+    "flash:/cvk-stage-68387df409b64d80959b581082f67139.tar",
+    "flash:/cvk-stage-99508ac6bf6b4e2caf786283a513a0e9.tar",
+    "flash:/cvk-stage-afde99a205384e5b9da8a4f34930af75.tar",
+    "flash:/cvk-stage-d08ff7931f14474d94c6bb02eb603fd4.tar"
+  ],
+  "qualificationComplete": true
+}

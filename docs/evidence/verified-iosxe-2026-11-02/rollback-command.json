@@ -1,0 +1,15 @@
+{
+  "atUTC": "2026-11-02T22:08:37.787740+00:00",
+  "command": [
+    "kubectl",
+    "--kubeconfig",
+    "<isolated-lab-kubeconfig>",
+    "-n",
+    "cvk-qual-apps-20261102",
+    "rollout",
+    "undo",
+    "deployment/cvk-verified-fixture",
+    "--to-revision=2"
+  ],
+  "retainedARevision": 2
+}

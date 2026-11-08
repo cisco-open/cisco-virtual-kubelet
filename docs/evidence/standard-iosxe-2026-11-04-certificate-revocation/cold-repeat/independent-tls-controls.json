@@ -1,0 +1,23 @@
+{
+  "atUTC": "2026-11-04T17:20:20.769500+00:00",
+  "passed": true,
+  "cases": [
+    {
+      "case": "control",
+      "CRLChecking": true,
+      "accepted": true
+    },
+    {
+      "case": "cold",
+      "CRLChecking": true,
+      "accepted": false,
+      "verificationCode": 23
+    },
+    {
+      "case": "cold",
+      "CRLChecking": false,
+      "accepted": true
+    }
+  ],
+  "onlyProbePathRequested": true
+}

@@ -1,0 +1,13 @@
+{
+  "collectedAtUTC": "2026-11-06T07:27:45.182170+00:00",
+  "commands": [
+    {
+      "command": "show crypto pki crls",
+      "output": "show crypto pki crls\nCRL Issuer Name: \n    cn=CVK Standard copy fix root 717eb0f2c8b8\n    LastUpdate: 07:14:06 UTC Nov 6 2026\n    NextUpdate: 07:14:11 UTC Nov 7 2026\n\n    CRL downloaded at: 07:25:48 UTC Nov 6 2026\n\n    Retrieved from CRL Distribution Point: \n      http://192.168.129.111:18476/issuer.crl\n\n CRL DER is 487 bytes\n CRL is stored in parsed CRL cache\n\nCRL Issuer Name: \n    cn=CVK Standard copy fix intermediate 717eb0f2c8b8\n    LastUpdate: 20:45:18 UTC Nov 5 2026\n    NextUpdate: 20:50:18 UTC Nov 6 2026\n\n    CRL downloaded at: 20:50:33 UTC Nov 5 2026\n\n    Retrieved from CRL Distribution Point: \n      http://192.168.129.111:18476/intermediate.crl\n\n CRL DER is 440 bytes\n CRL is stored in parsed CRL cache\n\nCRL Issuer Name: \n    cn=CVK Standard copy fix intermediate 3bb47dd5c618\n    LastUpdate: 20:12:13 UTC Nov 5 2026\n    NextUpdate: 20:17:13 UTC Nov 6 2026\n\n    CRL downloaded at: 20:19:08 UTC Nov 5 2026\n\n    Retrieved from CRL Distribution Point: \n      http://192.168.129.111:18476/intermediate.crl\n\n CRL DER is 440 bytes\n CRL is stored in parsed CRL cache\n\n\nParsed CRL cache current size is 1367 bytes\nParsed CRL cache maximum size is 65536 bytes\n\nEdge-9K"
+    },
+    {
+      "command": "show logging | include CERTIFICATE_REVOKED",
+      "output": "Nov  6 07:25:48.950: %PKI-3-CERTIFICATE_REVOKED: Certificate chain validation has failed. The certificate (SN: 0CCC3B327A765A1C5A667F0B1D535F8028E4F879) is revoked"
+    }
+  ]
+}

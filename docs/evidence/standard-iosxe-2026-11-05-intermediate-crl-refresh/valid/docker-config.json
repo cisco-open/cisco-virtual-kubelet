@@ -1,0 +1,31 @@
+{
+  "architecture": "amd64",
+  "os": "linux",
+  "created": "2026-11-05T06:31:59.101915+00:00",
+  "config": {
+    "User": "65532:65532",
+    "ExposedPorts": {
+      "8080/tcp": {}
+    },
+    "Entrypoint": [
+      "/app"
+    ],
+    "WorkingDir": "/",
+    "Labels": {
+      "apphosting.cisco.com/qualification": "20261105-intrefresh",
+      "apphosting.cisco.com/release": "INT-REFRESH-VALID-20261105-4cd216c69bce"
+    }
+  },
+  "rootfs": {
+    "type": "layers",
+    "diff_ids": [
+      "sha256:09bf5bc8f203f965f0d502d29be41c511d2a3f886d342c62011716980b391186"
+    ]
+  },
+  "history": [
+    {
+      "created": "2026-11-05T06:31:59.101915+00:00",
+      "created_by": "Run-owned CRL refresh fixture"
+    }
+  ]
+}

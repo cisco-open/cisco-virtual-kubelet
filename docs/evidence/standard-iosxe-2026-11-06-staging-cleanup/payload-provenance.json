@@ -1,0 +1,26 @@
+{
+  "createdAtUTC": "2026-11-06T10:21:36.697540+00:00",
+  "sourceSHA256": "a1789401e0e1e2e7e04ae024afa7f9de9f629047498b60992ff0c5dd139f1089",
+  "compiler": "go version go1.26.7 darwin/arm64",
+  "phases": {
+    "a": {
+      "release": "STD-GC-A-20261106-a85d9b305139",
+      "repoTag": "cvk-stdgc-20261106/a:a85d9b305139",
+      "dockerConfigID": "sha256:d74f237810173c8f4bf221232804e1dabb62521f163f548db89c87003fff0ffc",
+      "layerDiffID": "sha256:1e40062aaf1ea111e047a0c18268e43de115d1af73f533c2918b546cfc626b51",
+      "binarySHA256": "972d92b55cc7e66ef211b7b99e5a9591a18cdd4cee521435e4c122f570abf154",
+      "packageSHA256": "de3fa32182f1aec9d07786f002067dfb8ff0b54b012657344e957f6debbf79c2",
+      "packageBytes": 5959680
+    },
+    "b": {
+      "release": "STD-GC-B-20261106-a85d9b305139",
+      "repoTag": "cvk-stdgc-20261106/b:a85d9b305139",
+      "dockerConfigID": "sha256:6e03538116aba6521553b7e58ca8323bef517d32ba87accb204799708b3c32e8",
+      "layerDiffID": "sha256:ff5ccb2679251238b3f1e892b7b0d1133f8c170ff2e2946d88ab04505eb42090",
+      "binarySHA256": "79e9f3a8ebe89cc45b5410e3b7c4c2b523185d1b6d276fe309ff5b53af89a922",
+      "packageSHA256": "4a9adab35c2ff02256d264687db387a9f6bb8ed512b749643fc0a344b4cc9759",
+      "packageBytes": 5959680
+    }
+  },
+  "independentConfigAndLayerPerPhase": true
+}

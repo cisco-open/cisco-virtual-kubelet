@@ -1,0 +1,40 @@
+{
+  "atUTC": "2026-11-06T09:09:51.326588+00:00",
+  "readOnly": true,
+  "retiredPodUIDs": [
+    "257e4a85-d38b-4f10-b308-625b1e837360",
+    "92d6c115-029f-423e-b178-0e7e78c01f5b",
+    "5d78c63f-63ba-45a0-9f57-c732e3cd8549"
+  ],
+  "retainedFiles": [
+    {
+      "path": "flash:/cvk-cvk0000_257e4a85d38b4f10b308625b1e837360.tar",
+      "bytes": 5959680
+    },
+    {
+      "path": "flash:/cvk-cvk0000_92d6c115029f423eb1780e7e78c01f5b.tar",
+      "bytes": 5959680
+    },
+    {
+      "path": "flash:/cvk-cvk0000_5d78c63f63ba45a09f57c732e3cd8549.tar",
+      "bytes": 5959680
+    }
+  ],
+  "deviceEvidence": {
+    "collectedAtUTC": "2026-11-06T09:09:51.307761+00:00",
+    "commands": [
+      {
+        "command": "dir flash:/cvk-cvk0000_257e4a85d38b4f10b308625b1e837360.tar",
+        "output": "dir flash:/cvk-cvk0000_257e4a85d38b4f10b308625b1e837360.tar\nDirectory of flash:/cvk-cvk0000_257e4a85d38b4f10b308625b1e837360.tar\n\n254040  -rw-          5959680   Nov 6 2026 08:28:21 +00:00  cvk-cvk0000_257e4a85d38b4f10b308625b1e837360.tar\n\n11353194496 bytes total (5368651776 bytes free)\nEdge-9K"
+      },
+      {
+        "command": "dir flash:/cvk-cvk0000_92d6c115029f423eb1780e7e78c01f5b.tar",
+        "output": "dir flash:/cvk-cvk0000_92d6c115029f423eb1780e7e78c01f5b.tar\nDirectory of flash:/cvk-cvk0000_92d6c115029f423eb1780e7e78c01f5b.tar\n\n254043  -rw-          5959680   Nov 6 2026 08:30:34 +00:00  cvk-cvk0000_92d6c115029f423eb1780e7e78c01f5b.tar\n\n11353194496 bytes total (5368651776 bytes free)\nEdge-9K"
+      },
+      {
+        "command": "dir flash:/cvk-cvk0000_5d78c63f63ba45a09f57c732e3cd8549.tar",
+        "output": "dir flash:/cvk-cvk0000_5d78c63f63ba45a09f57c732e3cd8549.tar\nDirectory of flash:/cvk-cvk0000_5d78c63f63ba45a09f57c732e3cd8549.tar\n\n254044  -rw-          5959680   Nov 6 2026 08:32:59 +00:00  cvk-cvk0000_5d78c63f63ba45a09f57c732e3cd8549.tar\n\n11353194496 bytes total (5368651776 bytes free)\nEdge-9K"
+      }
+    ]
+  }
+}

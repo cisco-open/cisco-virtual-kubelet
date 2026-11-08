@@ -1,0 +1,62 @@
+{
+  "generatedAtUTC": "2026-11-05T06:38:11.906888+00:00",
+  "nonce": "abeba16b6a7f",
+  "certificates": {
+    "root": {
+      "sha256": "6af635e2cccbc3ba281736e9efa48be8e20d49d2e85340625baa8501b463e653",
+      "SPKISHA256": "949cd06abfb99e4df4c6c818c6584f68872ee525a25676e283ac1fca547bae09",
+      "serialHex": "22f1e4c19201a8ca2ffb54151a3688b1114869af",
+      "subject": "CN=CVK intermediate refresh root abeba16b6a7f",
+      "issuer": "CN=CVK intermediate refresh root abeba16b6a7f",
+      "validFromUTC": "2026-11-04T06:38:11+00:00",
+      "validUntilUTC": "2026-11-12T06:38:11+00:00",
+      "ca": true
+    },
+    "original": {
+      "sha256": "a7076bfd55003dd3cd7433637bee5030cfe6c817198490e9306702d28220a48b",
+      "SPKISHA256": "be0ca32d80af4398e8d093df91867ab210dd1937627e7d65c9c1a0ba0f000b67",
+      "serialHex": "2f2f8ee2e9c17c3c502f6cb3b13ab373f892c0f9",
+      "subject": "CN=CVK intermediate refresh intermediate abeba16b6a7f",
+      "issuer": "CN=CVK intermediate refresh root abeba16b6a7f",
+      "validFromUTC": "2026-11-04T06:38:11+00:00",
+      "validUntilUTC": "2026-11-12T06:38:11+00:00",
+      "ca": true
+    },
+    "replacement": {
+      "sha256": "9ffcd59a63a070b6bdba4933698b56fc8574c4932c4e77528d97ab60cba5dd2b",
+      "SPKISHA256": "be0ca32d80af4398e8d093df91867ab210dd1937627e7d65c9c1a0ba0f000b67",
+      "serialHex": "594b2a429e071004ab38cec372ba3586d4987f17",
+      "subject": "CN=CVK intermediate refresh intermediate abeba16b6a7f",
+      "issuer": "CN=CVK intermediate refresh root abeba16b6a7f",
+      "validFromUTC": "2026-11-04T06:38:11+00:00",
+      "validUntilUTC": "2026-11-12T06:38:11+00:00",
+      "ca": true
+    },
+    "leaf": {
+      "sha256": "4c740657f3ada24e1eaa3ac78d81145f6ba1d46bdfe4bd82db7572adc56e7ea4",
+      "SPKISHA256": "75e17369c409a591297bd022c82cf97459c7630c3c3713cb3f07b15503e49ad4",
+      "serialHex": "7af44e91c00b0c463cdc61c984a929fe3349c9ba",
+      "subject": "CN=192.168.129.111",
+      "issuer": "CN=CVK intermediate refresh intermediate abeba16b6a7f",
+      "validFromUTC": "2026-11-04T06:38:11+00:00",
+      "validUntilUTC": "2026-11-12T06:38:11+00:00",
+      "ca": false
+    }
+  },
+  "ephemeralPrivateKeys": [
+    "root.key",
+    "intermediate.key",
+    "leaf.key"
+  ],
+  "revocationTrustpoint": "CVK-INTREFRESH-20261105",
+  "CDP": "http://192.168.129.111:18473/issuer.crl",
+  "intermediateCDP": "http://192.168.129.111:18473/intermediate.crl",
+  "intermediateCRL": {
+    "sha256": "24a62783fc70550bfc86c3423c2727c1f323438276b9245b5e91e22b1e0257fc",
+    "bytes": 443,
+    "lastUpdateUTC": "2026-11-05T06:33:11+00:00",
+    "nextUpdateUTC": "2026-11-06T06:38:11+00:00",
+    "revokedSerialsHex": []
+  },
+  "replacementSemantics": "same intermediate subject/key, new unrevoked serial; supersession, not CA-key compromise"
+}

@@ -1,0 +1,9 @@
+import pathlib,json,subprocess,datetime
+R=pathlib.Path('/tmp/cvk-stdrevoke-20261104/cold');out=[]
+for label,leaf,ca,revocation,expected in [('valid-control','control-leaf','control-intermediate',True,True),('bad-without-check','leaf','bad',False,True),('revoked-intermediate','leaf','bad',True,False),('replacement-intermediate','leaf','good',True,True)]:
+ cmd=['openssl','verify','-CAfile',str(R/'cold-root.crt'),'-untrusted',str(R/(ca+'.crt')),'-purpose','sslserver','-verify_ip','192.168.129.111']
+ if revocation:cmd+=['-crl_check_all','-CRLfile',str(R/'all-crls.pem')]
+ cmd+=[str(R/(leaf+'.crt'))];q=subprocess.run(cmd,text=True,capture_output=True,timeout=10);assert (q.returncode==0)==expected,(label,q.stdout,q.stderr)
+ if not expected:assert 'error 23 at 1 depth' in q.stderr and 'certificate revoked' in q.stderr
+ out.append({'case':label,'command':cmd,'expectedSuccess':expected,'exitCode':q.returncode,'stdout':q.stdout,'stderr':q.stderr})
+(R/'offline-certificate-controls.json').write_text(json.dumps({'atUTC':datetime.datetime.now(datetime.timezone.utc).isoformat(),'passed':True,'cases':out},indent=2)+'\n');print('PASS four cold-repeat certificate controls; revocation isolated at intermediate depth')

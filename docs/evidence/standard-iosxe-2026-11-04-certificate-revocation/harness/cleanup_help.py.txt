@@ -1,0 +1,13 @@
+import pexpect,pathlib,json,datetime,os,time
+r=pathlib.Path('/tmp/cvk-stdrevoke-20261104');first=r/'cleanup-first-attempt.json';assert not first.exists();first.write_bytes((r/'cleanup-progress.json').read_bytes())
+p=pexpect.spawn('ssh',['-o','StrictHostKeyChecking=yes','-o','UserKnownHostsFile=/tmp/cvk-verified-qual-20261101/switch_known_hosts','-o','GlobalKnownHostsFile=/dev/null','-o','HostKeyAlgorithms=rsa-sha2-512,rsa-sha2-256','cisco@10.1.1.1'],encoding='utf-8',timeout=30);rows=[]
+try:
+ p.expect('(?i)password:');p.sendline(os.environ['CVK_QUAL_DEVICE_PASSWORD']);p.expect(r'[>#] ?$');p.sendline('terminal length 0');p.expect(r'[>#] ?$')
+ for c in ['clear crypto pki ?','crypto pki crl ?','show running-config all | include crl.*cache']:
+  if c.endswith('?'):
+   p.send(c);time.sleep(.5);p.sendcontrol('c');p.expect(r'[>#] ?$')
+  else:p.sendline(c);p.expect(r'[>#] ?$')
+  rows.append({'command':c,'output':p.before.replace('\r','')})
+ p.sendline('exit')
+finally:p.close(force=True)
+out={'atUTC':datetime.datetime.now(datetime.timezone.utc).isoformat(),'readOnly':True,'commands':rows};(r/'cleanup-command-discovery.json').write_text(json.dumps(out,indent=2)+'\n');print(json.dumps(out,indent=2))

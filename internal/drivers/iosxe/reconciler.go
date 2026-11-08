@@ -47,7 +47,20 @@ import (
 //	"" (no oper)    → delete config              → Deleted
 func (d *XEDriver) ReconcileApp(ctx context.Context, appConfig *AppHostingConfig) {
 	appID := appConfig.AppName()
+	defer func() {
+		if err := d.cleanupStandardStages(ctx, appID); err != nil {
+			appConfig.Status.Phase = AppPhaseError
+			appConfig.Status.Message = fmt.Sprintf("staging cleanup failed: %v", err)
+		}
+	}()
 	desired := appConfig.Spec.DesiredState
+	if desired == AppDesiredStateRunning {
+		if err := common.RequireStandardAppArtifacts(d.config); err != nil {
+			appConfig.Status.Phase = AppPhaseError
+			appConfig.Status.Message = err.Error()
+			return
+		}
+	}
 
 	// 1. Observe current device state.
 	obs := d.getAppObservation(ctx, appID)
@@ -85,6 +98,7 @@ func (d *XEDriver) ReconcileApp(ctx context.Context, appConfig *AppHostingConfig
 	if desired == AppDesiredStateRunning {
 		switch state {
 		case "RUNNING":
+			d.standardStagesConsumed(appID)
 			appConfig.Status.Phase = AppPhaseReady
 			appConfig.Status.Message = "App is running"
 			return
@@ -166,10 +180,17 @@ func (d *XEDriver) ReconcileApp(ctx context.Context, appConfig *AppHostingConfig
 				appConfig.Status.Message = "no image path available for install"
 				return
 			}
+			localPath, err := d.stageStandardPackage(ctx, appConfig)
+			if err != nil {
+				appConfig.Status.Phase = AppPhaseError
+				appConfig.Status.Message = fmt.Sprintf("image transfer failed: %v", err)
+				return
+			}
 			appConfig.Status.Phase = AppPhaseConverging
 			appConfig.Status.Message = "Re-issuing install"
 			log.G(ctx).Debugf("ReconcileApp %s: no oper data; re-issuing install (image: %s)", appID, imageReferenceForLog(imagePath))
-			if err := d.InstallApp(ctx, appID, imagePath); !recordPendingAppOperation(ctx, appConfig, "install", obs, err) {
+			d.standardStageInstallPending(localPath)
+			if err := d.InstallApp(ctx, appID, localPath); !recordPendingAppOperation(ctx, appConfig, "install", obs, err) {
 				log.G(ctx).Warnf("ReconcileApp %s: install failed: %v", appID, err)
 				appConfig.Status.Phase = AppPhaseError
 				appConfig.Status.Message = fmt.Sprintf("install failed: %v", err)
@@ -228,6 +249,7 @@ func (d *XEDriver) ReconcileApp(ctx context.Context, appConfig *AppHostingConfig
 				// this as a successful deletion.
 				if common.IsRESTCONFStatus(err, http.StatusNotFound) || strings.Contains(err.Error(), "404") {
 					log.G(ctx).Infof("ReconcileApp %s: config already absent (404), treating as deleted", appID)
+					d.standardStagesConsumed(appID)
 					appConfig.Status.Phase = AppPhaseDeleted
 					appConfig.Status.Message = "App fully removed (config was absent)"
 					return
@@ -237,6 +259,7 @@ func (d *XEDriver) ReconcileApp(ctx context.Context, appConfig *AppHostingConfig
 				appConfig.Status.Message = fmt.Sprintf("config delete failed: %v", err)
 				return
 			}
+			d.standardStagesConsumed(appID)
 			appConfig.Status.Phase = AppPhaseDeleted
 			appConfig.Status.Message = "App fully removed"
 			log.G(ctx).Infof("ReconcileApp %s: fully deleted", appID)

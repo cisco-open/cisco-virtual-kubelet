@@ -1,0 +1,13 @@
+import pathlib,subprocess,json,yaml,sys,datetime
+root=pathlib.Path('/tmp/cvk-replies-20261103');ns='cvk-replies-apps-20261103';k=['kubectl','--kubeconfig',str(root/'kubeconfig')]
+def apply(obj):
+ r=subprocess.run(k+['apply','-f','-'],input=yaml.safe_dump(obj),capture_output=True,text=True);print(r.stdout,r.stderr);r.check_returncode()
+release=sys.argv[1].upper();fault=len(sys.argv)>2 and sys.argv[2]=='fault'
+mismatch=len(sys.argv)>2 and sys.argv[2]=='mismatch'
+r=next(r for r in json.loads((root/'releases.json').read_text()) if r['release']==release)
+url=r['packageURL'].replace(':18443',':18444') if fault else r['packageURL']
+if mismatch:url=next(x['packageURL'] for x in json.loads((root/'releases.json').read_text()) if x['release']=='B')
+apply({'apiVersion':'v1','kind':'Namespace','metadata':{'name':ns}})
+pod={'metadata':{'labels':{'app':'cvk-verified-fixture','qualification':'20261103'},'annotations':{'cisco.io/apphost-artifacts':json.dumps({'agent':{'descriptorDigest':r['descriptorDigest']}}),'cisco.io/apphost-package-timeout':'300s'}},'spec':{'affinity':{'nodeAffinity':{'requiredDuringSchedulingIgnoredDuringExecution':{'nodeSelectorTerms':[{'matchFields':[{'key':'metadata.name','operator':'In','values':['c9k-pending-20261103']}]}]}}},'tolerations':[{'key':'cisco.vk/device','operator':'Exists','effect':'NoSchedule'}],'containers':[{'name':'agent','image':url,'imagePullPolicy':'IfNotPresent','ports':[{'containerPort':8080}],'resources':{'requests':{'memory':'128Mi'},'limits':{'memory':'128Mi'}}}]}}
+obj={'apiVersion':'apps/v1','kind':'Deployment','metadata':{'name':'cvk-verified-fixture','namespace':ns,'labels':{'qualification':'20261103'}},'spec':{'replicas':1,'strategy':{'type':'Recreate'},'selector':{'matchLabels':{'app':'cvk-verified-fixture'}},'template':pod}}
+(root/('deployment-'+release.lower()+('-fault' if fault else '-mismatch' if mismatch else '')+'.yaml')).write_text(yaml.safe_dump(obj));apply(obj)

@@ -1,0 +1,31 @@
+{
+  "passed": true,
+  "atUTC": "2026-11-06T07:14:11.467474+00:00",
+  "cases": [
+    {
+      "chain": "original",
+      "CRLChecking": false,
+      "expectedSuccess": true,
+      "exitCode": 0,
+      "stdout": "/tmp/cvk-stdcopyfix-20261105/leaf.crt: OK\n",
+      "stderr": ""
+    },
+    {
+      "chain": "original",
+      "CRLChecking": true,
+      "expectedSuccess": false,
+      "exitCode": 2,
+      "stdout": "",
+      "stderr": "CN = CVK Standard copy fix intermediate 717eb0f2c8b8\nerror 23 at 1 depth lookup: certificate revoked\nerror /tmp/cvk-stdcopyfix-20261105/leaf.crt: verification failed\n"
+    },
+    {
+      "chain": "replacement",
+      "CRLChecking": true,
+      "expectedSuccess": true,
+      "exitCode": 0,
+      "stdout": "/tmp/cvk-stdcopyfix-20261105/leaf.crt: OK\n",
+      "stderr": ""
+    }
+  ],
+  "C9KContacted": false
+}

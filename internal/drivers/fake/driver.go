@@ -64,6 +64,9 @@ func (d *FAKEDriver) GetDeviceInfo(ctx context.Context) (*common.DeviceInfo, err
 }
 
 func (d *FAKEDriver) DeployPod(ctx context.Context, pod *v1.Pod, _ corev1listers.SecretNamespaceLister, _ corev1listers.ConfigMapNamespaceLister) error {
+	if err := common.RequireStandardAppArtifacts(d.config); err != nil {
+		return err
+	}
 	containerAppIDs := common.GenerateContainerAppIDs(pod)
 
 	log.G(ctx).WithFields(log.Fields{
@@ -126,6 +129,11 @@ func (d *FAKEDriver) DeployPod(ctx context.Context, pod *v1.Pod, _ corev1listers
 }
 
 func (d *FAKEDriver) UpdatePod(ctx context.Context, pod *v1.Pod) error {
+	if pod.DeletionTimestamp == nil {
+		if err := common.RequireStandardAppArtifacts(d.config); err != nil {
+			return err
+		}
+	}
 	// TODO
 	log.G(ctx).Info("Pod UpdateContainer request received")
 	return nil

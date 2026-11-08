@@ -1,0 +1,11 @@
+{
+  "label": "rollback-a",
+  "phase": "a",
+  "preloaded": false,
+  "release": "STD-GC-A-20261106-a85d9b305139",
+  "podUID": "cbd4447b-726d-4fc4-ba94-3df35ffaeacc",
+  "revision": "4",
+  "deploymentUID": "59a1e5ef-afab-4e89-9ec7-bb2a4d6e96d5",
+  "generation": 4,
+  "atUTC": "2026-11-06T10:38:52.505514+00:00"
+}

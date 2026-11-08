@@ -1,0 +1,39 @@
+{
+  "physicalQualificationComplete": true,
+  "naturalCRLRefreshAndRevocationDiscoveryQualified": true,
+  "cachedWindowAcceptanceObserved": true,
+  "publicationToNativeFetchSeconds": 510.783776,
+  "originalNextUpdateToNativeFetchSeconds": 11.261617,
+  "freshImageDeliveryRejectedAfterDiscovery": true,
+  "samePodRecoveryPassed": true,
+  "freshDeploymentAndDeletionPassed": true,
+  "signedCRLAndPackageIdentityChecks": "passed",
+  "actualRunningReleaseChecks": "passed before publication, during cached-window acceptance, and after certificate replacement",
+  "prepublicationStopsAndRawEmptyCRLObserverCorrectionPreserved": true,
+  "rawActorStricterOriginAlertCriterionPreserved": true,
+  "twoSerialSpecificNativePKIRejectionsQualified": true,
+  "rawServerTraceRewritten": false,
+  "earlierRawEvidencePreserved": true,
+  "historicalEvidenceUnchanged": true,
+  "manualCRLRefreshOrFlushDuringQualification": false,
+  "deviceClockChanged": false,
+  "deviceCachePolicyChanged": false,
+  "manualLeaseOrJournalChanges": false,
+  "canonicalMutationLeaseRecreated": false,
+  "artifactMetadataAndJournalOmitted": true,
+  "ephemeralOriginTLSPrivateKeysRemaining": 0,
+  "labBaselineRestored": true,
+  "productionSourceChanged": false,
+  "goRaceTestsRerun": false,
+  "priorGoRaceResults": "../verified-iosxe-2026-11-03-replies/test-results.json",
+  "defaultMode": "Standard",
+  "governed": "deferred",
+  "strictDocumentationBuild": {
+    "command": ".venv/bin/mkdocs build --strict",
+    "passed": true
+  },
+  "whitespace": {
+    "command": "git diff --check",
+    "passed": true
+  }
+}

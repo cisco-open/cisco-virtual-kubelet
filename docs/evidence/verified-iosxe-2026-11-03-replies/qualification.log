@@ -1,0 +1,82 @@
+namespace/cvk-replies-apps-20261103 created
+ 
+deployment.apps/cvk-verified-fixture created
+ 
+2026-11-03T08:50:27.433307+00:00 activate replacement bound; normal lease expiry 2026-11-03T09:20:21.191735+00:00
+2026-11-03T08:50:28.377786+00:00 activate fenced; no replay or premature Ready
+2026-11-03T08:51:32.485526+00:00 activate fenced; no replay or premature Ready
+2026-11-03T08:52:36.445311+00:00 activate fenced; no replay or premature Ready
+2026-11-03T08:53:40.591923+00:00 activate fenced; no replay or premature Ready
+2026-11-03T08:54:44.429089+00:00 activate fenced; no replay or premature Ready
+2026-11-03T08:55:48.339342+00:00 activate fenced; no replay or premature Ready
+2026-11-03T08:56:52.366271+00:00 activate fenced; no replay or premature Ready
+2026-11-03T08:57:56.392365+00:00 activate fenced; no replay or premature Ready
+2026-11-03T08:59:00.389360+00:00 activate fenced; no replay or premature Ready
+2026-11-03T09:00:04.321558+00:00 activate fenced; no replay or premature Ready
+2026-11-03T09:01:08.334984+00:00 activate fenced; no replay or premature Ready
+2026-11-03T09:02:12.334340+00:00 activate fenced; no replay or premature Ready
+2026-11-03T09:03:16.348924+00:00 activate fenced; no replay or premature Ready
+2026-11-03T09:04:20.531668+00:00 activate fenced; no replay or premature Ready
+2026-11-03T09:05:24.477971+00:00 activate fenced; no replay or premature Ready
+2026-11-03T09:06:28.438267+00:00 activate fenced; no replay or premature Ready
+2026-11-03T09:07:32.239787+00:00 activate fenced; no replay or premature Ready
+2026-11-03T09:08:36.370259+00:00 activate fenced; no replay or premature Ready
+2026-11-03T09:09:40.425849+00:00 activate fenced; no replay or premature Ready
+2026-11-03T09:10:44.423652+00:00 activate fenced; no replay or premature Ready
+2026-11-03T09:11:48.402029+00:00 activate fenced; no replay or premature Ready
+2026-11-03T09:12:52.407312+00:00 activate fenced; no replay or premature Ready
+2026-11-03T09:13:56.512339+00:00 activate fenced; no replay or premature Ready
+2026-11-03T09:15:00.418510+00:00 activate fenced; no replay or premature Ready
+2026-11-03T09:16:04.468418+00:00 activate fenced; no replay or premature Ready
+2026-11-03T09:17:08.618678+00:00 activate fenced; no replay or premature Ready
+2026-11-03T09:18:12.694117+00:00 activate fenced; no replay or premature Ready
+2026-11-03T09:19:16.718619+00:00 activate fenced; no replay or premature Ready
+2026-11-03T09:20:20.727487+00:00 activate fenced; no replay or premature Ready
+2026-11-03T09:20:21.191822+00:00 activate original lease expired naturally
+{"collectedAtUTC": "2026-11-03T09:20:21.337168+00:00", "label": "activate-recovered", "release": "A", "ready": false, "correctJournal": false, "httpReleaseConfirmed": false, "oldNativeAppsAbsent": true, "podUIDs": ["1d31f788-3bae-4871-9593-8903667a6db1"], "nativeStates": {"iris": "RUNNING", "c9ktest": "DEPLOYED", "cvk0000_1d31f7883bae487195938903667a6db1": "ACTIVATED"}, "podStates": [[{"containerID": "cvk0000_1d31f7883bae487195938903667a6db1", "image": "https://192.168.129.111:18443/v1/packages/sha256/ed8c257297a526229b154cbaabe1c466de239d4c011e4edfd25c7cb440fa071c/package.tar", "imageID": "", "lastState": {}, "name": "agent", "ready": false, "restartCount": 0, "state": {"waiting": {"message": "device maintenance: mutation lease held by device-write/ee3b2540-091a-4b46-b93c-9867dba1ec54", "reason": "VerifiedInstallationBlocked"}}}]]}
+{"collectedAtUTC": "2026-11-03T09:20:38.804921+00:00", "label": "activate-recovered", "release": "A", "ready": false, "correctJournal": true, "httpReleaseConfirmed": false, "oldNativeAppsAbsent": true, "podUIDs": ["1d31f788-3bae-4871-9593-8903667a6db1"], "nativeStates": {"iris": "RUNNING", "c9ktest": "DEPLOYED", "cvk0000_1d31f7883bae487195938903667a6db1": "RUNNING"}, "podStates": [[{"containerID": "cvk0000_1d31f7883bae487195938903667a6db1", "image": "https://192.168.129.111:18443/v1/packages/sha256/ed8c257297a526229b154cbaabe1c466de239d4c011e4edfd25c7cb440fa071c/package.tar", "imageID": "", "lastState": {}, "name": "agent", "ready": false, "restartCount": 0, "state": {"waiting": {"message": "device maintenance: mutation lease held by device-write/ee3b2540-091a-4b46-b93c-9867dba1ec54", "reason": "VerifiedInstallationBlocked"}}}]]}
+{"collectedAtUTC": "2026-11-03T09:21:02.248532+00:00", "label": "activate-recovered", "release": "A", "ready": true, "correctJournal": true, "httpReleaseConfirmed": false, "oldNativeAppsAbsent": true, "podUIDs": ["1d31f788-3bae-4871-9593-8903667a6db1"], "nativeStates": {"iris": "RUNNING", "c9ktest": "DEPLOYED", "cvk0000_1d31f7883bae487195938903667a6db1": "RUNNING"}, "podStates": [[{"containerID": "cvk0000_1d31f7883bae487195938903667a6db1", "image": "https://192.168.129.111:18443/v1/packages/sha256/ed8c257297a526229b154cbaabe1c466de239d4c011e4edfd25c7cb440fa071c/package.tar", "imageID": "127.0.0.1:15443/cvk-qual-20261102/agent@sha256:24193e6eae32de28d622fe59cf2c5896b4929f325991ebf405f91c70920ebcd2", "lastState": {}, "name": "agent", "ready": true, "restartCount": 0, "state": {"running": {"startedAt": null}}}]]}
+{"collectedAtUTC": "2026-11-03T09:21:25.684760+00:00", "label": "activate-recovered", "release": "A", "ready": true, "correctJournal": true, "httpReleaseConfirmed": false, "oldNativeAppsAbsent": true, "podUIDs": ["1d31f788-3bae-4871-9593-8903667a6db1"], "nativeStates": {"iris": "RUNNING", "c9ktest": "DEPLOYED", "cvk0000_1d31f7883bae487195938903667a6db1": "RUNNING"}, "podStates": [[{"containerID": "cvk0000_1d31f7883bae487195938903667a6db1", "image": "https://192.168.129.111:18443/v1/packages/sha256/ed8c257297a526229b154cbaabe1c466de239d4c011e4edfd25c7cb440fa071c/package.tar", "imageID": "127.0.0.1:15443/cvk-qual-20261102/agent@sha256:24193e6eae32de28d622fe59cf2c5896b4929f325991ebf405f91c70920ebcd2", "lastState": {}, "name": "agent", "ready": true, "restartCount": 0, "state": {"running": {"startedAt": null}}}]]}
+{"collectedAtUTC": "2026-11-03T09:21:49.043662+00:00", "label": "activate-recovered", "release": "A", "ready": true, "correctJournal": true, "httpReleaseConfirmed": true, "oldNativeAppsAbsent": true, "podUIDs": ["1d31f788-3bae-4871-9593-8903667a6db1"], "nativeStates": {"iris": "RUNNING", "c9ktest": "DEPLOYED", "cvk0000_1d31f7883bae487195938903667a6db1": "RUNNING"}, "podStates": [[{"containerID": "cvk0000_1d31f7883bae487195938903667a6db1", "image": "https://192.168.129.111:18443/v1/packages/sha256/ed8c257297a526229b154cbaabe1c466de239d4c011e4edfd25c7cb440fa071c/package.tar", "imageID": "127.0.0.1:15443/cvk-qual-20261102/agent@sha256:24193e6eae32de28d622fe59cf2c5896b4929f325991ebf405f91c70920ebcd2", "lastState": {}, "name": "agent", "ready": true, "restartCount": 0, "state": {"running": {"startedAt": null}}}]]}
+PASS activate-recovered HTTP release A
+PASS activate lost reply recovered without replay; clean Pod status
+deployment.apps/cvk-verified-fixture scaled
+namespace/cvk-replies-apps-20261103 unchanged
+ 
+deployment.apps/cvk-verified-fixture configured
+ 
+2026-11-03T09:23:46.115495+00:00 start replacement bound; normal lease expiry 2026-11-03T09:53:45.936227+00:00
+2026-11-03T09:23:47.178211+00:00 start fenced; no replay or premature Ready
+2026-11-03T09:24:51.327711+00:00 start fenced; no replay or premature Ready
+2026-11-03T09:25:55.478814+00:00 start fenced; no replay or premature Ready
+2026-11-03T09:26:59.966813+00:00 start fenced; no replay or premature Ready
+2026-11-03T09:28:04.194975+00:00 start fenced; no replay or premature Ready
+2026-11-03T09:29:08.323381+00:00 start fenced; no replay or premature Ready
+2026-11-03T09:30:12.551873+00:00 start fenced; no replay or premature Ready
+2026-11-03T09:31:16.770757+00:00 start fenced; no replay or premature Ready
+2026-11-03T09:32:21.039723+00:00 start fenced; no replay or premature Ready
+2026-11-03T09:33:25.303800+00:00 start fenced; no replay or premature Ready
+2026-11-03T09:34:29.497208+00:00 start fenced; no replay or premature Ready
+2026-11-03T09:35:33.830626+00:00 start fenced; no replay or premature Ready
+2026-11-03T09:36:38.394805+00:00 start fenced; no replay or premature Ready
+2026-11-03T09:37:42.584291+00:00 start fenced; no replay or premature Ready
+2026-11-03T09:38:46.873638+00:00 start fenced; no replay or premature Ready
+2026-11-03T09:39:51.252887+00:00 start fenced; no replay or premature Ready
+2026-11-03T09:40:55.679732+00:00 start fenced; no replay or premature Ready
+2026-11-03T09:41:59.939008+00:00 start fenced; no replay or premature Ready
+2026-11-03T09:43:04.070689+00:00 start fenced; no replay or premature Ready
+2026-11-03T09:44:08.256237+00:00 start fenced; no replay or premature Ready
+2026-11-03T09:45:12.465762+00:00 start fenced; no replay or premature Ready
+2026-11-03T09:46:16.764091+00:00 start fenced; no replay or premature Ready
+2026-11-03T09:47:20.943123+00:00 start fenced; no replay or premature Ready
+2026-11-03T09:48:25.268774+00:00 start fenced; no replay or premature Ready
+2026-11-03T09:49:29.513387+00:00 start fenced; no replay or premature Ready
+2026-11-03T09:50:34.169322+00:00 start fenced; no replay or premature Ready
+2026-11-03T09:51:38.365706+00:00 start fenced; no replay or premature Ready
+2026-11-03T09:52:42.506175+00:00 start fenced; no replay or premature Ready
+2026-11-03T09:53:45.936373+00:00 start original lease expired naturally
+{"collectedAtUTC": "2026-11-03T09:53:46.066579+00:00", "label": "start-recovered", "release": "A", "ready": false, "correctJournal": false, "httpReleaseConfirmed": true, "oldNativeAppsAbsent": true, "podUIDs": ["6d1d044f-83c4-4a26-b1f0-d2d099671f9b"], "nativeStates": {"iris": "RUNNING", "c9ktest": "DEPLOYED", "cvk0000_6d1d044f83c44a26b1f0d2d099671f9b": "RUNNING"}, "podStates": [[{"containerID": "cvk0000_6d1d044f83c44a26b1f0d2d099671f9b", "image": "https://192.168.129.111:18443/v1/packages/sha256/ed8c257297a526229b154cbaabe1c466de239d4c011e4edfd25c7cb440fa071c/package.tar", "imageID": "", "lastState": {}, "name": "agent", "ready": false, "restartCount": 0, "state": {"waiting": {"message": "device maintenance: mutation lease held by device-write/ab2b4e74-2996-4491-a4cd-abd126e6be6b", "reason": "VerifiedInstallationBlocked"}}}]]}
+PASS start-recovered HTTP release A
+PASS start lost reply recovered without replay; clean Pod status
+deployment.apps/cvk-verified-fixture scaled
+PASS both independent hardware reply-loss recoveries

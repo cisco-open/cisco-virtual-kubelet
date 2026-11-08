@@ -1,0 +1,15 @@
+{
+  "createdAtUTC": "2026-11-04T17:12:46.406195Z",
+  "fixtureRelease": "REVOCATION-COLD-20261104-35d8a9c90cb2",
+  "repoTag": "cvk-stdrevoke-20261104/cold:35d8a9c90cb2",
+  "dockerConfigID": "sha256:fb0f4dd6b1012b3e626e42fa64f4fb98bcd5feeba40c34f5c812c4598be2046a",
+  "layerDiffID": "sha256:dc78be3c3975209b7a2b8d5170dcd7dd6274ec1b72134883d23c9b3265b8f00c",
+  "binarySHA256": "d6f9d9cb072151c8b6c5ef20f4afb39b039bf29a6f9fd343d05d62529acef01c",
+  "packageSHA256": "624075b6ecc6383fa8615ead9e2bcdb0c410a3f48a3e3351528ef04344b473bd",
+  "packageBytes": 5959680,
+  "platform": "linux/amd64",
+  "compiler": "go version go1.26.2 darwin/arm64",
+  "format": "Docker save archive; same manifest/config/layer layout as the qualified A archive",
+  "sourceSHA256": "3113d46a7286a3bb64f7d0e6160e79a661ba22df7397ec4d423319f1312bfaa8",
+  "neverPresentedToC9KBeforeNegativePhase": true
+}

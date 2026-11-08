@@ -1,0 +1,69 @@
+RENEWED NEGATIVE {"atUTC": "2026-11-06T07:15:04.651742+00:00", "leaseUID": "9a7919b7-3d1c-46e8-865e-e306c6be3e6f", "holder": "device-write/2f900a1c-d207-4264-b6d3-2da2bf60cc46", "renewTime": "2026-11-06T06:50:32.066361Z", "newCRLRetrieved": false, "ready": false, "nativeRunning": false, "actualReleases": []}
+RENEWED NEGATIVE {"atUTC": "2026-11-06T07:16:12.005665+00:00", "leaseUID": "9a7919b7-3d1c-46e8-865e-e306c6be3e6f", "holder": "device-write/2f900a1c-d207-4264-b6d3-2da2bf60cc46", "renewTime": "2026-11-06T06:50:32.066361Z", "newCRLRetrieved": false, "ready": false, "nativeRunning": false, "actualReleases": []}
+RENEWED NEGATIVE {"atUTC": "2026-11-06T07:17:20.080421+00:00", "leaseUID": "9a7919b7-3d1c-46e8-865e-e306c6be3e6f", "holder": "device-write/2f900a1c-d207-4264-b6d3-2da2bf60cc46", "renewTime": "2026-11-06T06:50:32.066361Z", "newCRLRetrieved": false, "ready": false, "nativeRunning": false, "actualReleases": []}
+RENEWED NEGATIVE {"atUTC": "2026-11-06T07:18:28.006239+00:00", "leaseUID": "9a7919b7-3d1c-46e8-865e-e306c6be3e6f", "holder": "device-write/2f900a1c-d207-4264-b6d3-2da2bf60cc46", "renewTime": "2026-11-06T06:50:32.066361Z", "newCRLRetrieved": false, "ready": false, "nativeRunning": false, "actualReleases": []}
+RENEWED NEGATIVE {"atUTC": "2026-11-06T07:19:35.336099+00:00", "leaseUID": "9a7919b7-3d1c-46e8-865e-e306c6be3e6f", "holder": "device-write/2f900a1c-d207-4264-b6d3-2da2bf60cc46", "renewTime": "2026-11-06T06:50:32.066361Z", "newCRLRetrieved": false, "ready": false, "nativeRunning": false, "actualReleases": []}
+RENEWED NEGATIVE {"atUTC": "2026-11-06T07:20:42.952520+00:00", "leaseUID": "9a7919b7-3d1c-46e8-865e-e306c6be3e6f", "holder": "device-write/2f900a1c-d207-4264-b6d3-2da2bf60cc46", "renewTime": "2026-11-06T06:50:32.066361Z", "newCRLRetrieved": false, "ready": false, "nativeRunning": false, "actualReleases": []}
+RENEWED NEGATIVE {"atUTC": "2026-11-06T07:21:50.309468+00:00", "leaseUID": "9a7919b7-3d1c-46e8-865e-e306c6be3e6f", "holder": "device-write/2f900a1c-d207-4264-b6d3-2da2bf60cc46", "renewTime": "2026-11-06T06:50:32.066361Z", "newCRLRetrieved": false, "ready": false, "nativeRunning": false, "actualReleases": []}
+RENEWED NEGATIVE {"atUTC": "2026-11-06T07:22:57.596803+00:00", "leaseUID": "9a7919b7-3d1c-46e8-865e-e306c6be3e6f", "holder": "device-write/2f900a1c-d207-4264-b6d3-2da2bf60cc46", "renewTime": "2026-11-06T06:50:32.066361Z", "newCRLRetrieved": false, "ready": false, "nativeRunning": false, "actualReleases": []}
+RENEWED NEGATIVE {"atUTC": "2026-11-06T07:24:05.412014+00:00", "leaseUID": "9a7919b7-3d1c-46e8-865e-e306c6be3e6f", "holder": "device-write/2f900a1c-d207-4264-b6d3-2da2bf60cc46", "renewTime": "2026-11-06T06:50:32.066361Z", "newCRLRetrieved": false, "ready": false, "nativeRunning": false, "actualReleases": []}
+RENEWED NEGATIVE {"atUTC": "2026-11-06T07:25:12.704830+00:00", "leaseUID": "9a7919b7-3d1c-46e8-865e-e306c6be3e6f", "holder": "device-write/2f900a1c-d207-4264-b6d3-2da2bf60cc46", "renewTime": "2026-11-06T06:50:32.066361Z", "newCRLRetrieved": false, "ready": false, "nativeRunning": false, "actualReleases": []}
+RENEWED NEGATIVE {"atUTC": "2026-11-06T07:26:20.001396+00:00", "leaseUID": "9a7919b7-3d1c-46e8-865e-e306c6be3e6f", "holder": "device-write/e6c555c4-f7b9-4ffa-8720-d3b89587d445", "renewTime": "2026-11-06T07:25:48.847521Z", "newCRLRetrieved": true, "ready": false, "nativeRunning": false, "actualReleases": []}
+RENEWED NEGATIVE {"atUTC": "2026-11-06T07:27:27.310575+00:00", "leaseUID": "9a7919b7-3d1c-46e8-865e-e306c6be3e6f", "holder": "device-write/e6c555c4-f7b9-4ffa-8720-d3b89587d445", "renewTime": "2026-11-06T07:25:48.847521Z", "newCRLRetrieved": true, "ready": false, "nativeRunning": false, "actualReleases": []}
+PASS read-only native PKI renewed-revoked-boundary published 3
+PASS read-only native PKI after-replacement published 3
+2026-11-06T07:27:51.717613+00:00 refresh waiting for normal fence 2026-11-06T07:56:48.847521+00:00
+2026-11-06T07:28:59.579088+00:00 refresh waiting for normal fence 2026-11-06T07:56:48.847521+00:00
+2026-11-06T07:30:06.949486+00:00 refresh waiting for normal fence 2026-11-06T07:56:48.847521+00:00
+2026-11-06T07:31:14.306584+00:00 refresh waiting for normal fence 2026-11-06T07:56:48.847521+00:00
+2026-11-06T07:32:21.660683+00:00 refresh waiting for normal fence 2026-11-06T07:56:48.847521+00:00
+2026-11-06T07:33:29.285186+00:00 refresh waiting for normal fence 2026-11-06T07:56:48.847521+00:00
+2026-11-06T07:34:37.236650+00:00 refresh waiting for normal fence 2026-11-06T07:56:48.847521+00:00
+2026-11-06T07:35:44.689163+00:00 refresh waiting for normal fence 2026-11-06T07:56:48.847521+00:00
+2026-11-06T07:36:52.036003+00:00 refresh waiting for normal fence 2026-11-06T07:56:48.847521+00:00
+2026-11-06T07:37:59.653866+00:00 refresh waiting for normal fence 2026-11-06T07:56:48.847521+00:00
+2026-11-06T07:39:07.030178+00:00 refresh waiting for normal fence 2026-11-06T07:56:48.847521+00:00
+2026-11-06T07:40:14.364879+00:00 refresh waiting for normal fence 2026-11-06T07:56:48.847521+00:00
+2026-11-06T07:41:21.709377+00:00 refresh waiting for normal fence 2026-11-06T07:56:48.847521+00:00
+2026-11-06T07:42:29.023830+00:00 refresh waiting for normal fence 2026-11-06T07:56:48.847521+00:00
+2026-11-06T07:43:36.373003+00:00 refresh waiting for normal fence 2026-11-06T07:56:48.847521+00:00
+2026-11-06T07:44:43.867047+00:00 refresh waiting for normal fence 2026-11-06T07:56:48.847521+00:00
+2026-11-06T07:45:51.317232+00:00 refresh waiting for normal fence 2026-11-06T07:56:48.847521+00:00
+2026-11-06T07:46:58.903422+00:00 refresh waiting for normal fence 2026-11-06T07:56:48.847521+00:00
+2026-11-06T07:48:06.574541+00:00 refresh waiting for normal fence 2026-11-06T07:56:48.847521+00:00
+2026-11-06T07:49:13.961471+00:00 refresh waiting for normal fence 2026-11-06T07:56:48.847521+00:00
+2026-11-06T07:50:21.312453+00:00 refresh waiting for normal fence 2026-11-06T07:56:48.847521+00:00
+2026-11-06T07:51:28.779419+00:00 refresh waiting for normal fence 2026-11-06T07:56:48.847521+00:00
+2026-11-06T07:52:36.129226+00:00 refresh waiting for normal fence 2026-11-06T07:56:48.847521+00:00
+2026-11-06T07:53:43.593936+00:00 refresh waiting for normal fence 2026-11-06T07:56:48.847521+00:00
+2026-11-06T07:54:51.076767+00:00 refresh waiting for normal fence 2026-11-06T07:56:48.847521+00:00
+2026-11-06T07:55:58.581482+00:00 refresh waiting for normal fence 2026-11-06T07:56:48.847521+00:00
+{"atUTC": "2026-11-06T07:56:50.864312+00:00", "label": "recovery", "release": "STD-COPYFIX-REFRESH-20261105-0609ed4e6d25", "podUIDs": ["302b286a-f469-4fe7-92a4-2d963d266570"], "nativeStates": {"iris": "RUNNING", "c9ktest": "DEPLOYED"}, "ready": false, "httpReleaseConfirmed": false, "oldNativeAppsAbsent": false, "artifactJournalCount": 0}
+{"atUTC": "2026-11-06T07:57:18.098231+00:00", "label": "recovery", "release": "STD-COPYFIX-REFRESH-20261105-0609ed4e6d25", "podUIDs": ["302b286a-f469-4fe7-92a4-2d963d266570"], "nativeStates": {"iris": "RUNNING", "c9ktest": "DEPLOYED", "cvk0000_302b286af4694fe792a42d963d266570": "ACTIVATED"}, "ready": false, "httpReleaseConfirmed": false, "oldNativeAppsAbsent": true, "artifactJournalCount": 0}
+{"atUTC": "2026-11-06T07:57:45.185034+00:00", "label": "recovery", "release": "STD-COPYFIX-REFRESH-20261105-0609ed4e6d25", "podUIDs": ["302b286a-f469-4fe7-92a4-2d963d266570"], "nativeStates": {"iris": "RUNNING", "c9ktest": "DEPLOYED", "cvk0000_302b286af4694fe792a42d963d266570": "ACTIVATED"}, "ready": false, "httpReleaseConfirmed": false, "oldNativeAppsAbsent": true, "artifactJournalCount": 0}
+{"atUTC": "2026-11-06T07:58:12.428293+00:00", "label": "recovery", "release": "STD-COPYFIX-REFRESH-20261105-0609ed4e6d25", "podUIDs": ["302b286a-f469-4fe7-92a4-2d963d266570"], "nativeStates": {"iris": "RUNNING", "c9ktest": "DEPLOYED", "cvk0000_302b286af4694fe792a42d963d266570": "ACTIVATED"}, "ready": false, "httpReleaseConfirmed": false, "oldNativeAppsAbsent": true, "artifactJournalCount": 0}
+PASS recovery Ready/HTTP STD-COPYFIX-REFRESH-20261105-0609ed4e6d25 without artifacts or journal
+deployment.apps/cvk-stdcopyfix-fixture scaled
+2026-11-06T07:58:42.262770+00:00 recovery normal deletion pending 2026-11-06 08:29:35.536210+00:00
+deployment.apps/cvk-stdcopyfix-fixture configured
+{"atUTC": "2026-11-06T07:59:31.744563+00:00", "label": "fresh", "release": "STD-COPYFIX-REFRESH-20261105-0609ed4e6d25", "podUIDs": ["58e515e0-739f-4dc6-b344-7bfda37eb76b"], "nativeStates": {"iris": "RUNNING", "c9ktest": "DEPLOYED"}, "ready": false, "httpReleaseConfirmed": false, "oldNativeAppsAbsent": false, "artifactJournalCount": 0}
+{"atUTC": "2026-11-06T07:59:58.899863+00:00", "label": "fresh", "release": "STD-COPYFIX-REFRESH-20261105-0609ed4e6d25", "podUIDs": ["58e515e0-739f-4dc6-b344-7bfda37eb76b"], "nativeStates": {"iris": "RUNNING", "c9ktest": "DEPLOYED", "cvk0000_58e515e0739f4dc6b3447bfda37eb76b": "RUNNING"}, "ready": true, "httpReleaseConfirmed": false, "oldNativeAppsAbsent": true, "artifactJournalCount": 0}
+{"atUTC": "2026-11-06T08:00:26.005208+00:00", "label": "fresh", "release": "STD-COPYFIX-REFRESH-20261105-0609ed4e6d25", "podUIDs": ["58e515e0-739f-4dc6-b344-7bfda37eb76b"], "nativeStates": {"iris": "RUNNING", "c9ktest": "DEPLOYED", "cvk0000_58e515e0739f4dc6b3447bfda37eb76b": "RUNNING"}, "ready": true, "httpReleaseConfirmed": false, "oldNativeAppsAbsent": true, "artifactJournalCount": 0}
+{"atUTC": "2026-11-06T08:00:53.224590+00:00", "label": "fresh", "release": "STD-COPYFIX-REFRESH-20261105-0609ed4e6d25", "podUIDs": ["58e515e0-739f-4dc6-b344-7bfda37eb76b"], "nativeStates": {"iris": "RUNNING", "c9ktest": "DEPLOYED", "cvk0000_58e515e0739f4dc6b3447bfda37eb76b": "RUNNING"}, "ready": true, "httpReleaseConfirmed": true, "oldNativeAppsAbsent": true, "artifactJournalCount": 0}
+PASS fresh Ready/HTTP STD-COPYFIX-REFRESH-20261105-0609ed4e6d25 without artifacts or journal
+deployment.apps/cvk-stdcopyfix-fixture scaled
+2026-11-06T08:01:02.638298+00:00 fresh normal deletion pending 2026-11-06 08:31:55.871351+00:00
+deployment.apps/cvk-stdcopyfix-fixture configured
+{"atUTC": "2026-11-06T08:01:54.584487+00:00", "label": "local-never", "release": "STD-COPYFIX-REFRESH-20261105-0609ed4e6d25", "podUIDs": ["4fb5eaf4-7476-4346-943a-e54c84b9e9e1"], "nativeStates": {"iris": "RUNNING", "c9ktest": "DEPLOYED", "cvk0000_4fb5eaf474764346943ae54c84b9e9e1": "INSTALLING"}, "ready": false, "httpReleaseConfirmed": false, "oldNativeAppsAbsent": true, "artifactJournalCount": 0}
+{"atUTC": "2026-11-06T08:02:21.761226+00:00", "label": "local-never", "release": "STD-COPYFIX-REFRESH-20261105-0609ed4e6d25", "podUIDs": ["4fb5eaf4-7476-4346-943a-e54c84b9e9e1"], "nativeStates": {"iris": "RUNNING", "c9ktest": "DEPLOYED", "cvk0000_4fb5eaf474764346943ae54c84b9e9e1": "RUNNING"}, "ready": true, "httpReleaseConfirmed": false, "oldNativeAppsAbsent": true, "artifactJournalCount": 0}
+{"atUTC": "2026-11-06T08:02:49.300476+00:00", "label": "local-never", "release": "STD-COPYFIX-REFRESH-20261105-0609ed4e6d25", "podUIDs": ["4fb5eaf4-7476-4346-943a-e54c84b9e9e1"], "nativeStates": {"iris": "RUNNING", "c9ktest": "DEPLOYED", "cvk0000_4fb5eaf474764346943ae54c84b9e9e1": "RUNNING"}, "ready": true, "httpReleaseConfirmed": false, "oldNativeAppsAbsent": true, "artifactJournalCount": 0}
+{"atUTC": "2026-11-06T08:03:16.837192+00:00", "label": "local-never", "release": "STD-COPYFIX-REFRESH-20261105-0609ed4e6d25", "podUIDs": ["4fb5eaf4-7476-4346-943a-e54c84b9e9e1"], "nativeStates": {"iris": "RUNNING", "c9ktest": "DEPLOYED", "cvk0000_4fb5eaf474764346943ae54c84b9e9e1": "RUNNING"}, "ready": true, "httpReleaseConfirmed": true, "oldNativeAppsAbsent": true, "artifactJournalCount": 0}
+PASS local-never Ready/HTTP STD-COPYFIX-REFRESH-20261105-0609ed4e6d25 without artifacts or journal
+{"atUTC": "2026-11-06T08:04:21.351781+00:00", "label": "local-never-restart", "release": "STD-COPYFIX-REFRESH-20261105-0609ed4e6d25", "podUIDs": ["4fb5eaf4-7476-4346-943a-e54c84b9e9e1"], "nativeStates": {"iris": "RUNNING", "c9ktest": "DEPLOYED", "cvk0000_4fb5eaf474764346943ae54c84b9e9e1": "RUNNING"}, "ready": true, "httpReleaseConfirmed": true, "oldNativeAppsAbsent": true, "artifactJournalCount": 0}
+PASS local-never-restart Ready/HTTP STD-COPYFIX-REFRESH-20261105-0609ed4e6d25 without artifacts or journal
+deployment.apps/cvk-stdcopyfix-fixture scaled
+2026-11-06T08:04:30.794718+00:00 local-never normal deletion pending 2026-11-06 08:35:24.077259+00:00
+PASS read-only native PKI complete published 3
+COMPLETE resumed qualification; automatic owned cleanup follows
+PASS CRL discovery qualification cleanup
+PASS original raw evidence unchanged: 2056 files

@@ -1,0 +1,31 @@
+{
+  "label": "future-boundary",
+  "atUTC": "2026-11-03T20:18:07.435330+00:00",
+  "hostBeforeUTC": "2026-11-03T20:18:06.476751+00:00",
+  "hostAfterUTC": "2026-11-03T20:18:07.435330+00:00",
+  "deviceUTC": "2026-11-03T20:18:07.273000+00:00",
+  "deviceTimeSource": "NTP",
+  "clockChanged": false,
+  "clockWithinMeasurementMargin": true,
+  "rootValidAtDeviceTime": true,
+  "originalLeafStatusesAtDeviceTime": {
+    "valid": "valid",
+    "expired": "expired",
+    "future": "not-yet-valid"
+  },
+  "case": "future",
+  "activeEndpointLeafStatuses": {
+    "valid": "valid",
+    "expired": "valid",
+    "future": "not-yet-valid"
+  },
+  "nativeClockEvidence": {
+    "collectedAtUTC": "2026-11-03T20:18:07.415899+00:00",
+    "commands": [
+      {
+        "command": "show clock detail",
+        "output": "show clock detail\n20:18:07.273 UTC Tue Nov 3 2026\nTime source is NTP\nEdge-9K"
+      }
+    ]
+  }
+}

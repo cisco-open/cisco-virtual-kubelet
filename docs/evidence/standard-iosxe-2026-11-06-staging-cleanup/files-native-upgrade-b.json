@@ -1,0 +1,9 @@
+{
+  "collectedAtUTC": "2026-11-06T10:36:28.353403+00:00",
+  "commands": [
+    {
+      "command": "dir flash:/cvk-stage-68387df409b64d80959b581082f67139.tar",
+      "output": "dir flash:/cvk-stage-68387df409b64d80959b581082f67139.tar\n%Error opening flash:/cvk-stage-68387df409b64d80959b581082f67139.tar (No such file or directory)\nEdge-9K"
+    }
+  ]
+}

@@ -1,0 +1,12 @@
+from pathlib import Path
+import json,tarfile,hashlib,re,datetime
+R=Path('/tmp/cvk-stdgc-20261106');assert json.loads((R/'final-cleanup.json').read_text())['passed'];assert json.loads((R/'owned-file-observer-finished.json').read_text())['qualificationComplete'];m=json.loads((R/'harness-stop-preservation.json').read_text())
+for item in m['files']:assert hashlib.sha256((R/'initial-harness-stop'/item['name']).read_bytes()).hexdigest()==item['sha256']
+files=[p for p in sorted(R.iterdir()) if p.is_file() and (p.suffix in ['.json','.jsonl','.yaml','.crt','.pem','.py','.log'] or p.name=='main.go')]
+files+=sorted((R/'initial-harness-stop').iterdir())
+for phase in ['a','b']:
+ for n in ['docker-config.json','docker-manifest.json']:files.append(R/phase/n)
+for p in files:assert p.is_file() and not p.name.endswith('.key') and 'kubeconfig' not in p.name and not re.search(rb'(?m)^-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----',p.read_bytes()),p
+with tarfile.open(R/'evidence-complete.tar.gz','w:gz') as t:
+ for p in files:t.add(p,arcname=str(p.relative_to(R)),recursive=False)
+(R/'complete-bundle.json').write_text(json.dumps({'atUTC':datetime.datetime.now(datetime.timezone.utc).isoformat(),'file':'evidence-complete.tar.gz','bytes':(R/'evidence-complete.tar.gz').stat().st_size,'sha256':hashlib.sha256((R/'evidence-complete.tar.gz').read_bytes()).hexdigest(),'files':len(files),'originalHarnessStopPreserved':True},indent=2)+'\n');print((R/'complete-bundle.json').read_text())

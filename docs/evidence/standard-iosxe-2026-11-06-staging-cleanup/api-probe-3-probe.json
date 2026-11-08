@@ -1,0 +1,862 @@
+{
+  "startedAtUTC": "2026-11-06T10:09:09.920086+00:00",
+  "path": "flash:/cvk-gc-probe-ad266e3434b24c83bb98e9425d5a7513.tar",
+  "installsIssued": 0,
+  "commands": [
+    {
+      "command": "terminal length 0",
+      "output": "terminal length 0\nEdge-9K"
+    },
+    {
+      "command": "terminal width 511",
+      "output": "terminal width 511\nEdge-9K"
+    },
+    {
+      "command": "show app-hosting list",
+      "output": "show app-hosting list\nApp id                                   State\n---------------------------------------------------------\niris                                     RUNNING\nc9ktest                                  DEPLOYED\n\nEdge-9K"
+    },
+    {
+      "command": "show ip http server status | include trustpoint",
+      "output": "show ip http server status | include trustpoint\nHTTP secure server trustpoint: TP-self-signed-806566997\nHTTP secure server peer validation trustpoint: \nEdge-9K"
+    },
+    {
+      "command": "dir flash:/cvk-gc-probe-ad266e3434b24c83bb98e9425d5a7513.tar",
+      "output": "dir flash:/cvk-gc-probe-ad266e3434b24c83bb98e9425d5a7513.tar\n%Error opening flash:/cvk-gc-probe-ad266e3434b24c83bb98e9425d5a7513.tar (No such file or directory)\nEdge-9K"
+    },
+    {
+      "command": "configure terminal",
+      "output": "configure terminal\nEnter configuration commands, one per line.  End with CNTL/Z.\nEdge-9K(config)"
+    },
+    {
+      "command": "ip http secure-trustpoint cvk-gnoi-20260904",
+      "output": "ip http secure-trustpoint cvk-gnoi-20260904\nEdge-9K(config)"
+    },
+    {
+      "command": "end",
+      "output": "end\nEdge-9K"
+    },
+    {
+      "command": "dir flash:/cvk-gc-probe-ad266e3434b24c83bb98e9425d5a7513.tar",
+      "output": "dir flash:/cvk-gc-probe-ad266e3434b24c83bb98e9425d5a7513.tar\nDirectory of flash:/cvk-gc-probe-ad266e3434b24c83bb98e9425d5a7513.tar\n\n254040  -rw-               51   Nov 6 2026 10:09:13 +00:00  cvk-gc-probe-ad266e3434b24c83bb98e9425d5a7513.tar\n\n11353194496 bytes total (5398511616 bytes free)\nEdge-9K"
+    },
+    {
+      "command": "dir flash:/cvk-gc-probe-ad266e3434b24c83bb98e9425d5a7513.tar",
+      "output": "dir flash:/cvk-gc-probe-ad266e3434b24c83bb98e9425d5a7513.tar\n%Error opening flash:/cvk-gc-probe-ad266e3434b24c83bb98e9425d5a7513.tar (No such file or directory)\nEdge-9K"
+    },
+    {
+      "command": "dir flash:/cvk-gc-probe-ad266e3434b24c83bb98e9425d5a7513.tar",
+      "output": "dir flash:/cvk-gc-probe-ad266e3434b24c83bb98e9425d5a7513.tar\n%Error opening flash:/cvk-gc-probe-ad266e3434b24c83bb98e9425d5a7513.tar (No such file or directory)\nEdge-9K"
+    },
+    {
+      "command": "configure terminal",
+      "output": "configure terminal\nEnter configuration commands, one per line.  End with CNTL/Z.\nEdge-9K(config)"
+    },
+    {
+      "command": "ip http secure-trustpoint TP-self-signed-806566997",
+      "output": "ip http secure-trustpoint TP-self-signed-806566997\nEdge-9K(config)"
+    },
+    {
+      "command": "end",
+      "output": "end\nEdge-9K"
+    }
+  ],
+  "filesystemBefore": {
+    "status": 200,
+    "body": {
+      "Cisco-IOS-XE-platform-software-oper:q-filesystem": [
+        {
+          "fru": "fru-rp",
+          "slot": 0,
+          "bay": 0,
+          "chassis": -1,
+          "partitions": [
+            {
+              "name": "webui:",
+              "is-writable": true
+            },
+            {
+              "name": "usbflash1:",
+              "is-writable": true
+            },
+            {
+              "name": "ucode0:",
+              "is-writable": true
+            },
+            {
+              "name": "obfl10:",
+              "is-writable": true
+            },
+            {
+              "name": "lic1:",
+              "is-writable": true
+            },
+            {
+              "name": "lic0:",
+              "is-writable": true
+            },
+            {
+              "name": "flash:",
+              "is-writable": true
+            },
+            {
+              "name": "drec0:",
+              "is-writable": true
+            },
+            {
+              "name": "crashinfo:",
+              "is-writable": true
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "copy": {
+    "status": 200,
+    "body": {
+      "Cisco-IOS-XE-rpc:output": {
+        "result": "RPC request successful"
+      }
+    }
+  },
+  "nativeAfterCopy": "dir flash:/cvk-gc-probe-ad266e3434b24c83bb98e9425d5a7513.tar\nDirectory of flash:/cvk-gc-probe-ad266e3434b24c83bb98e9425d5a7513.tar\n\n254040  -rw-               51   Nov 6 2026 10:09:13 +00:00  cvk-gc-probe-ad266e3434b24c83bb98e9425d5a7513.tar\n\n11353194496 bytes total (5398511616 bytes free)\nEdge-9K",
+  "flashListing": {
+    "status": 200,
+    "body": {
+      "Cisco-IOS-XE-platform-software-oper:partitions": [
+        {
+          "name": "flash:",
+          "is-writable": true,
+          "partition-content": [
+            {
+              "full-path": "/mnt/sd3/user/bootloader_evt_handle.log",
+              "size": "481",
+              "type": "file"
+            },
+            {
+              "full-path": "/mnt/sd3/user/tech_support",
+              "size": "4096",
+              "type": "directory"
+            },
+            {
+              "full-path": "/mnt/sd3/user/tech_support/igmp-snooping.tcl",
+              "size": "21698",
+              "type": "file"
+            },
+            {
+              "full-path": "/mnt/sd3/user/tech_support/igmpsn_dump.tcl",
+              "size": "1612",
+              "type": "file"
+            },
+            {
+              "full-path": "/mnt/sd3/user/tech_support/mld-snooping.tcl",
+              "size": "19990",
+              "type": "file"
+            },
+            {
+              "full-path": "/mnt/sd3/user/tech_support/mldsn_dump.tcl",
+              "size": "1612",
+              "type": "file"
+            },
+            {
+              "full-path": "/mnt/sd3/user/tech_support/multicast.tcl",
+              "size": "15828",
+              "type": "file"
+            },
+            {
+              "full-path": "/mnt/sd3/user/tech_support/multicast_dump.tcl",
+              "size": "7367",
+              "type": "file"
+            },
+            {
+              "full-path": "/mnt/sd3/user/tech_support/platform-fabric-vrf-ipv4.tcl",
+              "size": "2729",
+              "type": "file"
+            },
+            {
+              "full-path": "/mnt/sd3/user/tech_support/platform-fabric-vrf-ipv6.tcl",
+              "size": "2757",
+              "type": "file"
+            },
+            {
+              "full-path": "/mnt/sd3/user/tech_support/platform-fabric-vrf-source.tcl",
+              "size": "53606",
+              "type": "file"
+            },
+            {
+              "full-path": "/mnt/sd3/user/tech_support/platform-fabric.tcl",
+              "size": "22578",
+              "type": "file"
+            },
+            {
+              "full-path": "/mnt/sd3/user/tech_support/platform_evpn_vxlan.tcl",
+              "size": "1548",
+              "type": "file"
+            },
+            {
+              "full-path": "/mnt/sd3/user/tech_support/port.tcl",
+              "size": "26175",
+              "type": "file"
+            },
+            {
+              "full-path": "/mnt/sd3/user/tech_support/port_dump.tcl",
+              "size": "3215",
+              "type": "file"
+            },
+            {
+              "full-path": "/mnt/sd3/user/tech_support/port_utils.tcl",
+              "size": "10031",
+              "type": "file"
+            },
+            {
+              "full-path": "/mnt/sd3/user/tech_support/stackwise-virtual.tcl",
+              "size": "7389",
+              "type": "file"
+            },
+            {
+              "full-path": "/mnt/sd3/user/tech_support/unicast.tcl",
+              "size": "38541",
+              "type": "file"
+            },
+            {
+              "full-path": "/mnt/sd3/user/tech_support/unicast_dump.tcl",
+              "size": "12653",
+              "type": "file"
+            },
+            {
+              "full-path": "/mnt/sd3/user/tech_support/utils.tcl",
+              "size": "336",
+              "type": "file"
+            },
+            {
+              "full-path": "/mnt/sd3/user/tech_support/fabric_dump.tcl",
+              "size": "8124",
+              "type": "file"
+            },
+            {
+              "full-path": "/mnt/sd3/user/tech_support/phy.tcl",
+              "size": "11696",
+              "type": "file"
+            },
+            {
+              "full-path": "/mnt/sd3/user/tech_support/pkt-drop-stats-dump.tcl",
+              "size": "1330",
+              "type": "file"
+            },
+            {
+              "full-path": "/mnt/sd3/user/tech_support/pkt-drop-stats.tcl",
+              "size": "14047",
+              "type": "file"
+            },
+            {
+              "full-path": "/mnt/sd3/user/tech_support/platform-fabric-iid-ethernet.tcl",
+              "size": "1365",
+              "type": "file"
+            },
+            {
+              "full-path": "/mnt/sd3/user/tech_support/platform-fabric-iid-ipv4.tcl",
+              "size": "2107",
+              "type": "file"
+            },
+            {
+              "full-path": "/mnt/sd3/user/tech_support/platform-fabric-iid-ipv6.tcl",
+              "size": "2109",
+              "type": "file"
+            },
+            {
+              "full-path": "/mnt/sd3/user/tech_support/port_interface.tcl",
+              "size": "19400",
+              "type": "file"
+            },
+            {
+              "full-path": "/mnt/sd3/user/tech_support/stack.tcl",
+              "size": "16524",
+              "type": "file"
+            },
+            {
+              "full-path": "/mnt/sd3/user/tech_support/tech-support-confidential.tcl",
+              "size": "1496",
+              "type": "file"
+            },
+            {
+              "full-path": "/mnt/sd3/user/tech_support/tech-support-dump.tcl",
+              "size": "685",
+              "type": "file"
+            },
+            {
+              "full-path": "/mnt/sd3/user/tech_support/unicast_ipv6.tcl",
+              "size": "5162",
+              "type": "file"
+            },
+            {
+              "full-path": "/mnt/sd3/user/tech_support/unicast_ipv6_dump.tcl",
+              "size": "2864",
+              "type": "file"
+            },
+            {
+              "full-path": "/mnt/sd3/user/tech_support/xfsu.tcl",
+              "size": "2309",
+              "type": "file"
+            },
+            {
+              "full-path": "/mnt/sd3/user/tech_support/platform-fabric-access-tunnel.tcl",
+              "size": "16890",
+              "type": "file"
+            },
+            {
+              "full-path": "/mnt/sd3/user/tech_support/platform_debug_scripts",
+              "size": "4096",
+              "type": "directory"
+            },
+            {
+              "full-path": "/mnt/sd3/user/tech_support/platform_debug_scripts/platform-link-info.tcl",
+              "size": "6518",
+              "type": "file"
+            },
+            {
+              "full-path": "/mnt/sd3/user/gs_script",
+              "size": "4096",
+              "type": "directory"
+            },
+            {
+              "full-path": "/mnt/sd3/user/gs_script/sss",
+              "size": "1024",
+              "type": "directory"
+            },
+            {
+              "full-path": "/mnt/sd3/user/gs_script/sss/lost+found",
+              "size": "12288",
+              "type": "directory"
+            },
+            {
+              "full-path": "/mnt/sd3/user/sys_report",
+              "size": "4096",
+              "type": "directory"
+            },
+            {
+              "full-path": "/mnt/sd3/user/memleak.tcl",
+              "size": "143021",
+              "type": "file"
+            },
+            {
+              "full-path": "/mnt/sd3/user/rdope_out.txt",
+              "size": "17017",
+              "type": "file"
+            },
+            {
+              "full-path": "/mnt/sd3/user/nvram_config",
+              "size": "2097152",
+              "type": "file"
+            },
+            {
+              "full-path": "/mnt/sd3/user/nvram_config_bkup",
+              "size": "2097152",
+              "type": "file"
+            },
+            {
+              "full-path": "/mnt/sd3/user/rdope.log",
+              "size": "89",
+              "type": "file"
+            },
+            {
+              "full-path": "/mnt/sd3/user/onep",
+              "size": "4096",
+              "type": "directory"
+            },
+            {
+              "full-path": "/mnt/sd3/user/onep/apps-cli",
+              "size": "4096",
+              "type": "directory"
+            },
+            {
+              "full-path": "/mnt/sd3/user/dope_hist",
+              "size": "0",
+              "type": "file"
+            },
+            {
+              "full-path": "/mnt/sd3/user/pnp-tech-time",
+              "size": "34",
+              "type": "file"
+            },
+            {
+              "full-path": "/mnt/sd3/user/pnp-tech-discovery-summary",
+              "size": "71768",
+              "type": "file"
+            },
+            {
+              "full-path": "/mnt/sd3/user/ss_disc",
+              "size": "1024",
+              "type": "directory"
+            },
+            {
+              "full-path": "/mnt/sd3/user/boothelper.log",
+              "size": "437",
+              "type": "file"
+            },
+            {
+              "full-path": "/mnt/sd3/user/vlan.dat",
+              "size": "1036",
+              "type": "file"
+            },
+            {
+              "full-path": "/mnt/sd3/user/packages.conf",
+              "size": "7567",
+              "type": "file"
+            },
+            {
+              "full-path": "/mnt/sd3/user/SHARED-IOX",
+              "size": "4096",
+              "type": "directory"
+            },
+            {
+              "full-path": "/mnt/sd3/user/mode_event_log",
+              "size": "0",
+              "type": "file"
+            },
+            {
+              "full-path": "/mnt/sd3/user/core",
+              "size": "4096",
+              "type": "directory"
+            },
+            {
+              "full-path": "/mnt/sd3/user/core/modules",
+              "size": "4096",
+              "type": "directory"
+            },
+            {
+              "full-path": "/mnt/sd3/user/core/Border_1_RP_0_code_sign_verify_12515_20250928-043655-UTC.core.gz",
+              "size": "125738",
+              "type": "file"
+            },
+            {
+              "full-path": "/mnt/sd3/user/cat9k-cc_srdriver.17.12.04.SPA.pkg",
+              "size": "29471752",
+              "type": "file"
+            },
+            {
+              "full-path": "/mnt/sd3/user/pcap",
+              "size": "4096",
+              "type": "directory"
+            },
+            {
+              "full-path": "/mnt/sd3/user/dc_profile_dir",
+              "size": "4096",
+              "type": "directory"
+            },
+            {
+              "full-path": "/mnt/sd3/user/dc_profile_dir/dc_default_profiles.txt",
+              "size": "346139",
+              "type": "file"
+            },
+            {
+              "full-path": "/mnt/sd3/user/dc_profile_dir/dc_default_profiles.txt.bkp",
+              "size": "346139",
+              "type": "file"
+            },
+            {
+              "full-path": "/mnt/sd3/user/dc_profile_dir/dc_user_profiles.xml",
+              "size": "1367",
+              "type": "file"
+            },
+            {
+              "full-path": "/mnt/sd3/user/cat9k-espbase.17.12.04.SPA.pkg",
+              "size": "169464836",
+              "type": "file"
+            },
+            {
+              "full-path": "/mnt/sd3/user/NVRAM",
+              "size": "60",
+              "type": "directory"
+            },
+            {
+              "full-path": "/mnt/sd3/user/cat9k-guestshell.17.12.04.SPA.pkg",
+              "size": "2155524",
+              "type": "file"
+            },
+            {
+              "full-path": "/mnt/sd3/user/cat9k-lni.17.12.04.SPA.pkg",
+              "size": "111498240",
+              "type": "file"
+            },
+            {
+              "full-path": "/mnt/sd3/user/cat9k-rpbase.17.12.04.SPA.pkg",
+              "size": "768689152",
+              "type": "file"
+            },
+            {
+              "full-path": "/mnt/sd3/user/cat9k-rpboot.17.12.04.SPA.pkg",
+              "size": "61891845",
+              "type": "file"
+            },
+            {
+              "full-path": "/mnt/sd3/user/cat9k-sipbase.17.12.04.SPA.pkg",
+              "size": "48747524",
+              "type": "file"
+            },
+            {
+              "full-path": "/mnt/sd3/user/smart_overall_health.log",
+              "size": "241",
+              "type": "file"
+            },
+            {
+              "full-path": "/mnt/sd3/user/guest-share",
+              "size": "4096",
+              "type": "directory"
+            },
+            {
+              "full-path": "/mnt/sd3/user/cat9k_iosxe.17.18.01.SPA.bin",
+              "size": "1265722018",
+              "type": "file"
+            },
+            {
+              "full-path": "/mnt/sd3/user/cat9k-cc_srdriver.17.18.01.SPA.pkg",
+              "size": "25162760",
+              "type": "file"
+            },
+            {
+              "full-path": "/mnt/sd3/user/cat9k-guestshell.17.18.01.SPA.pkg",
+              "size": "1958916",
+              "type": "file"
+            },
+            {
+              "full-path": "/mnt/sd3/user/cat9k-lni.17.18.01.SPA.pkg",
+              "size": "9216",
+              "type": "file"
+            },
+            {
+              "full-path": "/mnt/sd3/user/cat9k-rpbase.17.18.01.SPA.pkg",
+              "size": "1111839744",
+              "type": "file"
+            },
+            {
+              "full-path": "/mnt/sd3/user/cat9k-srdriver.17.18.01.SPA.pkg",
+              "size": "40649732",
+              "type": "file"
+            },
+            {
+              "full-path": "/mnt/sd3/user/biosupgrade",
+              "size": "4096",
+              "type": "directory"
+            },
+            {
+              "full-path": "/mnt/sd3/user/biosupgrade/boothelper.log",
+              "size": "2185",
+              "type": "file"
+            },
+            {
+              "full-path": "/mnt/sd3/user/cat9k-sipspa.17.12.04.SPA.pkg",
+              "size": "56431616",
+              "type": "file"
+            },
+            {
+              "full-path": "/mnt/sd3/user/cat9k-srdriver.17.12.04.SPA.pkg",
+              "size": "41288708",
+              "type": "file"
+            },
+            {
+              "full-path": "/mnt/sd3/user/cat9k-webui.17.18.01.SPA.pkg",
+              "size": "19690496",
+              "type": "file"
+            },
+            {
+              "full-path": "/mnt/sd3/user/cat9k-webui.17.12.04.SPA.pkg",
+              "size": "17884160",
+              "type": "file"
+            },
+            {
+              "full-path": "/mnt/sd3/user/cat9k-wlc.17.12.04.SPA.pkg",
+              "size": "9216",
+              "type": "file"
+            },
+            {
+              "full-path": "/mnt/sd3/user/mcelog.txt",
+              "size": "420",
+              "type": "file"
+            },
+            {
+              "full-path": "/mnt/sd3/user/cat9k-wlc.17.18.01.SPA.pkg",
+              "size": "9216",
+              "type": "file"
+            },
+            {
+              "full-path": "/mnt/sd3/user/EDScisco",
+              "size": "4096",
+              "type": "directory"
+            },
+            {
+              "full-path": "/mnt/sd3/user/fp_cc_crash",
+              "size": "4096",
+              "type": "directory"
+            },
+            {
+              "full-path": "/mnt/sd3/user/fpgahelper.log",
+              "size": "1660",
+              "type": "file"
+            },
+            {
+              "full-path": "/mnt/sd3/user/svl_ipc.tcl",
+              "size": "2049",
+              "type": "file"
+            },
+            {
+              "full-path": "/mnt/sd3/user/Tbot",
+              "size": "4096",
+              "type": "directory"
+            },
+            {
+              "full-path": "/mnt/sd3/user/Tbot/HealthCheckDebugInfra.py",
+              "size": "117906",
+              "type": "file"
+            },
+            {
+              "full-path": "/mnt/sd3/user/Tbot/L3ParseOutputs.py",
+              "size": "265373",
+              "type": "file"
+            },
+            {
+              "full-path": "/mnt/sd3/user/Tbot/L3DebugInfraAPIs.py",
+              "size": "365279",
+              "type": "file"
+            },
+            {
+              "full-path": "/mnt/sd3/user/Tbot/L2DebugInfraAPIs.py",
+              "size": "155706",
+              "type": "file"
+            },
+            {
+              "full-path": "/mnt/sd3/user/Tbot/L2ParseOutputs.py",
+              "size": "164575",
+              "type": "file"
+            },
+            {
+              "full-path": "/mnt/sd3/user/Tbot/L2DebugInfraScript.py",
+              "size": "155706",
+              "type": "file"
+            },
+            {
+              "full-path": "/mnt/sd3/user/DigiCertGlobalRootCA.ca",
+              "size": "1338",
+              "type": "file"
+            },
+            {
+              "full-path": "/mnt/sd3/user/ISRGRootX1CrossSignDST.ca",
+              "size": "1924",
+              "type": "file"
+            },
+            {
+              "full-path": "/mnt/sd3/user/StarfieldServicesRootCA.ca",
+              "size": "1606",
+              "type": "file"
+            },
+            {
+              "full-path": "/mnt/sd3/user/Baltimore.ca",
+              "size": "1261",
+              "type": "file"
+            },
+            {
+              "full-path": "/mnt/sd3/user/rmon_var_template",
+              "size": "15",
+              "type": "file"
+            },
+            {
+              "full-path": "/mnt/sd3/user/cat9k_iosxe.17.18.01.SPA.conf",
+              "size": "7567",
+              "type": "file"
+            },
+            {
+              "full-path": "/mnt/sd3/user/cat9k-rpboot.17.18.01.SPA.pkg",
+              "size": "67116698",
+              "type": "file"
+            },
+            {
+              "full-path": "/mnt/sd3/user/preboothelper.log",
+              "size": "526",
+              "type": "file"
+            },
+            {
+              "full-path": "/mnt/sd3/user/mcu_debug.txt",
+              "size": "396",
+              "type": "file"
+            },
+            {
+              "full-path": "/mnt/sd3/user/DigiCertGlobalRootG2.ca",
+              "size": "1295",
+              "type": "file"
+            },
+            {
+              "full-path": "/mnt/sd3/user/yang-infra",
+              "size": "0",
+              "type": "file"
+            },
+            {
+              "full-path": "/mnt/sd3/user/alpine_3.18.tar",
+              "size": "7656448",
+              "type": "file"
+            },
+            {
+              "full-path": "/mnt/sd3/user/alpine_latest.tar",
+              "size": "8731136",
+              "type": "file"
+            },
+            {
+              "full-path": "/mnt/sd3/user/nginx_latest.tar",
+              "size": "164293120",
+              "type": "file"
+            },
+            {
+              "full-path": "/mnt/sd3/user/backup.cfg",
+              "size": "25726",
+              "type": "file"
+            },
+            {
+              "full-path": "/mnt/sd3/user/flow-compare-amd64.tar",
+              "size": "147760640",
+              "type": "file"
+            },
+            {
+              "full-path": "/mnt/sd3/user/ray-worker-min-2.55.1-py311-amd64.tar",
+              "size": "463042048",
+              "type": "file"
+            },
+            {
+              "full-path": "/mnt/sd3/user/ray-worker-min-2.55.1-py311.11-amd64.tar",
+              "size": "465949696",
+              "type": "file"
+            },
+            {
+              "full-path": "/mnt/sd3/user/hello-app-private-test-20260614152501.tar",
+              "size": "4669440",
+              "type": "file"
+            },
+            {
+              "full-path": "/mnt/sd3/user/http-client-plain.txt",
+              "size": "23",
+              "type": "file"
+            },
+            {
+              "full-path": "/mnt/sd3/user/http-client-challenge.txt",
+              "size": "23",
+              "type": "file"
+            },
+            {
+              "full-path": "/mnt/sd3/user/hello-app-registry2-private-test-20260614152501.tar",
+              "size": "4669440",
+              "type": "file"
+            },
+            {
+              "full-path": "/mnt/sd3/user/hello-app-url-registry2-private-test-20260614152501.tar",
+              "size": "4669440",
+              "type": "file"
+            },
+            {
+              "full-path": "/mnt/sd3/user/iris.tar",
+              "size": "109895680",
+              "type": "file"
+            },
+            {
+              "full-path": "/mnt/sd3/user/iris-amd64.tar",
+              "size": "109906432",
+              "type": "file"
+            },
+            {
+              "full-path": "/mnt/sd3/user/cvk-gc-probe-ad266e3434b24c83bb98e9425d5a7513.tar",
+              "size": "51",
+              "type": "file"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "exactQueries": {
+    "flash:/cvk-gc-probe-ad266e3434b24c83bb98e9425d5a7513.tar": {
+      "status": 404,
+      "body": "{\n  \"ietf-restconf:errors\": {\n    \"error\": [\n      {\n        \"error-type\": \"application\",\n        \"error-tag\": \"invalid-value\",\n        \"error-message\": \"uri keypath not found\"\n      }\n    ]\n  }\n}\n"
+    },
+    "cvk-gc-probe-ad266e3434b24c83bb98e9425d5a7513.tar": {
+      "status": 200,
+      "body": {
+        "Cisco-IOS-XE-platform-software-oper:partition-content": [
+          {
+            "full-path": "cvk-gc-probe-ad266e3434b24c83bb98e9425d5a7513.tar",
+            "size": "51",
+            "type": "file"
+          }
+        ]
+      }
+    },
+    "/cvk-gc-probe-ad266e3434b24c83bb98e9425d5a7513.tar": {
+      "status": 404,
+      "body": "{\n  \"ietf-restconf:errors\": {\n    \"error\": [\n      {\n        \"error-type\": \"application\",\n        \"error-tag\": \"invalid-value\",\n        \"error-message\": \"uri keypath not found\"\n      }\n    ]\n  }\n}\n"
+    }
+  },
+  "delete": {
+    "status": 200,
+    "body": {
+      "Cisco-IOS-XE-rpc:output": {
+        "result": "RPC request successful"
+      }
+    }
+  },
+  "nativeAfterDelete": "dir flash:/cvk-gc-probe-ad266e3434b24c83bb98e9425d5a7513.tar\n%Error opening flash:/cvk-gc-probe-ad266e3434b24c83bb98e9425d5a7513.tar (No such file or directory)\nEdge-9K",
+  "deleteMissing": {
+    "status": 200,
+    "body": {
+      "Cisco-IOS-XE-rpc:output": {
+        "result": "RPC request successful"
+      }
+    }
+  },
+  "filesystemAfterDelete": {
+    "status": 200,
+    "body": {
+      "Cisco-IOS-XE-platform-software-oper:q-filesystem": [
+        {
+          "fru": "fru-rp",
+          "slot": 0,
+          "bay": 0,
+          "chassis": -1,
+          "partitions": [
+            {
+              "name": "webui:",
+              "is-writable": true
+            },
+            {
+              "name": "usbflash1:",
+              "is-writable": true
+            },
+            {
+              "name": "ucode0:",
+              "is-writable": true
+            },
+            {
+              "name": "obfl10:",
+              "is-writable": true
+            },
+            {
+              "name": "lic1:",
+              "is-writable": true
+            },
+            {
+              "name": "lic0:",
+              "is-writable": true
+            },
+            {
+              "name": "flash:",
+              "is-writable": true
+            },
+            {
+              "name": "drec0:",
+              "is-writable": true
+            },
+            {
+              "name": "crashinfo:",
+              "is-writable": true
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "managementSelectorRestored": true
+}

@@ -1,0 +1,57 @@
+PUBLISHED CRL {"publishedAtUTC": "2026-11-05T20:50:28.711104+00:00", "version": 1, "sha256": "b8ccba97b4c905a31ae763da5b16b866c6b0e3b8d0cb838407f7f08de3d60ce3", "bytes": 432, "lastUpdateUTC": "2026-11-05T20:50:23+00:00", "nextUpdateUTC": "2026-11-05T21:00:28+00:00", "revokedSerialsHex": [], "certificateOrPolicyChanged": false, "manualRefreshOrFlushIssued": false}
+PASS offline chain controls v 1
+PASS read-only native PKI baseline published 1
+deployment.apps/cvk-stdcopyfix-fixture configured
+{"atUTC": "2026-11-05T20:50:35.232718+00:00", "label": "valid", "release": "STD-COPYFIX-VALID-20261105-0609ed4e6d25", "podUIDs": ["3e4f2caf-3e42-4f8f-b3ee-62969bde6a7c"], "nativeStates": {"iris": "RUNNING", "c9ktest": "DEPLOYED"}, "ready": false, "httpReleaseConfirmed": false, "oldNativeAppsAbsent": false, "artifactJournalCount": 0}
+{"atUTC": "2026-11-05T20:51:02.253995+00:00", "label": "valid", "release": "STD-COPYFIX-VALID-20261105-0609ed4e6d25", "podUIDs": ["3e4f2caf-3e42-4f8f-b3ee-62969bde6a7c"], "nativeStates": {"iris": "RUNNING", "c9ktest": "DEPLOYED", "cvk0000_3e4f2caf3e424f8fb3ee62969bde6a7c": "RUNNING"}, "ready": true, "httpReleaseConfirmed": false, "oldNativeAppsAbsent": true, "artifactJournalCount": 0}
+{"atUTC": "2026-11-05T20:51:29.319700+00:00", "label": "valid", "release": "STD-COPYFIX-VALID-20261105-0609ed4e6d25", "podUIDs": ["3e4f2caf-3e42-4f8f-b3ee-62969bde6a7c"], "nativeStates": {"iris": "RUNNING", "c9ktest": "DEPLOYED", "cvk0000_3e4f2caf3e424f8fb3ee62969bde6a7c": "RUNNING"}, "ready": true, "httpReleaseConfirmed": false, "oldNativeAppsAbsent": true, "artifactJournalCount": 0}
+PASS valid Ready/HTTP STD-COPYFIX-VALID-20261105-0609ed4e6d25 without artifacts or journal
+PASS read-only native PKI valid published 1
+PUBLISHED CRL {"publishedAtUTC": "2026-11-05T20:51:48.178429+00:00", "version": 2, "sha256": "bc89e9b28d5b38aa37aeec073ec5996ee38272873d0a5a51696440432e11650f", "bytes": 487, "lastUpdateUTC": "2026-11-05T20:51:42+00:00", "nextUpdateUTC": "2026-11-05T22:51:47+00:00", "revokedSerialsHex": ["ccc3b327a765a1c5a667f0b1d535f8028e4f879"], "certificateOrPolicyChanged": false, "manualRefreshOrFlushIssued": false}
+PASS offline chain controls v 2
+PASS read-only native PKI just-published published 2
+deployment.apps/cvk-stdcopyfix-fixture scaled
+2026-11-05T20:51:59.289823+00:00 valid normal deletion pending 2026-11-05 21:22:52.529617+00:00
+deployment.apps/cvk-stdcopyfix-fixture configured
+{"atUTC": "2026-11-05T20:54:14.189977+00:00", "label": "cached", "release": "STD-COPYFIX-CACHED-20261105-0609ed4e6d25", "podUIDs": ["b5b6dad5-7491-4618-a251-8b7b5f748096"], "nativeStates": {"iris": "RUNNING", "c9ktest": "DEPLOYED", "cvk0000_b5b6dad574914618a2518b7b5f748096": "RUNNING"}, "ready": true, "httpReleaseConfirmed": true, "oldNativeAppsAbsent": true, "artifactJournalCount": 0}
+PASS cached Ready/HTTP STD-COPYFIX-CACHED-20261105-0609ed4e6d25 without artifacts or journal
+PASS read-only native PKI cached-boundary published 2
+2026-11-05T20:54:18.987887+00:00 CACHE WINDOW fresh-image-accepted-using-cached-unrevoked-CRL [{'appID': 'cvk0000_b5b6dad574914618a2518b7b5f748096', 'release': 'STD-COPYFIX-CACHED-20261105-0609ed4e6d25', 'ip': '192.168.129.185'}]
+PASS read-only native PKI idle-cache-0 published 2
+PASS read-only native PKI idle-cache-1 published 2
+PASS read-only native PKI idle-cache-2 published 2
+PASS read-only native PKI idle-cache-3 published 2
+PASS read-only native PKI idle-cache-4 published 2
+PASS read-only native PKI idle-cache-5 published 2
+PASS read-only native PKI idle-cache-6 published 2
+PASS read-only native PKI idle-cache-7 published 2
+PASS read-only native PKI idle-cache-8 published 2
+PASS read-only native PKI idle-cache-9 published 2
+PASS read-only native PKI idle-cache-10 published 2
+PASS read-only native PKI idle-cache-11 published 2
+PASS read-only native PKI idle-cache-12 published 2
+deployment.apps/cvk-stdcopyfix-fixture scaled
+2026-11-05T20:59:13.416750+00:00 cached normal deletion pending 2026-11-05 21:30:08.647851+00:00
+2026-11-05T21:00:01.133865+00:00 cached normal deletion pending None
+PASS read-only native PKI expiry-wait-0 published 2
+PASS read-only native PKI expiry-wait-1 published 2
+PASS read-only native PKI before-refresh-demand published 2
+deployment.apps/cvk-stdcopyfix-fixture configured
+{"atUTC": "2026-11-05T21:00:38.175247+00:00", "podUIDs": ["302b286a-f469-4fe7-92a4-2d963d266570"], "ready": false, "nativeRunning": false, "actualReleases": [], "newCRLNativeRetrievals": 1, "TLSRejections": 0, "packageRequests": 0, "leaseRenewAgeSeconds": 1.836116, "leaseExpiresUTC": "2026-11-05T21:31:36.339114+00:00", "artifactJournals": 0}
+{"atUTC": "2026-11-05T21:01:25.841233+00:00", "podUIDs": ["302b286a-f469-4fe7-92a4-2d963d266570"], "ready": false, "nativeRunning": false, "actualReleases": [], "newCRLNativeRetrievals": 1, "TLSRejections": 0, "packageRequests": 0, "leaseRenewAgeSeconds": 49.502103, "leaseExpiresUTC": "2026-11-05T21:31:36.339114+00:00", "artifactJournals": 0}
+{"atUTC": "2026-11-05T21:02:13.230743+00:00", "podUIDs": ["302b286a-f469-4fe7-92a4-2d963d266570"], "ready": false, "nativeRunning": false, "actualReleases": [], "newCRLNativeRetrievals": 1, "TLSRejections": 0, "packageRequests": 0, "leaseRenewAgeSeconds": 96.891608, "leaseExpiresUTC": "2026-11-05T21:31:36.339114+00:00", "artifactJournals": 0}
+{"atUTC": "2026-11-05T21:03:01.141402+00:00", "podUIDs": ["302b286a-f469-4fe7-92a4-2d963d266570"], "ready": false, "nativeRunning": false, "actualReleases": [], "newCRLNativeRetrievals": 1, "TLSRejections": 0, "packageRequests": 0, "leaseRenewAgeSeconds": 144.802265, "leaseExpiresUTC": "2026-11-05T21:31:36.339114+00:00", "artifactJournals": 0}
+{"atUTC": "2026-11-05T21:03:48.768734+00:00", "podUIDs": ["302b286a-f469-4fe7-92a4-2d963d266570"], "ready": false, "nativeRunning": false, "actualReleases": [], "newCRLNativeRetrievals": 1, "TLSRejections": 0, "packageRequests": 0, "leaseRenewAgeSeconds": 192.429605, "leaseExpiresUTC": "2026-11-05T21:31:36.339114+00:00", "artifactJournals": 0}
+{"atUTC": "2026-11-05T21:04:36.277584+00:00", "podUIDs": ["302b286a-f469-4fe7-92a4-2d963d266570"], "ready": false, "nativeRunning": false, "actualReleases": [], "newCRLNativeRetrievals": 1, "TLSRejections": 0, "packageRequests": 0, "leaseRenewAgeSeconds": 239.938454, "leaseExpiresUTC": "2026-11-05T21:31:36.339114+00:00", "artifactJournals": 0}
+{"atUTC": "2026-11-05T21:05:23.873950+00:00", "podUIDs": ["302b286a-f469-4fe7-92a4-2d963d266570"], "ready": false, "nativeRunning": false, "actualReleases": [], "newCRLNativeRetrievals": 1, "TLSRejections": 0, "packageRequests": 0, "leaseRenewAgeSeconds": 287.534818, "leaseExpiresUTC": "2026-11-05T21:31:36.339114+00:00", "artifactJournals": 0}
+PASS read-only native PKI revoked-boundary published 2
+2026-11-05T21:05:52.344272+00:00 SEALED REFRESH OUTCOME new-intermediate-revocation-discovered-and-fresh-delivery-rejected
+error: failed to patch: deployments.apps "c9k-stdcopyfix-20261105-vk" is forbidden: ValidatingAdmissionPolicy 'cvk-stdcopyfix-cisco-virtual-kubelet-shared-worker-deployment' with binding 'cvk-stdcopyfix-cisco-virtual-kubelet-shared-worker-deployment' denied request: only the topology manager, exact native Deployment controller, or namespace cleanup may mutate a Deployment that uses a reserved worker account
+Traceback (most recent call last):
+  File "/tmp/cvk-stdcopyfix-20261105/qualify.py", line 114, in <module>
+    oldWorkers={w['uid'] for w in bad['workers']};oldLease=lease();run(K+['-n',NS,'rollout','restart','deployment/'+DEV+'-vk']);run(K+['-n',NS,'rollout','status','deployment/'+DEV+'-vk','--timeout=240s']);time.sleep(15);restart=observe('revoked-worker-restart');assert not any(ready(p) for p in restart['pods']) and not releases(restart);assert {a['appID'] for a in restart['nativeApps']}=={'iris','c9ktest'};assert oldWorkers.isdisjoint({w['uid'] for w in restart['workers']});assert lease()['metadata']['uid']==oldLease['metadata']['uid'];save('negative-worker-restart',{'atUTC':now(),'passed':True,'previousWorkerUIDs':sorted(oldWorkers),'newWorkerUIDs':[w['uid'] for w in restart['workers']],'sameLeaseUID':True,'noRuntime':True,'noReady':True})
+                                                                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "cold-control-functions", line 7, in run
+  File "/usr/lib/python3.12/subprocess.py", line 571, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['kubectl', '--kubeconfig', '/tmp/cvk-stdcopyfix-20261105/kubeconfig', '-n', 'cvk-stdcopyfix-20261105', 'rollout', 'restart', 'deployment/c9k-stdcopyfix-20261105-vk']' returned non-zero exit status 1.

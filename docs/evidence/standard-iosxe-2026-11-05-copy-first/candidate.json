@@ -1,0 +1,19 @@
+{
+  "atUTC": "2026-11-05T20:20:38.475634+00:00",
+  "baseCommit": "1791a7e1634961936233ee94170f1c63cea1b64c",
+  "branch": "pr/johalley/verified-app-artifacts",
+  "dirtySourceSHA256": "f31b516f5dafd468c2dee968cd62e68dfd366344924876834500e2a9b18f81ab",
+  "sourceFiles": 1556,
+  "binarySHA256": "b55c3b3f6aedaa331a4431b47edc49546cc4e4b19f6541d3a0af1cf67e2037c5",
+  "imageTag": "cvk-stdcopyfix-qual:20261105-b55c3b3f6aed",
+  "standardDefault": true,
+  "governed": "deferred",
+  "goVersion": "go version go1.26.7 darwin/arm64",
+  "physicalControl": "Standard copy-first false-success regression; CRL refresh, failed download, recovery and worker restart",
+  "priorCandidateEvidence": "../standard-iosxe-2026-11-05-intermediate-crl-refresh/candidate.json",
+  "dockerImageID": "sha256:40a7e2843b2650363374b6a78785075d88b846d69c1b236a3ff29fd5cba32d71",
+  "containerdManifestDigest": "sha256:45feceb9284073d8e78677e2ebd8a46a1657c1daa330e2e2c61ff04f73c8f094",
+  "imageBase": "cvk-replies-qual:20261103-529e98f251b3",
+  "defaultPackageDestination": "flash:/cvk-<app-id>.tar",
+  "qualificationAmendment": "First candidate blocked safely because the legacy virtual-kubelet parent directory was absent; initial attempt preserved, final candidate uses flash root."
+}

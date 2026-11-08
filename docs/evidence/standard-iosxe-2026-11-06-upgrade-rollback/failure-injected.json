@@ -1,0 +1,12 @@
+{
+  "atUTC": "2026-11-06T08:34:26.955548+00:00",
+  "method": "HTTPS HTTP 404 for b.tar only",
+  "TLSIdentityChanged": false,
+  "URLChanged": false,
+  "packageBytesChanged": false,
+  "warmImages": [
+    "sha256:6867fbf05d7a5df0d11ab7c023b9a5e5a5389a171c309d8327abe23c0981859f",
+    "sha256:8d061560f2f7eb048a082a6b0c53fd5c9ba1b9820a2314f492abbab4efba60af"
+  ],
+  "globalImageCachePruned": false
+}

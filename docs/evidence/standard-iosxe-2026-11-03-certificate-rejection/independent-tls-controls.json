@@ -1,0 +1,22 @@
+{
+  "atUTC": "2026-11-03T17:30:17.081066+00:00",
+  "testClient": "ux-agx Python SSL; separate from C9K results",
+  "cases": [
+    {
+      "case": "valid",
+      "accepted": true
+    },
+    {
+      "case": "untrusted",
+      "accepted": false,
+      "verificationCode": 20,
+      "verificationMessage": "unable to get local issuer certificate"
+    },
+    {
+      "case": "hostname",
+      "accepted": false,
+      "verificationCode": 64,
+      "verificationMessage": "IP address mismatch, certificate is not valid for '192.168.129.111'."
+    }
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "atUTC": "2026-11-06T10:36:29.572976+00:00",
+  "passed": true,
+  "path": "flash:/cvk-stage-cdab804e32744611b282036c11686f66.tar",
+  "stat": {
+    "status": 200,
+    "body": {
+      "Cisco-IOS-XE-platform-software-oper:partition-content": [
+        {
+          "full-path": "cvk-stage-cdab804e32744611b282036c11686f66.tar",
+          "size": "5959680",
+          "type": "file"
+        }
+      ]
+    }
+  },
+  "sha512": "aa8f88fcfdd7a18c271cb136561cfca76ee8ff8893a40eb2c9b999f908551de6919d9148afa2c8be54569372dadd56d9e9b8d1cc8d711b688341e6bfea897e26",
+  "nativeProof": "files-native-preloaded-upgrade-b.json"
+}

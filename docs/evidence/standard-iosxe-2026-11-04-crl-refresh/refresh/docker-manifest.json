@@ -1,0 +1,11 @@
+[
+  {
+    "Config": "39643121a920aa28ee5c43cfb01986ecb3f2281f269b2eb0cbd10c1b0ce71972.json",
+    "Layers": [
+      "bd59654f9c413a47229cfc48be9911c3ec5b6a91b76fb144fc18834b73855964/layer.tar"
+    ],
+    "RepoTags": [
+      "cvk-crlrefresh-20261104/refresh:a674b004ffa2"
+    ]
+  }
+]

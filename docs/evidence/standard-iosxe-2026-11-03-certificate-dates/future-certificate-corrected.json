@@ -1,0 +1,10 @@
+{
+  "atUTC": "2026-11-03T20:18:07.793434+00:00",
+  "case": "future",
+  "onlyCertificateChanged": true,
+  "packageURLChanged": false,
+  "payloadChanged": false,
+  "newMode": "valid",
+  "independentTLSProbePassed": true,
+  "leaseManuallyModified": false
+}

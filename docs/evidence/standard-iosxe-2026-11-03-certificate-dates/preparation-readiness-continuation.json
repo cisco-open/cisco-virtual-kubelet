@@ -1,0 +1,18 @@
+{
+  "atUTC": "2026-11-03T19:23:54.417036+00:00",
+  "passed": true,
+  "managementTLSVerified": true,
+  "deviceWritesIssued": 0,
+  "checks": [
+    {
+      "resource": "future",
+      "expectedStatus": 404,
+      "actualStatus": 404
+    },
+    {
+      "resource": "hostname",
+      "expectedStatus": 200,
+      "actualStatus": 200
+    }
+  ]
+}

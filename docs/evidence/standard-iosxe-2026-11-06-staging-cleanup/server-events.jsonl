@@ -1,0 +1,48 @@
+{"kind": "servers-ready", "TLSport": 18482, "atUTC": "2026-11-06T10:30:40.731657+00:00"}
+{"kind": "tls-established", "client": "192.168.129.111", "sessionReused": false, "tlsVersion": "TLSv1.3", "atUTC": "2026-11-06T10:30:41.615957+00:00"}
+{"kind": "http-request", "phase": null, "client": "192.168.129.111", "path": "/_probe", "status": 200, "package": false, "bAvailable": true, "truncated": false, "atUTC": "2026-11-06T10:30:41.617365+00:00"}
+{"kind": "tls-established", "client": "10.1.1.1", "sessionReused": false, "tlsVersion": "TLSv1.3", "atUTC": "2026-11-06T10:30:41.722233+00:00"}
+{"kind": "http-request", "phase": "a", "client": "10.1.1.1", "path": "/a.tar", "status": 200, "package": true, "bAvailable": true, "truncated": false, "atUTC": "2026-11-06T10:30:41.768737+00:00"}
+{"kind": "tls-established", "client": "10.1.1.1", "sessionReused": false, "tlsVersion": "TLSv1.3", "atUTC": "2026-11-06T10:30:41.846404+00:00"}
+{"kind": "http-request", "phase": "a", "client": "10.1.1.1", "path": "/a.tar", "status": 200, "package": true, "bAvailable": true, "truncated": false, "atUTC": "2026-11-06T10:30:41.891778+00:00"}
+{"kind": "package-write-error", "phase": "a", "client": "10.1.1.1", "errorType": "SSLEOFError", "atUTC": "2026-11-06T10:30:42.001418+00:00"}
+{"kind": "package-sent", "phase": "a", "client": "10.1.1.1", "bytes": 5959680, "sha256": "de3fa32182f1aec9d07786f002067dfb8ff0b54b012657344e957f6debbf79c2", "atUTC": "2026-11-06T10:30:44.971036+00:00"}
+{"kind": "tls-established", "client": "10.1.1.1", "sessionReused": false, "tlsVersion": "TLSv1.3", "atUTC": "2026-11-06T10:32:26.907019+00:00"}
+{"kind": "http-request", "phase": "a", "client": "10.1.1.1", "path": "/a.tar", "status": 200, "package": true, "bAvailable": true, "truncated": false, "atUTC": "2026-11-06T10:32:26.949645+00:00"}
+{"kind": "tls-established", "client": "10.1.1.1", "sessionReused": false, "tlsVersion": "TLSv1.3", "atUTC": "2026-11-06T10:32:27.022609+00:00"}
+{"kind": "http-request", "phase": "a", "client": "10.1.1.1", "path": "/a.tar", "status": 200, "package": true, "bAvailable": true, "truncated": false, "atUTC": "2026-11-06T10:32:27.066575+00:00"}
+{"kind": "package-write-error", "phase": "a", "client": "10.1.1.1", "errorType": "SSLEOFError", "atUTC": "2026-11-06T10:32:27.172921+00:00"}
+{"kind": "package-sent", "phase": "a", "client": "10.1.1.1", "bytes": 5959680, "sha256": "de3fa32182f1aec9d07786f002067dfb8ff0b54b012657344e957f6debbf79c2", "atUTC": "2026-11-06T10:32:30.136542+00:00"}
+{"kind": "tls-established", "client": "10.1.1.1", "sessionReused": false, "tlsVersion": "TLSv1.3", "atUTC": "2026-11-06T10:34:56.849113+00:00"}
+{"kind": "http-request", "phase": "b", "client": "10.1.1.1", "path": "/b.tar", "status": 200, "package": true, "bAvailable": true, "truncated": false, "atUTC": "2026-11-06T10:34:56.891580+00:00"}
+{"kind": "tls-established", "client": "10.1.1.1", "sessionReused": false, "tlsVersion": "TLSv1.3", "atUTC": "2026-11-06T10:34:56.975648+00:00"}
+{"kind": "http-request", "phase": "b", "client": "10.1.1.1", "path": "/b.tar", "status": 200, "package": true, "bAvailable": true, "truncated": false, "atUTC": "2026-11-06T10:34:57.018300+00:00"}
+{"kind": "package-write-error", "phase": "b", "client": "10.1.1.1", "errorType": "SSLEOFError", "atUTC": "2026-11-06T10:34:57.120218+00:00"}
+{"kind": "package-sent", "phase": "b", "client": "10.1.1.1", "bytes": 5959680, "sha256": "4a9adab35c2ff02256d264687db387a9f6bb8ed512b749643fc0a344b4cc9759", "atUTC": "2026-11-06T10:35:00.102841+00:00"}
+{"kind": "tls-established", "client": "10.1.1.1", "sessionReused": false, "tlsVersion": "TLSv1.3", "atUTC": "2026-11-06T10:37:20.948352+00:00"}
+{"kind": "http-request", "phase": "a", "client": "10.1.1.1", "path": "/a.tar", "status": 200, "package": true, "bAvailable": true, "truncated": false, "atUTC": "2026-11-06T10:37:20.990623+00:00"}
+{"kind": "package-write-error", "phase": "a", "client": "10.1.1.1", "errorType": "SSLEOFError", "atUTC": "2026-11-06T10:37:21.009287+00:00"}
+{"kind": "tls-established", "client": "10.1.1.1", "sessionReused": false, "tlsVersion": "TLSv1.3", "atUTC": "2026-11-06T10:37:21.065174+00:00"}
+{"kind": "http-request", "phase": "a", "client": "10.1.1.1", "path": "/a.tar", "status": 200, "package": true, "bAvailable": true, "truncated": false, "atUTC": "2026-11-06T10:37:21.107737+00:00"}
+{"kind": "package-sent", "phase": "a", "client": "10.1.1.1", "bytes": 5959680, "sha256": "de3fa32182f1aec9d07786f002067dfb8ff0b54b012657344e957f6debbf79c2", "atUTC": "2026-11-06T10:37:24.190003+00:00"}
+{"kind": "tls-established", "client": "10.1.1.1", "sessionReused": false, "tlsVersion": "TLSv1.3", "atUTC": "2026-11-06T10:39:44.752617+00:00"}
+{"kind": "http-request", "phase": "b", "client": "10.1.1.1", "path": "/b.tar", "status": 200, "package": true, "bAvailable": false, "truncated": true, "atUTC": "2026-11-06T10:39:44.796107+00:00"}
+{"kind": "truncated-package-sent", "phase": "b", "client": "10.1.1.1", "bytesSent": 4096, "declaredBytes": 5959680, "atUTC": "2026-11-06T10:39:44.796478+00:00"}
+{"kind": "tls-established", "client": "10.1.1.1", "sessionReused": false, "tlsVersion": "TLSv1.3", "atUTC": "2026-11-06T11:10:46.448399+00:00"}
+{"kind": "http-request", "phase": "a", "client": "10.1.1.1", "path": "/a.tar", "status": 200, "package": true, "bAvailable": false, "truncated": false, "atUTC": "2026-11-06T11:10:46.491380+00:00"}
+{"kind": "tls-established", "client": "10.1.1.1", "sessionReused": false, "tlsVersion": "TLSv1.3", "atUTC": "2026-11-06T11:10:46.564368+00:00"}
+{"kind": "http-request", "phase": "a", "client": "10.1.1.1", "path": "/a.tar", "status": 200, "package": true, "bAvailable": false, "truncated": false, "atUTC": "2026-11-06T11:10:46.605841+00:00"}
+{"kind": "package-write-error", "phase": "a", "client": "10.1.1.1", "errorType": "SSLEOFError", "atUTC": "2026-11-06T11:10:46.716740+00:00"}
+{"kind": "package-sent", "phase": "a", "client": "10.1.1.1", "bytes": 5959680, "sha256": "de3fa32182f1aec9d07786f002067dfb8ff0b54b012657344e957f6debbf79c2", "atUTC": "2026-11-06T11:10:49.910854+00:00"}
+{"kind": "tls-established", "client": "10.1.1.1", "sessionReused": false, "tlsVersion": "TLSv1.3", "atUTC": "2026-11-06T11:51:04.103787+00:00"}
+{"kind": "http-request", "phase": "b", "client": "10.1.1.1", "path": "/b.tar", "status": 200, "package": true, "bAvailable": true, "truncated": false, "atUTC": "2026-11-06T11:51:04.146530+00:00"}
+{"kind": "tls-established", "client": "10.1.1.1", "sessionReused": false, "tlsVersion": "TLSv1.3", "atUTC": "2026-11-06T11:51:04.278353+00:00"}
+{"kind": "http-request", "phase": "b", "client": "10.1.1.1", "path": "/b.tar", "status": 200, "package": true, "bAvailable": true, "truncated": false, "atUTC": "2026-11-06T11:51:04.320701+00:00"}
+{"kind": "package-write-error", "phase": "b", "client": "10.1.1.1", "errorType": "SSLEOFError", "atUTC": "2026-11-06T11:51:04.382739+00:00"}
+{"kind": "package-sent", "phase": "b", "client": "10.1.1.1", "bytes": 5959680, "sha256": "4a9adab35c2ff02256d264687db387a9f6bb8ed512b749643fc0a344b4cc9759", "atUTC": "2026-11-06T11:51:07.632760+00:00"}
+{"kind": "tls-established", "client": "10.1.1.1", "sessionReused": false, "tlsVersion": "TLSv1.3", "atUTC": "2026-11-06T11:53:23.077299+00:00"}
+{"kind": "http-request", "phase": "a", "client": "10.1.1.1", "path": "/a.tar", "status": 200, "package": true, "bAvailable": true, "truncated": false, "atUTC": "2026-11-06T11:53:23.119725+00:00"}
+{"kind": "tls-established", "client": "10.1.1.1", "sessionReused": false, "tlsVersion": "TLSv1.3", "atUTC": "2026-11-06T11:53:23.209392+00:00"}
+{"kind": "http-request", "phase": "a", "client": "10.1.1.1", "path": "/a.tar", "status": 200, "package": true, "bAvailable": true, "truncated": false, "atUTC": "2026-11-06T11:53:23.252720+00:00"}
+{"kind": "package-write-error", "phase": "a", "client": "10.1.1.1", "errorType": "SSLEOFError", "atUTC": "2026-11-06T11:53:23.345573+00:00"}
+{"kind": "package-sent", "phase": "a", "client": "10.1.1.1", "bytes": 5959680, "sha256": "de3fa32182f1aec9d07786f002067dfb8ff0b54b012657344e957f6debbf79c2", "atUTC": "2026-11-06T11:53:26.364395+00:00"}

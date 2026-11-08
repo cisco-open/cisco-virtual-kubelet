@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    qualification: 20261103-standard
+  name: cvk-standard-fixture
+  namespace: cvk-standard-apps-20261103
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cvk-standard-fixture
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: cvk-standard-fixture
+        qualification: 20261103-standard
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchFields:
+              - key: metadata.name
+                operator: In
+                values:
+                - c9k-standard-20261103
+      containers:
+      - image: http://192.168.129.111:18447/standard-agent-a.tar
+        imagePullPolicy: IfNotPresent
+        name: agent
+        ports:
+        - containerPort: 8080
+        resources:
+          limits:
+            memory: 128Mi
+          requests:
+            memory: 128Mi
+      tolerations:
+      - effect: NoSchedule
+        key: cisco.vk/device
+        operator: Exists

@@ -1,0 +1,50 @@
+import pathlib,subprocess,json,datetime,time,hashlib,re,os,pexpect,ssl
+r=pathlib.Path('/tmp/cvk-verified-qual-20261102');assert json.loads((r/'positive-lifecycle-result.json').read_text())['passed'];s=json.loads((r/'snapshot-transfer-corruption.json').read_text());assert s['assertions']['passed'];assert {a['appID']:a['details'].get('state') for a in s['nativeApps']}=={'iris':'RUNNING','c9ktest':'DEPLOYED'}
+records=[json.loads(v) for j in s['journals'] for v in (j.get('data') or {}).values()];allowed={x['package']['digest'] for x in json.loads((r/'releases.json').read_text())};paths=set()
+for x in records:
+ path=x.get('stagedPath')
+ if not path:continue
+ assert x['device']=='10.1.1.1' and x['packageDigest'] in allowed
+ assert path=='flash:cvk-'+hashlib.sha256(x['podUID'].encode()).hexdigest()[:16]+'-'+x['packageDigest'][7:]+'.tar';paths.add(path)
+paths.add('flash:cvk-0000000020261102-ed8c257297a526229b154cbaabe1c466de239d4c011e4edfd25c7cb440fa071c.tar')
+report={'startedAtUTC':datetime.datetime.now(datetime.timezone.utc).isoformat(),'ownedPaths':sorted(paths),'retainedFailedJournalPhase':'staging','safetyLeaseManuallyModified':False,'commands':[],'containers':[],'services':[]}
+for name in ['cvk-verified-k3s-20261102b','cvk-verified-k3s-20261102']:
+ d=json.loads(subprocess.check_output(['docker','inspect',name],text=True))[0];assert d['Config']['Labels'].get('apphosting.cisco.com/qualification')=='20261102';report['containers'].append({'name':name,'id':d['Id'],'before':d['State']['Status']});subprocess.run(['docker','stop','--time','60',name],check=True,capture_output=True)
+# With all run-owned workers stopped and no fixture application, remove exact
+# run-owned staged files and restore only the two temporary trust changes.
+p=pexpect.spawn('ssh',['-o','StrictHostKeyChecking=yes','-o','UserKnownHostsFile=/tmp/cvk-verified-qual-20261101/switch_known_hosts','-o','GlobalKnownHostsFile=/dev/null','-o','HostKeyAlgorithms=rsa-sha2-512,rsa-sha2-256','cisco@10.1.1.1'],encoding='utf-8',timeout=180)
+try:
+ p.expect('(?i)password:');p.sendline(os.environ['CVK_QUAL_DEVICE_PASSWORD']);p.expect(r'[>#] ?$')
+ for cmd in ['terminal length 0','terminal width 511']:
+  p.sendline(cmd);p.expect(r'[>#] ?$')
+ def cli(cmd,confirm=False):
+  p.sendline(cmd)
+  if confirm:
+   i=p.expect([r'(?i)\[yes/no\]\s*:',r'[>#] ?$']);out=p.before
+   if i==0:p.sendline('yes');p.expect(r'[>#] ?$');out+='[confirmed removal of run-owned trustpoint]\n'+p.before
+  else:p.expect(r'[>#] ?$');out=p.before
+  out=out.replace('\r','');report['commands'].append({'command':cmd,'output':out});(r/'cleanup-native-progress.json').write_text(json.dumps(report,indent=2)+'\n');return out
+ before=cli('show app-hosting list');assert 'iris' in before and 'c9ktest' in before and not re.search(r'cvk[0-9]{4}_',before)
+ for path in sorted(paths):
+  assert re.fullmatch(r'flash:cvk-[a-f0-9]{16}-[a-f0-9]{64}\.tar',path)
+  listing=cli('dir '+path)
+  if re.search(r'\s-rw-\s',listing):cli('delete /force '+path)
+ for cmd in ['configure terminal','ip http secure-trustpoint TP-self-signed-806566997']:cli(cmd)
+ cli('no crypto pki trustpoint CVK-QUAL-20261102',confirm=True);cli('end')
+ final=cli('show app-hosting list');assert 'iris' in final and 'RUNNING' in final and 'c9ktest' in final and 'DEPLOYED' in final and not re.search(r'cvk[0-9]{4}_',final)
+ infra=cli('show app-hosting infra');assert 'CAF Health: Stable' in infra and 'App signature verification: disabled' in infra
+ http=cli('show ip http server status | include trustpoint');assert 'TP-self-signed-806566997' in http
+ config=cli('show running-config | include ^ip http client secure-trustpoint|^ip http secure-trustpoint|^crypto pki trustpoint CVK-QUAL-20261102');assert 'ip http client secure-trustpoint IRIS' in config and not re.search(r'^crypto pki trustpoint CVK-QUAL-20261102',config,re.M) and 'ip http secure-trustpoint TP-self-signed-806566997' in config
+ for path in sorted(paths):
+  listing=cli('dir '+path);assert not re.search(r'\s-rw-\s',listing),path
+ p.sendline('exit')
+finally:p.close(force=True)
+for name in ['store','fault-store']:
+ pid=int((r/(name+'.pid')).read_text());proc=pathlib.Path('/proc')/str(pid)/'cmdline'
+ if proc.exists():
+  cmd=proc.read_bytes().replace(b'\0',b' ').decode();assert str(r/'store.py') in cmd;os.kill(pid,15);report['services'].append({'name':name,'pid':pid,'stopped':True})
+for c in report['containers']:
+ d=json.loads(subprocess.check_output(['docker','inspect',c['name']],text=True))[0];assert not d['State']['Running'];subprocess.run(['docker','rm',c['name']],check=True,capture_output=True);c['removed']=True
+# This query uses the host's original kubeconfig, not the isolated test cluster.
+n=json.loads(subprocess.check_output(['kubectl','get','nodes','-o','json'],text=True));node=next(x for x in n['items'] if x['metadata']['name']=='cisco');assert any(c['type']=='Ready' and c['status']=='True' for c in node['status']['conditions']);report['sharedHostNode']={'name':'cisco','ready':True,'kubeletVersion':node['status']['nodeInfo']['kubeletVersion']}
+report['restorationConfigDelta']='Original HTTPS certificate restored through explicit ip http secure-trustpoint TP-self-signed-806566997. With no explicit selector, IOS-XE now chooses existing cvk-gnoi-20260904; no existing certificate/trustpoint was removed to change that preference.';report['finishedAtUTC']=datetime.datetime.now(datetime.timezone.utc).isoformat();report['passed']=True;report['retention']='Private isolated-cluster data, original archives and diagnostic captures retained under the run directory; no shared cluster or registry was removed.';(r/'final-cleanup.json').write_text(json.dumps(report,indent=2)+'\n');print('PASS cleanup: native baseline restored, only owned files/trustpoint removed, owned services/clusters stopped, shared node Ready',flush=True)

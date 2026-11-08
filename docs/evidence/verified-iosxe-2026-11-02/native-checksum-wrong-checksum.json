@@ -1,0 +1,13 @@
+{
+  "collectedAtUTC": "2026-11-02T20:15:09.101385+00:00",
+  "exitCode": 1,
+  "result": {
+    "error": "on-device application package SHA512 mismatch or unsupported verification response",
+    "expectedBytes": 5963776,
+    "expectedSHA512": "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+    "hostKeyPinned": true,
+    "path": "flash:cvk-0000000020261102-ed8c257297a526229b154cbaabe1c466de239d4c011e4edfd25c7cb440fa071c.tar",
+    "success": false
+  },
+  "stderr": ""
+}

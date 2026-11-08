@@ -1,0 +1,53 @@
+{
+  "purpose": "Lab-only execution/evidence helpers; credentials read from environment and never included. The initial positive_lifecycle.py direct-delete step was denied; worker_replacement.py is the subsequent successful manager-controlled replacement.",
+  "files": [
+    {
+      "file": "device_cli.py.txt",
+      "sha256": "465e1fe652404dbe88cb4104e606ab85f4e3d214973a6ffed456c7129e4a88f5"
+    },
+    {
+      "file": "snapshot.py.txt",
+      "sha256": "5fd3d7642d4c575168fbedbd7e10be3e6567cdd94d3f0e4ccc6b00f972011f41"
+    },
+    {
+      "file": "workload.py.txt",
+      "sha256": "214370d42996415e1c70edf357fded23369798777b2886617bb1761ae366580b"
+    },
+    {
+      "file": "wait_health.py.txt",
+      "sha256": "7d889f3e9a8768aefd1391f4554b8e61d7d0387a4ff6ebad01e2ad788b21f928"
+    },
+    {
+      "file": "capture_phase.py.txt",
+      "sha256": "24dd748354bce5e2a59253e6755ecd5e5e49392f293d4445c5f2d0799b283f8a"
+    },
+    {
+      "file": "resume_consistent.py.txt",
+      "sha256": "dc6fc76d978700cd15ea259e21cc8f41c3bd2d66b173323c9ac710a888baef3a"
+    },
+    {
+      "file": "positive_lifecycle.py.txt",
+      "sha256": "a226939fee443c11ede3a47084ecc8b7a0b28bfeb9bf88f3dadece09a84712df"
+    },
+    {
+      "file": "worker_replacement.py.txt",
+      "sha256": "8493c6c532d54848a84b77476cf87e613e9be4b6db79fe208d1fbf541644d1b9"
+    },
+    {
+      "file": "fault_qualification.py.txt",
+      "sha256": "780c81ad1d132e858328be357406cd9b6d578f291562d7a5a04192a4a1e790b5"
+    },
+    {
+      "file": "cleanup_qualification.py.txt",
+      "sha256": "16a16a59ec3b40eb1eba41cb3d1f9eb4771e7afdbca5f1deff568419b4eb79ed"
+    },
+    {
+      "file": "store.py.txt",
+      "sha256": "d81366a42a69fc6a9c064985eb7adc778e601611154cfe67710177c6855f7c8a"
+    },
+    {
+      "file": "checksum-probe.go.txt",
+      "sha256": "f4a937e23ae527f17fd5e4642b780d1bd728aa632632aa297bbd8d5acaf23567"
+    }
+  ]
+}

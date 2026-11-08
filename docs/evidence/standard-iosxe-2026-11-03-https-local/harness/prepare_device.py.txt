@@ -1,0 +1,23 @@
+import pathlib,pexpect,os,json,datetime,ssl,urllib.request,base64,time,subprocess,re
+R=pathlib.Path('/tmp/cvk-stdtls-20261103');TP='CVK-STDTLS-20261103'
+def readCLI(cmds):
+ q=subprocess.run(['python3',str(R/'device_cli.py')],input=json.dumps(cmds),capture_output=True,text=True,check=True);return json.loads(q.stdout)
+b=readCLI(['show version | include Version|Model Number|System Serial','show app-hosting list','show app-hosting infra','show ip http server status | include trustpoint','show running-config | include ^ip http secure-trustpoint|^ip http client secure-trustpoint|^crypto pki trustpoint CVK-STDTLS-20261103','dir flash:cvk-stdtls-20261103-a.tar','dir flash: | include bytes']);text=json.dumps(b);assert 'FCW2247C1AJ' in text and 'C9300-24UX' in text and 'cvk0000_' not in text and 'CAF Health: Stable' in text and 'HTTP secure server trustpoint: TP-self-signed-806566997' in text;assert not re.search(r'^crypto pki trustpoint '+TP,b['commands'][4]['output'],re.M);assert not re.search(r'\s-rw-\s',b['commands'][5]['output']);(R/'device-baseline.json').write_text(json.dumps(b,indent=2)+'\n')
+p=pexpect.spawn('ssh',['-o','StrictHostKeyChecking=yes','-o','UserKnownHostsFile=/tmp/cvk-verified-qual-20261101/switch_known_hosts','-o','GlobalKnownHostsFile=/dev/null','-o','HostKeyAlgorithms=rsa-sha2-512,rsa-sha2-256','cisco@10.1.1.1'],encoding='utf-8',timeout=90);out=[]
+try:
+ p.expect('(?i)password:');p.sendline(os.environ['CVK_QUAL_DEVICE_PASSWORD']);p.expect(r'[>#] ?$')
+ def cmd(c):
+  p.sendline(c);p.expect(r'[>#] ?$');v=p.before.replace('\r','');out.append({'command':c,'output':v});assert '% Invalid' not in v;return v
+ cmd('terminal length 0');cmd('terminal width 511');cmd('configure terminal');cmd('ip http secure-trustpoint cvk-gnoi-20260904');cmd('crypto pki trustpoint '+TP);cmd('enrollment terminal');cmd('revocation-check none');cmd('exit')
+ p.sendline('crypto pki authenticate '+TP);p.expect('(?i)(quit|certificate)');p.sendline(pathlib.Path('/tmp/cvk-verified-qual-20261102/ca.crt').read_text().strip());p.sendline('quit');p.expect(r'(?i)\[yes/no\]\s*:?');p.sendline('yes');p.expect(r'[>#] ?$');out.append({'command':'authenticate temporary ordinary HTTPS origin public CA','output':p.before.replace('\r','')});cmd('end');cmd('show ip http server status | include trustpoint');cmd('show running-config | include ^ip http client secure-trustpoint');p.sendline('exit')
+finally:p.close(force=True)
+(R/'device-preparation.json').write_text(json.dumps({'atUTC':datetime.datetime.now(datetime.timezone.utc).isoformat(),'commands':out},indent=2)+'\n')
+ctx=ssl.create_default_context(cafile='/tmp/cvk-verified-qual-20261101/device-ca.crt');ctx.verify_flags|=ssl.VERIFY_X509_PARTIAL_CHAIN
+for attempt in range(20):
+ try:
+  req=urllib.request.Request('https://10.1.1.1/restconf/data/Cisco-IOS-XE-native:native/hostname',headers={'Authorization':'Basic '+base64.b64encode(('cisco:'+os.environ['CVK_QUAL_DEVICE_PASSWORD']).encode()).decode(),'Accept':'application/yang-data+json'})
+  with urllib.request.urlopen(req,context=ctx,timeout=10) as resp:assert resp.status==200 and 'Edge-9K' in resp.read().decode()
+  break
+ except OSError:time.sleep(2)
+else:raise RuntimeError('Authenticated direct RESTCONF unavailable')
+(R/'transport-controls.json').write_text(json.dumps({'atUTC':datetime.datetime.now(datetime.timezone.utc).isoformat(),'directRESTCONF':True,'managementTLSVerified':True,'relayUsed':False,'NATInjected':False,'ordinaryOriginTrustpoint':TP,'originCA':'/tmp/cvk-verified-qual-20261102/ca.crt','clientIdentityTrustpointPreserved':'IRIS','nativeSignaturePolicyChanged':False,'verifiedConfigurationRequired':False},indent=2)+'\n');print('PASS baseline, direct authenticated RESTCONF and ordinary origin CA prepared',flush=True)

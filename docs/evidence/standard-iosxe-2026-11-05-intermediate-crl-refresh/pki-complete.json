@@ -1,0 +1,39 @@
+{
+  "atUTC": "2026-11-05T06:55:26.891925+00:00",
+  "deviceUTC": "2026-11-05T06:55:25+00:00",
+  "deviceTimeSource": "NTP",
+  "allCertificatesCurrentlyValid": true,
+  "publishedCRLCurrentlyValid": true,
+  "publishedCRLversion": 2,
+  "publishedCRLSHA256": "7ed5e8f4e68e49595c07805243c64a04ee6da00a649753284f2190250123c12a",
+  "defaultCachePolicyUnchanged": true,
+  "revocationCheckCRLUnchanged": true,
+  "deviceWritesIssued": 0,
+  "clockChanged": false,
+  "nativeEvidence": {
+    "collectedAtUTC": "2026-11-05T06:55:26.867706+00:00",
+    "commands": [
+      {
+        "command": "show clock detail",
+        "output": "show clock detail\n06:55:25.531 UTC Thu Nov 5 2026\nTime source is NTP\nEdge-9K"
+      },
+      {
+        "command": "show running-config all | section ^crypto pki trustpoint CVK-INTREFRESH",
+        "output": "show running-config all | section ^crypto pki trustpoint CVK-INTREFRESH\ncrypto pki trustpoint CVK-INTREFRESH-20261105\n enrollment retry count 999\n enrollment retry period 1\n enrollment terminal pem\n revocation-check crl\n authorization username subjectname  \n authorization username subjectname  secondary\n hash sha512\nEdge-9K"
+      },
+      {
+        "command": "show crypto pki crls",
+        "output": "show crypto pki crls\nCRL Issuer Name: \n    cn=CVK intermediate refresh root abeba16b6a7f\n    LastUpdate: 06:41:07 UTC Nov 5 2026\n    NextUpdate: 08:41:12 UTC Nov 5 2026\n\n    CRL downloaded at: 06:49:57 UTC Nov 5 2026\n\n    Retrieved from CRL Distribution Point: \n      http://192.168.129.111:18473/issuer.crl\n\n CRL DER is 490 bytes\n CRL is stored in parsed CRL cache\n\nCRL Issuer Name: \n    cn=CVK intermediate refresh intermediate abeba16b6a7f\n    LastUpdate: 06:33:11 UTC Nov 5 2026\n    NextUpdate: 06:38:11 UTC Nov 6 2026\n\n    CRL downloaded at: 06:39:53 UTC Nov 5 2026\n\n    Retrieved from CRL Distribution Point: \n      http://192.168.129.111:18473/intermediate.crl\n\n CRL DER is 443 bytes\n CRL is stored in parsed CRL cache\n\n\nParsed CRL cache current size is 933 bytes\nParsed CRL cache maximum size is 65536 bytes\n\nEdge-9K"
+      },
+      {
+        "command": "show ip interface brief | include ^Vlan129",
+        "output": "show ip interface brief | include ^Vlan129\nVlan129                192.168.129.2   YES NVRAM  up                    up      \nEdge-9K"
+      },
+      {
+        "command": "show running-config | include ^ip http secure-trustpoint|^ip http client secure-trustpoint",
+        "output": "show running-config | include ^ip http secure-trustpoint|^ip http client secure-trustpoint\nip http secure-trustpoint cvk-gnoi-20260904\nip http client secure-trustpoint IRIS\nEdge-9K"
+      }
+    ]
+  },
+  "runIssuerInCache": true
+}

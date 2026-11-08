@@ -1,0 +1,11 @@
+{
+  "atUTC": "2026-11-03T14:58:25.025656+00:00",
+  "originStopped": true,
+  "originPort": 18448,
+  "originListening": false,
+  "traceLineCount": 4,
+  "packageRequestsFromC9K": 3,
+  "preloadedPath": "flash:cvk-stdtls-20261103-a.tar",
+  "localImagePullPolicy": "Never",
+  "artifactConfiguration": false
+}

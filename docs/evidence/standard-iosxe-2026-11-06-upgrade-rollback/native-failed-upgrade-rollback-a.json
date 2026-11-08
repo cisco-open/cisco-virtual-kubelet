@@ -1,0 +1,13 @@
+{
+  "collectedAtUTC": "2026-11-06T09:07:56.561146+00:00",
+  "commands": [
+    {
+      "command": "show app-hosting list",
+      "output": "show app-hosting list\nApp id                                   State\n---------------------------------------------------------\niris                                     RUNNING\nc9ktest                                  DEPLOYED\ncvk0000_cc21816b03f544848fd256056836cbd4 RUNNING\n\nEdge-9K"
+    },
+    {
+      "command": "show app-hosting detail appid cvk0000_cc21816b03f544848fd256056836cbd4",
+      "output": "show app-hosting detail appid cvk0000_cc21816b03f544848fd256056836cbd4\nApp id                 : cvk0000_cc21816b03f544848fd256056836cbd4\nOwner                  : iox\nState                  : RUNNING\nApplication\n  Type                 : docker\n  Name                 : cvk-stdupgrade-20261106/a\n  Version              : 8f0d26f6c543\n  Description          : \n  Author               : \n  Path                 : flash:/cvk-cvk0000_cc21816b03f544848fd256056836cbd4.tar\n  URL Path             : \nActivated profile name : custom\n\nResource reservation\n  Memory               : 128 MB\n  Disk                 : 1024 MB\n  CPU                  : 1000 units\n  CPU-percent          : 14 %\n  VCPU                 : 1\n\nPlatform resource profiles\n  Profile Name                  CPU(unit) CPU(percent)  Memory(MB)  Disk(MB)\n  ---------------------------------------------------------------------------\n\nAttached devices\n  Type              Name               Alias\n  ---------------------------------------------\n  serial/shell     iox_console_shell   serial0\n  serial/aux       iox_console_aux     serial1\n  serial/syslog    iox_syslog          serial2\n  serial/trace     iox_trace           serial3\n\nNetwork interfaces\n   ---------------------------------------\neth0:\n   MAC address         : 52:54:dd:63:18:77\n   IPv4 address        : 192.168.129.226\n   IPv6 address        : ::\n   Network name        : mgmt-bridge-v129\n   Multicast           : No\n   Mirroring           : No\n   Rx Bytes            : 14190\n   Rx Packets          : 188\n   Rx Errors           : 0\n   Tx Bytes            : 2316\n   Tx Packets          : 19\n   Tx Errors           : 0\n\n\nDocker\n------\nRun-time information\n  Command              : \n  Entry-point          : /app \n  Run options in use   : \n  Package run options  : \nApplication health information\n  Status               : 0\n  Last probe error     : \n  Last probe output    : \n\n\nEdge-9K"
+    }
+  ]
+}

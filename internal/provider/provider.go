@@ -119,6 +119,9 @@ func NewAppHostingProvider(
 	nodeProvider *AppHostingNode,
 	eventRecorder record.EventRecorder,
 ) (*AppHostingProvider, error) {
+	if err := common.CheckAppArtifactSupport(deviceSpec, driver); err != nil {
+		return nil, err
+	}
 	// Wire the event recorder into the driver if it supports it.
 	if eventRecorder != nil {
 		type eventRecorderSetter interface {
@@ -664,6 +667,9 @@ func (p *AppHostingProvider) findPodByAppID(ctx context.Context, appID string) *
 }
 
 func (p *AppHostingProvider) CreatePod(ctx context.Context, pod *v1.Pod) (outcome error) {
+	if err := common.CheckAppArtifactSupport(p.deviceSpec, p.driver); err != nil {
+		return errdefs.AsInvalidInput(err)
+	}
 	ctx, span := p.startPodSpan(ctx, pod, "create")
 	defer span.End()
 	p.rememberPodTrace(ctx, pod)
@@ -725,6 +731,9 @@ func (p *AppHostingProvider) UpdatePod(ctx context.Context, pod *v1.Pod) error {
 		// ordinary writes and could bypass the drain protocol through this path.
 		err = p.withDeleteMutation(ctx, pod, mutate)
 	} else {
+		if err := common.CheckAppArtifactSupport(p.deviceSpec, p.driver); err != nil {
+			return errdefs.AsInvalidInput(err)
+		}
 		err = p.withMutation(ctx, mutate)
 	}
 	if err != nil {

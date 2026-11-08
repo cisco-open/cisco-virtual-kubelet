@@ -1,0 +1,10 @@
+"""Explicit allowlist only; no Secret data, kubeconfig, private keys or raw configs."""
+import pathlib,json,tarfile,sys
+R=pathlib.Path('/tmp/cvk-stdtls-20261103');assert json.loads((R/'qualification-result.json').read_text())['passed'];assert json.loads((R/'final-cleanup.json').read_text())['passed']
+names=['device-baseline.json','device-preparation.json','transport-controls.json','origin-tls-controls.json','qualification-result.json','preload-copy.json','preloaded-file.json','preloaded-file-assessment.json','before-preload.json','offline-local-controls.json','local-file-after-replacement.json','local-file-after-replacement-assessment.json','https-events.json','local-events.json','store-requests.jsonl','device-input.yaml','deployment-https-input.yaml','deployment-local-input.yaml','values.yaml','final-cleanup.json','qualification.log']
+for label in ['https-a','local-a','local-worker-replacement-a']:names += [p+label+e for p,e in [('snapshot-','.json'),('controls-','.json'),('deployment-','.json'),('native-','.json'),('leases-','.json'),('wait-','.jsonl')]]
+for label in ['baseline','https-normal-cleanup','normal-cleanup']:
+ names.append('controls-'+label+'.json')
+ if label!='baseline':names += ['snapshot-'+label+'.json','leases-'+label+'.json']
+with tarfile.open(fileobj=sys.stdout.buffer,mode='w|') as t:
+ for n in names:assert (R/n).is_file(),n;t.add(R/n,arcname=n)

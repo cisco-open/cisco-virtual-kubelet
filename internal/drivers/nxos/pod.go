@@ -41,6 +41,9 @@ const defaultNXOSMaxAppSlots = 4
 const nxosMaxAppsResourceKey = "maxApps"
 
 func (d *NXOSDriver) DeployPod(ctx context.Context, pod *v1.Pod, secretLister corev1listers.SecretNamespaceLister, configMapLister corev1listers.ConfigMapNamespaceLister) error {
+	if err := common.RequireStandardAppArtifacts(d.config); err != nil {
+		return err
+	}
 	d.rememberPodResourceListers(pod.Namespace, secretLister, configMapLister)
 	appConfigs, err := d.convertPodToAppConfigs(pod)
 	if err != nil {
@@ -104,6 +107,9 @@ func (d *NXOSDriver) maxAppSlots() int {
 func (d *NXOSDriver) UpdatePod(ctx context.Context, pod *v1.Pod) error {
 	if pod.DeletionTimestamp != nil {
 		return d.DeletePod(ctx, pod)
+	}
+	if err := common.RequireStandardAppArtifacts(d.config); err != nil {
+		return err
 	}
 	appConfigs, err := d.convertPodToAppConfigs(pod)
 	if err != nil {
@@ -346,6 +352,9 @@ func (d *NXOSDriver) ListPods(ctx context.Context) ([]*v1.Pod, error) {
 }
 
 func (d *NXOSDriver) createApp(ctx context.Context, cfg *nxosAppConfig) error {
+	if err := common.RequireStandardAppArtifacts(d.config); err != nil {
+		return err
+	}
 	if err := validateNXOSAppID(cfg.AppID); err != nil {
 		return err
 	}
@@ -364,6 +373,9 @@ func (d *NXOSDriver) convergeAppState(ctx context.Context, cfg *nxosAppConfig, s
 }
 
 func (d *NXOSDriver) advanceAppState(ctx context.Context, cfg *nxosAppConfig, state string) error {
+	if err := common.RequireStandardAppArtifacts(d.config); err != nil {
+		return err
+	}
 	if err := validateNXOSAppID(cfg.AppID); err != nil {
 		return err
 	}
@@ -410,6 +422,9 @@ func (d *NXOSDriver) advanceAppState(ctx context.Context, cfg *nxosAppConfig, st
 }
 
 func (d *NXOSDriver) ensureAppConfig(ctx context.Context, cfg *nxosAppConfig) error {
+	if err := common.RequireStandardAppArtifacts(d.config); err != nil {
+		return err
+	}
 	if err := validateNXOSAppID(cfg.AppID); err != nil {
 		return err
 	}

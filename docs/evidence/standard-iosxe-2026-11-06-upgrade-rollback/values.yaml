@@ -1,0 +1,15 @@
+config:
+  yangValidationMode: disabled
+controller:
+  leaderElect: true
+image:
+  pullPolicy: Never
+  repository: cvk-stdcopyfix-qual
+  tag: 20261105-b55c3b3f6aed
+rbac:
+  profile: strict
+telemetry:
+  otlp:
+    endpoint: ''
+topology:
+  enabled: true

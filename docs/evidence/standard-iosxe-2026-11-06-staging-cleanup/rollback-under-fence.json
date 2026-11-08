@@ -1,0 +1,9 @@
+{
+  "atUTC": "2026-11-06T10:45:01.217588+00:00",
+  "targetRevision": "4",
+  "leaseUID": "3f70b86b-784c-4a43-9a07-078e3634ebc0",
+  "holder": "device-write/1e1d13e4-2e1d-4a10-a224-7fd645832f48",
+  "renewTime": "2026-11-06T10:39:44.005660Z",
+  "naturalExpiryUTC": "2026-11-06T11:10:44.005660+00:00",
+  "manualLeaseReset": false
+}

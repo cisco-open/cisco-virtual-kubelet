@@ -1,0 +1,11 @@
+import pathlib,json,hashlib
+R=pathlib.Path('/tmp/cvk-pending-20261103');scope={'__name__':'scope_test'};source=(R/'relay.py').read_text().split("server=http.server.ThreadingHTTPServer",1)[0];exec(compile(source,'relay.py','exec'),scope)
+uid='11111111-2222-3333-4444-555555555555';aid='cvk0000_'+uid.replace('-','');expected=scope['EXPECTED'];path='flash:cvk-'+hashlib.sha256(uid.encode()).hexdigest()[:16]+'-'+expected['package']['digest'][7:]+'.tar';scope['fixture']=lambda:({'metadata':{'uid':uid}},aid,path)
+rpc='/restconf/operations/Cisco-IOS-XE-rpc:app-hosting';copy='/restconf/operations/Cisco-IOS-XE-rpc:copy';cfg='/restconf/data/Cisco-IOS-XE-app-hosting-cfg:app-hosting-cfg-data/apps'
+cases=[('valid-install','POST',rpc,{'Cisco-IOS-XE-rpc:app-hosting':{'install':{'appid':aid,'package':path}}},True),('wrong-app','POST',rpc,{'Cisco-IOS-XE-rpc:app-hosting':{'install':{'appid':'iris','package':path}}},False),('global-policy','POST',rpc,{'Cisco-IOS-XE-rpc:app-hosting':{'verification':{'disable':[None]}}},False),('valid-copy','POST',copy,{'Cisco-IOS-XE-rpc:copy':{'source-drop-node-name':expected['packageURL'],'destination-drop-node-name':path}},True),('wrong-copy-target','POST',copy,{'Cisco-IOS-XE-rpc:copy':{'source-drop-node-name':expected['packageURL'],'destination-drop-node-name':'flash:other.tar'}},False),('valid-config','POST',cfg,{'Cisco-IOS-XE-app-hosting-cfg:app':[{'application-name':aid,'start':False}]},True),('other-config','POST',cfg,{'Cisco-IOS-XE-app-hosting-cfg:app':[{'application-name':'iris'}]},False),('multiple-config','POST',cfg,{'Cisco-IOS-XE-app-hosting-cfg:app':[{'application-name':aid},{'application-name':'iris'}]},False),('delete-other','DELETE',cfg+'/app=iris',{},False),('platform-write','POST','/restconf/operations/Cisco-IOS-XE-rpc:reload',{},False)]
+result=[]
+for name,m,p,b,want in cases:
+ try:scope['authorize'](m,p,json.dumps(b).encode());ok=True
+ except (AssertionError,ValueError,KeyError):ok=False
+ assert ok==want,name;result.append({'case':name,'passed':True})
+R.joinpath('relay-scope-tests.json').write_text(json.dumps({'passed':True,'cases':result,'deviceRequestsSent':0},indent=2)+'\n');print('PASS 10 fixture-only relay scope tests; no device requests')

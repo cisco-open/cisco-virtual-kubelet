@@ -1,0 +1,10 @@
+{
+  "label": "initial-a",
+  "phase": "a",
+  "release": "STD-UPGRADE-A-20261106-8f0d26f6c543",
+  "podUID": "257e4a85-d38b-4f10-b308-625b1e837360",
+  "revision": "1",
+  "deploymentUID": "6d61f17e-a446-4456-8bee-163e6dec33b0",
+  "generation": 1,
+  "atUTC": "2026-11-06T08:29:38.543044+00:00"
+}

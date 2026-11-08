@@ -42,19 +42,25 @@ type UnmarshalFunc func([]byte, any) error
 
 // XEDriver implements the device driver for Cisco IOS-XE AppHosting
 type XEDriver struct {
+	verified     *VerifiedRuntime
 	config       *v1alpha1.DeviceSpec
 	client       common.NetworkClient
 	marshaller   func(any) ([]byte, error)
 	unmarshaller UnmarshalFunc
 	deviceInfo   *common.DeviceInfo
 
-	secretLister    corev1listers.SecretNamespaceLister
-	configMapLister corev1listers.ConfigMapNamespaceLister
-	recoveryMu      sync.RWMutex
-	recoveringPods  map[string]bool // keyed by pod UID
+	verifiedSecretLister    corev1listers.SecretLister
+	verifiedConfigMapLister corev1listers.ConfigMapLister
+	secretLister            corev1listers.SecretNamespaceLister
+	configMapLister         corev1listers.ConfigMapNamespaceLister
+	recoveryMu              sync.RWMutex
+	recoveringPods          map[string]bool // keyed by pod UID
 
 	installMu       sync.Mutex
 	installInFlight map[string]bool // keyed by appID; prevents duplicate background recovery installs
+
+	standardStagingMu sync.Mutex
+	standardStaging   map[string]*standardStageReceipt
 
 	eventRecorder record.EventRecorder
 	// Set before callbacks start. Status-triggered asynchronous recovery owns
@@ -69,6 +75,9 @@ func (d *XEDriver) SetMaintenanceMutationGuard(acquire func(context.Context) (co
 
 // NewAppHostingDriver creates a new IOS-XE AppHosting driver instance
 func NewAppHostingDriver(ctx context.Context, spec *v1alpha1.DeviceSpec) (*XEDriver, error) {
+	if err := spec.AppArtifacts.Validate(); err != nil {
+		return nil, fmt.Errorf("appArtifacts: %w", err)
+	}
 	u := &url.URL{
 		Host: fmt.Sprintf("%s:%d", spec.Address, spec.Port),
 	}
@@ -143,7 +152,7 @@ func NewAppHostingDriver(ctx context.Context, spec *v1alpha1.DeviceSpec) (*XEDri
 		"platform": "IOS-XE",
 	}).Info("Connected to IOSXE device")
 
-	if spec.AllowUnsignedApps {
+	if spec.AllowUnsignedApps && spec.AppArtifacts.EffectiveMode() == v1alpha1.AppArtifactModeStandard {
 		if err := d.withMaintenanceMutation(ctx, func(writeCtx context.Context) error { return d.ConfigureSignVerification(writeCtx, false) }); err != nil {
 			log.G(ctx).WithError(err).Warn("allowUnsignedApps=true but failed to disable sign-verification on device; unsigned installs may be blocked")
 		}

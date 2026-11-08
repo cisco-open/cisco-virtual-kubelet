@@ -365,26 +365,30 @@ sequenceDiagram
     User->>API: Create Pod targeting the virtual node
     API->>VK: CreatePod
     VK->>Drv: DeployPod
-    Drv->>Dev: POST app-hosting config with RESTCONF
-
-    alt Flash package already on the device
-        Drv->>Dev: Install from flash path
-        Dev-->>Drv: DEPLOYED or RUNNING
-    else HTTP URL supported by the device
-        Drv->>Dev: Install from HTTP URL
-        Dev-->>Drv: DEPLOYED
-    else HTTP URL requires copy fallback
-        Drv->>Dev: Copy image to flash
-        Note over VK,Drv: Pod status reports PullingImage while the copy runs
+    alt Remote package URL
+        Drv->>Dev: RESTCONF copy to explicit flash path
+        break Copy failed or completion unconfirmed
+            Drv-->>VK: Image transfer error, no app installation
+        end
+        Drv->>Dev: POST app-hosting config
         Drv->>Dev: Install from copied flash path
-        Dev-->>Drv: DEPLOYED
+        Dev-->>Drv: DEPLOYED or RUNNING
+    else Preloaded device-local package
+        Drv->>Dev: POST app-hosting config
+        Drv->>Dev: Install from local path
+        Dev-->>Drv: DEPLOYED or RUNNING
     end
 
-    opt App is not already running
+    opt Installation succeeded and app is not already running
         Drv->>Dev: RPC activate
         Dev-->>Drv: ACTIVATED
         Drv->>Dev: RPC start
         Dev-->>Drv: RUNNING
+    end
+
+    opt Consumed temporary package with live ownership receipt
+        Drv->>Dev: RESTCONF delete exact owned tar
+        Drv->>Dev: Confirm exact-file absence
     end
 
     Drv->>Dev: Query oper-data for pod IP
@@ -396,6 +400,20 @@ sequenceDiagram
     end
     Drv-->>VK: Pod ready
 ```
+
+### Standard staging ownership
+
+Remote copy-first delivery allocates a random flash tar and records a live-worker
+ownership receipt only after filtered filesystem metadata and an exact-key query
+establish that it did not exist. The full device mutation guard covers allocation,
+copy, lifecycle and exact-file cleanup. A consumed package (native RUNNING),
+confirmed teardown, or definitive synchronous copy failure permits cleanup;
+copy/delete uncertainty quarantines the receipt. Cleanup decodes the existing
+RESTCONF delete RPC and confirms absence. Preloaded/explicit destinations are
+never adopted, and no filename-prefix sweep occurs. A replacement worker has no
+receipt-based deletion authority. Unsupported ownership observations retain an
+unowned unique tar while preserving Standard copy-first deployment. See
+[staging cleanup configuration](CONFIGURATION.md#standard-staging-cleanup).
 
 ### Pod deletion flow
 
@@ -665,6 +683,8 @@ out-of-band changes, or ownership across Kubernetes clusters.
 | App config (delete) | DELETE | `/restconf/data/Cisco-IOS-XE-app-hosting-cfg:app-hosting-cfg-data/apps/app={id}` |
 | App oper-data | GET | `/restconf/data/Cisco-IOS-XE-app-hosting-oper:app-hosting-oper-data/app` |
 | App-hosting lifecycle and verification RPCs | POST | `/restconf/operations/Cisco-IOS-XE-rpc:app-hosting` |
+| Standard package copy / owned staging delete | POST | `/restconf/operations/Cisco-IOS-XE-rpc:copy`, `/restconf/operations/Cisco-IOS-XE-rpc:delete` |
+| Standard staging metadata / exact file | GET | `/restconf/data/Cisco-IOS-XE-platform-software-oper:cisco-platform-software/q-filesystem` (filtered metadata and keyed child) |
 | Device version | GET | `/restconf/data/Cisco-IOS-XE-native:native/version` |
 | CDP neighbors | GET | `/restconf/data/Cisco-IOS-XE-cdp-oper:cdp-neighbor-details` |
 | OSPF neighbors | GET | `/restconf/data/Cisco-IOS-XE-ospf-oper:ospf-oper-data` |

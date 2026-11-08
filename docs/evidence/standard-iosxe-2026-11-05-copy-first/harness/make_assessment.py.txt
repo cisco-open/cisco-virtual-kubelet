@@ -1,0 +1,26 @@
+from pathlib import Path
+r=Path('/private/tmp/cvk-stdcopyfix-20261105');s=Path('/private/tmp/cvk-intrefresh-20261105/assess.py').read_text().replace('cvk-intrefresh','cvk-stdcopyfix').replace("['productionSourceUnchanged']","['candidateSourceMatches']")
+a=s.index('assert not gets and any(');b=s.index('assert len(uids)==len(leaseUIDs)==1;',a)
+s=s[:a]+'''assert not gets and not badRelease['actualReleases']
+assert invalid and all(not v['ready'] and not v['nativeRunning'] and not v['actualReleases'] and v['packageRequests']==0 and v['artifactJournals']==0 for v in invalid)
+assert (dt(invalid[-1]['atUTC'])-dt(invalid[0]['atUTC'])).total_seconds()>=270
+assert {a['appID'] for a in bad['nativeApps']}=={'iris','c9ktest'}
+assert not any(a and a.startswith('cvk0000_') for a in bad['nativeConfigAppIDs'])
+diag='\\n'.join(read('worker-diagnostics')['lines']);assert 'Copy RPC failed' in diag and 'Installing app cvk0000_' not in diag and 'Successfully installed app cvk0000_' not in diag
+assert q['classification']=='new-intermediate-revocation-discovered-and-fresh-delivery-rejected' and q['revocationDiscoveryQualified']
+restart=read('negative-worker-restart');assert restart['passed'] and restart['sameLeaseUID'] and restart['noRuntime'] and restart['noReady'];controls('revoked-worker-restart')
+assert fix['onlyServedIntermediateCertificateChanged'] and not fix['rootOrLeafChanged'] and not fix['intermediateSubjectOrKeyChanged'] and not fix['CRLOrPolicyChanged'] and not fix['URLOrPayloadChanged'] and not fix['revokedSerialRemoved']
+recovery=health('recovery',P['phases']['refresh']['release']);assert {p['metadata']['uid'] for p in bad['pods']}=={p['metadata']['uid'] for p in recovery['pods']};deleted('recovery');health('fresh',P['phases']['refresh']['release']);deleted('fresh')
+local=health('local-never',P['phases']['refresh']['release']);localRestart=health('local-never-restart',P['phases']['refresh']['release']);assert local['pods'][0]['metadata']['uid']==localRestart['pods'][0]['metadata']['uid'];deleted('local-never');assert read('local-never-control')['passed']
+original=read('invalid-lease')
+for v in rows('guarded-observations'):assert v['leaseUID']==original['metadata']['uid'] and v['holder']==original['spec']['holderIdentity'] and v['renewTime']==original['spec']['renewTime'] and not v['ready'] and not v['actualReleases'] and v['artifactJournals']==0
+assert read('test-results')['passed'] and read('test-results')['packagesPassed']==62
+qualified=True
+''' + s[b:]
+a=s.index("out={'status':");s=s[:a]+'''out={'status':'standard-copy-first-failed-download-and-recovery-qualified','executionComplete':True,'failedDownloadExecutionBlocked':True,'freshExecutionBlockingQualified':True,'revocationDiscoveryQualified':True,'nativeSerialSpecificPKIRejections':[v.isoformat() for v in pkifail],'firstNativePKIRejectionUTC':pkifail[0].isoformat(),'firstOriginTLSAlertUTC':alerts[0]['atUTC'] if alerts else None,'cacheWindowOutcome':q['cacheWindowOutcome'],'publicationUTC':crls[2]['publishedAtUTC'],'originalCRLNextUpdateUTC':crls[1]['nextUpdateUTC'],'firstRevokedCRLNativeFetchUTC':v2['atUTC'],'publicationToNativeFetchSeconds':(dt(v2['atUTC'])-dt(crls[2]['publishedAtUTC'])).total_seconds(),'originalNextUpdateToNativeFetchSeconds':(dt(v2['atUTC'])-dt(crls[1]['nextUpdateUTC'])).total_seconds(),'freshImageAcceptedDuringCachedWindow':cacheAccepted,'noPackageGETBeforeCertificateReplacement':True,'noAppConfigurationOrRuntimeAfterCopyFailure':True,'releaseBeforeReplacement':badRelease['actualReleases'],'releaseAfterReplacement':read('release-after-replacement')['actualReleases'],'samePodRecoveryPassed':True,'negativeWorkerRestartPassed':True,'localNeverAndWorkerRestartPassed':True,'freshDeploymentAndDeletionPassed':True,'invalidObservations':len(invalid),'guardedObservations':len(rows('guarded-observations')),'canonicalMutationLeaseUID':next(iter(leaseUIDs)),'manualLeaseOrJournalChanges':False,'forcedCRLRefreshOrFlushDuringQualification':False,'defaultCachePolicyUnchanged':True,'baselineCleanupPassed':True,'earlierEvidencePreserved':True,'defaultMode':'Standard','artifactMetadataOrJournalRequired':False,'governed':'deferred','startedAtUTC':q['startedAtUTC'],'finishedAtUTC':cleanup['finishedAtUTC'],'scope':'C9300-24UX / IOS-XE 17.18.1 fc2; existing synchronous RESTCONF Copy, HTTPS DockerResource deployment with intermediate CRL discovery; same-Pod repair after natural fence, fresh positive and local Never/restart. Standard still depends on device TLS/cache policy and copy completion; no cryptographic artifact attestation.'};(R/'qualification-assessed.json').write_text(json.dumps(out,indent=2)+'\\n');print('PASS independent assessment:',out['status'])
+'''
+(r/'assess.py').write_text(s)
+# Static source identity and immutable earlier evidence verification.
+s=Path('/private/tmp/cvk-intrefresh-20261105/verify_static.py').read_text().replace('cvk-intrefresh','cvk-stdcopyfix').replace("d.name=='standard-iosxe-2026-11-05-intermediate-crl-refresh'","d.name=='standard-iosxe-2026-11-05-copy-first'").replace("'productionSourceUnchanged':True","'candidateSourceMatches':True")
+(r/'verify_static.py').write_text(s)
+print('Prepared independent final checks')

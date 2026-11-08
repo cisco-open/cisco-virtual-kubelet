@@ -1,0 +1,5 @@
+import pathlib,json,hashlib,datetime
+R=pathlib.Path('/tmp/cvk-stdcopyfix-20261105');m=json.loads((R/'earlier-remote-hashes.json').read_text());old=pathlib.Path(m.get('root','/'))
+for f in m['files']:
+ b=(pathlib.Path(f['path'])).read_bytes();assert len(b)==f['bytes'] and hashlib.sha256(b).hexdigest()==f['sha256'],f['path']
+(R/'earlier-evidence-preservation.json').write_text(json.dumps({'passed':True,'verifiedAtUTC':datetime.datetime.now(datetime.timezone.utc).isoformat(),'filesVerified':len(m['files']),'earlierManifestSHA256':hashlib.sha256((R/'earlier-remote-hashes.json').read_bytes()).hexdigest(),'originalFilesRewritten':False},indent=2)+'\n');print('PASS original raw evidence unchanged:',len(m['files']),'files')

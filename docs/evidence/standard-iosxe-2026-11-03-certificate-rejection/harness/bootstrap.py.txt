@@ -1,0 +1,22 @@
+import pathlib,subprocess,json,datetime,time,os,ipaddress
+from cryptography import x509
+from cryptography.x509.oid import NameOID
+from cryptography.hazmat.primitives import hashes,serialization
+from cryptography.hazmat.primitives.asymmetric import rsa
+r=pathlib.Path('/tmp/cvk-stdcert-20261103');r.mkdir(mode=0o700,exist_ok=True);os.chmod(r,0o700);old=pathlib.Path('/tmp/cvk-verified-qual-20261102')
+assert not subprocess.check_output(['docker','ps','-a','--filter','name=^cvk-stdcert-k3s-20261103$','--format','{{.ID}}'],text=True).strip()
+for x in ['k3s-data','k3s-output']:r.joinpath(x).mkdir(exist_ok=True)
+cmd=['docker','run','-d','--privileged','--name','cvk-stdcert-k3s-20261103','--label','apphosting.cisco.com/qualification=20261103-stdcert','-p','127.0.0.1:16452:6443','--tmpfs','/run','--tmpfs','/var/run','-v',str(r/'k3s-data')+':/var/lib/rancher/k3s','-v',str(r/'k3s-output')+':/output','--entrypoint','/bin/k3s','rancher/k3s@sha256:ec9868c6a38d4e8c1869832fb5fd1eb8473c39794a0b44d2b952e7ba911951bc','server','--disable','traefik','--disable','servicelb','--disable','metrics-server','--node-name','cvk-stdcert-k3s','--cluster-cidr','10.66.0.0/16','--service-cidr','10.67.0.0/16','--write-kubeconfig','/output/kubeconfig','--write-kubeconfig-mode','600','--tls-san','127.0.0.1']
+subprocess.run(cmd,check=True)
+for i in range(120):
+ q=subprocess.run(['docker','exec','cvk-stdcert-k3s-20261103','cat','/output/kubeconfig'],text=True,capture_output=True)
+ if q.returncode==0 and 'certificate-authority-data' in q.stdout:
+  (r/'kubeconfig').write_text(q.stdout.replace('127.0.0.1:6443','127.0.0.1:16452'));os.chmod(r/'kubeconfig',0o600)
+  z=subprocess.run(['kubectl','--kubeconfig',str(r/'kubeconfig'),'get','nodes','--no-headers'],text=True,capture_output=True)
+  if z.returncode==0 and ' Ready ' in z.stdout:break
+ time.sleep(2)
+else:raise RuntimeError('Isolated cluster did not become Ready')
+print('PASS fresh isolated cluster Ready',flush=True)
+subprocess.run(['docker','cp','/tmp/cvk-replies-20261103/image.tar','cvk-stdcert-k3s-20261103:/tmp/cvk-candidate.tar'],check=True)
+subprocess.run(['docker','exec','cvk-stdcert-k3s-20261103','ctr','-n','k8s.io','images','import','/tmp/cvk-candidate.tar'],check=True)
+print('PASS corrected candidate imported',flush=True)

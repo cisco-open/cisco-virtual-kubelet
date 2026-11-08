@@ -1,0 +1,30 @@
+{
+  "atUTC": "2026-11-04T18:00:20.710250+00:00",
+  "deviceUTC": "2026-11-04T18:00:19.853000+00:00",
+  "deviceTimeSource": "NTP",
+  "deviceWritesIssued": 0,
+  "allCertificatesValid": true,
+  "CRLsFreshAndUnchanged": true,
+  "allPoliciesUnchanged": true,
+  "serverMode": {
+    "control": "control",
+    "cold": "good"
+  },
+  "nativeEvidence": {
+    "collectedAtUTC": "2026-11-04T18:00:20.690182+00:00",
+    "commands": [
+      {
+        "command": "show clock detail",
+        "output": "show clock detail\n18:00:19.853 UTC Wed Nov 4 2026\nTime source is NTP\nEdge-9K"
+      },
+      {
+        "command": "show running-config all | section ^crypto pki trustpoint CVK-STDREVOKE",
+        "output": "show running-config all | section ^crypto pki trustpoint CVK-STDREVOKE\ncrypto pki trustpoint CVK-STDREVOKE-NONE-20261104\n enrollment retry count 999\n enrollment retry period 1\n enrollment terminal pem\n revocation-check none\n authorization username subjectname  \n authorization username subjectname  secondary\n hash sha512\ncrypto pki trustpoint CVK-STDREVOKE-LEAF-20261104\n enrollment retry count 999\n enrollment retry period 1\n enrollment terminal pem\n revocation-check crl\n authorization username subjectname  \n authorization username subjectname  secondary\n hash sha512\ncrypto pki trustpoint CVK-STDREVOKE-CHAIN-20261104\n enrollment retry count 999\n enrollment retry period 1\n enrollment terminal pem\n revocation-check crl\n authorization username subjectname  \n authorization username subjectname  secondary\n hash sha512\ncrypto pki trustpoint CVK-STDREVOKE-COLD-20261104\n enrollment retry count 999\n enrollment retry period 1\n enrollment terminal pem\n revocation-check crl\n authorization username subjectname  \n authorization username subjectname  secondary\n hash sha512\nEdge-9K"
+      },
+      {
+        "command": "show crypto pki crls",
+        "output": "CRL Issuer Name: \n    cn=CVK revoke cold-test-intermediate 067753481674\n    LastUpdate: 17:15:18 UTC Nov 4 2026\n    NextUpdate: 17:20:18 UTC Nov 6 2026\n\n    CRL downloaded at: 17:56:15 UTC Nov 4 2026\n\n    Retrieved from CRL Distribution Point: \n      http://192.168.129.111:18466/intermediate.crl\n\n CRL DER is 439 bytes\n CRL is stored in parsed CRL cache\n\n\nCRL Issuer Name: \n    cn=CVK revoke cold-control-intermediate 067753481674\n    LastUpdate: 17:15:18 UTC Nov 4 2026\n    NextUpdate: 17:20:18 UTC Nov 6 2026\n\n    CRL downloaded at: 17:20:30 UTC Nov 4 2026\n\n    Retrieved from CRL Distribution Point: \n      http://192.168.129.111:18466/control-intermediate.crl\n\n CRL DER is 442 bytes\n CRL is stored in parsed CRL cache\n\n\nCRL Issuer Name: \n    cn=CVK revoke cold-root 067753481674\n    LastUpdate: 17:15:18 UTC Nov 4 2026\n    NextUpdate: 17:20:18 UTC Nov 6 2026\n\n    CRL downloaded at: 17:20:30 UTC Nov 4 2026\n\n    Retrieved from CRL Distribution Point: \n      http://192.168.129.111:18466/cold-root.crl\n\n CRL DER is 481 bytes\n CRL is stored in parsed CRL cache\n\n"
+      }
+    ]
+  }
+}

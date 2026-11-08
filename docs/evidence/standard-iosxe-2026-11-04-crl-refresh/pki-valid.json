@@ -1,0 +1,39 @@
+{
+  "atUTC": "2026-11-04T19:39:58.776205+00:00",
+  "deviceUTC": "2026-11-04T19:39:57+00:00",
+  "deviceTimeSource": "NTP",
+  "allCertificatesCurrentlyValid": true,
+  "publishedCRLCurrentlyValid": true,
+  "publishedCRLversion": 3,
+  "publishedCRLSHA256": "01f8e700a081137b7c94df7043f52b4a48857837ddd2ddab6cd75215b1aaf733",
+  "defaultCachePolicyUnchanged": true,
+  "revocationCheckCRLUnchanged": true,
+  "deviceWritesIssued": 0,
+  "clockChanged": false,
+  "nativeEvidence": {
+    "collectedAtUTC": "2026-11-04T19:39:58.750637+00:00",
+    "commands": [
+      {
+        "command": "show clock detail",
+        "output": "show clock detail\n19:39:57.379 UTC Wed Nov 4 2026\nTime source is NTP\nEdge-9K"
+      },
+      {
+        "command": "show running-config all | section ^crypto pki trustpoint CVK-CRLREFRESH",
+        "output": "show running-config all | section ^crypto pki trustpoint CVK-CRLREFRESH\ncrypto pki trustpoint CVK-CRLREFRESH-20261104\n enrollment retry count 999\n enrollment retry period 1\n enrollment terminal pem\n revocation-check crl\n authorization username subjectname  \n authorization username subjectname  secondary\n hash sha512\nEdge-9K"
+      },
+      {
+        "command": "show crypto pki crls",
+        "output": "show crypto pki crls\nCRL Issuer Name: \n    cn=CVK CRL refresh root f9561e3ce389\n    LastUpdate: 19:38:14 UTC Nov 4 2026\n    NextUpdate: 19:48:19 UTC Nov 4 2026\n\n    CRL downloaded at: 19:38:24 UTC Nov 4 2026\n\n    Retrieved from CRL Distribution Point: \n      http://192.168.129.111:18470/issuer.crl\n\n CRL DER is 426 bytes\n CRL is stored in parsed CRL cache\n\n\nParsed CRL cache current size is 426 bytes\nParsed CRL cache maximum size is 65536 bytes\n\nEdge-9K"
+      },
+      {
+        "command": "show ip interface brief | include ^Vlan129",
+        "output": "show ip interface brief | include ^Vlan129\nVlan129                192.168.129.2   YES NVRAM  up                    up      \nEdge-9K"
+      },
+      {
+        "command": "show running-config | include ^ip http secure-trustpoint|^ip http client secure-trustpoint",
+        "output": "show running-config | include ^ip http secure-trustpoint|^ip http client secure-trustpoint\nip http secure-trustpoint cvk-gnoi-20260904\nip http client secure-trustpoint IRIS\nEdge-9K"
+      }
+    ]
+  },
+  "runIssuerInCache": true
+}

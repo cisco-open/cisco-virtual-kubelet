@@ -1,0 +1,796 @@
+{
+  "collectedAtUTC": "2026-11-03T05:21:25.725550+00:00",
+  "case": "before-fixture",
+  "devices": [
+    {
+      "name": "c9k-pending-20261103",
+      "uid": "1c00ea5a-b650-4be8-87be-8fd18a8c64ff",
+      "status": {
+        "conditions": [
+          {
+            "lastTransitionTime": "2026-11-03T05:19:24Z",
+            "message": "no topology ownership conflict is present",
+            "observedGeneration": 2,
+            "reason": "ProjectionComplete",
+            "status": "False",
+            "type": "TopologyConflict"
+          },
+          {
+            "lastTransitionTime": "2026-11-03T05:19:24Z",
+            "message": "required topology is projected and the live physical identity is verified",
+            "observedGeneration": 2,
+            "reason": "ProjectionComplete",
+            "status": "True",
+            "type": "TopologyReady"
+          },
+          {
+            "lastTransitionTime": "2026-11-03T05:18:05Z",
+            "message": "no managed maintenance session is active",
+            "observedGeneration": 2,
+            "reason": "Idle",
+            "status": "True",
+            "type": "MaintenanceReady"
+          },
+          {
+            "lastTransitionTime": "2026-11-03T05:18:05Z",
+            "message": "Node name and UID are bound to this CiscoDevice incarnation",
+            "observedGeneration": 2,
+            "reason": "UIDBound",
+            "status": "True",
+            "type": "NodeIdentityReady"
+          },
+          {
+            "lastTransitionTime": "2026-11-03T05:18:05Z",
+            "message": "all required topology labels are present",
+            "observedGeneration": 2,
+            "reason": "ProjectionComplete",
+            "status": "False",
+            "type": "TopologyIncomplete"
+          },
+          {
+            "lastTransitionTime": "2026-11-03T05:18:05Z",
+            "message": "network-management worker is read-only; gNOI software mutation is unavailable",
+            "observedGeneration": 2,
+            "reason": "NetworkManagementReadOnly",
+            "status": "False",
+            "type": "GNOIConfigurationReady"
+          }
+        ],
+        "networkWorkerRevision": {
+          "deploymentGeneration": 1,
+          "deploymentUID": "9c146e8a-177f-4d4d-88ca-4ffcc3a1dae9",
+          "desiredRevision": "sha256:73c8a073b8a06dd118a99468f46354683d6d182e92eeedba1d9174ba0d3dd45a",
+          "observedAt": "2026-11-03T05:19:18Z",
+          "observedRevision": "sha256:73c8a073b8a06dd118a99468f46354683d6d182e92eeedba1d9174ba0d3dd45a",
+          "podReadyTime": "2026-11-03T05:19:17Z",
+          "podStartTime": "2026-11-03T05:18:05Z",
+          "podUID": "9cd32129-557c-4a24-8788-61ee6b0f63c3"
+        },
+        "nodeIdentity": {
+          "deviceUID": "1c00ea5a-b650-4be8-87be-8fd18a8c64ff",
+          "nodeName": "c9k-pending-20261103",
+          "nodeUID": "8d217a40-9e3a-40df-8710-a8b1a4c5046b",
+          "physicalIdentity": "fcw2247c1aj"
+        },
+        "phase": "Ready",
+        "workerCapabilities": [
+          {
+            "enabled": true,
+            "name": "apphosting",
+            "runtime": "per-device-worker"
+          },
+          {
+            "enabled": true,
+            "name": "config",
+            "runtime": "per-device-worker"
+          },
+          {
+            "enabled": true,
+            "name": "telemetry",
+            "runtime": "per-device-worker"
+          },
+          {
+            "enabled": true,
+            "name": "diagnostics",
+            "runtime": "per-device-worker"
+          },
+          {
+            "enabled": true,
+            "name": "operations",
+            "runtime": "per-device-worker"
+          },
+          {
+            "enabled": true,
+            "name": "lifecycle",
+            "runtime": "per-device-worker"
+          }
+        ],
+        "workerRevision": {
+          "deploymentGeneration": 1,
+          "deploymentUID": "948be225-1965-4a0d-a37a-7998b276c862",
+          "desiredRevision": "sha256:de08cb187617f9658b4ab51385d0dd89d92bf52c838c23dfc3375d42681caed0",
+          "observedAt": "2026-11-03T05:21:23Z",
+          "observedRevision": "sha256:de08cb187617f9658b4ab51385d0dd89d92bf52c838c23dfc3375d42681caed0",
+          "podStartTime": "2026-11-03T05:18:05Z",
+          "podUID": "09d3ecd4-2bb4-4bea-af06-c905e769a705",
+          "readyHeartbeatTime": "2026-11-03T05:21:22Z"
+        }
+      },
+      "artifactConfig": {
+        "delivery": "Copy",
+        "maxPackageBytes": 16777216,
+        "mode": "Verified",
+        "platform": {
+          "architecture": "amd64",
+          "os": "linux"
+        },
+        "producerPublicKeys": [
+          "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEJPFK2YUnFu5bq7rhecC0kJs0Ggz+\n8oroqWIcJbjrbCh90YTWCbMxwMKEiM83P1JYYMCtP3p1o7gj/IZNGZOQ7Q==\n-----END PUBLIC KEY-----\n"
+        ],
+        "sshHostKeySHA256": "SHA256:6a1Ts89cusFB7YnEyKujejZUTb11osqRyI8wBJ1MslA",
+        "storeURL": "https://192.168.129.111:18443"
+      }
+    }
+  ],
+  "pods": [
+    {
+      "apiVersion": "v1",
+      "kind": "Pod",
+      "metadata": {
+        "annotations": {
+          "cisco.io/apphost-artifacts": "{\"agent\": {\"descriptorDigest\": \"sha256:aa3215da3bc24864581775acbf5e0de9e51dac4816d9a9fcc3f8b8ce1d3c755c\"}}",
+          "cisco.io/apphost-package-timeout": "300s",
+          "topology.cisco.vk/app-worker-pod-name": "c9k-pending-20261103-vk-56857c4777-z99zw",
+          "topology.cisco.vk/app-worker-pod-uid": "09d3ecd4-2bb4-4bea-af06-c905e769a705",
+          "topology.cisco.vk/app-worker-username": "system:serviceaccount:cvk-pending-20261103:cvk-pending-cisco-virtual-kubelet-app-hosting"
+        },
+        "creationTimestamp": "2026-11-03T05:19:49Z",
+        "generateName": "cvk-verified-fixture-6f55bc5cd8-",
+        "generation": 1,
+        "labels": {
+          "app": "cvk-verified-fixture",
+          "pod-template-hash": "6f55bc5cd8",
+          "qualification": "20261103",
+          "topology.kubernetes.io/region": "lab",
+          "topology.kubernetes.io/zone": "ux-agx"
+        },
+        "name": "cvk-verified-fixture-6f55bc5cd8-2rb6j",
+        "namespace": "cvk-pending-apps-20261103",
+        "ownerReferences": [
+          {
+            "apiVersion": "apps/v1",
+            "blockOwnerDeletion": true,
+            "controller": true,
+            "kind": "ReplicaSet",
+            "name": "cvk-verified-fixture-6f55bc5cd8",
+            "uid": "3271c800-8853-47e0-bbe3-de5d2ca07119"
+          }
+        ],
+        "resourceVersion": "1155",
+        "uid": "e0b0e50d-aabc-4e7a-861c-c2ba72bad946"
+      },
+      "spec": {
+        "affinity": {
+          "nodeAffinity": {
+            "requiredDuringSchedulingIgnoredDuringExecution": {
+              "nodeSelectorTerms": [
+                {
+                  "matchFields": [
+                    {
+                      "key": "metadata.name",
+                      "operator": "In",
+                      "values": [
+                        "c9k-pending-20261103"
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        },
+        "containers": [
+          {
+            "image": "https://192.168.129.111:18443/v1/packages/sha256/ed8c257297a526229b154cbaabe1c466de239d4c011e4edfd25c7cb440fa071c/package.tar",
+            "imagePullPolicy": "IfNotPresent",
+            "name": "agent",
+            "ports": [
+              {
+                "containerPort": 8080,
+                "protocol": "TCP"
+              }
+            ],
+            "resources": {
+              "limits": {
+                "memory": "128Mi"
+              },
+              "requests": {
+                "memory": "128Mi"
+              }
+            },
+            "terminationMessagePath": "/dev/termination-log",
+            "terminationMessagePolicy": "File",
+            "volumeMounts": [
+              {
+                "mountPath": "/var/run/secrets/kubernetes.io/serviceaccount",
+                "name": "kube-api-access-n6tkj",
+                "readOnly": true
+              }
+            ]
+          }
+        ],
+        "dnsPolicy": "ClusterFirst",
+        "enableServiceLinks": true,
+        "nodeName": "c9k-pending-20261103",
+        "preemptionPolicy": "PreemptLowerPriority",
+        "priority": 0,
+        "restartPolicy": "Always",
+        "schedulerName": "default-scheduler",
+        "securityContext": {},
+        "serviceAccount": "default",
+        "serviceAccountName": "default",
+        "terminationGracePeriodSeconds": 30,
+        "tolerations": [
+          {
+            "effect": "NoSchedule",
+            "key": "cisco.vk/device",
+            "operator": "Exists"
+          },
+          {
+            "effect": "NoExecute",
+            "key": "node.kubernetes.io/not-ready",
+            "operator": "Exists",
+            "tolerationSeconds": 300
+          },
+          {
+            "effect": "NoExecute",
+            "key": "node.kubernetes.io/unreachable",
+            "operator": "Exists",
+            "tolerationSeconds": 300
+          }
+        ],
+        "volumes": [
+          {
+            "name": "kube-api-access-n6tkj",
+            "projected": {
+              "defaultMode": 420,
+              "sources": [
+                {
+                  "serviceAccountToken": {
+                    "expirationSeconds": 3607,
+                    "path": "token"
+                  }
+                },
+                {
+                  "configMap": {
+                    "items": [
+                      {
+                        "key": "ca.crt",
+                        "path": "ca.crt"
+                      }
+                    ],
+                    "name": "kube-root-ca.crt"
+                  }
+                },
+                {
+                  "downwardAPI": {
+                    "items": [
+                      {
+                        "fieldRef": {
+                          "apiVersion": "v1",
+                          "fieldPath": "metadata.namespace"
+                        },
+                        "path": "namespace"
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "status": {
+        "conditions": [
+          {
+            "lastProbeTime": null,
+            "lastTransitionTime": "2026-11-03T05:19:52Z",
+            "status": "False",
+            "type": "Ready"
+          }
+        ],
+        "containerStatuses": [
+          {
+            "containerID": "cvk0000_e0b0e50daabc4e7a861cc2ba72bad946",
+            "image": "https://192.168.129.111:18443/v1/packages/sha256/ed8c257297a526229b154cbaabe1c466de239d4c011e4edfd25c7cb440fa071c/package.tar",
+            "imageID": "",
+            "lastState": {},
+            "name": "agent",
+            "ready": false,
+            "restartCount": 0,
+            "state": {
+              "waiting": {
+                "message": "device maintenance: mutation lease held by device-write/ea9a6891-d472-4d1e-8f02-5bbbd8761846",
+                "reason": "VerifiedInstallationBlocked"
+              }
+            }
+          }
+        ],
+        "hostIP": "10.1.1.1",
+        "message": "device maintenance: mutation lease held by device-write/ea9a6891-d472-4d1e-8f02-5bbbd8761846",
+        "phase": "Pending",
+        "qosClass": "Burstable",
+        "reason": "ProviderFailed"
+      }
+    }
+  ],
+  "deployment": [
+    {
+      "apiVersion": "apps/v1",
+      "kind": "Deployment",
+      "metadata": {
+        "annotations": {
+          "deployment.kubernetes.io/revision": "1"
+        },
+        "creationTimestamp": "2026-11-03T05:19:49Z",
+        "generation": 1,
+        "labels": {
+          "qualification": "20261103"
+        },
+        "name": "cvk-verified-fixture",
+        "namespace": "cvk-pending-apps-20261103",
+        "resourceVersion": "1139",
+        "uid": "c5a19d45-ad02-4274-a93e-b4098160a44d"
+      },
+      "spec": {
+        "progressDeadlineSeconds": 600,
+        "replicas": 1,
+        "revisionHistoryLimit": 10,
+        "selector": {
+          "matchLabels": {
+            "app": "cvk-verified-fixture"
+          }
+        },
+        "strategy": {
+          "type": "Recreate"
+        },
+        "template": {
+          "metadata": {
+            "annotations": {
+              "cisco.io/apphost-artifacts": "{\"agent\": {\"descriptorDigest\": \"sha256:aa3215da3bc24864581775acbf5e0de9e51dac4816d9a9fcc3f8b8ce1d3c755c\"}}",
+              "cisco.io/apphost-package-timeout": "300s"
+            },
+            "labels": {
+              "app": "cvk-verified-fixture",
+              "qualification": "20261103"
+            }
+          },
+          "spec": {
+            "affinity": {
+              "nodeAffinity": {
+                "requiredDuringSchedulingIgnoredDuringExecution": {
+                  "nodeSelectorTerms": [
+                    {
+                      "matchFields": [
+                        {
+                          "key": "metadata.name",
+                          "operator": "In",
+                          "values": [
+                            "c9k-pending-20261103"
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              }
+            },
+            "containers": [
+              {
+                "image": "https://192.168.129.111:18443/v1/packages/sha256/ed8c257297a526229b154cbaabe1c466de239d4c011e4edfd25c7cb440fa071c/package.tar",
+                "imagePullPolicy": "IfNotPresent",
+                "name": "agent",
+                "ports": [
+                  {
+                    "containerPort": 8080,
+                    "protocol": "TCP"
+                  }
+                ],
+                "resources": {
+                  "limits": {
+                    "memory": "128Mi"
+                  },
+                  "requests": {
+                    "memory": "128Mi"
+                  }
+                },
+                "terminationMessagePath": "/dev/termination-log",
+                "terminationMessagePolicy": "File"
+              }
+            ],
+            "dnsPolicy": "ClusterFirst",
+            "restartPolicy": "Always",
+            "schedulerName": "default-scheduler",
+            "securityContext": {},
+            "terminationGracePeriodSeconds": 30,
+            "tolerations": [
+              {
+                "effect": "NoSchedule",
+                "key": "cisco.vk/device",
+                "operator": "Exists"
+              }
+            ]
+          }
+        }
+      },
+      "status": {
+        "conditions": [
+          {
+            "lastTransitionTime": "2026-11-03T05:19:49Z",
+            "lastUpdateTime": "2026-11-03T05:19:49Z",
+            "message": "Deployment does not have minimum availability.",
+            "reason": "MinimumReplicasUnavailable",
+            "status": "False",
+            "type": "Available"
+          },
+          {
+            "lastTransitionTime": "2026-11-03T05:19:49Z",
+            "lastUpdateTime": "2026-11-03T05:19:49Z",
+            "message": "ReplicaSet \"cvk-verified-fixture-6f55bc5cd8\" is progressing.",
+            "reason": "ReplicaSetUpdated",
+            "status": "True",
+            "type": "Progressing"
+          }
+        ],
+        "observedGeneration": 1,
+        "replicas": 1,
+        "terminatingReplicas": 0,
+        "unavailableReplicas": 1,
+        "updatedReplicas": 1
+      }
+    }
+  ],
+  "nodes": [
+    {
+      "apiVersion": "v1",
+      "kind": "Node",
+      "metadata": {
+        "annotations": {
+          "topology.cisco.vk/app-worker-pod-name": "c9k-pending-20261103-vk-56857c4777-z99zw",
+          "topology.cisco.vk/app-worker-pod-uid": "09d3ecd4-2bb4-4bea-af06-c905e769a705",
+          "topology.cisco.vk/app-worker-username": "system:serviceaccount:cvk-pending-20261103:cvk-pending-cisco-virtual-kubelet-app-hosting",
+          "topology.cisco.vk/device-name": "c9k-pending-20261103",
+          "topology.cisco.vk/device-namespace": "cvk-pending-20261103",
+          "topology.cisco.vk/device-uid": "1c00ea5a-b650-4be8-87be-8fd18a8c64ff",
+          "topology.cisco.vk/managed": "true",
+          "topology.cisco.vk/managed-taints": "",
+          "topology.cisco.vk/network-worker-pod-name": "u1c00ea5a-b650-4be8-87be-8fd18a8c64ff-network-5457b6f7c9-hqddw",
+          "topology.cisco.vk/network-worker-pod-uid": "9cd32129-557c-4a24-8788-61ee6b0f63c3",
+          "topology.cisco.vk/network-worker-username": "system:serviceaccount:cvk-pending-20261103:cvk-pending-cisco-virtual-kubelet-network-management",
+          "topology.cisco.vk/node-uid": "8d217a40-9e3a-40df-8710-a8b1a4c5046b",
+          "topology.cisco.vk/projected-keys": "kubernetes.io/hostname,platform,provider,topology.kubernetes.io/region,topology.kubernetes.io/zone,type",
+          "topology.cisco.vk/projection-hash": "sha256:40bda17bd4c62fa28444092be6b8e45a73d24fdb699227d647418f97796a7559",
+          "topology.cisco.vk/worker-observed-revision": "sha256:de08cb187617f9658b4ab51385d0dd89d92bf52c838c23dfc3375d42681caed0",
+          "topology.cisco.vk/worker-protocol": "rollout-v1",
+          "topology.cisco.vk/worker-username": "system:serviceaccount:cvk-pending-20261103:cvk-pending-cisco-virtual-kubelet-app-hosting",
+          "virtual-kubelet.io/last-applied-node-status": "{\"capacity\":{\"memory\":\"2Gi\",\"pods\":\"1\",\"storage\":\"112487Mi\"},\"allocatable\":{\"memory\":\"2Gi\",\"pods\":\"1\",\"storage\":\"112487Mi\"},\"conditions\":[{\"type\":\"Ready\",\"status\":\"True\",\"lastHeartbeatTime\":\"2026-11-03T05:21:22Z\",\"lastTransitionTime\":\"2026-11-03T05:19:22Z\",\"reason\":\"KubeletReady\",\"message\":\"Cisco IOx is enabled and reachable\"},{\"type\":\"CiscoVirtualKubeletManagedReady\",\"status\":\"True\",\"lastHeartbeatTime\":\"2026-11-03T05:21:22Z\",\"lastTransitionTime\":\"2026-11-03T05:19:22Z\",\"reason\":\"StatusOnlyRolloutV1\",\"message\":\"worker is enforcing the rollout-v1 status-only Node writer contract\"},{\"type\":\"DiskPressure\",\"status\":\"False\",\"lastHeartbeatTime\":\"2026-11-03T05:21:22Z\",\"lastTransitionTime\":\"2026-11-03T05:19:22Z\",\"reason\":\"StorageAvailable\",\"message\":\"Sufficient storage available\"}],\"addresses\":[{\"type\":\"InternalIP\",\"address\":\"10.58.0.5\"}],\"daemonEndpoints\":{\"kubeletEndpoint\":{\"Port\":10250}},\"nodeInfo\":{\"machineID\":\"FCW2247C1AJ\",\"systemUUID\":\"FCW2247C1AJ\",\"bootID\":\"\",\"kernelVersion\":\"17.18.1\",\"osImage\":\"IOS-XE\",\"containerRuntimeVersion\":\"\",\"kubeletVersion\":\"v1.12.0\",\"kubeProxyVersion\":\"\",\"operatingSystem\":\"Cisco\",\"architecture\":\"C9300-24UX\"}}",
+          "virtual-kubelet.io/last-applied-object-meta": "{\"name\":\"c9k-pending-20261103\",\"uid\":\"8d217a40-9e3a-40df-8710-a8b1a4c5046b\"}"
+        },
+        "creationTimestamp": "2026-11-03T05:18:02Z",
+        "labels": {
+          "kubernetes.io/hostname": "c9k-pending-20261103",
+          "platform": "cisco-ios-xe",
+          "provider": "cisco-apphosting",
+          "topology.kubernetes.io/region": "lab",
+          "topology.kubernetes.io/zone": "ux-agx",
+          "type": "virtual-kubelet"
+        },
+        "name": "c9k-pending-20261103",
+        "resourceVersion": "1271",
+        "uid": "8d217a40-9e3a-40df-8710-a8b1a4c5046b"
+      },
+      "spec": {},
+      "status": {
+        "addresses": [
+          {
+            "address": "10.58.0.5",
+            "type": "InternalIP"
+          }
+        ],
+        "allocatable": {
+          "memory": "2Gi",
+          "pods": "1",
+          "storage": "112487Mi"
+        },
+        "capacity": {
+          "memory": "2Gi",
+          "pods": "1",
+          "storage": "112487Mi"
+        },
+        "conditions": [
+          {
+            "lastHeartbeatTime": "2026-11-03T05:21:22Z",
+            "lastTransitionTime": "2026-11-03T05:19:22Z",
+            "message": "Cisco IOx is enabled and reachable",
+            "reason": "KubeletReady",
+            "status": "True",
+            "type": "Ready"
+          },
+          {
+            "lastHeartbeatTime": "2026-11-03T05:21:22Z",
+            "lastTransitionTime": "2026-11-03T05:19:22Z",
+            "message": "worker is enforcing the rollout-v1 status-only Node writer contract",
+            "reason": "StatusOnlyRolloutV1",
+            "status": "True",
+            "type": "CiscoVirtualKubeletManagedReady"
+          },
+          {
+            "lastHeartbeatTime": "2026-11-03T05:21:22Z",
+            "lastTransitionTime": "2026-11-03T05:19:22Z",
+            "message": "Sufficient storage available",
+            "reason": "StorageAvailable",
+            "status": "False",
+            "type": "DiskPressure"
+          }
+        ],
+        "daemonEndpoints": {
+          "kubeletEndpoint": {
+            "Port": 10250
+          }
+        },
+        "nodeInfo": {
+          "architecture": "C9300-24UX",
+          "bootID": "",
+          "containerRuntimeVersion": "",
+          "kernelVersion": "17.18.1",
+          "kubeProxyVersion": "",
+          "kubeletVersion": "v1.12.0",
+          "machineID": "FCW2247C1AJ",
+          "operatingSystem": "Cisco",
+          "osImage": "IOS-XE",
+          "systemUUID": "FCW2247C1AJ"
+        }
+      }
+    }
+  ],
+  "journals": [
+    {
+      "apiVersion": "v1",
+      "kind": "ConfigMap",
+      "metadata": {
+        "annotations": {
+          "apphosting.cisco.com/device-name": "c9k-pending-20261103",
+          "apphosting.cisco.com/device-namespace": "cvk-pending-20261103",
+          "apphosting.cisco.com/device-uid": "1c00ea5a-b650-4be8-87be-8fd18a8c64ff",
+          "apphosting.cisco.com/journal": "v1"
+        },
+        "creationTimestamp": "2026-11-03T05:18:05Z",
+        "name": "cvk-artifacts-a22c5cbeebdbc827eb42428f",
+        "namespace": "cvk-pending-20261103",
+        "resourceVersion": "768",
+        "uid": "f6082b67-aaa0-4e60-b9a9-4d528f894f29"
+      }
+    }
+  ],
+  "journalRoles": [
+    {
+      "apiVersion": "rbac.authorization.k8s.io/v1",
+      "kind": "Role",
+      "metadata": {
+        "annotations": {
+          "apphosting.cisco.com/device-name": "c9k-pending-20261103",
+          "apphosting.cisco.com/device-namespace": "cvk-pending-20261103",
+          "apphosting.cisco.com/device-uid": "1c00ea5a-b650-4be8-87be-8fd18a8c64ff",
+          "apphosting.cisco.com/journal": "v1",
+          "topology.cisco.vk/shared-worker-account": "app-hosting",
+          "topology.cisco.vk/shared-worker-namespace": "cvk-pending-20261103",
+          "topology.cisco.vk/shared-worker-role": "cvk-artifacts-a22c5cbeebdbc827eb42428f",
+          "topology.cisco.vk/worker-protocol": "rollout-v1"
+        },
+        "creationTimestamp": "2026-11-03T05:18:05Z",
+        "name": "cvk-artifacts-a22c5cbeebdbc827eb42428f",
+        "namespace": "cvk-pending-20261103",
+        "resourceVersion": "769",
+        "uid": "9fb4de02-dba6-4920-92cc-3a0cf6209c2e"
+      },
+      "rules": [
+        {
+          "apiGroups": [
+            ""
+          ],
+          "resourceNames": [
+            "cvk-artifacts-a22c5cbeebdbc827eb42428f"
+          ],
+          "resources": [
+            "configmaps"
+          ],
+          "verbs": [
+            "get",
+            "update"
+          ]
+        }
+      ]
+    }
+  ],
+  "journalBindings": [
+    {
+      "apiVersion": "rbac.authorization.k8s.io/v1",
+      "kind": "RoleBinding",
+      "metadata": {
+        "annotations": {
+          "apphosting.cisco.com/device-name": "c9k-pending-20261103",
+          "apphosting.cisco.com/device-namespace": "cvk-pending-20261103",
+          "apphosting.cisco.com/device-uid": "1c00ea5a-b650-4be8-87be-8fd18a8c64ff",
+          "apphosting.cisco.com/journal": "v1",
+          "topology.cisco.vk/shared-worker-account": "app-hosting",
+          "topology.cisco.vk/shared-worker-namespace": "cvk-pending-20261103",
+          "topology.cisco.vk/shared-worker-role": "cvk-artifacts-a22c5cbeebdbc827eb42428f",
+          "topology.cisco.vk/worker-protocol": "rollout-v1"
+        },
+        "creationTimestamp": "2026-11-03T05:18:05Z",
+        "name": "cvk-artifacts-a22c5cbeebdbc827eb42428f",
+        "namespace": "cvk-pending-20261103",
+        "resourceVersion": "770",
+        "uid": "2de4e9b4-f2e8-4e57-85ce-8654232704f4"
+      },
+      "roleRef": {
+        "apiGroup": "rbac.authorization.k8s.io",
+        "kind": "Role",
+        "name": "cvk-artifacts-a22c5cbeebdbc827eb42428f"
+      },
+      "subjects": [
+        {
+          "kind": "ServiceAccount",
+          "name": "cvk-pending-cisco-virtual-kubelet-app-hosting",
+          "namespace": "cvk-pending-20261103"
+        }
+      ]
+    }
+  ],
+  "workers": [
+    {
+      "name": "c9k-pending-20261103-vk-56857c4777-z99zw",
+      "uid": "09d3ecd4-2bb4-4bea-af06-c905e769a705",
+      "annotations": {
+        "cisco.vk/config-hash": "3c45c446",
+        "cisco.vk/credential-resource-version": "480",
+        "cisco.vk/device-tls-ca-resource-version": "481",
+        "topology.cisco.vk/worker-config-revision": "sha256:de08cb187617f9658b4ab51385d0dd89d92bf52c838c23dfc3375d42681caed0"
+      },
+      "serviceAccount": "cvk-pending-cisco-virtual-kubelet-app-hosting",
+      "status": {
+        "conditions": [
+          {
+            "lastProbeTime": null,
+            "lastTransitionTime": "2026-11-03T05:18:15Z",
+            "observedGeneration": 1,
+            "status": "True",
+            "type": "PodReadyToStartContainers"
+          },
+          {
+            "lastProbeTime": null,
+            "lastTransitionTime": "2026-11-03T05:18:05Z",
+            "observedGeneration": 1,
+            "status": "True",
+            "type": "Initialized"
+          },
+          {
+            "lastProbeTime": null,
+            "lastTransitionTime": "2026-11-03T05:19:23Z",
+            "observedGeneration": 1,
+            "status": "True",
+            "type": "Ready"
+          },
+          {
+            "lastProbeTime": null,
+            "lastTransitionTime": "2026-11-03T05:19:23Z",
+            "observedGeneration": 1,
+            "status": "True",
+            "type": "ContainersReady"
+          },
+          {
+            "lastProbeTime": null,
+            "lastTransitionTime": "2026-11-03T05:18:05Z",
+            "observedGeneration": 1,
+            "status": "True",
+            "type": "PodScheduled"
+          }
+        ],
+        "containerStatuses": [
+          {
+            "containerID": "containerd://5ab731fb88704413df49a0440d04f223688c4a99587d95aa8570de918550b4ec",
+            "image": "docker.io/library/cvk-verified-qual:20261102-consistent-0afc2dec6bb8",
+            "imageID": "sha256:cc9db942e9bbe1295c961a3ec1de554befaac33d07de4d456cd711b1bd3e13c4",
+            "lastState": {
+              "terminated": {
+                "containerID": "containerd://c274a020e4c619af8af570861c1f4e944758f0f68f96cfbb5d54a86306e8b3ef",
+                "exitCode": 1,
+                "finishedAt": "2026-11-03T05:18:52Z",
+                "reason": "Error",
+                "startedAt": "2026-11-03T05:18:51Z"
+              }
+            },
+            "name": "cisco-vk",
+            "ready": true,
+            "resources": {},
+            "restartCount": 3,
+            "started": true,
+            "state": {
+              "running": {
+                "startedAt": "2026-11-03T05:19:22Z"
+              }
+            },
+            "user": {
+              "linux": {
+                "gid": 65532,
+                "supplementalGroups": [
+                  65532
+                ],
+                "uid": 65532
+              }
+            },
+            "volumeMounts": [
+              {
+                "mountPath": "/etc/virtual-kubelet/config.yaml",
+                "name": "device-config",
+                "readOnly": true,
+                "recursiveReadOnly": "Disabled"
+              },
+              {
+                "mountPath": "/var/lib/virtual-kubelet",
+                "name": "tls-gen"
+              },
+              {
+                "mountPath": "/tmp",
+                "name": "tmp"
+              },
+              {
+                "mountPath": "/var/run/secrets/cisco-vk/device-tls-ca",
+                "name": "device-tls-ca",
+                "readOnly": true,
+                "recursiveReadOnly": "Disabled"
+              },
+              {
+                "mountPath": "/var/run/secrets/kubernetes.io/serviceaccount",
+                "name": "kube-api-access-qnfrd",
+                "readOnly": true,
+                "recursiveReadOnly": "Disabled"
+              }
+            ]
+          }
+        ],
+        "hostIP": "172.17.0.3",
+        "hostIPs": [
+          {
+            "ip": "172.17.0.3"
+          }
+        ],
+        "observedGeneration": 1,
+        "phase": "Running",
+        "podIP": "10.58.0.5",
+        "podIPs": [
+          {
+            "ip": "10.58.0.5"
+          }
+        ],
+        "qosClass": "BestEffort",
+        "startTime": "2026-11-03T05:18:05Z"
+      }
+    }
+  ],
+  "nativeApps": [
+    {
+      "appID": "iris",
+      "details": {
+        "state": "RUNNING"
+      }
+    },
+    {
+      "appID": "c9ktest",
+      "details": {
+        "state": "DEPLOYED"
+      }
+    }
+  ],
+  "probes": []
+}

@@ -1,0 +1,38 @@
+{
+  "label": "baseline",
+  "atUTC": "2026-11-04T10:17:34.403045+00:00",
+  "hostBeforeUTC": "2026-11-04T10:17:32.749938+00:00",
+  "hostAfterUTC": "2026-11-04T10:17:34.403045+00:00",
+  "deviceUTC": "2026-11-04T10:17:33.562000+00:00",
+  "deviceTimeSource": "NTP",
+  "clockChanged": false,
+  "deviceWritesIssued": 0,
+  "allCertificatesCurrentlyValid": true,
+  "allCRLsCurrentlyFresh": true,
+  "CRLBytesUnchanged": true,
+  "policiesUnchanged": true,
+  "serverModes": {
+    "disabled": "disabled-bad",
+    "valid-leaf": "leaf-control",
+    "valid-chain": "control-intermediate",
+    "leaf": "leaf-bad",
+    "intermediate": "intermediate-bad"
+  },
+  "nativeEvidence": {
+    "collectedAtUTC": "2026-11-04T10:17:34.391351+00:00",
+    "commands": [
+      {
+        "command": "show clock detail",
+        "output": "show clock detail\n10:17:33.562 UTC Wed Nov 4 2026\nTime source is NTP\nEdge-9K"
+      },
+      {
+        "command": "show running-config all | section ^crypto pki trustpoint CVK-STDREVOKE",
+        "output": "show running-config all | section ^crypto pki trustpoint CVK-STDREVOKE\ncrypto pki trustpoint CVK-STDREVOKE-NONE-20261104\n enrollment retry count 999\n enrollment retry period 1\n enrollment terminal pem\n revocation-check none\n hash sha512\ncrypto pki trustpoint CVK-STDREVOKE-LEAF-20261104\n enrollment retry count 999\n enrollment retry period 1\n enrollment terminal pem\n revocation-check crl\n hash sha512\ncrypto pki trustpoint CVK-STDREVOKE-CHAIN-20261104\n enrollment retry count 999\n enrollment retry period 1\n enrollment terminal pem\n revocation-check crl\n hash sha512\nEdge-9K"
+      },
+      {
+        "command": "show crypto pki crls",
+        "output": "[No run-owned CRL block observed]"
+      }
+    ]
+  }
+}

@@ -1,0 +1,55 @@
+{
+  "apiVersion": "apphosting.cisco.com/v1alpha1",
+  "kind": "AppHostingDeploymentAuthorization",
+  "authorizationID": "a91f7549-c5bd-48de-9cce-64a3127b96d9",
+  "descriptorDigest": "sha256:c1eeab4f2eff6127a34878ba3d2c2f3d08029dfcd402d00dd3aaac3eb2015b9f",
+  "action": "deploy",
+  "scope": {
+    "clusterID": "production-eu-1",
+    "namespace": "edge-apps",
+    "namespaceUID": "70be6386-d91b-42f1-b6a0-7bbd3ced1e55",
+    "workload": {
+      "apiVersion": "apps/v1",
+      "kind": "Deployment",
+      "name": "edge-agent-site-a",
+      "uid": "e2a2ca68-b219-41fb-873d-37a02da155a3"
+    },
+    "containerName": "agent",
+    "releaseID": "fb600a56-77fb-4e36-bbe9-20ab8fe13f02",
+    "transitionID": "131b5136-a0d8-45de-a3de-842319d96ea4",
+    "fromReleaseID": "38363dce-886c-42a2-a4dd-6a9566af8b4e",
+    "targetProfiles": [
+      {
+        "id": "iosxe-lab-qualified-example",
+        "digest": "sha256:9999999999999999999999999999999999999999999999999999999999999999"
+      }
+    ]
+  },
+  "issuedAt": "2026-10-31T10:00:00Z",
+  "notBefore": "2026-10-31T10:00:00Z",
+  "expiresAt": "2026-10-31T16:00:00Z",
+  "policyDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "assessment": {
+    "sourceManifestDigest": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+    "packageDigest": "sha256:4444444444444444444444444444444444444444444444444444444444444444",
+    "scanReport": {
+      "digest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "mediaType": "application/json"
+    },
+    "scanner": {
+      "name": "example-scanner",
+      "version": "example-version"
+    },
+    "scannedAt": "2026-10-31T09:30:00Z",
+    "databaseDigest": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+    "databaseUpdatedAt": "2026-10-31T08:00:00Z",
+    "qualification": {
+      "digest": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+      "mediaType": "application/json"
+    },
+    "sourceTrustEvidence": {
+      "digest": "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+      "mediaType": "application/vnd.in-toto+json"
+    }
+  }
+}

@@ -1,0 +1,15 @@
+from pathlib import Path
+import tarfile,shutil,json,hashlib
+R=Path('/private/tmp/cvk-stdgc-20261106');dest=R/'remote-public';assert not dest.exists();dest.mkdir()
+with tarfile.open(R/'evidence-input.tar.gz','r:gz') as t:t.extractall(dest,filter='data')
+for p in sorted(dest.rglob('*')):
+ if not p.is_file() or p.suffix=='.py' or 'initial-harness-stop' in p.parts:continue
+ target=R/p.relative_to(dest);target.parent.mkdir(parents=True,exist_ok=True);shutil.copyfile(p,target)
+for p in dest.glob('*.py'):
+ target=R/p.name
+ if not target.exists():shutil.copyfile(p,target)
+amend=json.loads((dest/'snapshot-arp-amendment.json').read_text())
+for n,digest in json.loads((dest/'executed-source-hashes.json').read_text()).items():assert hashlib.sha256((dest/(amend['originalScript'] if n=='snapshot.py' else n)).read_bytes()).hexdigest()==digest,n
+assert hashlib.sha256((dest/amend['amendedScript']).read_bytes()).hexdigest()==amend['amendedSHA256']
+for n,digest in json.loads((dest/'supplemental-source-hashes.json').read_text()).items():assert hashlib.sha256((dest/n).read_bytes()).hexdigest()==digest,n
+print('PASS imported public remote data and verified captured lab source hashes; local analysis preserved')

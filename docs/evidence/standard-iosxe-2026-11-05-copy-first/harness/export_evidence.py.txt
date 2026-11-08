@@ -1,0 +1,55 @@
+import pathlib,json,yaml,re,hashlib,shutil
+R=pathlib.Path('/private/tmp/cvk-stdcopyfix-20261105');OUT=pathlib.Path('/Users/johalley/Git/cisco-virtual-kubelet/docs/evidence/standard-iosxe-2026-11-05-copy-first');q=json.loads((R/'qualification-assessed.json').read_text());assert q['executionComplete'] and q['baselineCleanupPassed'];OUT.mkdir(parents=True,exist_ok=True)
+def clean(v):
+ if isinstance(v,list):return [clean(x) for x in v]
+ if isinstance(v,dict):return {k:clean(x) for k,x in v.items() if k not in ['managedFields','kubectl.kubernetes.io/last-applied-configuration']}
+ return v
+def copy(p,out,raw=False):
+ out.parent.mkdir(parents=True,exist_ok=True)
+ if raw:shutil.copyfile(p,out);return
+ if p.suffix=='.json':
+  x=clean(json.loads(p.read_text()))
+  if isinstance(x,dict) and 'devices' in x:
+   for d in x['devices']:
+    if d.get('status'):d['status']={k:v for k,v in d['status'].items() if k in ['phase','conditions','nodeIdentity','workerRevision','networkWorkerRevision','workerCapabilities']}
+   for a in x.get('nativeApps',[]):
+    if not a.get('appID','').startswith('cvk0000_'):a.pop('networkInterfaces',None)
+  out.write_text(json.dumps(x,indent=2)+'\n')
+ elif p.suffix=='.jsonl':out.write_text(''.join(json.dumps(clean(json.loads(l)))+'\n' for l in p.read_text().splitlines()))
+ elif p.suffix=='.yaml':
+  v=yaml.safe_load(p.read_text());assert 'password' not in json.dumps(v).lower();out.write_text(yaml.safe_dump(v))
+ else:shutil.copyfile(p,out)
+for p in sorted(R.iterdir()):
+ if p.is_file() and (p.suffix in ['.json','.jsonl','.yaml','.crt','.crl','.pem'] or p.name in ['qualification.log','continuation.log','discovery.log','main.go']):copy(p,OUT/p.name)
+copy(R/'qualification-assessed.json',OUT/'qualification.json')
+for phase in ['valid','cached','refresh']:
+ for name in ['docker-config.json','docker-manifest.json']:copy(R/phase/name,OUT/phase/name)
+(OUT/'harness').mkdir(exist_ok=True)
+for p in sorted(R.glob('*.py')):shutil.copyfile(p,OUT/'harness'/(p.name+'.txt'))
+# Preserve the safely blocked initial default-path failure and its original candidate.
+initial=R/'initial-missing-directory'
+for p in sorted(initial.iterdir()):
+ if p.is_file() and not p.name.endswith('.key'):copy(p,OUT/'initial-missing-directory'/p.name,raw=True)
+for n in ['implementation.patch','race-root-path.log','Dockerfile.qual']:
+ copy(R/n,OUT/n,raw=True)
+rows=['| Boundary | Result (UTC) |','| --- | --- |', '| Revocation published | '+q['publicationUTC']+' |','| Cached CRL NextUpdate | '+q['originalCRLNextUpdateUTC']+' |','| C9K fetched revoked CRL | '+q['firstRevokedCRLNativeFetchUTC']+' |','| Native serial-specific revocation error | '+q['firstNativePKIRejectionUTC']+' |','| Fresh image while old CRL was cached | '+q['cacheWindowOutcome']+' |','| Failed-copy boundary | No fixture configuration, runtime, Ready or package GET |','| Current revoked CRL renewed before continuation | '+json.loads((R/'crl-v3.json').read_text())['publishedAtUTC']+' |','| Worker restart while revoked | Block remained in force; same canonical Lease |','| Certificate-only repair | Same Pod recovered the expected release after natural fence |','| Fresh HTTPS with IfNotPresent | Exact compiled release confirmed |','| Preloaded local Never; origin offline | Exact release confirmed before and after worker restart |']
+(OUT/'README.md').write_text((R/'evidence-readme.md').read_text().replace('@@TIMELINE@@','\n'.join(rows)))
+pattern=re.compile(r'^-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----|^\s*client-key-data:\s*[A-Za-z0-9+/]{24,}|password\s*[=:]\s*cisco\b|^Authorization:\s*(?:Basic|Bearer)\s+\S|\b(?:Basic|Bearer)[ \t]+[A-Za-z0-9+/_.=-]{16,}',re.I|re.M)
+for p in OUT.rglob('*'):
+ if p.is_file() and p.suffix!='.crl' and not p.name.endswith('.tar.gz'):
+  text=p.read_text();assert not pattern.search(text),p
+  normalized=text.replace('\\"','"');assert not re.search(r'''password["'\s]*[=:]["'\s]*cisco\b''',normalized,re.I),p
+# Preserve repeated, sanitized observation snapshots in a deterministic indexed archive.
+import tarfile,gzip,io
+polls=[p for p in sorted(OUT.iterdir()) if p.is_file() and p.suffix=='.json' and re.fullmatch(r'(?:snapshot|controls)-(?:.+-poll-\d+|refresh-guard-\d+|refresh-invalid-\d+|cached-window-\d+|renewed-revoked-\d+)',p.stem)]
+index=[];buffer=io.BytesIO()
+with gzip.GzipFile(fileobj=buffer,mode='wb',mtime=0,filename='') as zipped:
+ with tarfile.open(fileobj=zipped,mode='w|',format=tarfile.USTAR_FORMAT) as tar:
+  for p in polls:
+   data=p.read_bytes();entry=tarfile.TarInfo(p.name);entry.mode=0o644;entry.mtime=0;entry.size=len(data);tar.addfile(entry,io.BytesIO(data));index.append({'name':p.name,'bytes':len(data),'sha256':hashlib.sha256(data).hexdigest()})
+with tarfile.open(fileobj=io.BytesIO(buffer.getvalue()),mode='r:gz') as tar:
+ members=tar.getmembers();assert len(members)==len(index)
+ for member,expected in zip(members,index):assert member.name==expected['name'] and hashlib.sha256(tar.extractfile(member).read()).hexdigest()==expected['sha256']
+(OUT/'observation-snapshots.tar.gz').write_bytes(buffer.getvalue());(OUT/'observation-snapshots-index.json').write_text(json.dumps({'format':'Sanitized repeated poll/guard observations; boundary proofs and JSONL logs retained directly','files':index},indent=2)+'\n')
+for p in polls:p.unlink()
+manifest=''.join(hashlib.sha256(p.read_bytes()).hexdigest()+'  '+str(p.relative_to(OUT))+'\n' for p in sorted(OUT.rglob('*')) if p.is_file() and p.name!='SHA256SUMS');(OUT/'SHA256SUMS').write_text(manifest);print('PASS exported',len(manifest.splitlines()),'public evidence files; prior evidence preserved')

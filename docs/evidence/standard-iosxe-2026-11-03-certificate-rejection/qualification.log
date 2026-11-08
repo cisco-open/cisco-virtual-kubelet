@@ -1,0 +1,90 @@
+namespace/cvk-stdcert-apps-20261103 created
+deployment.apps/cvk-stdcert-fixture created
+{"atUTC": "2026-11-03T17:34:06.951260+00:00", "label": "valid-control", "release": "A", "podUIDs": ["e49e4cd6-1cec-462b-8377-e9267d275775"], "nativeStates": {"iris": "RUNNING", "c9ktest": "DEPLOYED"}, "ready": false, "httpReleaseConfirmed": false, "oldNativeAppsAbsent": false, "artifactJournalCount": 0}
+{"atUTC": "2026-11-03T17:34:33.732612+00:00", "label": "valid-control", "release": "A", "podUIDs": ["e49e4cd6-1cec-462b-8377-e9267d275775"], "nativeStates": {"iris": "RUNNING", "c9ktest": "DEPLOYED", "cvk0000_e49e4cd61cec462b8377e9267d275775": "RUNNING"}, "ready": true, "httpReleaseConfirmed": false, "oldNativeAppsAbsent": true, "artifactJournalCount": 0}
+PASS valid-control Ready/HTTP A without artifacts or journal
+deployment.apps/cvk-stdcert-fixture scaled
+2026-11-03T17:34:50.200857+00:00 valid normal deletion pending; guard 2026-11-03 18:05:43.515877+00:00
+deployment.apps/cvk-stdcert-fixture configured
+{"atUTC": "2026-11-03T17:35:39.144089+00:00", "case": "untrusted", "invalidCertificateMode": "untrusted", "podUIDs": ["5532698d-0056-4d6d-83f9-5429697774e0"], "ready": false, "nativeRunning": false, "tlsRejections": 1, "packageHTTPRequests": 0, "leaseRenewAgeSeconds": 1.628393, "leaseExpiresUTC": "2026-11-03T18:06:37.515685+00:00", "artifactJournals": 0}
+{"atUTC": "2026-11-03T17:36:26.762389+00:00", "case": "untrusted", "invalidCertificateMode": "untrusted", "podUIDs": ["5532698d-0056-4d6d-83f9-5429697774e0"], "ready": false, "nativeRunning": false, "tlsRejections": 1, "packageHTTPRequests": 0, "leaseRenewAgeSeconds": 19.219622, "leaseExpiresUTC": "2026-11-03T18:07:07.542758+00:00", "artifactJournals": 0}
+{"atUTC": "2026-11-03T17:37:13.897742+00:00", "case": "untrusted", "invalidCertificateMode": "untrusted", "podUIDs": ["5532698d-0056-4d6d-83f9-5429697774e0"], "ready": false, "nativeRunning": false, "tlsRejections": 1, "packageHTTPRequests": 0, "leaseRenewAgeSeconds": 6.353999, "leaseExpiresUTC": "2026-11-03T18:08:07.543733+00:00", "artifactJournals": 0}
+{"atUTC": "2026-11-03T17:38:01.472352+00:00", "case": "untrusted", "invalidCertificateMode": "untrusted", "podUIDs": ["5532698d-0056-4d6d-83f9-5429697774e0"], "ready": false, "nativeRunning": false, "tlsRejections": 1, "packageHTTPRequests": 0, "leaseRenewAgeSeconds": 23.934943, "leaseExpiresUTC": "2026-11-03T18:08:37.537399+00:00", "artifactJournals": 0}
+{"atUTC": "2026-11-03T17:38:48.769360+00:00", "case": "untrusted", "invalidCertificateMode": "untrusted", "podUIDs": ["5532698d-0056-4d6d-83f9-5429697774e0"], "ready": false, "nativeRunning": false, "tlsRejections": 2, "packageHTTPRequests": 0, "leaseRenewAgeSeconds": 11.227181, "leaseExpiresUTC": "2026-11-03T18:09:37.542173+00:00", "artifactJournals": 0}
+{"atUTC": "2026-11-03T17:39:36.183397+00:00", "case": "untrusted", "invalidCertificateMode": "untrusted", "podUIDs": ["5532698d-0056-4d6d-83f9-5429697774e0"], "ready": false, "nativeRunning": false, "tlsRejections": 2, "packageHTTPRequests": 0, "leaseRenewAgeSeconds": 58.641218, "leaseExpiresUTC": "2026-11-03T18:09:37.542173+00:00", "artifactJournals": 0}
+{"atUTC": "2026-11-03T17:40:23.402842+00:00", "case": "untrusted", "invalidCertificateMode": "untrusted", "podUIDs": ["5532698d-0056-4d6d-83f9-5429697774e0"], "ready": false, "nativeRunning": false, "tlsRejections": 2, "packageHTTPRequests": 0, "leaseRenewAgeSeconds": 105.86066, "leaseExpiresUTC": "2026-11-03T18:09:37.542173+00:00", "artifactJournals": 0}
+2026-11-03T17:40:47.319329+00:00 untrusted test certificate corrected; normal guarded recovery only
+2026-11-03T17:40:49.073923+00:00 untrusted waiting for existing mutation guard 2026-11-03T18:09:37.542173+00:00
+2026-11-03T17:41:56.235565+00:00 untrusted waiting for existing mutation guard 2026-11-03T18:09:37.542173+00:00
+2026-11-03T17:43:03.623530+00:00 untrusted waiting for existing mutation guard 2026-11-03T18:09:37.542173+00:00
+2026-11-03T17:44:11.092788+00:00 untrusted waiting for existing mutation guard 2026-11-03T18:09:37.542173+00:00
+2026-11-03T17:45:18.762055+00:00 untrusted waiting for existing mutation guard 2026-11-03T18:09:37.542173+00:00
+2026-11-03T17:46:26.061187+00:00 untrusted waiting for existing mutation guard 2026-11-03T18:09:37.542173+00:00
+2026-11-03T17:47:33.198354+00:00 untrusted waiting for existing mutation guard 2026-11-03T18:09:37.542173+00:00
+2026-11-03T17:48:40.727748+00:00 untrusted waiting for existing mutation guard 2026-11-03T18:09:37.542173+00:00
+2026-11-03T17:49:47.759969+00:00 untrusted waiting for existing mutation guard 2026-11-03T18:09:37.542173+00:00
+2026-11-03T17:50:55.271545+00:00 untrusted waiting for existing mutation guard 2026-11-03T18:09:37.542173+00:00
+2026-11-03T17:52:02.710952+00:00 untrusted waiting for existing mutation guard 2026-11-03T18:09:37.542173+00:00
+2026-11-03T17:53:10.132758+00:00 untrusted waiting for existing mutation guard 2026-11-03T18:09:37.542173+00:00
+2026-11-03T17:54:17.392263+00:00 untrusted waiting for existing mutation guard 2026-11-03T18:09:37.542173+00:00
+2026-11-03T17:55:24.782161+00:00 untrusted waiting for existing mutation guard 2026-11-03T18:09:37.542173+00:00
+2026-11-03T17:56:32.100564+00:00 untrusted waiting for existing mutation guard 2026-11-03T18:09:37.542173+00:00
+2026-11-03T17:57:39.524185+00:00 untrusted waiting for existing mutation guard 2026-11-03T18:09:37.542173+00:00
+2026-11-03T17:58:46.741533+00:00 untrusted waiting for existing mutation guard 2026-11-03T18:09:37.542173+00:00
+2026-11-03T17:59:54.299703+00:00 untrusted waiting for existing mutation guard 2026-11-03T18:09:37.542173+00:00
+2026-11-03T18:01:01.584168+00:00 untrusted waiting for existing mutation guard 2026-11-03T18:09:37.542173+00:00
+2026-11-03T18:02:09.300347+00:00 untrusted waiting for existing mutation guard 2026-11-03T18:09:37.542173+00:00
+2026-11-03T18:03:16.860235+00:00 untrusted waiting for existing mutation guard 2026-11-03T18:09:37.542173+00:00
+2026-11-03T18:04:24.313718+00:00 untrusted waiting for existing mutation guard 2026-11-03T18:09:37.542173+00:00
+2026-11-03T18:05:31.530562+00:00 untrusted waiting for existing mutation guard 2026-11-03T18:09:37.542173+00:00
+2026-11-03T18:06:38.923095+00:00 untrusted waiting for existing mutation guard 2026-11-03T18:09:37.542173+00:00
+2026-11-03T18:07:46.573771+00:00 untrusted waiting for existing mutation guard 2026-11-03T18:09:37.542173+00:00
+2026-11-03T18:08:53.813234+00:00 untrusted waiting for existing mutation guard 2026-11-03T18:09:37.542173+00:00
+{"atUTC": "2026-11-03T18:09:39.309386+00:00", "label": "untrusted-corrected-recovery", "release": "A", "podUIDs": ["5532698d-0056-4d6d-83f9-5429697774e0"], "nativeStates": {"iris": "RUNNING", "c9ktest": "DEPLOYED"}, "ready": false, "httpReleaseConfirmed": false, "oldNativeAppsAbsent": false, "artifactJournalCount": 0}
+{"atUTC": "2026-11-03T18:10:06.264846+00:00", "label": "untrusted-corrected-recovery", "release": "A", "podUIDs": ["5532698d-0056-4d6d-83f9-5429697774e0"], "nativeStates": {"iris": "RUNNING", "c9ktest": "DEPLOYED", "cvk0000_5532698d00564d6d83f95429697774e0": "RUNNING"}, "ready": false, "httpReleaseConfirmed": false, "oldNativeAppsAbsent": true, "artifactJournalCount": 0}
+PASS untrusted-corrected-recovery Ready/HTTP A without artifacts or journal
+deployment.apps/cvk-stdcert-fixture scaled
+2026-11-03T18:10:37.650202+00:00 untrusted normal deletion pending; guard 2026-11-03 18:41:29.387403+00:00
+2026-11-03T18:11:24.758739+00:00 CASE RESULT {"case": "untrusted", "startedAtUTC": "2026-11-03T17:35:37.127559+00:00", "finishedAtUTC": "2026-11-03T18:11:24.758719+00:00", "classification": "invalid-certificate-rejected", "rejectionQualified": true, "appHealthyUnderInvalidCertificate": false, "recoveryPassed": true, "normalDeletionPassed": true, "packageURL": "https://192.168.129.111:18450/untrusted-agent-a.tar"}
+deployment.apps/cvk-stdcert-fixture configured
+{"atUTC": "2026-11-03T18:11:26.872594+00:00", "case": "hostname", "invalidCertificateMode": "hostname", "podUIDs": ["47f9872b-f661-4272-9961-48491a4ec4b2"], "ready": false, "nativeRunning": false, "tlsRejections": 1, "packageHTTPRequests": 0, "leaseRenewAgeSeconds": 1.746714, "leaseExpiresUTC": "2026-11-03T18:42:25.125870+00:00", "artifactJournals": 0}
+{"atUTC": "2026-11-03T18:12:14.249484+00:00", "case": "hostname", "invalidCertificateMode": "hostname", "podUIDs": ["47f9872b-f661-4272-9961-48491a4ec4b2"], "ready": false, "nativeRunning": false, "tlsRejections": 1, "packageHTTPRequests": 0, "leaseRenewAgeSeconds": 19.094487, "leaseExpiresUTC": "2026-11-03T18:42:55.154983+00:00", "artifactJournals": 0}
+{"atUTC": "2026-11-03T18:13:01.516077+00:00", "case": "hostname", "invalidCertificateMode": "hostname", "podUIDs": ["47f9872b-f661-4272-9961-48491a4ec4b2"], "ready": false, "nativeRunning": false, "tlsRejections": 1, "packageHTTPRequests": 0, "leaseRenewAgeSeconds": 6.358011, "leaseExpiresUTC": "2026-11-03T18:43:55.158060+00:00", "artifactJournals": 0}
+{"atUTC": "2026-11-03T18:13:48.665673+00:00", "case": "hostname", "invalidCertificateMode": "hostname", "podUIDs": ["47f9872b-f661-4272-9961-48491a4ec4b2"], "ready": false, "nativeRunning": false, "tlsRejections": 1, "packageHTTPRequests": 0, "leaseRenewAgeSeconds": 23.509872, "leaseExpiresUTC": "2026-11-03T18:44:25.155794+00:00", "artifactJournals": 0}
+{"atUTC": "2026-11-03T18:14:36.145995+00:00", "case": "hostname", "invalidCertificateMode": "hostname", "podUIDs": ["47f9872b-f661-4272-9961-48491a4ec4b2"], "ready": false, "nativeRunning": false, "tlsRejections": 2, "packageHTTPRequests": 0, "leaseRenewAgeSeconds": 10.990532, "leaseExpiresUTC": "2026-11-03T18:45:25.155439+00:00", "artifactJournals": 0}
+{"atUTC": "2026-11-03T18:15:23.571919+00:00", "case": "hostname", "invalidCertificateMode": "hostname", "podUIDs": ["47f9872b-f661-4272-9961-48491a4ec4b2"], "ready": false, "nativeRunning": false, "tlsRejections": 2, "packageHTTPRequests": 0, "leaseRenewAgeSeconds": 58.416471, "leaseExpiresUTC": "2026-11-03T18:45:25.155439+00:00", "artifactJournals": 0}
+{"atUTC": "2026-11-03T18:16:10.898259+00:00", "case": "hostname", "invalidCertificateMode": "hostname", "podUIDs": ["47f9872b-f661-4272-9961-48491a4ec4b2"], "ready": false, "nativeRunning": false, "tlsRejections": 2, "packageHTTPRequests": 0, "leaseRenewAgeSeconds": 105.74281, "leaseExpiresUTC": "2026-11-03T18:45:25.155439+00:00", "artifactJournals": 0}
+2026-11-03T18:16:34.662679+00:00 hostname test certificate corrected; normal guarded recovery only
+2026-11-03T18:16:36.567032+00:00 hostname waiting for existing mutation guard 2026-11-03T18:45:25.155439+00:00
+2026-11-03T18:17:43.936669+00:00 hostname waiting for existing mutation guard 2026-11-03T18:45:25.155439+00:00
+2026-11-03T18:18:51.147219+00:00 hostname waiting for existing mutation guard 2026-11-03T18:45:25.155439+00:00
+2026-11-03T18:19:58.840438+00:00 hostname waiting for existing mutation guard 2026-11-03T18:45:25.155439+00:00
+2026-11-03T18:21:06.443005+00:00 hostname waiting for existing mutation guard 2026-11-03T18:45:25.155439+00:00
+2026-11-03T18:22:13.853321+00:00 hostname waiting for existing mutation guard 2026-11-03T18:45:25.155439+00:00
+2026-11-03T18:23:21.144115+00:00 hostname waiting for existing mutation guard 2026-11-03T18:45:25.155439+00:00
+2026-11-03T18:24:28.501668+00:00 hostname waiting for existing mutation guard 2026-11-03T18:45:25.155439+00:00
+2026-11-03T18:25:36.179470+00:00 hostname waiting for existing mutation guard 2026-11-03T18:45:25.155439+00:00
+2026-11-03T18:26:43.555585+00:00 hostname waiting for existing mutation guard 2026-11-03T18:45:25.155439+00:00
+2026-11-03T18:27:50.962620+00:00 hostname waiting for existing mutation guard 2026-11-03T18:45:25.155439+00:00
+2026-11-03T18:28:58.176753+00:00 hostname waiting for existing mutation guard 2026-11-03T18:45:25.155439+00:00
+2026-11-03T18:30:05.574405+00:00 hostname waiting for existing mutation guard 2026-11-03T18:45:25.155439+00:00
+2026-11-03T18:31:13.206126+00:00 hostname waiting for existing mutation guard 2026-11-03T18:45:25.155439+00:00
+2026-11-03T18:32:20.564718+00:00 hostname waiting for existing mutation guard 2026-11-03T18:45:25.155439+00:00
+2026-11-03T18:33:27.914084+00:00 hostname waiting for existing mutation guard 2026-11-03T18:45:25.155439+00:00
+2026-11-03T18:34:35.128198+00:00 hostname waiting for existing mutation guard 2026-11-03T18:45:25.155439+00:00
+2026-11-03T18:35:42.375706+00:00 hostname waiting for existing mutation guard 2026-11-03T18:45:25.155439+00:00
+2026-11-03T18:36:50.182966+00:00 hostname waiting for existing mutation guard 2026-11-03T18:45:25.155439+00:00
+2026-11-03T18:37:57.661977+00:00 hostname waiting for existing mutation guard 2026-11-03T18:45:25.155439+00:00
+2026-11-03T18:39:04.911150+00:00 hostname waiting for existing mutation guard 2026-11-03T18:45:25.155439+00:00
+2026-11-03T18:40:12.252130+00:00 hostname waiting for existing mutation guard 2026-11-03T18:45:25.155439+00:00
+2026-11-03T18:41:19.648293+00:00 hostname waiting for existing mutation guard 2026-11-03T18:45:25.155439+00:00
+2026-11-03T18:42:27.099230+00:00 hostname waiting for existing mutation guard 2026-11-03T18:45:25.155439+00:00
+2026-11-03T18:43:34.455126+00:00 hostname waiting for existing mutation guard 2026-11-03T18:45:25.155439+00:00
+2026-11-03T18:44:41.756364+00:00 hostname waiting for existing mutation guard 2026-11-03T18:45:25.155439+00:00
+{"atUTC": "2026-11-03T18:45:27.193443+00:00", "label": "hostname-corrected-recovery", "release": "A", "podUIDs": ["47f9872b-f661-4272-9961-48491a4ec4b2"], "nativeStates": {"iris": "RUNNING", "c9ktest": "DEPLOYED"}, "ready": false, "httpReleaseConfirmed": false, "oldNativeAppsAbsent": false, "artifactJournalCount": 0}
+{"atUTC": "2026-11-03T18:45:54.173051+00:00", "label": "hostname-corrected-recovery", "release": "A", "podUIDs": ["47f9872b-f661-4272-9961-48491a4ec4b2"], "nativeStates": {"iris": "RUNNING", "c9ktest": "DEPLOYED", "cvk0000_47f9872bf6614272996148491a4ec4b2": "ACTIVATED"}, "ready": false, "httpReleaseConfirmed": false, "oldNativeAppsAbsent": true, "artifactJournalCount": 0}
+PASS hostname-corrected-recovery Ready/HTTP A without artifacts or journal
+deployment.apps/cvk-stdcert-fixture scaled
+2026-11-03T18:46:17.126335+00:00 hostname normal deletion pending; guard 2026-11-03 19:17:10.374324+00:00
+2026-11-03T18:47:04.549610+00:00 CASE RESULT {"case": "hostname", "startedAtUTC": "2026-11-03T18:11:24.758789+00:00", "finishedAtUTC": "2026-11-03T18:47:04.549579+00:00", "classification": "invalid-certificate-rejected", "rejectionQualified": true, "appHealthyUnderInvalidCertificate": false, "recoveryPassed": true, "normalDeletionPassed": true, "packageURL": "https://192.168.129.111:18451/hostname-agent-a.tar"}
+COMPLETE actual Standard invalid-certificate qualification: True

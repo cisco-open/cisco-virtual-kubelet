@@ -1,0 +1,235 @@
+{
+  "kind": "VerifiedIOSXEQualification",
+  "reportVersion": 1,
+  "collectedAtUTC": "2026-11-01T06:22:28.232215+00:00",
+  "status": "NOT_QUALIFIED_REQUIRED_GNOI_FILE_GET_UNIMPLEMENTED",
+  "qualificationPassed": false,
+  "candidate": {
+    "baseCommit": "1791a7e1634961936233ee94170f1c63cea1b64c",
+    "branch": "pr/johalley/verified-app-artifacts",
+    "dirtyWorktree": true,
+    "runtimeSourceTreeDigest": "sha256:c2bf9f60c88d7beeea2198c0da85a9f3a9a6a87fe791571119e2d9aa9de5f6ab",
+    "sourceFileCount": 1550,
+    "digestAlgorithm": "SHA256 of sorted unique git ls-files -co --exclude-standard paths under api/, cmd/, internal/, charts/ plus go.mod, go.sum, Dockerfile and Makefile; concatenate UTF-8 path, NUL, lowercase SHA256 of file bytes and newline for each regular file.",
+    "deployedCVKImageDigest": null,
+    "producerExecutableDigest": null,
+    "candidateImageConfigDigest": "sha256:25e80e21508d30273e4eb69ff44cb4b6625676a76d9e3e69e6bdc7237417c553",
+    "binarySHA256": "d26123fe5c99a0df3574f776da33a00305544efd7613c0076f573a7e40103f3e",
+    "chartBundleSHA256": "fc6c46bc731670f3ffc4aae51decca280d667545db3960570059b1ef7ee13b84"
+  },
+  "target": {
+    "host": "ux-agx",
+    "address": "10.1.1.1",
+    "deviceUID": null,
+    "nodeUID": null,
+    "serial": "FCW2247C1AJ",
+    "model": "C9300-24UX",
+    "iosxeVersion": "17.18.01 / 17.18.1 RELEASE fc2",
+    "identityVerified": true,
+    "sshHostKeyFingerprint": "SHA256:6a1Ts89cusFB7YnEyKujejZUTb11osqRyI8wBJ1MslA"
+  },
+  "fixtureImages": [
+    {
+      "release": "A",
+      "image": "cvk-verified-fixture-20261101:a",
+      "imageConfigDigest": "sha256:6857d08813f6fb07e59e976a001b5906971416a647bc85c7e614a1e59822d530",
+      "architecture": "amd64",
+      "os": "linux",
+      "binarySHA256": "5988d80f51015bd0bad02afb6cb1aa82a4e5dc16e188bbe04266d59a74cf325d"
+    },
+    {
+      "release": "B",
+      "image": "cvk-verified-fixture-20261101:b",
+      "imageConfigDigest": "sha256:f862e7a24ca757f4cb6202e0131eed1c2f54a25a12e723807a68d80b1b3bf5c0",
+      "architecture": "amd64",
+      "os": "linux",
+      "binarySHA256": "69077938a73f134bf7e3d81b85b72ebc85a8a66e446cf192b97985a675b70e2b"
+    }
+  ],
+  "signedPublishedReleaseArtifacts": null,
+  "cases": [
+    {
+      "id": "baseline",
+      "description": "Current device identity, health, capacity and candidate provenance",
+      "status": "PARTIAL",
+      "reason": "Authenticated hardware identity, native application states, flash capacity and candidate provenance captured. Required File.Get prerequisite failed; no manager/worker/journal or fixture service baseline exists.",
+      "evidence": [
+        "device-baseline.json",
+        "device-prerequisites.json",
+        "preflight.json"
+      ]
+    },
+    {
+      "id": "gnoi-os-verify-control",
+      "description": "Authenticated positive control over certificate-verified TLS",
+      "status": "PASS",
+      "reason": "OS.Verify returned the actual IOS-XE version using the same TLS and password authentication configuration.",
+      "evidence": [
+        "os-verify-control.json",
+        "probe-provenance.json"
+      ]
+    },
+    {
+      "id": "gnoi-file-get-capability",
+      "description": "Required physical staged-file readback service",
+      "status": "FAIL_UNSUPPORTED",
+      "reason": "File.Get returned gRPC Unimplemented through 10.1.1.1:9339. File.Put and file checksum semantics remain untested. This is scoped to the tested device/software/endpoint configuration.",
+      "evidence": [
+        "file-get-capability.json",
+        "probe-provenance.json"
+      ]
+    },
+    {
+      "id": "deployment-a",
+      "description": "Physical Verified deployment of retained release A",
+      "status": "BLOCKED_BY_UNSUPPORTED_READBACK",
+      "reason": "Required gNOI File.Get returned Unimplemented on the authenticated target. No package upload or lifecycle case was attempted; prior unit tests do not qualify this hardware.",
+      "evidence": [
+        "file-get-capability.json",
+        "os-verify-control.json"
+      ]
+    },
+    {
+      "id": "download-checksum-failure",
+      "description": "Same-size corruption rejected before device transfer/installation",
+      "status": "BLOCKED_BY_UNSUPPORTED_READBACK",
+      "reason": "Required gNOI File.Get returned Unimplemented on the authenticated target. No package upload or lifecycle case was attempted; prior unit tests do not qualify this hardware.",
+      "evidence": [
+        "file-get-capability.json",
+        "os-verify-control.json"
+      ]
+    },
+    {
+      "id": "device-checksum-failure",
+      "description": "Corrupt only owned staged bytes and prove recovery start is blocked",
+      "status": "BLOCKED_BY_UNSUPPORTED_READBACK",
+      "reason": "Required gNOI File.Get returned Unimplemented on the authenticated target. No package upload or lifecycle case was attempted; prior unit tests do not qualify this hardware.",
+      "evidence": [
+        "file-get-capability.json",
+        "os-verify-control.json"
+      ]
+    },
+    {
+      "id": "worker-restart-running",
+      "description": "Worker replacement without reinstalling the running application",
+      "status": "BLOCKED_BY_UNSUPPORTED_READBACK",
+      "reason": "Required gNOI File.Get returned Unimplemented on the authenticated target. No package upload or lifecycle case was attempted; prior unit tests do not qualify this hardware.",
+      "evidence": [
+        "file-get-capability.json",
+        "os-verify-control.json"
+      ]
+    },
+    {
+      "id": "worker-restart-pending",
+      "description": "Lost accepted install response and worker replacement without replay",
+      "status": "BLOCKED_BY_UNSUPPORTED_READBACK",
+      "reason": "Required gNOI File.Get returned Unimplemented on the authenticated target. No package upload or lifecycle case was attempted; prior unit tests do not qualify this hardware.",
+      "evidence": [
+        "file-get-capability.json",
+        "os-verify-control.json"
+      ]
+    },
+    {
+      "id": "image-update-b",
+      "description": "Deployment replaces A with retained release B",
+      "status": "BLOCKED_BY_UNSUPPORTED_READBACK",
+      "reason": "Required gNOI File.Get returned Unimplemented on the authenticated target. No package upload or lifecycle case was attempted; prior unit tests do not qualify this hardware.",
+      "evidence": [
+        "file-get-capability.json",
+        "os-verify-control.json"
+      ]
+    },
+    {
+      "id": "rollback-a",
+      "description": "Deployment restores retained release A under a new Pod identity",
+      "status": "BLOCKED_BY_UNSUPPORTED_READBACK",
+      "reason": "Required gNOI File.Get returned Unimplemented on the authenticated target. No package upload or lifecycle case was attempted; prior unit tests do not qualify this hardware.",
+      "evidence": [
+        "file-get-capability.json",
+        "os-verify-control.json"
+      ]
+    },
+    {
+      "id": "standard-control",
+      "description": "Separate Standard workflow retains its default behavior",
+      "status": "BLOCKED_BY_UNSUPPORTED_READBACK",
+      "reason": "Required gNOI File.Get returned Unimplemented on the authenticated target. No package upload or lifecycle case was attempted; prior unit tests do not qualify this hardware.",
+      "evidence": [
+        "file-get-capability.json",
+        "os-verify-control.json"
+      ]
+    },
+    {
+      "id": "cleanup",
+      "description": "Only fixture resources removed and unrelated baseline health retained",
+      "status": "PASS_WITH_LIMITED_SCOPE",
+      "reason": "No switch package/application/configuration mutation occurred. Final native application states match baseline. Owned test control planes removed; build artifacts/data and diagnostics retained privately. No fixture app/journal was created, so deletion/tombstone and data-plane health assertions are untested.",
+      "evidence": [
+        "final-inventory.json",
+        "final-cleanup.json"
+      ]
+    }
+  ],
+  "evidence": [
+    {
+      "path": "device-baseline.json",
+      "sha256": "c9575ee903c13d353371b60548f816d3865b4ce9ad15da75d3eef7870ac20538"
+    },
+    {
+      "path": "device-prerequisites.json",
+      "sha256": "a3b16c1ede2d155de83f6058bdfa599fb111a0adc20b848659b18ab8f639ed2c"
+    },
+    {
+      "path": "device-probe-build.txt",
+      "sha256": "ca499f1c14fe8a4c46812e8f7c10d95c76fbe6304c8906e5cef8967a6ad70241"
+    },
+    {
+      "path": "device-probe.go.txt",
+      "sha256": "33f96399156a58fe7001fb9d123ae5f8e62361837e16e226ea32e91546800e82"
+    },
+    {
+      "path": "file-get-capability.json",
+      "sha256": "da7bde0ce23a6de2b4f3801189e1ee2d33b855fff5d374d999bd2651b6450546"
+    },
+    {
+      "path": "final-cleanup.json",
+      "sha256": "4bd45c0899499f30511bde125975df06082f9f031842c2b73ee380d0e51514aa"
+    },
+    {
+      "path": "final-inventory.json",
+      "sha256": "93b2ad7c41717053d2b902cd6721c0957a60d2e0d67078c62e0ce1ab6da88f11"
+    },
+    {
+      "path": "k3s-readiness.json",
+      "sha256": "d2ccf338619c228246b54e08f16cd603ae022661f7090472de1b9b3fbaec8dd1"
+    },
+    {
+      "path": "os-verify-control.json",
+      "sha256": "424cedb8ba98e69fca0060bdf1cb1f2e2fd1a3c4457f25080dd041fcc86a9f16"
+    },
+    {
+      "path": "preflight-before-identity-confirmation.json",
+      "sha256": "8b146f88d9b6970920829bab1b8da69a888e6ca64cfcd220423e4e95b6d8f369"
+    },
+    {
+      "path": "preflight.json",
+      "sha256": "b1f2e315fdd58982ec3526cc26ed41b018fbb014c3cd0f29595e101c0488511f"
+    },
+    {
+      "path": "preparation.json",
+      "sha256": "3849024126067687962aa084d01ff778a23d7b730134cf379a9c48bd7ccd7506"
+    },
+    {
+      "path": "probe-provenance.json",
+      "sha256": "e05534eb48d65a2c696d0373aacc7651ac7dcfdc5427a0610bf6c5f5ea3338ad"
+    }
+  ],
+  "limitations": [
+    "No CVK manager, managed worker or journal deployed. Managed RBAC integration remains unqualified on hardware.",
+    "No signed fixture descriptors or device packages published. A/B images are fixtures, not assessed vulnerable/fixed releases.",
+    "No claim that all IOS-XE versions or devices lack File.Get.",
+    "The HTTPS RESTCONF certificate lacks an IP SAN; verified HTTPS also needs suitable certificate/trust configuration.",
+    "Standard default and Governed deferral were not changed; physical Standard control was not executed."
+  ],
+  "nextStep": "Implement and separately qualify an optional secure IOS-XE file transfer and SHA256 verification transport for devices lacking gNOI File.Get, or select a supported firmware/device profile. Do not downgrade verification on Unimplemented. Then rerun the complete managed lifecycle matrix."
+}

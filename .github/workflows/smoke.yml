@@ -94,8 +94,10 @@ jobs:
         # and internal/drivers/iosxe/models.go (ygot output — reformatting it
         # by hand would drift it from the generator; see the drift check
         # below, which asserts generated artefacts match their sources).
+        # Qualification fixtures are immutable captured evidence, not runtime
+        # sources. Their SHA256SUMS bind their original bytes; do not reformat.
         run: |
-          fmt_out="$(gofmt -l . | grep -v '/configdriver/generated/' | grep -v 'internal/drivers/iosxe/models.go' || true)"
+          fmt_out="$(gofmt -l . | grep -v '/configdriver/generated/' | grep -v 'internal/drivers/iosxe/models.go' | grep -v '^docs/evidence/' || true)"
           if [ -n "$fmt_out" ]; then
             echo "gofmt violations in first-party files:"
             echo "$fmt_out"

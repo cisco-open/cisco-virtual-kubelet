@@ -1,0 +1,4 @@
+from pathlib import Path
+import subprocess,os
+R=Path("/tmp/cvk-stdgc-20261106")
+for name in ["build_candidate_remote","bootstrap","setup"]:subprocess.run(["python3","-u",str(R/(name+".py"))],check=True)

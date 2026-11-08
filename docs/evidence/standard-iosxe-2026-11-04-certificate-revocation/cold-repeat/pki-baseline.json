@@ -1,0 +1,30 @@
+{
+  "atUTC": "2026-11-04T17:20:29.089469+00:00",
+  "deviceUTC": "2026-11-04T17:20:28.230000+00:00",
+  "deviceTimeSource": "NTP",
+  "deviceWritesIssued": 0,
+  "allCertificatesValid": true,
+  "CRLsFreshAndUnchanged": true,
+  "allPoliciesUnchanged": true,
+  "serverMode": {
+    "control": "control",
+    "cold": "bad"
+  },
+  "nativeEvidence": {
+    "collectedAtUTC": "2026-11-04T17:20:29.076535+00:00",
+    "commands": [
+      {
+        "command": "show clock detail",
+        "output": "show clock detail\n17:20:28.230 UTC Wed Nov 4 2026\nTime source is NTP\nEdge-9K"
+      },
+      {
+        "command": "show running-config all | section ^crypto pki trustpoint CVK-STDREVOKE",
+        "output": "show running-config all | section ^crypto pki trustpoint CVK-STDREVOKE\ncrypto pki trustpoint CVK-STDREVOKE-NONE-20261104\n enrollment retry count 999\n enrollment retry period 1\n enrollment terminal pem\n revocation-check none\n authorization username subjectname  \n authorization username subjectname  secondary\n hash sha512\ncrypto pki trustpoint CVK-STDREVOKE-LEAF-20261104\n enrollment retry count 999\n enrollment retry period 1\n enrollment terminal pem\n revocation-check crl\n authorization username subjectname  \n authorization username subjectname  secondary\n hash sha512\ncrypto pki trustpoint CVK-STDREVOKE-CHAIN-20261104\n enrollment retry count 999\n enrollment retry period 1\n enrollment terminal pem\n revocation-check crl\n authorization username subjectname  \n authorization username subjectname  secondary\n hash sha512\ncrypto pki trustpoint CVK-STDREVOKE-COLD-20261104\n enrollment retry count 999\n enrollment retry period 1\n enrollment terminal pem\n revocation-check crl\n hash sha512\nEdge-9K"
+      },
+      {
+        "command": "show crypto pki crls",
+        "output": ""
+      }
+    ]
+  }
+}

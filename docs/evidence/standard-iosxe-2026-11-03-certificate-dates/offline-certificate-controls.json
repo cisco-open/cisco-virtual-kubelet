@@ -1,0 +1,113 @@
+{
+  "atUTC": "2026-11-03T19:22:17.148674+00:00",
+  "passed": true,
+  "scope": "Offline explicit-time public-certificate checks, including valid chain/name within each leaf window",
+  "deviceClockOrTrustChanged": false,
+  "cases": [
+    {
+      "case": "valid-now",
+      "command": [
+        "openssl",
+        "verify",
+        "-CAfile",
+        "/tmp/cvk-stddate-20261103/trusted-ca.crt",
+        "-purpose",
+        "sslserver",
+        "-verify_ip",
+        "192.168.129.111",
+        "-attime",
+        "1793733737",
+        "/tmp/cvk-stddate-20261103/valid.crt"
+      ],
+      "verificationEpochUTC": "2026-11-03T19:22:17+00:00",
+      "expectedSuccess": true,
+      "exitCode": 0,
+      "stdout": "/tmp/cvk-stddate-20261103/valid.crt: OK\n",
+      "stderr": ""
+    },
+    {
+      "case": "expired-now",
+      "command": [
+        "openssl",
+        "verify",
+        "-CAfile",
+        "/tmp/cvk-stddate-20261103/trusted-ca.crt",
+        "-purpose",
+        "sslserver",
+        "-verify_ip",
+        "192.168.129.111",
+        "-attime",
+        "1793733737",
+        "/tmp/cvk-stddate-20261103/expired.crt"
+      ],
+      "verificationEpochUTC": "2026-11-03T19:22:17+00:00",
+      "expectedSuccess": false,
+      "exitCode": 2,
+      "stdout": "",
+      "stderr": "CN = 192.168.129.111\nerror 10 at 0 depth lookup: certificate has expired\nerror /tmp/cvk-stddate-20261103/expired.crt: verification failed\n"
+    },
+    {
+      "case": "future-now",
+      "command": [
+        "openssl",
+        "verify",
+        "-CAfile",
+        "/tmp/cvk-stddate-20261103/trusted-ca.crt",
+        "-purpose",
+        "sslserver",
+        "-verify_ip",
+        "192.168.129.111",
+        "-attime",
+        "1793733737",
+        "/tmp/cvk-stddate-20261103/future.crt"
+      ],
+      "verificationEpochUTC": "2026-11-03T19:22:17+00:00",
+      "expectedSuccess": false,
+      "exitCode": 2,
+      "stdout": "",
+      "stderr": "CN = 192.168.129.111\nerror 9 at 0 depth lookup: certificate is not yet valid\nerror /tmp/cvk-stddate-20261103/future.crt: verification failed\n"
+    },
+    {
+      "case": "expired-valid-within-own-window",
+      "command": [
+        "openssl",
+        "verify",
+        "-CAfile",
+        "/tmp/cvk-stddate-20261103/trusted-ca.crt",
+        "-purpose",
+        "sslserver",
+        "-verify_ip",
+        "192.168.129.111",
+        "-attime",
+        "1793517716",
+        "/tmp/cvk-stddate-20261103/expired.crt"
+      ],
+      "verificationEpochUTC": "2026-11-01T07:21:56+00:00",
+      "expectedSuccess": true,
+      "exitCode": 0,
+      "stdout": "/tmp/cvk-stddate-20261103/expired.crt: OK\n",
+      "stderr": ""
+    },
+    {
+      "case": "future-valid-within-own-window",
+      "command": [
+        "openssl",
+        "verify",
+        "-CAfile",
+        "/tmp/cvk-stddate-20261103/trusted-ca.crt",
+        "-purpose",
+        "sslserver",
+        "-verify_ip",
+        "192.168.129.111",
+        "-attime",
+        "1793949716",
+        "/tmp/cvk-stddate-20261103/future.crt"
+      ],
+      "verificationEpochUTC": "2026-11-06T07:21:56+00:00",
+      "expectedSuccess": true,
+      "exitCode": 0,
+      "stdout": "/tmp/cvk-stddate-20261103/future.crt: OK\n",
+      "stderr": ""
+    }
+  ]
+}

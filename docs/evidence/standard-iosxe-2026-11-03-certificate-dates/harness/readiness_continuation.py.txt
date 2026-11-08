@@ -1,0 +1,11 @@
+import pathlib,ssl,urllib.request,urllib.error,json,os,base64,datetime
+R=pathlib.Path('/tmp/cvk-stddate-20261103');ctx=ssl.create_default_context(cafile='/tmp/cvk-verified-qual-20261101/device-ca.crt');ctx.verify_flags|=ssl.VERIFY_X509_PARTIAL_CHAIN;headers={'Authorization':'Basic '+base64.b64encode(('cisco:'+os.environ['CVK_QUAL_DEVICE_PASSWORD']).encode()).decode(),'Accept':'application/yang-data+json'};checks=[]
+for leaf,want in [('future',404),('hostname',200)]:
+ req=urllib.request.Request('https://10.1.1.1/restconf/data/Cisco-IOS-XE-native:native/'+leaf,headers=headers)
+ try:
+  with urllib.request.urlopen(req,context=ctx,timeout=15) as r:status=r.status;body=r.read()
+ except urllib.error.HTTPError as e:status=e.code;body=e.read()
+ assert status==want,(leaf,status)
+ if status==200:assert 'Edge-9K' in body.decode()
+ checks.append({'resource':leaf,'expectedStatus':want,'actualStatus':status})
+(R/'preparation-readiness-continuation.json').write_text(json.dumps({'atUTC':datetime.datetime.now(datetime.timezone.utc).isoformat(),'passed':True,'managementTLSVerified':True,'deviceWritesIssued':0,'checks':checks},indent=2)+'\n');print('PASS authenticated management readiness; incorrect resource was 404, correct resource is 200',flush=True)

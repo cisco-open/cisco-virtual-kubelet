@@ -1,0 +1,15 @@
+import pathlib,subprocess,json,os,ssl,urllib.request,base64,time,datetime
+R=pathlib.Path('/tmp/cvk-standard-20261103')
+def cli(commands):
+ p=subprocess.run(['python3',str(R/'device_cli.py')],input=json.dumps(commands),capture_output=True,text=True,check=True);return json.loads(p.stdout)
+baseline=cli(['show version | include Version|Model Number|System Serial','show app-hosting list','show app-hosting infra','show ip http server status | include trustpoint|secure server status','show running-config | include ^ip http secure-trustpoint|^ip http client secure-trustpoint','dir flash: | include bytes']);text=json.dumps(baseline);assert 'FCW2247C1AJ' in text and 'C9300-24UX' in text and 'cvk0000_' not in text;assert 'TP-self-signed-806566997' in text and 'CAF Health: Stable' in text;(R/'device-baseline.json').write_text(json.dumps(baseline,indent=2)+'\n')
+prepared=cli(['configure terminal','ip http secure-trustpoint cvk-gnoi-20260904','end','show ip http server status | include trustpoint']);assert 'HTTP secure server trustpoint: cvk-gnoi-20260904' in json.dumps(prepared);(R/'device-preparation.json').write_text(json.dumps(prepared,indent=2)+'\n')
+ctx=ssl.create_default_context(cafile='/tmp/cvk-verified-qual-20261101/device-ca.crt');ctx.verify_flags|=ssl.VERIFY_X509_PARTIAL_CHAIN
+for attempt in range(20):
+ try:
+  req=urllib.request.Request('https://10.1.1.1/restconf/data/Cisco-IOS-XE-native:native/hostname',headers={'Authorization':'Basic '+base64.b64encode(('cisco:'+os.environ['CVK_QUAL_DEVICE_PASSWORD']).encode()).decode(),'Accept':'application/yang-data+json'})
+  with urllib.request.urlopen(req,context=ctx,timeout=10) as resp:assert resp.status==200 and 'Edge-9K' in resp.read().decode()
+  break
+ except OSError:time.sleep(2)
+else:raise RuntimeError('Authenticated direct RESTCONF unavailable')
+(R/'transport-controls.json').write_text(json.dumps({'atUTC':datetime.datetime.now(datetime.timezone.utc).isoformat(),'directRESTCONF':True,'tlsVerified':True,'serverName':'10.1.1.1','relayUsed':False,'NATInjected':False,'artifactStoreCAInstalled':False,'nativeSignaturePolicyChanged':False},indent=2)+'\n');print('PASS baseline and authenticated direct RESTCONF; no artifact trustpoint or relay',flush=True)

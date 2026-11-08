@@ -1,0 +1,54 @@
+{
+  "executionComplete": true,
+  "rejectionQualified": true,
+  "startedAtUTC": "2026-11-03T22:52:06.623568+00:00",
+  "finishedAtUTC": "2026-11-04T07:29:32.674962+00:00",
+  "timingOrigin": "First retained native clock measurement",
+  "defaultMode": "Standard",
+  "governed": "deferred",
+  "cases": [
+    {
+      "case": "root",
+      "startedAtUTC": "2026-11-03T23:09:14.046897+00:00",
+      "finishedAtUTC": "2026-11-04T06:51:26.147345+00:00",
+      "classification": "expired-ca-rejected",
+      "rejectionQualified": true,
+      "appHealthyUnderExpiredCA": false,
+      "postReplacementHealthPassed": true,
+      "freshDeliveryAfterReplacementPassed": true,
+      "normalDeletionPassed": true,
+      "packageURL": "https://192.168.129.111:18457/root-agent-a.tar",
+      "resumedAfterCAReplacementHarnessFailure": true
+    },
+    {
+      "case": "intermediate",
+      "startedAtUTC": "2026-11-04T06:51:26.151484+00:00",
+      "finishedAtUTC": "2026-11-04T07:29:32.674873+00:00",
+      "classification": "expired-ca-rejected",
+      "rejectionQualified": true,
+      "appHealthyUnderExpiredCA": false,
+      "postReplacementHealthPassed": true,
+      "freshDeliveryAfterReplacementPassed": true,
+      "normalDeletionPassed": true,
+      "packageURL": "https://192.168.129.111:18458/intermediate-agent-a.tar"
+    }
+  ],
+  "podUIDs": [
+    "4a4fad83-4b46-4fa7-a54b-1ff0d0758d83",
+    "4de45663-cb76-4d78-a53f-7a871f988d17",
+    "51617da9-c861-41a6-9b4c-103166a492fc",
+    "56048d56-5f50-40a3-bc99-c2f6041a09ff",
+    "cd3e421f-5d68-4846-ae96-953b4d37f18a",
+    "de95a383-b1f0-488a-8021-a68ca416a222"
+  ],
+  "positiveControlsPassed": [
+    "valid-root",
+    "valid-intermediate"
+  ],
+  "metadataAndJournalOmitted": true,
+  "artifactJournalAndGrantCount": 0,
+  "manualLeaseOrJournalEdits": false,
+  "deviceClockChanged": false,
+  "candidateChanged": false,
+  "rootContinuationDocumented": true
+}

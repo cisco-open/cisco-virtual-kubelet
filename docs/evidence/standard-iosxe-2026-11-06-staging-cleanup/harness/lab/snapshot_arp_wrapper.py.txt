@@ -1,0 +1,26 @@
+"""Supplement native oper-only snapshots with CVK's authenticated ARP fallback."""
+from pathlib import Path
+import ipaddress,re,hashlib,json,subprocess,urllib.request,datetime
+root=Path('/tmp/cvk-stdgc-20261106')
+exec(compile((root/'snapshot-oper-only.py').read_text(),'snapshot-oper-only.py','exec'))
+original=root/('snapshot-'+label+'.json');raw=original.read_bytes();extras=[]
+for pod in report['pods']:
+ aid='cvk0000_'+pod['metadata']['uid'].replace('-','');ip=pod.get('status',{}).get('podIP')
+ if not ip or any(p.get('status')==200 and p['appID']==aid for p in report['probes']):continue
+ try:address=ipaddress.ip_address(ip)
+ except ValueError:continue
+ if address not in ipaddress.ip_network('192.168.129.0/24') or ip in ['192.168.129.0','192.168.129.255']:continue
+ app=next((v for v in report['nativeApps'] if v['appID']==aid and v['details'].get('state')=='RUNNING'),None)
+ if not app:continue
+ interfaces=(app.get('networkInterfaces') or {}).get('network-interface',[])
+ macs={re.sub('[^0-9a-f]','',v.get('mac-address','').lower()) for v in interfaces if v.get('attached-interface')=='eth0'};macs={v for v in macs if len(v)==12}
+ if len(macs)!=1:continue
+ mac=next(iter(macs));q=subprocess.run(['python3',str(root/'device_cli.py')],input=json.dumps(['show ip arp '+ip]),text=True,capture_output=True,check=True);proof=json.loads(q.stdout);text=proof['commands'][0]['output'];rows=re.findall(r'(?m)^Internet\s+'+re.escape(ip)+r'\s+\S+\s+([a-fA-F0-9.]+)\s+ARPA\s+Vlan129\s*$',text)
+ if len(rows)!=1 or rows[0].replace('.','').lower()!=mac:continue
+ binding={'appID':aid,'podUID':pod['metadata']['uid'],'ip':ip,'expectedNativeMAC':mac,'nativeARP':proof,'addressDiscovery':'PodIP plus pinned authenticated native ARP; app oper IPv4 not yet populated'};extras.append(binding);probe={'appID':aid,'ip':ip,'addressSource':'authenticated-native-ARP-fallback','podUID':pod['metadata']['uid']}
+ try:
+  with urllib.request.urlopen('http://'+ip+':8080/',timeout=5) as response:probe.update(status=response.status,body=response.read(4096).decode())
+ except Exception as e:probe['error']=str(e)
+ report['probes'].append(probe)
+if extras:
+ name='oper-only-snapshot-'+label+'.json';(root/name).write_bytes(raw);report['authenticatedARPBindings']=extras;report['operOnlySnapshot']={'file':name,'sha256':hashlib.sha256(raw).hexdigest()};report['arpSupplementCollectedAtUTC']=datetime.datetime.now(datetime.timezone.utc).isoformat();original.write_text(json.dumps(report,indent=2)+'\n')

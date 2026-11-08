@@ -1,0 +1,94 @@
+from pathlib import Path
+root=Path('/Users/johalley/Git/cisco-virtual-kubelet')
+p=root/'docs/CONFIGURATION.md';s=p.read_text().replace('**An HTTP(S) URL** — the VK attempts a device-native pull first; if the platform cannot pull, it downloads the image itself and installs from flash','**An HTTP(S) URL** — the device downloads the package to flash through the existing RESTCONF copy RPC before CVK configures or installs the app')
+a=s.index('By default the VK passes');b=s.index('### `imagePullSecrets`',a)
+s=s[:a]+'''Standard remains the default and requires no artifact metadata or installation
+journal. For remote package URLs, CVK first asks the device to download to an
+explicit flash path using the existing synchronous RESTCONF `copy` RPC. CVK
+requires its qualified completion response before configuring the app, installing
+from that local path, activating or starting it. A failed or ambiguous copy stops
+this flow; CVK does not retry installation from an unchecked cache filename.
+
+This ordering addresses IOS-XE reporting `DEPLOYED` after a failed URL download
+while reusing older package data. App operational state alone cannot prove that
+the requested package was downloaded. Device-local package references retain
+their preloaded workflow. Copy completion is not a digest or signature check;
+select optional Verified when package identity and durable installation evidence
+are required.
+
+### `imagePullPolicy`
+
+| Value | Behaviour for Standard app packages |
+|---|---|
+| `Always` | A new remote installation must successfully copy the URL to flash before installation. |
+| `IfNotPresent` (default) | Existing apps can continue through lifecycle reconciliation. A new remote installation must successfully copy; a filename alone does not establish a reusable cache entry. |
+| `Never` | Reference a package already present on the device. Remote URLs are rejected before installation. |
+
+For a new remote app, `IfNotPresent` therefore performs the same transfer as
+`Always`. Offline deployment uses a preloaded device-local path with `Never`.
+These package policies are separate from the Kubernetes image pull policy used
+to launch the CVK worker itself. Normal device mutation guards remain in effect
+after errors and worker restarts; do not clear their Leases to accelerate retries.
+
+''' +s[b:]
+s=s.replace('    Authentication is applied only to the copy RPC (device-initiated download). The device-native pull path does not support credential injection via this mechanism.','    Authentication is applied to the copy RPC, where the device initiates the download. Credential resolution errors stop delivery before app installation.')
+s=s.replace('Two optional annotations tune the copy fallback behaviour:','Two optional annotations tune the delivery path; neither is required for Standard:')
+s=s.replace('| Normal | `Pulling` | Device-native HTTP pull started |\n| Warning | `ImagePullFallback` | Device-native pull timed out; copy fallback begins |\n| Normal | `Copying` | Copy RPC started (shows source URL and destination path) |\n| Normal | `Pulled` | Image successfully copied to device flash |\n| Normal | `Started` | App reached RUNNING via copy fallback |','| Normal | `Pulling` | Device copy of the remote package started; URL credentials and query parameters are omitted |\n| Normal | `Pulled` | The copy RPC confirmed completion at the device-local destination |')
+p.write_text(s)
+p=root/'docs/ARCHITECTURE.md';s=p.read_text();a=s.index('    Drv->>Dev: POST app-hosting config with RESTCONF');b=s.index('    opt App is not already running',a)
+s=s[:a]+'''    alt Remote package URL
+        Drv->>Dev: RESTCONF copy to explicit flash path
+        alt Copy failed or completion unconfirmed
+            Drv-->>VK: Image transfer error, no app installation
+        else Copy confirmed
+            Drv->>Dev: POST app-hosting config
+            Drv->>Dev: Install from copied flash path
+            Dev-->>Drv: DEPLOYED or RUNNING
+        end
+    else Preloaded device-local package
+        Drv->>Dev: POST app-hosting config
+        Drv->>Dev: Install from local path
+        Dev-->>Drv: DEPLOYED or RUNNING
+    end
+
+''' +s[b:]
+# Keep the success-only lifecycle outside the error branch explicit.
+s=s.replace('    opt App is not already running','    opt Installation succeeded and app is not already running',1)
+p.write_text(s)
+p=root/'docs/troubleshooting.md';s=p.read_text();a=s.index('The VK attempted a device-native HTTP pull');b=s.index('### Wait times',a)
+s=s[:a]+'''For a new remote Standard installation, the device first downloads the tar to
+flash through the synchronous RESTCONF copy RPC. CVK requires a successful copy
+before app configuration and local installation. This can take several minutes,
+depending on package size and network speed. A native `DEPLOYED` observation is
+not evidence that a failed download succeeded.
+
+Monitor the `Pulling` and `Pulled` events with `kubectl describe pod <name>`.
+If copying fails, inspect the worker error and device logs. Check origin
+reachability, HTTPS certificate validation, device storage and the destination
+path. Correct the cause and let normal retry/fencing proceed; do not reset
+mutation Leases or run an install against a leftover cache filename.
+
+''' +s[b:]
+s=s.replace('"copy|fallback|error|Error"','"copy|error|Error"')
+s=s.replace('### Avoiding the copy fallback\n\nTo use the copy path intentionally and skip the device-native pull attempt entirely, set `imagePullPolicy: Never` and pre-copy the tar to flash yourself. Then reference the flash path directly in the pod spec:','### Using a preloaded local package\n\nFor offline deployment, pre-copy the tar to flash and reference that path with `imagePullPolicy: Never`:')
+a=s.index('You set `imagePullPolicy: IfNotPresent` expecting');b=s.index('\n---\n\n## `imagePullPolicy: Never`',a)
+s=s[:a]+'''You set `imagePullPolicy: IfNotPresent` expecting a previous tar filename to be
+reused, but a new app deployment downloads the remote package again.
+
+### Why
+
+A cache filename alone does not establish which image it contains. Standard
+requires a completed device copy before every new remote installation, under
+both `IfNotPresent` and `Always`. This avoids installing older package data after
+a failed download. Existing app lifecycle reconciliation can reuse the installed
+app; it does not treat an unchecked flash filename as proof of a successful pull.
+
+### Offline deployment
+
+Preload the desired package and use a device-local reference with
+`imagePullPolicy: Never`, for example `flash:/virtual-kubelet/my-app.tar`.
+Optional Verified adds package identity checks and a durable installation journal;
+Standard does not require that configuration.
+''' +s[b:]
+p.write_text(s)
+print('Updated current delivery, cache and troubleshooting guidance')

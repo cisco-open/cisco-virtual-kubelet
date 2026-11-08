@@ -72,6 +72,100 @@ spec:
                   INSTALLING as a terminal failure only when confirmed by an install
                   notification from the device.
                 type: boolean
+              appArtifacts:
+                description: |-
+                  AppArtifacts configures optional application artifact verification.
+                  Omission preserves Standard behavior without new dependencies. Verified
+                  requires a supported device delivery/checksum and durable recovery runtime.
+                properties:
+                  delivery:
+                    description: |-
+                      Delivery selects staging and file verification in Verified mode. GNOI is
+                      the compatibility default. Copy reuses the RESTCONF copy RPC and performs
+                      native SHA512 file verification over host-key-pinned SSH (port 22).
+                    enum:
+                    - GNOI
+                    - Copy
+                    type: string
+                  maxPackageBytes:
+                    description: |-
+                      MaxPackageBytes bounds one artifact's exact byte size. Omitted in Verified
+                      mode, it is 4 GiB. It is a safety limit, not a storage reservation.
+                    format: int64
+                    maximum: 68719476736
+                    minimum: 1
+                    type: integer
+                  mode:
+                    default: Standard
+                    description: Mode defaults to Standard. Verified requires a supported
+                      device checksum and durable recovery runtime.
+                    enum:
+                    - Standard
+                    - Verified
+                    type: string
+                  platform:
+                    description: |-
+                      Platform is the explicit Linux source platform accepted by this device.
+                      Declaring a platform is not a claim of device/package compatibility.
+                    properties:
+                      architecture:
+                        pattern: ^[a-z0-9][a-z0-9_-]{0,31}$
+                        type: string
+                      os:
+                        enum:
+                        - linux
+                        type: string
+                      variant:
+                        pattern: ^[a-zA-Z0-9._-]{1,32}$
+                        type: string
+                    required:
+                    - architecture
+                    - os
+                    type: object
+                  producerPublicKeys:
+                    description: |-
+                      ProducerPublicKeys contains accepted producer PKIX PUBLIC KEY PEM blocks.
+                      These are public trust anchors, never private signing keys. Each entry
+                      contains exactly one RSA (2048, 3072 or 4096 bits), ECDSA, or Ed25519 public key.
+                    items:
+                      maxLength: 16384
+                      minLength: 1
+                      type: string
+                    maxItems: 8
+                    minItems: 1
+                    type: array
+                  sshHostKeySHA256:
+                    description: |-
+                      SSHHostKeySHA256 pins the device SSH host key for Copy checksum queries.
+                      Credentials come from the same device identity used by RESTCONF. No SCP
+                      service, shell on the application, or private SSH key is required.
+                    pattern: ^SHA256:[A-Za-z0-9+/]{43}$
+                    type: string
+                  storeURL:
+                    description: |-
+                      StoreURL is a canonical HTTPS origin (lowercase host and optional port), with at most a
+                      trailing slash. Credentials, query parameters, fragments and base paths
+                      are forbidden. The verifier uses system TLS trust; insecure TLS is not an
+                      option. This setting grants no authority to the store to approve bytes.
+                    maxLength: 2048
+                    minLength: 9
+                    pattern: ^https://[^/?#@]+/?$
+                    type: string
+                type: object
+                x-kubernetes-validations:
+                - message: Verified requires storeURL, producerPublicKeys, and platform
+                  rule: '!has(self.mode) || self.mode != ''Verified'' || (has(self.storeURL)
+                    && has(self.producerPublicKeys) && has(self.platform))'
+                - message: artifact trust and package limits require mode Verified
+                  rule: (has(self.mode) && self.mode == 'Verified') || (!has(self.storeURL)
+                    && !has(self.producerPublicKeys) && !has(self.platform) && !has(self.maxPackageBytes)
+                    && !has(self.delivery) && !has(self.sshHostKeySHA256))
+                - message: Copy delivery requires a pinned SSH host key for native
+                    file verification
+                  rule: '!has(self.delivery) || self.delivery != ''Copy'' || has(self.sshHostKeySHA256)'
+                - message: sshHostKeySHA256 requires Copy delivery
+                  rule: '!has(self.sshHostKeySHA256) || (has(self.delivery) && self.delivery
+                    == ''Copy'')'
               configPrereqs:
                 description: |-
                   ConfigPrereqs declares the network configuration this device requires

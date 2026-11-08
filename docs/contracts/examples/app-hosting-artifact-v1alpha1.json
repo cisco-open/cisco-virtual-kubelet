@@ -1,0 +1,38 @@
+{
+  "apiVersion": "apphosting.cisco.com/v1alpha1",
+  "kind": "AppHostingArtifact",
+  "source": {
+    "registry": "registry.example.com",
+    "repository": "vendor/edge-agent",
+    "releaseLabel": "1.8.3",
+    "requestedDigest": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+    "indexDigest": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+    "manifestDigest": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+    "configDigest": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
+    "platform": {
+      "os": "linux",
+      "architecture": "amd64"
+    }
+  },
+  "package": {
+    "format": "docker-save-v1",
+    "mediaType": "application/x-tar",
+    "digest": "sha256:4444444444444444444444444444444444444444444444444444444444444444",
+    "sizeBytes": 104857600
+  },
+  "producer": {
+    "name": "docker-http-passthrough",
+    "version": "example-unreleased",
+    "buildDigest": "sha256:5555555555555555555555555555555555555555555555555555555555555555",
+    "recipeDigest": "sha256:6666666666666666666666666666666666666666666666666666666666666666"
+  },
+  "createdAt": "2026-10-31T09:00:00Z",
+  "provenance": {
+    "digest": "sha256:7777777777777777777777777777777777777777777777777777777777777777",
+    "mediaType": "application/vnd.in-toto+json"
+  },
+  "sbom": {
+    "digest": "sha256:8888888888888888888888888888888888888888888888888888888888888888",
+    "mediaType": "application/vnd.cyclonedx+json"
+  }
+}

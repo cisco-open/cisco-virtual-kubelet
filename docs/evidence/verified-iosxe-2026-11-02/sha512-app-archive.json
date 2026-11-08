@@ -1,0 +1,25 @@
+{
+  "collectedAtUTC": "2026-11-02T19:53:55.892680+00:00",
+  "commands": [
+    {
+      "command": "verify /sha512 flash:alpine_3.18.tar",
+      "output": "verify /sha512 flash:alpine_3.18.tar\n.....................................................................................................................Done!\nverify /sha512 (flash:alpine_3.18.tar) = 43de12e7d9c9353768640b9322d94f9b43e01e56b55ddc87740de2a90dde733087fc7a8d930ff666179fa8a426118e1d4d4b833d1408f3fa5e45021eb3d142ae\n\n\nEdge-9K"
+    },
+    {
+      "command": "configure terminal",
+      "output": "configure terminal\nEnter configuration commands, one per line.  End with CNTL/Z.\nEdge-9K(config)"
+    },
+    {
+      "command": "ip http secure-trustpoint cvk-gnoi-20260904",
+      "output": "ip http secure-trustpoint cvk-gnoi-20260904\nEdge-9K(config)"
+    },
+    {
+      "command": "end",
+      "output": "end\nEdge-9K"
+    },
+    {
+      "command": "show ip http server status | include trustpoint",
+      "output": "show ip http server status | include trustpoint\nHTTP secure server trustpoint: cvk-gnoi-20260904\nHTTP secure server peer validation trustpoint: \nEdge-9K"
+    }
+  ]
+}

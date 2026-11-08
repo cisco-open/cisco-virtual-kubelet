@@ -1,0 +1,60 @@
+{
+  "status": 200,
+  "body": {
+    "Cisco-IOS-XE-platform-software-oper:q-filesystem": [
+      {
+        "fru": "fru-rp",
+        "slot": 0,
+        "bay": 0,
+        "chassis": -1,
+        "partitions": [
+          {
+            "name": "webui:",
+            "is-primary": false,
+            "is-writable": true
+          },
+          {
+            "name": "usbflash1:",
+            "is-primary": false,
+            "is-writable": true
+          },
+          {
+            "name": "ucode0:",
+            "is-primary": false,
+            "is-writable": true
+          },
+          {
+            "name": "obfl10:",
+            "is-primary": false,
+            "is-writable": true
+          },
+          {
+            "name": "lic1:",
+            "is-primary": false,
+            "is-writable": true
+          },
+          {
+            "name": "lic0:",
+            "is-primary": false,
+            "is-writable": true
+          },
+          {
+            "name": "flash:",
+            "is-primary": true,
+            "is-writable": true
+          },
+          {
+            "name": "drec0:",
+            "is-primary": false,
+            "is-writable": true
+          },
+          {
+            "name": "crashinfo:",
+            "is-primary": false,
+            "is-writable": true
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "atUTC": "2026-11-04T17:22:10.322367+00:00",
+  "passed": true,
+  "coldPackageSentToC9KBeforeNegative": false,
+  "expectedRelease": "REVOCATION-COLD-20261104-35d8a9c90cb2",
+  "dockerConfigID": "sha256:fb0f4dd6b1012b3e626e42fa64f4fb98bcd5feeba40c34f5c812c4598be2046a",
+  "layerDiffID": "sha256:dc78be3c3975209b7a2b8d5170dcd7dd6274ec1b72134883d23c9b3265b8f00c",
+  "packageSHA256": "624075b6ecc6383fa8615ead9e2bcdb0c410a3f48a3e3351528ef04344b473bd",
+  "priorControlRelease": "A",
+  "priorControlPayloadDifferent": true
+}

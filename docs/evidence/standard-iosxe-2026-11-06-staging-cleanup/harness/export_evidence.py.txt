@@ -1,0 +1,69 @@
+from pathlib import Path
+import json,yaml,re,hashlib,shutil,tarfile,gzip,io
+R=Path('/private/tmp/cvk-stdgc-20261106');OUT=Path('/Users/johalley/Git/cisco-virtual-kubelet/docs/evidence/standard-iosxe-2026-11-06-staging-cleanup');q=json.loads((R/'qualification-assessed.json').read_text());assert q['passed'] and q['normalDeletionAndBaselineCleanupPassed'];OUT.mkdir(parents=True,exist_ok=True)
+def clean(v):
+ if isinstance(v,list):return [clean(x) for x in v]
+ if isinstance(v,dict):return {k:clean(x) for k,x in v.items() if k not in ['managedFields','kubectl.kubernetes.io/last-applied-configuration']}
+ return v
+for p in sorted(R.iterdir()):
+ if not p.is_file() or not(p.suffix in ['.json','.jsonl','.yaml','.crt','.pem','.log'] or p.name in ['qualification.log','main.go','race.log']):continue
+ target=OUT/p.name
+ if p.suffix=='.json':
+  x=clean(json.loads(p.read_text()))
+  if isinstance(x,dict) and 'devices' in x:
+   for d in x['devices']:
+    if d.get('status'):d['status']={k:v for k,v in d['status'].items() if k in ['phase','conditions','nodeIdentity','workerRevision','networkWorkerRevision','workerCapabilities']}
+   for a in x.get('nativeApps',[]):
+    if not a.get('appID','').startswith('cvk0000_'):a.pop('networkInterfaces',None)
+  if isinstance(x,dict) and x.get('operOnlySnapshot'):
+   ref=x['operOnlySnapshot'];ref['originalRawSHA256']=ref['sha256'];ref['sha256']=hashlib.sha256((OUT/ref['file']).read_bytes()).hexdigest()
+  target.write_text(json.dumps(x,indent=2)+'\n')
+ elif p.suffix=='.jsonl':target.write_text(''.join(json.dumps(clean(json.loads(l)))+'\n' for l in p.read_text().splitlines()))
+ elif p.suffix=='.yaml':
+  value=yaml.safe_load(p.read_text());assert 'password' not in json.dumps(value).lower();target.write_text(yaml.safe_dump(value))
+ else:shutil.copyfile(p,target)
+shutil.copyfile(OUT/'qualification-assessed.json',OUT/'qualification.json')
+for phase in ['a','b']:
+ (OUT/phase).mkdir(exist_ok=True)
+ for n in ['docker-config.json','docker-manifest.json']:shutil.copyfile(R/phase/n,OUT/phase/n)
+(OUT/'harness').mkdir(exist_ok=True)
+for p in sorted(R.glob('*.py')):shutil.copyfile(p,OUT/'harness'/(p.name+'.txt'))
+(OUT/'harness/lab').mkdir(exist_ok=True)
+for p in sorted((R/'remote-public').glob('*.py')):shutil.copyfile(p,OUT/'harness/lab'/(p.name+'.txt'))
+rows=['| Case | Release | Pod UID | Deployment revision |','| --- | --- | --- | --- |']+['| '+v['label']+' | '+v['release']+' | '+v['podUID']+' | '+v['revision']+' |' for v in q['caseReleases']]
+(OUT/'README.md').write_text((R/'evidence-readme.md').read_text().replace('@@CASES@@','\n'.join(rows)).replace('@@FAILED_UID@@',q['failedPodUID']).replace('@@ROLLBACK_REQUEST@@',q['rollbackRequestedUTC']).replace('@@FENCE_EXPIRY@@',q['naturalFenceExpiryUTC']).replace('@@ROLLBACK_HEALTHY@@',q['failedUpgradeRollbackHealthyUTC']).replace('@@WAIT_SECONDS@@',str(round(q['rollbackRequestToHealthySeconds'],1))))
+pattern=re.compile(r'^-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----|^\s*client-key-data:\s*[A-Za-z0-9+/]{24,}|password\s*[=:]\s*cisco\b|^Authorization:\s*(?:Basic|Bearer)\s+\S|\b(?:Basic|Bearer)[ \t]+[A-Za-z0-9+/_.=-]{16,}',re.I|re.M)
+for p in OUT.rglob('*'):
+ if p.is_file() and not p.name.endswith('.tar.gz'):
+  text=p.read_text();assert not pattern.search(text),p;assert not re.search(r'''password["'\s]*[=:]["'\s]*cisco\b''',text.replace('\\"','"'),re.I),p
+# Preserve the failed harness attempt in a separately indexed, sanitized archive.
+stop=json.loads((R/'harness-stop-preservation.json').read_text());stopIndex=[];stopBuffer=io.BytesIO()
+with gzip.GzipFile(fileobj=stopBuffer,mode='wb',mtime=0,filename='') as zipped:
+ with tarfile.open(fileobj=zipped,mode='w|',format=tarfile.USTAR_FORMAT) as archive:
+  for item in stop['files']:
+   src=R/'remote-public/initial-harness-stop'/item['name'];raw=src.read_bytes();assert hashlib.sha256(raw).hexdigest()==item['sha256']
+   if src.suffix=='.json':
+    obj=clean(json.loads(raw))
+    if isinstance(obj,dict) and 'devices' in obj:
+     for device in obj['devices']:
+      if device.get('status'):device['status']={k:v for k,v in device['status'].items() if k in ['phase','conditions','nodeIdentity','workerRevision','networkWorkerRevision','workerCapabilities']}
+     for app in obj.get('nativeApps',[]):
+      if not app.get('appID','').startswith('cvk0000_'):app.pop('networkInterfaces',None)
+    data=(json.dumps(obj,indent=2)+'\n').encode()
+   elif src.suffix=='.jsonl':data=''.join(json.dumps(clean(json.loads(line)))+'\n' for line in raw.decode().splitlines()).encode()
+   elif src.suffix=='.yaml':
+    obj=yaml.safe_load(raw);assert 'password' not in json.dumps(obj).lower();data=yaml.safe_dump(obj).encode()
+   else:data=raw
+   assert not pattern.search(data.decode()),src
+   name=item['name']+('.txt' if src.suffix=='.py' else '');m=tarfile.TarInfo(name);m.mode=0o644;m.mtime=0;m.size=len(data);archive.addfile(m,io.BytesIO(data));stopIndex.append({'name':name,'bytes':len(data),'sha256':hashlib.sha256(data).hexdigest(),'originalRawSHA256':item['sha256']})
+(OUT/'harness-stop-evidence.tar.gz').write_bytes(stopBuffer.getvalue());(OUT/'harness-stop-evidence-index.json').write_text(json.dumps({'files':stopIndex,'sanitized':True,'originalRemoteBytesVerifiedUnchanged':True},indent=2)+'\n')
+polls=[p for p in sorted(OUT.iterdir()) if p.is_file() and p.suffix=='.json' and re.fullmatch(r'(?:snapshot|controls)-(?:.+-(?:poll|transition)-\d+|failed-upgrade-\d+|rollback-guard-\d+)',p.stem)];index=[];buffer=io.BytesIO()
+with gzip.GzipFile(fileobj=buffer,mode='wb',mtime=0,filename='') as zipped:
+ with tarfile.open(fileobj=zipped,mode='w|',format=tarfile.USTAR_FORMAT) as t:
+  for p in polls:
+   data=p.read_bytes();m=tarfile.TarInfo(p.name);m.mode=0o644;m.mtime=0;m.size=len(data);t.addfile(m,io.BytesIO(data));index.append({'name':p.name,'bytes':len(data),'sha256':hashlib.sha256(data).hexdigest()})
+with tarfile.open(fileobj=io.BytesIO(buffer.getvalue()),mode='r:gz') as t:
+ for item in index:assert hashlib.sha256(t.extractfile(item['name']).read()).hexdigest()==item['sha256']
+(OUT/'observation-snapshots.tar.gz').write_bytes(buffer.getvalue());(OUT/'observation-snapshots-index.json').write_text(json.dumps({'files':index,'format':'Sanitized repeated observations; boundary results remain directly accessible'},indent=2)+'\n')
+for p in polls:p.unlink()
+manifest=''.join(hashlib.sha256(p.read_bytes()).hexdigest()+'  '+str(p.relative_to(OUT))+'\n' for p in sorted(OUT.rglob('*')) if p.is_file() and p.name!='SHA256SUMS');(OUT/'SHA256SUMS').write_text(manifest);print('PASS exported',len(manifest.splitlines()),'public files and',len(index),'archived observations')

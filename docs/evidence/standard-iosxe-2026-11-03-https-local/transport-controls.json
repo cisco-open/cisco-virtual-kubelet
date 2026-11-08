@@ -1,0 +1,12 @@
+{
+  "atUTC": "2026-11-03T14:52:52.802765+00:00",
+  "directRESTCONF": true,
+  "managementTLSVerified": true,
+  "relayUsed": false,
+  "NATInjected": false,
+  "ordinaryOriginTrustpoint": "CVK-STDTLS-20261103",
+  "originCA": "/tmp/cvk-verified-qual-20261102/ca.crt",
+  "clientIdentityTrustpointPreserved": "IRIS",
+  "nativeSignaturePolicyChanged": false,
+  "verifiedConfigurationRequired": false
+}

@@ -1,0 +1,23 @@
+{
+  "physicalQualification": "passed: actual C9K untrusted CA and trusted-issuer hostname mismatch, including native pull/fallback",
+  "positiveAndCertificateCorrectedHealth": "passed; same Pod/app retained in each case",
+  "independentTLSControls": "passed",
+  "offlinePublicCertificateControls": "five passed",
+  "independentEvidenceAssessment": "passed",
+  "canonicalMutationLeaseRecreated": false,
+  "manualLeaseOrJournalChanges": false,
+  "ephemeralPrivateKeysRemaining": 0,
+  "labBaselineRestored": true,
+  "productionSourceChanged": false,
+  "goRaceTestsRerun": false,
+  "priorGoRaceResults": "../verified-iosxe-2026-11-03-replies/test-results.json",
+  "historicalEvidenceUnchanged": true,
+  "strictDocumentationBuild": {
+    "command": ".venv/bin/mkdocs build --strict",
+    "passed": true
+  },
+  "whitespace": {
+    "command": "git diff --check",
+    "passed": true
+  }
+}

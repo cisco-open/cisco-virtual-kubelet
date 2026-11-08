@@ -1,0 +1,193 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "urn:cisco:app-hosting:artifact:v1alpha1",
+  "title": "Draft App Hosting Artifact Descriptor",
+  "description": "Proposed contract only. Sign and hash exact published UTF-8 bytes. Runtime semantics and security validation are specified in docs/app-image-lifecycle-plan.md.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "apiVersion",
+    "kind",
+    "source",
+    "package",
+    "producer",
+    "createdAt",
+    "provenance"
+  ],
+  "properties": {
+    "apiVersion": {
+      "const": "apphosting.cisco.com/v1alpha1"
+    },
+    "kind": {
+      "const": "AppHostingArtifact"
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "registry",
+        "repository",
+        "requestedDigest",
+        "manifestDigest",
+        "configDigest",
+        "platform"
+      ],
+      "properties": {
+        "registry": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 253
+        },
+        "repository": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 255
+        },
+        "releaseLabel": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "requestedDigest": {
+          "type": "string",
+          "pattern": "^sha256:[a-f0-9]{64}$"
+        },
+        "indexDigest": {
+          "type": "string",
+          "pattern": "^sha256:[a-f0-9]{64}$"
+        },
+        "manifestDigest": {
+          "type": "string",
+          "pattern": "^sha256:[a-f0-9]{64}$"
+        },
+        "configDigest": {
+          "type": "string",
+          "pattern": "^sha256:[a-f0-9]{64}$"
+        },
+        "platform": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "os",
+            "architecture"
+          ],
+          "properties": {
+            "os": {
+              "const": "linux"
+            },
+            "architecture": {
+              "type": "string",
+              "pattern": "^[a-z0-9][a-z0-9_-]{0,31}$"
+            },
+            "variant": {
+              "type": "string",
+              "pattern": "^[a-zA-Z0-9._-]{1,32}$"
+            }
+          }
+        }
+      }
+    },
+    "package": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "format",
+        "mediaType",
+        "digest",
+        "sizeBytes"
+      ],
+      "properties": {
+        "format": {
+          "enum": [
+            "docker-save-v1",
+            "iox-package-v1"
+          ]
+        },
+        "mediaType": {
+          "const": "application/x-tar"
+        },
+        "digest": {
+          "type": "string",
+          "pattern": "^sha256:[a-f0-9]{64}$"
+        },
+        "sizeBytes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        }
+      }
+    },
+    "producer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "version",
+        "buildDigest",
+        "recipeDigest"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "version": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "buildDigest": {
+          "type": "string",
+          "pattern": "^sha256:[a-f0-9]{64}$"
+        },
+        "recipeDigest": {
+          "type": "string",
+          "pattern": "^sha256:[a-f0-9]{64}$"
+        }
+      }
+    },
+    "createdAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "digest",
+        "mediaType"
+      ],
+      "properties": {
+        "digest": {
+          "type": "string",
+          "pattern": "^sha256:[a-f0-9]{64}$"
+        },
+        "mediaType": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        }
+      }
+    },
+    "sbom": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "digest",
+        "mediaType"
+      ],
+      "properties": {
+        "digest": {
+          "type": "string",
+          "pattern": "^sha256:[a-f0-9]{64}$"
+        },
+        "mediaType": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        }
+      }
+    }
+  }
+}

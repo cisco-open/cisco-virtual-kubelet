@@ -1,0 +1,13 @@
+{
+  "collectedAtUTC": "2026-11-03T14:58:24.002923+00:00",
+  "commands": [
+    {
+      "command": "dir flash:cvk-stdtls-20261103-a.tar",
+      "output": "dir flash:cvk-stdtls-20261103-a.tar\nDirectory of flash:/cvk-stdtls-20261103-a.tar\n\n254040  -rw-          5963776   Nov 3 2026 14:58:22 +00:00  cvk-stdtls-20261103-a.tar\n\n11353194496 bytes total (5392539648 bytes free)\nEdge-9K"
+    },
+    {
+      "command": "verify /sha512 flash:cvk-stdtls-20261103-a.tar",
+      "output": "verify /sha512 flash:cvk-stdtls-20261103-a.tar\n...........................................................................................Done!\nverify /sha512 (flash:cvk-stdtls-20261103-a.tar) = e50300677be5f0827b4a7fedc9d317d684a96627f4ea2b3c9a86836e753c671179d85a2bce4360277b7157b684901858402451f85540862d415a8776f1762a2d\n\n\nEdge-9K"
+    }
+  ]
+}

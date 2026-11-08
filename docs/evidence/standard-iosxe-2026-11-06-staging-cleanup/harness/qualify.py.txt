@@ -1,0 +1,106 @@
+"""Real Deployment upgrades/undo, warm-cache failed copy, and rollback under the retained fence."""
+import pathlib,json,datetime,time,subprocess,os,ssl,urllib.request,yaml,hashlib,re
+R=pathlib.Path('/tmp/cvk-stdgc-20261106');exec(compile((R/'control_functions.py').read_text(),'control_functions.py','exec'));P=json.loads((R/'payload-provenance.json').read_text());SEEN=set();IPS={'10.1.1.1','192.168.129.2'};CASES=[];DEVICEUID=None;DEPUID=None;STAGED=[]
+exec(compile((R/"gc_checks.py").read_text(),"gc_checks.py","exec"))
+
+def events():return [e for line in (R/'server-events.jsonl').read_text().splitlines() if (e:=json.loads(line)).get('client') in IPS]
+def append(n,v):
+ with (R/(n+'.jsonl')).open('a') as f:f.write(json.dumps(v)+'\n')
+def lease():return next((v for v in get(['-n',NS,'get','leases','-o','json'])['items'] if v.get('metadata',{}).get('labels',{}).get('cisco.vk/family')=='device-disruptive-mutation'),None)
+def expiry(l):return datetime.datetime.fromisoformat(l['spec']['renewTime'].replace('Z','+00:00'))+datetime.timedelta(seconds=l['spec']['leaseDurationSeconds']) if l and l['spec'].get('holderIdentity') else None
+def observe(label):
+ s=snap(label);checks=controls(label);assertBaselineApps(s);SEEN.update(p['metadata']['uid'] for p in s['pods']);return s
+
+def releases(s):return [json.loads(p['body'])['release'] for p in s['probes'] if p.get('status')==200]
+def noFixture(s):
+ assert {a['appID'] for a in s['nativeApps']}=={'iris','c9ktest'} and 'iris' in s['nativeConfigAppIDs'] and not any(a and a.startswith('cvk0000_') for a in s['nativeConfigAppIDs']);assert not any(ready(p) for p in s['pods']) and not releases(s)
+def history(label):
+ dep=get(['-n',APPS,'get','deployment',NAME,'-o','json']);rs=get(['-n',APPS,'get','replicasets','-l','app='+NAME,'-o','json']);save('history-'+label,{'atUTC':now(),'deployment':dep,'replicaSets':rs});return dep
+
+def deploy(phase,preloaded=False):
+ image=PRELOADED if preloaded else 'https://192.168.129.111:18482/'+phase+'.tar';template={'metadata':{'labels':{'app':NAME,'qualification':'20261106-stdgc','release':phase}},'spec':{'affinity':{'nodeAffinity':{'requiredDuringSchedulingIgnoredDuringExecution':{'nodeSelectorTerms':[{'matchFields':[{'key':'metadata.name','operator':'In','values':[DEV]}]}]}}},'tolerations':[{'key':'cisco.vk/device','operator':'Exists','effect':'NoSchedule'}],'containers':[{'name':'agent','image':image,'imagePullPolicy':'Never' if preloaded else 'Always','ports':[{'containerPort':8080}],'resources':{'requests':{'memory':'128Mi'},'limits':{'memory':'128Mi'}}}]}};obj={'apiVersion':'apps/v1','kind':'Deployment','metadata':{'name':NAME,'namespace':APPS,'labels':{'qualification':'20261106-stdgc'}},'spec':{'replicas':1,'revisionHistoryLimit':10,'strategy':{'type':'Recreate'},'selector':{'matchLabels':{'app':NAME}},'template':template}};(R/('deployment-'+phase+'-input.yaml')).write_text(yaml.safe_dump(obj));apply(obj);return image
+
+def undo(label,revision):
+ before=history(label+'-before');run(K+['-n',APPS,'rollout','undo','deployment/'+NAME,'--to-revision='+revision]);save('undo-'+label,{'atUTC':now(),'command':'kubectl rollout undo','targetRevision':revision,'deploymentUID':before['metadata']['uid'],'generationBefore':before['metadata']['generation']})
+
+def waitNewPod(label,phase,oldUIDs,preloaded=False):
+ deadline=time.monotonic()+600;i=0
+ while time.monotonic()<deadline:
+  s=observe(label+'-transition-'+str(i));pods=[p for p in s['pods'] if not p['metadata'].get('deletionTimestamp') and p['spec']['containers'][0]['image']==(PRELOADED if preloaded else 'https://192.168.129.111:18482/'+phase+'.tar') and p['metadata']['uid'] not in oldUIDs]
+  if len(pods)==1:return s,pods[0]
+  i+=1;time.sleep(5)
+ raise RuntimeError('No new revision Pod '+label)
+
+def health(label,phase,oldUIDs,preloaded=False):
+ global DEPUID
+ _,new=waitNewPod(label,phase,oldUIDs,preloaded);s=healthy(label,P['phases'][phase]['release']);assert s['pods'][0]['metadata']['uid']==new['metadata']['uid'] and not s['pods'][0]['status'].get('reason') and not s['pods'][0]['status'].get('message');SEEN.add(new['metadata']['uid']);nativeProof(label,s['pods'][0]);leaseReleased(label);dep=history(label)
+ appid='cvk0000_'+new['metadata']['uid'].replace('-','');lines=[];allLines=[]
+ for w in s['workers']:
+  text=subprocess.check_output(K+['-n',NS,'logs',w['name'],'--tail=10000'],text=True);allLines.extend(text.splitlines());lines.extend(v for v in text.splitlines() if appid in v or new['metadata']['uid'] in v)
+ installed=[i for i,v in enumerate(lines) if 'Installing app '+appid in v];assert installed
+ if preloaded:
+  assert all('from package: '+PRELOADED in lines[i] for i in installed);assert not any('Starting copy operation' in v for v in lines);preservePreloaded(label)
+ else:
+  copied=[i for i,v in enumerate(lines) if 'Copy operation completed successfully' in v];assert copied and min(copied)<min(installed)
+  paths={re.search(r'from package: (flash:/cvk-stage-[a-f0-9]{32}\.tar)',lines[i]).group(1) for i in installed};assert len(paths)==1
+  for file in paths:assert any('Standard staging cleanup confirmed absent: '+file in v for v in allLines)
+  assert not set(STAGED)&paths;STAGED.extend(sorted(paths));confirmOwnedGone(label,sorted(paths))
+ save('worker-'+label,{'atUTC':now(),'appID':appid,'lines':lines,'copyBeforeLocalInstallConfirmed':not preloaded,'preloadedNever':preloaded,'automaticCleanupConfirmed':not preloaded})
+ if DEPUID is None:DEPUID=dep['metadata']['uid']
+ assert dep['metadata']['uid']==DEPUID and dep['status'].get('observedGeneration')==dep['metadata']['generation'];assert dep['spec']['template']['spec']['containers'][0]['image']==s['pods'][0]['spec']['containers'][0]['image'];CASE={'label':label,'phase':phase,'preloaded':preloaded,'release':P['phases'][phase]['release'],'podUID':new['metadata']['uid'],'revision':dep['metadata']['annotations']['deployment.kubernetes.io/revision'],'deploymentUID':DEPUID,'generation':dep['metadata']['generation'],'atUTC':now()};CASES.append(CASE);save('case-'+label,CASE);return s,CASE
+
+def assertNewTransfer(phase,since):
+ sent=[e for e in events() if e['kind']=='package-sent' and e.get('phase')==phase and e['atUTC']>since];assert sent;return sent
+
+def deleteFinal():
+ run(K+['-n',APPS,'scale','deployment/'+NAME,'--replicas=0']);deadline=time.monotonic()+3000;i=0
+ while time.monotonic()<deadline:
+  s=observe('final-normal-cleanup')
+  if not s['pods'] and {a['appID']:a['details'].get('state') for a in s['nativeApps']}=={'iris':'RUNNING','c9ktest':'DEPLOYED'}:leaseReleased('final-normal-cleanup');return
+  i+=1;time.sleep(10)
+ raise RuntimeError('Normal final deletion timeout; never clear Lease')
+
+started=now();baseline=observe('baseline');assert not baseline['pods'];(R/'server-mode.json').write_text(json.dumps({'bAvailable':True}))
+with (R/'servers.log').open('wb') as out:server=subprocess.Popen(['python3',str(R/'servers.py')],stdout=out,stderr=subprocess.STDOUT,start_new_session=True)
+(R/'servers.pid').write_text(str(server.pid));ctx=ssl.create_default_context(cafile=str(R/'root.crt'))
+for i in range(30):
+ try:
+  with urllib.request.urlopen('https://192.168.129.111:18482/_probe',context=ctx,timeout=5) as response:assert response.status==200
+  break
+ except OSError:time.sleep(1)
+else:raise RuntimeError('Origin not Ready')
+PRELOADED=createPreloaded();deploy('a',True);pre,cp=health('preloaded-before','a',set(),True)
+# Every successful transition requires a newly created Pod, a new complete copy, and exact code release.
+t0=now();deploy('a');a,ca=health('initial-a','a',{cp['podUID']});assertNewTransfer('a',t0)
+t0=now();deploy('b');b,cb=health('upgrade-b','b',{ca['podUID']});assertNewTransfer('b',t0)
+t0=now();undo('rollback-a',ca['revision']);a2,ca2=health('rollback-a','a',{ca['podUID'],cb['podUID']});assertNewTransfer('a',t0)
+# A and B have both been loaded. Keep their IOx caches and reject only B's HTTPS package URL.
+mode={'bAvailable':False,'truncateB':True};tmp=R/'mode-next.json';tmp.write_text(json.dumps(mode));os.replace(tmp,R/'server-mode.json');failedAt=now();save('failure-injected',{'atUTC':failedAt,'method':'Truncated HTTPS b.tar response: declared full length, sent 4096 bytes and closed','TLSIdentityChanged':False,'URLChanged':False,'packageBytesChanged':False,'warmImages':[P['phases'][p]['dockerConfigID'] for p in ['a','b']],'globalImageCachePruned':False});deploy('b');_,bad=waitNewPod('failed-upgrade','b',{c['podUID'] for c in CASES});start=time.monotonic();i=0
+while time.monotonic()-start<420:
+ s=observe('failed-upgrade-'+str(i));l=lease();row={'atUTC':now(),'podUIDs':[p['metadata']['uid'] for p in s['pods']],'ready':any(ready(p) for p in s['pods']),'nativeStates':{a['appID']:a['details'].get('state') for a in s['nativeApps']},'actualReleases':releases(s),'leaseUID':l['metadata']['uid'] if l else None,'leaseExpiresUTC':expiry(l).isoformat() if expiry(l) else None};append('failed-upgrade-observations',row)
+ assert not any(e['kind']=='package-sent' and e.get('phase')=='b' and e['atUTC']>failedAt for e in events())
+ # Once the old A app is gone, any fixture running or configuration is a regression.
+ if all(a['appID']!=('cvk0000_'+ca2['podUID'].replace('-','')) for a in s['nativeApps']):noFixture(s)
+ errors=[e for e in events() if e['kind']=='http-request' and e.get('phase')=='b' and e.get('truncated')==True and e['atUTC']>failedAt]
+ if errors and time.monotonic()-start>=300:
+  noFixture(s);assert len(s['pods'])==1 and s['pods'][0]['metadata']['uid']==bad['metadata']['uid'];break
+ if i%5==0:print('FAILED UPGRADE',json.dumps(row),flush=True)
+ i+=1;time.sleep(10)
+else:raise RuntimeError('Failed upgrade boundary not qualified')
+save('snapshot-failed-upgrade-boundary',s);save('failed-upgrade-lease',lease());history('failed-upgrade');lines=[]
+for w in s['workers']:
+ text=subprocess.check_output(K+['-n',NS,'logs',w['name'],'--tail=3000'],text=True);lines.extend(v for v in text.splitlines() if bad['metadata']['uid'] in v or bad['metadata']['uid'].replace('-','') in v)
+failedPaths=sorted({m.group(0) for v in lines if 'Copy RPC failed' in v for m in re.finditer(r'flash:/cvk-stage-[a-f0-9]{32}\.tar',v)});confirmOwnedGone('failed-upgrade',failedPaths);STAGED.extend(failedPaths);assert all(any('Standard staging cleanup confirmed absent: '+file in v for v in lines) for file in failedPaths)
+assert any('Copy RPC failed' in v for v in lines) and not any('Installing app cvk0000_'+bad['metadata']['uid'].replace('-','') in v for v in lines);save('failed-worker-diagnostics',{'atUTC':now(),'lines':lines});save('failed-upgrade-result',{'atUTC':now(),'passed':True,'podUID':bad['metadata']['uid'],'noConfiguration':True,'noRuntime':True,'noReady':True,'noSuccessfulPackageTransfer':True,'sameDeploymentUID':DEPUID,'truncatedDownloadSeen':True,'negativeWindowSeconds':time.monotonic()-start})
+# Roll back through Deployment history while the failed-copy fence still exists.
+original=lease();end=expiry(original);assert end and datetime.datetime.now(datetime.timezone.utc)<end;t0=now();undo('failed-upgrade-rollback-a',ca2['revision']);save('rollback-under-fence',{'atUTC':now(),'targetRevision':ca2['revision'],'leaseUID':original['metadata']['uid'],'holder':original['spec']['holderIdentity'],'renewTime':original['spec']['renewTime'],'naturalExpiryUTC':end.isoformat(),'manualLeaseReset':False});deadline=time.monotonic()+3600;i=0
+while datetime.datetime.now(datetime.timezone.utc)<end:
+ assert time.monotonic()<deadline;s=observe('rollback-guard-'+str(i))
+ if datetime.datetime.now(datetime.timezone.utc)>=end:break
+ noFixture(s);l=lease();assert l['metadata']['uid']==original['metadata']['uid'] and l['spec'].get('holderIdentity')==original['spec']['holderIdentity'] and l['spec'].get('renewTime')==original['spec']['renewTime'];assert not any(e['kind']=='http-request' and e.get('package') and e['atUTC']>t0 for e in events());append('rollback-guard-observations',{'atUTC':now(),'leaseUID':l['metadata']['uid'],'holder':l['spec']['holderIdentity'],'renewTime':l['spec']['renewTime'],'podUIDs':[p['metadata']['uid'] for p in s['pods']],'noReadyOrRuntime':True,'packageRequests':0})
+ if i%4==0:print(now(),'rollback respects natural fence',end.isoformat(),flush=True)
+ i+=1;time.sleep(min(15,max(1,(end-datetime.datetime.now(datetime.timezone.utc)).total_seconds())))
+a3,ca3=health('failed-upgrade-rollback-a','a',{c['podUID'] for c in CASES}|{bad['metadata']['uid']});assertNewTransfer('a',t0);assert ca3['podUID']!=bad['metadata']['uid']
+# Restore the source and prove a subsequent upgrade and history rollback still work.
+tmp=R/'mode-next.json';tmp.write_text(json.dumps({'bAvailable':True}));os.replace(tmp,R/'server-mode.json');save('source-restored',{'atUTC':now(),'onlyHTTPAvailabilityChanged':True,'BPackageIdentityUnchanged':True});t0=now();deploy('b');b2,cb2=health('retry-upgrade-b','b',SEEN.copy());assertNewTransfer('b',t0);t0=now();undo('final-rollback-a',ca3['revision']);a4,ca4=health('final-rollback-a','a',SEEN.copy());assertNewTransfer('a',t0);deploy('a',True);post,postCase=health('preloaded-after','a',SEEN.copy(),True);deleteFinal();preservePreloaded('final-normal-cleanup');save('qualification-result',{'ownedStagingPaths':STAGED,'preloadedPath':PRELOADED,'automaticCleanupQualified':True,'preloadedBeforeAndAfterQualified':True,'executionComplete':True,'passed':True,'startedAtUTC':started,'finishedAtUTC':now(),'initialDeploymentA':True,'upgradeAToB':True,'historyRollbackBToA':True,'failedUpgradeDownloadBlocked':True,'historyRollbackAfterFailedUpgrade':True,'retryUpgradeAfterSourceRepair':True,'finalHistoryRollbackA':True,'normalDeletionPassed':True,'deploymentUID':DEPUID,'cases':CASES,'failedPodUID':bad['metadata']['uid'],'podUIDs':sorted(SEEN),'manualLeaseOrJournalChanges':False,'globalImageCachePruned':False,'artifactMetadataAndJournalOmitted':True,'defaultMode':'Standard','governed':'deferred','strategy':'Recreate','baselineApplicationPreservationRequired':True});print('COMPLETE Standard upgrade and rollback qualification',flush=True)
+for script in ['cleanup.py','verify_earlier.py','bundle_remote.py']:run(['python3',str(R/script)])

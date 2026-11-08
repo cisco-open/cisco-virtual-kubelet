@@ -1,0 +1,12 @@
+{
+  "atUTC": "2026-11-04T11:17:39.881018+00:00",
+  "case": "intermediate",
+  "classification": "inconclusive-no-conclusive-native-revocation-outcome",
+  "rejectionObserved": false,
+  "appHealthyUnderRevokedCertificate": false,
+  "packageURL": "https://192.168.129.111:18463/intermediate-agent-a.tar",
+  "serverModeAtObservation": "intermediate-bad",
+  "deviceRevocationCheck": "crl",
+  "allCertificateDatesValid": true,
+  "artifactConfigurationRequired": false
+}

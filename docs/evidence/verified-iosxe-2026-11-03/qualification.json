@@ -1,0 +1,106 @@
+{
+  "status": "pending-install-lost-response-recovery-qualified",
+  "dateUTC": "2026-11-03",
+  "defaultMode": "Standard",
+  "governed": "deferred, not implemented",
+  "target": {
+    "model": "C9300-24UX",
+    "serial": "FCW2247C1AJ",
+    "iosXeVersion": "17.18.1 RELEASE SOFTWARE (fc2)"
+  },
+  "candidateChanged": false,
+  "candidateProvenance": "candidate-provenance.json",
+  "coreQualification": "../verified-iosxe-2026-11-02/README.md",
+  "scope": "One accepted install reply suppressed before headers/body; manager replaces worker; same pending install recovered after normal lease expiry. Lost activate/start replies were not injected.",
+  "result": {
+    "passed": true,
+    "startedAtUTC": "2026-11-03T05:21:25.642568+00:00",
+    "finishedAtUTC": "2026-11-03T06:23:04.556304+00:00",
+    "fault": "accepted install reply lost before client headers/body",
+    "candidateChanged": false,
+    "podUID": "e0b0e50d-aabc-4e7a-861c-c2ba72bad946",
+    "appID": "cvk0000_e0b0e50daabc4e7a861cc2ba72bad946",
+    "journalUID": "f6082b67-aaa0-4e60-b9a9-4d528f894f29",
+    "oldWorkerUID": "09d3ecd4-2bb4-4bea-af06-c905e769a705",
+    "newWorkerUID": "ba3edd55-a184-4ff5-9b22-a74f29410940",
+    "expiryUTC": "2026-11-03T06:21:52.652992+00:00",
+    "fencedObservationCount": 108,
+    "forwardedLifecycleCounts": {
+      "copy": 1,
+      "configuration": 1,
+      "install": 1,
+      "activate": 1,
+      "start": 1
+    },
+    "samePodAppJournalRetained": true,
+    "normalGuardedRecovery": true,
+    "ready": true,
+    "httpRelease": "A",
+    "defaultMode": "Standard",
+    "governed": "deferred",
+    "scope": "installPending lost reply, with subsequent activate/start observed once each; lost activate/start replies not injected"
+  },
+  "leaseObjectUID": "8a67ff79-363f-43b6-b2be-a44ff0dcbd26",
+  "leaseObjectRecreated": false,
+  "journalPhases": [
+    "installPending",
+    "installPending",
+    "running",
+    "deleted"
+  ],
+  "forwardedMutationCounts": {
+    "copy": 1,
+    "configuration": 1,
+    "install": 1,
+    "activate": 1,
+    "start": 1
+  },
+  "fencedObservations": {
+    "count": 108,
+    "firstUTC": "2026-11-03T05:53:21.035082+00:00",
+    "lastUTC": "2026-11-03T06:21:47.144947+00:00",
+    "file": "fenced-observations.jsonl"
+  },
+  "nativeProof": [
+    "lost-install-response.json",
+    "pending-native-ssh-observation.json",
+    "recovered-native-checksum.json"
+  ],
+  "recoveredDeploymentAvailable": true,
+  "cleanup": {
+    "result": "PASS",
+    "evidence": "final-cleanup.json",
+    "configurationDelta": "None relative to this run baseline: original explicit self-signed HTTPS selector, IRIS client trustpoint and signature policy restored. Isolated namespace NAT disappears with the owned container; no manual relay rules were added to the host; Docker removes its owned published API port with the container."
+  },
+  "preparationAndObserverFailures": [
+    {
+      "issue": "Relay initially omitted GET host-meta discovery and operational fields query",
+      "effect": "Rejected read-only requests. No device writes or journal entries; resulting preparation lease expired normally. Retained independently from actual accepted-install fault."
+    },
+    {
+      "issue": "Observer checked exact worker binding before manager publication converged",
+      "effect": "Observer stopped with KeyError; bounded read-only continuation observed converged manager binding on same Pod/app/journal/lease. No reinstallation, reinjection, manual annotation or lease edit."
+    }
+  ],
+  "remainingLimits": [
+    "Lost activate/start replies have automated coverage only.",
+    "Device/package/firmware-specific Linux/amd64 Docker-save fixture qualification; no fleet-wide claim.",
+    "One-replica Recreate, no uninterrupted availability, stateful migration or Service routing claim.",
+    "Native package-signature verification disabled at baseline and preserved.",
+    "No CVE remediation or runtime rootfs digest measurement claim.",
+    "No native installer-internal counter is exposed; exactly one CVK install request is established by the controlled authenticated forwarding trace."
+  ],
+  "evidenceExport": "Sanitized metadata/state only; no Secret data, credentials, private keys, kubeconfig or unrelated topology observations.",
+  "findings": [
+    {
+      "severity": "non-blocking status-reporting defect",
+      "issue": "Running/Ready Pod retains the prior ProviderFailed top-level reason/message after successful recovery",
+      "observedReason": "ProviderFailed",
+      "observedMessage": "device maintenance: mutation lease held by device-write/0d9b4269-e60b-4c46-9895-3d090a5f2ef9",
+      "impact": "Confusing stale diagnostic text. Pod Ready, native RUNNING, expected HTTP A and Available/Progressing Deployment all passed.",
+      "location": "internal/drivers/iosxe/verified.go:verifiedPodStatus copies prior status without clearing Reason/Message",
+      "evidence": "snapshot-recovered-a.json",
+      "runtimeChangeMade": false
+    }
+  ]
+}

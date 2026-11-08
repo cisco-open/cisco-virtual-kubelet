@@ -1,0 +1,13 @@
+{
+  "passedBoundaries": [
+    "preloaded-before",
+    "initial-a",
+    "upgrade-b",
+    "rollback-a",
+    "failed-download-cleanup"
+  ],
+  "candidateBinaryChartAndSourceMatch": true,
+  "certificateChainChecked": true,
+  "executionComplete": false,
+  "remaining": "original fence expiry, recovery, repeat upgrade/rollback, preloaded-after and baseline cleanup"
+}

@@ -1,0 +1,14 @@
+import pathlib,pexpect,os,json,datetime,ssl,urllib.request,base64
+R=pathlib.Path('/tmp/cvk-pending-20261103');p=pexpect.spawn('ssh',['-o','StrictHostKeyChecking=yes','-o','UserKnownHostsFile=/tmp/cvk-verified-qual-20261101/switch_known_hosts','-o','GlobalKnownHostsFile=/dev/null','-o','HostKeyAlgorithms=rsa-sha2-512,rsa-sha2-256','cisco@10.1.1.1'],encoding='utf-8',timeout=90);out=[]
+try:
+ p.expect('(?i)password:');p.sendline(os.environ['CVK_QUAL_DEVICE_PASSWORD']);p.expect(r'[>#] ?$')
+ def cmd(c):
+  p.sendline(c);p.expect(r'[>#] ?$');v=p.before.replace('\r','');out.append({'command':c,'output':v});assert '% Invalid' not in v;return v
+ cmd('terminal length 0');cmd('terminal width 511');v=cmd('show app-hosting list');assert 'iris' in v and 'c9ktest' in v and 'cvk0000_' not in v
+ cmd('configure terminal');cmd('ip http secure-trustpoint cvk-gnoi-20260904');cmd('crypto pki trustpoint CVK-QUAL-20261103');cmd('enrollment terminal');cmd('revocation-check none');cmd('exit')
+ p.sendline('crypto pki authenticate CVK-QUAL-20261103');p.expect('(?i)(quit|certificate)');p.sendline(pathlib.Path('/tmp/cvk-verified-qual-20261102/ca.crt').read_text().strip());p.sendline('quit');p.expect(r'(?i)\[yes/no\]\s*:?');p.sendline('yes');p.expect(r'[>#] ?$');out.append({'command':'authenticate run-owned trustpoint with public artifact-store CA','output':p.before.replace('\r','')});cmd('end');cmd('show ip http server status | include trustpoint');cmd('show running-config | include ^ip http client secure-trustpoint');p.sendline('exit')
+finally:p.close(force=True)
+R.joinpath('device-preparation.json').write_text(json.dumps({'atUTC':datetime.datetime.now(datetime.timezone.utc).isoformat(),'commands':out},indent=2)+'\n')
+ctx=ssl.create_default_context(cafile='/tmp/cvk-verified-qual-20261101/device-ca.crt');ctx.verify_flags|=ssl.VERIFY_X509_PARTIAL_CHAIN;req=urllib.request.Request('https://10.1.1.1/restconf/data/Cisco-IOS-XE-native:native/hostname',headers={'Authorization':'Basic '+base64.b64encode(('cisco:'+os.environ['CVK_QUAL_DEVICE_PASSWORD']).encode()).decode(),'Accept':'application/yang-data+json'})
+with urllib.request.urlopen(req,context=ctx,timeout=20) as q:assert q.status==200;assert 'Edge-9K' in q.read().decode()
+print('PASS authenticated RESTCONF and temporary public store CA prepared',flush=True)

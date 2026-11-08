@@ -1,0 +1,8 @@
+import pathlib,json,datetime,subprocess,re
+R=pathlib.Path('/tmp/cvk-stdrevoke-20261104/cold');exec(compile((R/'pki_io.py').read_text(),'pki_io.py','exec'));p=CLI();proof=None
+try:
+ apps=p.cmd('show app-hosting list');assert 'cvk0000_' not in apps and re.search(r'^iris\s+RUNNING\s*$',apps,re.M) and re.search(r'^c9ktest\s+DEPLOYED\s*$',apps,re.M);config=p.cmd('show running-config all | section ^crypto pki trustpoint CVK-STDREVOKE');assert not re.search(r'^crypto pki trustpoint '+TPS['cold']+r'\s*$',config,re.M)
+ p.cmd('configure terminal');p.cmd('crypto pki trustpoint '+TPS['cold']);p.cmd('enrollment terminal pem');p.cmd('revocation-check none');p.cmd('exit');p.authenticate(TPS['cold'],'cold-root');p.cmd('crypto pki trustpoint '+TPS['cold']);p.cmd('revocation-check crl');p.cmd('exit');p.cmd('end');proof=p.proof(TPS['cold'],'cold-root');config=p.cmd('show running-config all | section ^crypto pki trustpoint CVK-STDREVOKE');block=next(x for x in re.split(r'(?m)(?=^crypto pki trustpoint )',config) if x.startswith('crypto pki trustpoint '+TPS['cold']+'\n'));assert re.search(r'^ revocation-check crl\s*$',block,re.M) and 'revocation-check none' not in block
+finally:
+ (R/'device-preparation.json').write_text(json.dumps({'atUTC':datetime.datetime.now(datetime.timezone.utc).isoformat(),'commands':p.records,'certificateProof':proof,'rootOnlyImported':True,'CRLCacheCleared':False,'existingTrustpointsChanged':False,'clockChanged':False},indent=2)+'\n');p.close()
+print('PASS added only fresh cold-repeat root with CRL checking; existing roots/policies preserved')

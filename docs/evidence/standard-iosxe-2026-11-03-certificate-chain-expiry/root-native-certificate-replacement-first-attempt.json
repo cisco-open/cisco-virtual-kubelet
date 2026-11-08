@@ -1,0 +1,26 @@
+{
+  "atUTC": "2026-11-03T23:14:27.632921+00:00",
+  "commands": [
+    {
+      "command": "terminal length 0",
+      "output": "terminal length 0\nEdge-9K"
+    },
+    {
+      "command": "terminal width 511",
+      "output": "terminal width 511\nEdge-9K"
+    },
+    {
+      "command": "show crypto pki certificates pem CVK-STDCHAIN-ROOT-20261103",
+      "output": "show crypto pki certificates pem CVK-STDCHAIN-ROOT-20261103\n------Trustpoint: CVK-STDCHAIN-ROOT-20261103------\n% The specified trustpoint is not enrolled (CVK-STDCHAIN-ROOT-20261103).\n% Only export the CA certificate in PEM format.\n% CA certificate:\n-----BEGIN CERTIFICATE-----\nMIIDTDCCAjSgAwIBAgIUXVYpr1rkvI1E0m2kt0ky2CZOKgEwDQYJKoZIhvcNAQEL\nBQAwLDEqMCgGA1UEAwwhQ1ZLIGNoYWluIHNob3J0LXJvb3QgYjI2NzQ3YWMxYjU0\nMB4XDTI2MTAwNDIyNTExNFoXDTI2MTEwMzIzMDYxNFowLDEqMCgGA1UEAwwhQ1ZL\nIGNoYWluIHNob3J0LXJvb3QgYjI2NzQ3YWMxYjU0MIIBIjANBgkqhkiG9w0BAQEF\nAAOCAQ8AMIIBCgKCAQEAw6nUSs1Bx7Pj//ft6X+h71w6WMG3ME3sA5la56eNIGTS\nmuHUzA4yCB1otvgQKP8ctyjH6NU+J/mlgB5xRy7lTom4GkS6JNZvokUopOe+Iv0I\nwqpj4nTSlN2tlaVaxB21OVHmC+66IcAEHnQvzT3lvbq/YJ8X2w15OFEu+2KTFb67\nqG/oyG4qeP4gqvz3BV1TLAKdiXBtRKhcp0zoAUdQ5XpCJ4ezYsKb55xo0QcTWKcR\nBUlVmyGTpv0sgYfTEUkeCsOO+pNLMim9rqit8j23q09LsP9G9EQzx5WDq2TB2V6d\nR8pkaTDIk4bovCaBO5u6+z3Gu7rIaW69KlpyUJgPzQIDAQABo2YwZDASBgNVHRMB\nAf8ECDAGAQH/AgEAMB0GA1UdDgQWBBTkChPN5PBA1LXRt5fSd1s6fTL9yjAfBgNV\nHSMEGDAWgBTkChPN5PBA1LXRt5fSd1s6fTL9yjAOBgNVHQ8BAf8EBAMCAQYwDQYJ\nKoZIhvcNAQELBQADggEBABUp46lKDGhMnPqRG0OEnsNE+18+WxTbQ/EiKcx1Gzn8\nMlr+jbNgjisQsYRYPWwq8XeuWCAKP9aNMc/ClVrk58GT9W4alo2YELIZ3RSlaYDY\nOovGz5IT1LRt7yvxTg/p/n2UNM5dzOq3FilHP32+bnZv1WWUpeNr6kICE6RQErX+\nYpKCS3u2cfQK9RZRNDxscWdfHlIQ2b4jHCiznuAm3kRV8yqJywKIXHr4FcAPFfx1\nwQksjQId1zehnXVzzxd1y0PDG8f5G18Gd1m/woN+wE51EAWMLxwCQdVlQ1m3FxiQ\nFNT6M8I3xmenDSDP+vnyVVP4qvfhl9CD+AFrGkHaxiM=\n-----END CERTIFICATE-----\n\nEdge-9K"
+    },
+    {
+      "command": "configure terminal",
+      "output": "configure terminal\nEnter configuration commands, one per line.  End with CNTL/Z.\nEdge-9K(config)"
+    },
+    {
+      "command": "authenticate CVK-STDCHAIN-ROOT-20261103 using root-renewed.crt",
+      "output": "crypto pki authenticate CVK-STDCHAIN-ROOT-20261103\n% Please delete your existing CA certificate first.\n% You must use 'no crypto pki trustpoint <trustpoint-name>' to delete the CA certificate.\nEdge-9K(config)#"
+    }
+  ],
+  "scope": "Only run-owned short-root CA authentication; no clock, leaf, payload, Pod, URL, client identity or verification policy change"
+}

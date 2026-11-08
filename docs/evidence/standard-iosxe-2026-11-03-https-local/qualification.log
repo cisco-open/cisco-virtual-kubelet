@@ -1,0 +1,16 @@
+namespace/cvk-stdtls-apps-20261103 created
+deployment.apps/cvk-stdtls-fixture created
+{"atUTC": "2026-11-03T14:56:46.796429+00:00", "label": "https-a", "release": "A", "podUIDs": ["b5e263e7-0c37-47c6-8dc1-fe40355414c9"], "nativeStates": {"iris": "RUNNING", "c9ktest": "DEPLOYED"}, "ready": false, "httpReleaseConfirmed": false, "oldNativeAppsAbsent": false, "artifactJournalCount": 0}
+{"atUTC": "2026-11-03T14:57:13.623679+00:00", "label": "https-a", "release": "A", "podUIDs": ["b5e263e7-0c37-47c6-8dc1-fe40355414c9"], "nativeStates": {"iris": "RUNNING", "c9ktest": "DEPLOYED", "cvk0000_b5e263e70c3747c68dc1fe40355414c9": "RUNNING"}, "ready": true, "httpReleaseConfirmed": false, "oldNativeAppsAbsent": true, "artifactJournalCount": 0}
+PASS https-a Ready/HTTP A without artifacts or journal
+deployment.apps/cvk-stdtls-fixture scaled
+PASS native RESTCONF preload and checksum; ordinary HTTPS origin stopped before local deployment
+deployment.apps/cvk-stdtls-fixture configured
+{"atUTC": "2026-11-03T14:58:27.306337+00:00", "label": "local-a", "release": "A", "podUIDs": ["9f697a19-127c-444f-95f5-92c1f8196b06"], "nativeStates": {"iris": "RUNNING", "c9ktest": "DEPLOYED"}, "ready": false, "httpReleaseConfirmed": false, "oldNativeAppsAbsent": false, "artifactJournalCount": 0}
+{"atUTC": "2026-11-03T14:58:54.316102+00:00", "label": "local-a", "release": "A", "podUIDs": ["9f697a19-127c-444f-95f5-92c1f8196b06"], "nativeStates": {"iris": "RUNNING", "c9ktest": "DEPLOYED", "cvk0000_9f697a19127c444f95f592c1f8196b06": "RUNNING"}, "ready": true, "httpReleaseConfirmed": false, "oldNativeAppsAbsent": true, "artifactJournalCount": 0}
+{"atUTC": "2026-11-03T14:59:21.576027+00:00", "label": "local-a", "release": "A", "podUIDs": ["9f697a19-127c-444f-95f5-92c1f8196b06"], "nativeStates": {"iris": "RUNNING", "c9ktest": "DEPLOYED", "cvk0000_9f697a19127c444f95f592c1f8196b06": "RUNNING"}, "ready": true, "httpReleaseConfirmed": false, "oldNativeAppsAbsent": true, "artifactJournalCount": 0}
+PASS local-a Ready/HTTP A without artifacts or journal
+{"atUTC": "2026-11-03T15:00:33.645425+00:00", "label": "local-worker-replacement-a", "release": "A", "podUIDs": ["9f697a19-127c-444f-95f5-92c1f8196b06"], "nativeStates": {"iris": "RUNNING", "c9ktest": "DEPLOYED", "cvk0000_9f697a19127c444f95f592c1f8196b06": "RUNNING"}, "ready": true, "httpReleaseConfirmed": true, "oldNativeAppsAbsent": true, "artifactJournalCount": 0}
+PASS local-worker-replacement-a Ready/HTTP A without artifacts or journal
+deployment.apps/cvk-stdtls-fixture scaled
+PASS Standard HTTPS and offline preloaded local image without artifact metadata or journal

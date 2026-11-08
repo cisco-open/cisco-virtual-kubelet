@@ -1,0 +1,10 @@
+{
+  "label": "upgrade-b",
+  "phase": "b",
+  "release": "STD-UPGRADE-B-20261106-8f0d26f6c543",
+  "podUID": "92d6c115-029f-423e-b178-0e7e78c01f5b",
+  "revision": "2",
+  "deploymentUID": "6d61f17e-a446-4456-8bee-163e6dec33b0",
+  "generation": 2,
+  "atUTC": "2026-11-06T08:32:06.291770+00:00"
+}

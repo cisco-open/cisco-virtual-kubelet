@@ -1,0 +1,25 @@
+{
+  "executionComplete": true,
+  "startedAtUTC": "2026-11-04T17:20:25.110869+00:00",
+  "finishedAtUTC": "2026-11-04T18:00:20.724693+00:00",
+  "classification": "revoked-intermediate-rejected-for-uncached-image",
+  "uncachedImageRejectionQualified": true,
+  "expectedRelease": "REVOCATION-COLD-20261104-35d8a9c90cb2",
+  "beforeReplacement": [],
+  "samePodReleaseAfterReplacementPassed": true,
+  "samePodRetained": true,
+  "freshDeploymentReleasePassed": true,
+  "normalDeletionPassed": true,
+  "imageWasUnprimedBeforeNegative": true,
+  "packageURL": "https://192.168.129.111:18467/cold-agent.tar",
+  "podUIDs": [
+    "19a9ea42-a177-452e-8e47-afcbbe938834",
+    "7e8b7d7a-5dfe-40d4-9576-37e0c0e2e882",
+    "8d451af6-ec24-4979-aff4-bda9f3875911"
+  ],
+  "defaultMode": "Standard",
+  "governed": "deferred",
+  "metadataAndJournalOmitted": true,
+  "manualLeaseOrJournalEdits": false,
+  "CRLOrPolicyChangedDuringRecovery": false
+}

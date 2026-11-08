@@ -1,0 +1,8 @@
+{"atUTC": "2026-11-04T19:40:59.770985+00:00", "originalCRLNextUpdateUTC": "2026-11-04T19:48:19+00:00", "newCRLRetrieved": false, "ready": false, "actualReleases": []}
+{"atUTC": "2026-11-04T19:41:11.536875+00:00", "originalCRLNextUpdateUTC": "2026-11-04T19:48:19+00:00", "newCRLRetrieved": false, "ready": false, "actualReleases": []}
+{"atUTC": "2026-11-04T19:41:23.307683+00:00", "originalCRLNextUpdateUTC": "2026-11-04T19:48:19+00:00", "newCRLRetrieved": false, "ready": false, "actualReleases": []}
+{"atUTC": "2026-11-04T19:41:35.008862+00:00", "originalCRLNextUpdateUTC": "2026-11-04T19:48:19+00:00", "newCRLRetrieved": false, "ready": true, "actualReleases": []}
+{"atUTC": "2026-11-04T19:41:46.894463+00:00", "originalCRLNextUpdateUTC": "2026-11-04T19:48:19+00:00", "newCRLRetrieved": false, "ready": true, "actualReleases": []}
+{"atUTC": "2026-11-04T19:41:58.565543+00:00", "originalCRLNextUpdateUTC": "2026-11-04T19:48:19+00:00", "newCRLRetrieved": false, "ready": true, "actualReleases": []}
+{"atUTC": "2026-11-04T19:42:10.373467+00:00", "originalCRLNextUpdateUTC": "2026-11-04T19:48:19+00:00", "newCRLRetrieved": false, "ready": true, "actualReleases": []}
+{"atUTC": "2026-11-04T19:42:22.084135+00:00", "originalCRLNextUpdateUTC": "2026-11-04T19:48:19+00:00", "newCRLRetrieved": false, "ready": true, "actualReleases": [{"appID": "cvk0000_25d133f14d8f43609db74c5cd6f57bae", "release": "CRL-REFRESH-CACHED-20261104-a674b004ffa2", "ip": "192.168.129.213"}]}

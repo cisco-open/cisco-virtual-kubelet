@@ -232,6 +232,12 @@ type DeviceSpec struct {
 	// +kubebuilder:default=false
 	AllowUnsignedApps bool `json:"allowUnsignedApps,omitempty" mapstructure:"allowUnsignedApps"`
 
+	// AppArtifacts configures optional application artifact verification.
+	// Omission preserves Standard behavior without new dependencies. Verified
+	// requires a supported device delivery/checksum and durable recovery runtime.
+	// +kubebuilder:validation:Optional
+	AppArtifacts *AppArtifactConfig `json:"appArtifacts,omitempty" mapstructure:"appArtifacts,omitempty"`
+
 	// Transport selects the device channel used by declarative config
 	// drivers. IOS-XE defaults to RESTCONF and also supports NETCONF/gNMI.
 	// NX-OS declarative config uses NX-API REST/DME, selected with "rest";

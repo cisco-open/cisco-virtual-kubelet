@@ -1,0 +1,15 @@
+config:
+  yangValidationMode: disabled
+controller:
+  leaderElect: true
+image:
+  pullPolicy: Never
+  repository: cvk-replies-qual
+  tag: 20261103-529e98f251b3
+rbac:
+  profile: strict
+telemetry:
+  otlp:
+    endpoint: ''
+topology:
+  enabled: true

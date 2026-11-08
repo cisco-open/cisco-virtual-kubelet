@@ -1,0 +1,186 @@
+[
+  {
+    "action": "Binding",
+    "apiVersion": "v1",
+    "eventTime": "2026-11-03T14:56:45.258692Z",
+    "firstTimestamp": null,
+    "involvedObject": {
+      "apiVersion": "v1",
+      "kind": "Pod",
+      "name": "cvk-stdtls-fixture-5478bf4f8c-7pcmr",
+      "namespace": "cvk-stdtls-apps-20261103",
+      "resourceVersion": "978",
+      "uid": "b5e263e7-0c37-47c6-8dc1-fe40355414c9"
+    },
+    "kind": "Event",
+    "lastTimestamp": null,
+    "message": "Successfully assigned cvk-stdtls-apps-20261103/cvk-stdtls-fixture-5478bf4f8c-7pcmr to c9k-stdtls-20261103",
+    "metadata": {
+      "creationTimestamp": "2026-11-03T14:56:45Z",
+      "name": "cvk-stdtls-fixture-5478bf4f8c-7pcmr.18e490d721bced35",
+      "namespace": "cvk-stdtls-apps-20261103",
+      "resourceVersion": "983",
+      "uid": "bf760fb7-dc12-457c-aa54-dce3fb637dc7"
+    },
+    "reason": "Scheduled",
+    "reportingComponent": "default-scheduler",
+    "reportingInstance": "default-scheduler-67c103417c01",
+    "source": {},
+    "type": "Normal"
+  },
+  {
+    "apiVersion": "v1",
+    "count": 1,
+    "eventTime": null,
+    "firstTimestamp": "2026-11-03T14:56:45Z",
+    "involvedObject": {
+      "apiVersion": "v1",
+      "kind": "Pod",
+      "name": "cvk-stdtls-fixture-5478bf4f8c-7pcmr",
+      "namespace": "cvk-stdtls-apps-20261103",
+      "resourceVersion": "981",
+      "uid": "b5e263e7-0c37-47c6-8dc1-fe40355414c9"
+    },
+    "kind": "Event",
+    "lastTimestamp": "2026-11-03T14:56:45Z",
+    "message": "Pulling image https://192.168.129.111:18448/standard-agent-a.tar",
+    "metadata": {
+      "creationTimestamp": "2026-11-03T14:56:45Z",
+      "name": "cvk-stdtls-fixture-5478bf4f8c-7pcmr.18e490d73c7b8754",
+      "namespace": "cvk-stdtls-apps-20261103",
+      "resourceVersion": "988",
+      "uid": "cb10d29f-fab1-4939-bfed-51655e37cbb9"
+    },
+    "reason": "Pulling",
+    "reportingComponent": "cisco-virtual-kubelet",
+    "reportingInstance": "",
+    "source": {
+      "component": "cisco-virtual-kubelet"
+    },
+    "type": "Normal"
+  },
+  {
+    "apiVersion": "v1",
+    "count": 1,
+    "eventTime": null,
+    "firstTimestamp": "2026-11-03T14:57:10Z",
+    "involvedObject": {
+      "apiVersion": "v1",
+      "kind": "Pod",
+      "name": "cvk-stdtls-fixture-5478bf4f8c-7pcmr",
+      "namespace": "cvk-stdtls-apps-20261103",
+      "resourceVersion": "981",
+      "uid": "b5e263e7-0c37-47c6-8dc1-fe40355414c9"
+    },
+    "kind": "Event",
+    "lastTimestamp": "2026-11-03T14:57:10Z",
+    "message": "Create pod in provider successfully",
+    "metadata": {
+      "creationTimestamp": "2026-11-03T14:57:10Z",
+      "name": "cvk-stdtls-fixture-5478bf4f8c-7pcmr.18e490dcf2d217ec",
+      "namespace": "cvk-stdtls-apps-20261103",
+      "resourceVersion": "1015",
+      "uid": "9f2852d6-1c21-4277-bc2e-ef46f47b33ee"
+    },
+    "reason": "ProviderCreateSuccess",
+    "reportingComponent": "c9k-stdtls-20261103/pod-controller",
+    "reportingInstance": "",
+    "source": {
+      "component": "c9k-stdtls-20261103/pod-controller"
+    },
+    "type": "Normal"
+  },
+  {
+    "apiVersion": "v1",
+    "count": 1,
+    "eventTime": null,
+    "firstTimestamp": "2026-11-03T14:57:11Z",
+    "involvedObject": {
+      "apiVersion": "v1",
+      "kind": "Pod",
+      "name": "cvk-stdtls-fixture-5478bf4f8c-7pcmr",
+      "namespace": "cvk-stdtls-apps-20261103",
+      "resourceVersion": "1006",
+      "uid": "b5e263e7-0c37-47c6-8dc1-fe40355414c9"
+    },
+    "kind": "Event",
+    "lastTimestamp": "2026-11-03T14:57:11Z",
+    "message": "Update pod in provider successfully",
+    "metadata": {
+      "creationTimestamp": "2026-11-03T14:57:11Z",
+      "name": "cvk-stdtls-fixture-5478bf4f8c-7pcmr.18e490dd38b0c85c",
+      "namespace": "cvk-stdtls-apps-20261103",
+      "resourceVersion": "1022",
+      "uid": "2f817aa3-015e-4a4b-a9f0-add264de6186"
+    },
+    "reason": "ProviderUpdateSuccess",
+    "reportingComponent": "c9k-stdtls-20261103/pod-controller",
+    "reportingInstance": "",
+    "source": {
+      "component": "c9k-stdtls-20261103/pod-controller"
+    },
+    "type": "Normal"
+  },
+  {
+    "apiVersion": "v1",
+    "count": 1,
+    "eventTime": null,
+    "firstTimestamp": "2026-11-03T14:56:45Z",
+    "involvedObject": {
+      "apiVersion": "apps/v1",
+      "kind": "ReplicaSet",
+      "name": "cvk-stdtls-fixture-5478bf4f8c",
+      "namespace": "cvk-stdtls-apps-20261103",
+      "resourceVersion": "975",
+      "uid": "d0f87b84-2173-418d-89a8-b521919f9d1f"
+    },
+    "kind": "Event",
+    "lastTimestamp": "2026-11-03T14:56:45Z",
+    "message": "Created pod: cvk-stdtls-fixture-5478bf4f8c-7pcmr",
+    "metadata": {
+      "creationTimestamp": "2026-11-03T14:56:45Z",
+      "name": "cvk-stdtls-fixture-5478bf4f8c.18e490d721777c34",
+      "namespace": "cvk-stdtls-apps-20261103",
+      "resourceVersion": "979",
+      "uid": "4d438fa0-c717-48cb-8da8-91d45439d7d1"
+    },
+    "reason": "SuccessfulCreate",
+    "reportingComponent": "replicaset-controller",
+    "reportingInstance": "",
+    "source": {
+      "component": "replicaset-controller"
+    },
+    "type": "Normal"
+  },
+  {
+    "apiVersion": "v1",
+    "count": 1,
+    "eventTime": null,
+    "firstTimestamp": "2026-11-03T14:56:45Z",
+    "involvedObject": {
+      "apiVersion": "apps/v1",
+      "kind": "Deployment",
+      "name": "cvk-stdtls-fixture",
+      "namespace": "cvk-stdtls-apps-20261103",
+      "resourceVersion": "974",
+      "uid": "e560730d-d96c-4d4e-b8ef-1ef65603b7d0"
+    },
+    "kind": "Event",
+    "lastTimestamp": "2026-11-03T14:56:45Z",
+    "message": "Scaled up replica set cvk-stdtls-fixture-5478bf4f8c from 0 to 1",
+    "metadata": {
+      "creationTimestamp": "2026-11-03T14:56:45Z",
+      "name": "cvk-stdtls-fixture.18e490d72121b260",
+      "namespace": "cvk-stdtls-apps-20261103",
+      "resourceVersion": "976",
+      "uid": "199f3b2e-2170-4241-b16f-926f00768c3c"
+    },
+    "reason": "ScalingReplicaSet",
+    "reportingComponent": "deployment-controller",
+    "reportingInstance": "",
+    "source": {
+      "component": "deployment-controller"
+    },
+    "type": "Normal"
+  }
+]

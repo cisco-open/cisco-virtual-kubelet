@@ -1,0 +1,46 @@
+{
+  "atUTC": "2026-11-05T20:20:09.602255+00:00",
+  "reason": "default parent directory absent; no app configuration or native runtime",
+  "lease": {
+    "apiVersion": "coordination.k8s.io/v1",
+    "kind": "Lease",
+    "metadata": {
+      "annotations": {
+        "topology.cisco.vk/app-worker-pod-name": "c9k-stdcopyfix-20261105-vk-688f6767ff-lb248",
+        "topology.cisco.vk/app-worker-pod-uid": "631d1988-56b4-4137-834c-27bd3de1e890",
+        "topology.cisco.vk/app-worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-app-hosting",
+        "topology.cisco.vk/device-name": "c9k-stdcopyfix-20261105",
+        "topology.cisco.vk/device-namespace": "cvk-stdcopyfix-20261105",
+        "topology.cisco.vk/device-uid": "d904e1a0-fc5c-4a5b-9b9b-6e249a90d009",
+        "topology.cisco.vk/lease-purpose": "device-mutation",
+        "topology.cisco.vk/managed": "true",
+        "topology.cisco.vk/network-worker-pod-name": "ud904e1a0-fc5c-4a5b-9b9b-6e249a90d009-network-77dc7dcdb9-xzdvb",
+        "topology.cisco.vk/network-worker-pod-uid": "af99416e-6673-46a8-a0d2-997b9d7811df",
+        "topology.cisco.vk/network-worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-network-management",
+        "topology.cisco.vk/node-name": "c9k-stdcopyfix-20261105",
+        "topology.cisco.vk/node-uid": "2f9be910-1f41-4ce1-84c5-9e35a6cfa94a",
+        "topology.cisco.vk/retain-lease": "true",
+        "topology.cisco.vk/worker-protocol": "rollout-v1",
+        "topology.cisco.vk/worker-username": "system:serviceaccount:cvk-stdcopyfix-20261105:cvk-stdcopyfix-cisco-virtual-kubelet-network-management"
+      },
+      "creationTimestamp": "2026-11-05T20:18:05Z",
+      "labels": {
+        "cisco.vk/device": "device-a6a123d578f69ec1",
+        "cisco.vk/family": "device-disruptive-mutation"
+      },
+      "name": "cvk-device-a6a123d578f69ec1-device-disruptive-mutation-72ac365f",
+      "namespace": "cvk-stdcopyfix-20261105",
+      "resourceVersion": "1016",
+      "uid": "9a7919b7-3d1c-46e8-865e-e306c6be3e6f"
+    },
+    "spec": {
+      "acquireTime": "2026-11-05T20:19:08.632669Z",
+      "holderIdentity": "device-write/4eb50344-4e39-496d-867b-21fcaf842988",
+      "leaseDurationSeconds": 1860,
+      "leaseTransitions": 1,
+      "renewTime": "2026-11-05T20:19:08.632669Z"
+    }
+  },
+  "naturalFenceExpiryUTC": "2026-11-05T20:50:08.632669+00:00",
+  "manualLeaseReset": false
+}

@@ -1,0 +1,76 @@
+[
+  {
+    "check": "go-race",
+    "logSHA256": "65513b3939de7faa6d8a415bcaf906094557e724b3a241771249a0dd84c31df2",
+    "tail": [
+      "ok  \tgithub.com/cisco/virtual-kubelet-cisco/internal/topologyhealth\t3.868s",
+      "?   \tgithub.com/cisco/virtual-kubelet-cisco/internal/topologyidentity\t[no test files]",
+      "ok  \tgithub.com/cisco/virtual-kubelet-cisco/internal/topologyrollout\t5.497s",
+      "ok  \tgithub.com/cisco/virtual-kubelet-cisco/internal/workloaddrain\t4.141s",
+      "ok  \tgithub.com/cisco/virtual-kubelet-cisco/tools/cisco-vk-config-docs\t4.362s",
+      "ok  \tgithub.com/cisco/virtual-kubelet-cisco/tools/cisco-vk-config-lint\t4.794s",
+      "ok  \tgithub.com/cisco/virtual-kubelet-cisco/tools/cisco-vk-yang-sync\t4.496s",
+      "ok  \tgithub.com/cisco/virtual-kubelet-cisco/tools/cvk-netascode-migrate\t4.947s",
+      "ok  \tgithub.com/cisco/virtual-kubelet-cisco/tools/krew-manifest-owner-check\t5.173s",
+      "ok  \tgithub.com/cisco/virtual-kubelet-cisco/tools/kubectl-ciscovk\t9.274s"
+    ]
+  },
+  {
+    "check": "real-apiserver",
+    "logSHA256": "acfc25dae3df84727f6e667ae9286866d12f8b347eb09194f53fd921079744fe",
+    "tail": [
+      "ok  \tgithub.com/cisco/virtual-kubelet-cisco/internal/provider\t233.203s",
+      "ok  \tgithub.com/cisco/virtual-kubelet-cisco/internal/controller\t84.534s",
+      "ok  \tgithub.com/cisco/virtual-kubelet-cisco/internal/topologyrollout\t8.477s"
+    ]
+  },
+  {
+    "check": "chart-render",
+    "logSHA256": "6ea1c5e2cdb9350b1a4ee55a2fd5908aa026263048d44e366ebe202d6c964238",
+    "tail": [
+      "ok  \tgithub.com/cisco/virtual-kubelet-cisco/cmd/cisco-vk\t3.826s",
+      "ok  \tgithub.com/cisco/virtual-kubelet-cisco/cmd/cisco-vk\t4.173s",
+      "managed topology Helm render contract passed"
+    ]
+  },
+  {
+    "check": "targeted-race",
+    "logSHA256": "92ce875ed404d07890d110b80567076bd530ccd9e828f3f2679c16f48df77f8b",
+    "tail": [
+      "ok  \tgithub.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe\t8.769s",
+      "ok  \tgithub.com/cisco/virtual-kubelet-cisco/internal/provider\t(cached)",
+      "ok  \tgithub.com/cisco/virtual-kubelet-cisco/internal/provider/maintenance\t(cached)",
+      "ok  \tgithub.com/cisco/virtual-kubelet-cisco/cmd/cisco-vk\t(cached)"
+    ]
+  },
+  {
+    "check": "passthrough",
+    "logSHA256": "178bb93895b38402f8f2303912a5a920afdbbc75a08343b45946a522fa3f7700",
+    "tail": [
+      "test tests::manifest_lists_resolve_to_linux_amd64_manifest_before_download ... ok",
+      "test tests::gzipped_layers_are_decompressed_into_docker_save_archive ... ok",
+      "test prepare::tests::corrupt_content_and_unsupported_sources_never_publish_or_leave_scratch ... ok",
+      "test tests::download_matrix_covers_routes_client_credentials_and_registry_auth ... ok",
+      "test prepare::tests::expansion_budget_diff_id_and_deadline_are_enforced ... ok",
+      "test prepare::tests::direct_manifest_and_plain_layer_work_and_existing_outputs_are_untouched ... ok",
+      "test prepare::tests::verified_index_gzip_preparation_is_deterministic_and_descriptor_binds_bytes ... ok",
+      "",
+      "test result: ok. 38 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.75s",
+      ""
+    ]
+  },
+  {
+    "check": "strict-mkdocs",
+    "logSHA256": "2c6ca3a628853e7a51b5624cd3b0cee65a025709b0e29fe4c29e5d27cdcddd5b",
+    "tail": [
+      "INFO    -  Removed unused non-English lunr language assets",
+      "INFO    -  Vendored exact Mermaid and ResizeObserver runtime assets",
+      "INFO    -  Documentation built in 2.82 seconds"
+    ]
+  },
+  {
+    "check": "whitespace-source-and-evidence-integrity",
+    "result": "PASS",
+    "scope": "git diff --check; final CVK source-tree digest; evidence SHA256SUMS; credential-material scan"
+  }
+]

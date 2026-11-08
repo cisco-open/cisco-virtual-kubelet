@@ -1,0 +1,11 @@
+{
+  "atUTC": "2026-11-05T20:41:38.666705+00:00",
+  "passed": true,
+  "binarySHA256": "b55c3b3f6aedaa331a4431b47edc49546cc4e4b19f6541d3a0af1cf67e2037c5",
+  "dockerImageID": "sha256:40a7e2843b2650363374b6a78785075d88b846d69c1b236a3ff29fd5cba32d71",
+  "lastLayerWorkerBinaryMatches": true,
+  "dockerConfigLabels": {
+    "apphosting.cisco.com/qualification": "20261105-stdcopyfix",
+    "apphosting.cisco.com/source-sha256": "f31b516f5dafd468c2dee968cd62e68dfd366344924876834500e2a9b18f81ab"
+  }
+}

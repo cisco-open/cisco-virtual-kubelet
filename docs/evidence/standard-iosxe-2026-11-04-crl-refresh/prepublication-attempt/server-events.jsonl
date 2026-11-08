@@ -1,0 +1,7 @@
+{"kind": "servers-ready", "TLSport": 18469, "CRLport": 18470, "atUTC": "2026-11-04T19:20:18.905621+00:00"}
+{"kind": "tls-established", "certMode": "original", "client": "192.168.129.111", "clientPort": 57828, "sessionReused": false, "tlsVersion": "TLSv1.3", "atUTC": "2026-11-04T19:20:19.323894+00:00"}
+{"kind": "http-request", "phase": null, "certMode": "original", "client": "192.168.129.111", "clientPort": 57828, "path": "/_probe", "status": 200, "package": false, "atUTC": "2026-11-04T19:20:19.325037+00:00"}
+{"kind": "tls-established", "certMode": "original", "client": "10.1.1.1", "clientPort": 27983, "sessionReused": false, "tlsVersion": "TLSv1.3", "atUTC": "2026-11-04T19:22:22.339413+00:00"}
+{"kind": "crl-served", "client": "192.168.129.2", "clientPort": 21789, "path": "/issuer.crl", "status": 200, "sha256": "740f326956008d95047bb2634f22efd44a51b085d3449e9cd102db13ff75c698", "bytes": 426, "version": null, "revokedSerialsHex": [], "atUTC": "2026-11-04T19:22:22.341271+00:00"}
+{"kind": "http-request", "phase": "valid", "certMode": "original", "client": "10.1.1.1", "clientPort": 27983, "path": "/valid.tar", "status": 200, "package": true, "atUTC": "2026-11-04T19:22:22.430966+00:00"}
+{"kind": "package-sent", "phase": "valid", "certMode": "original", "client": "10.1.1.1", "bytes": 5959680, "sha256": "65a25e7e47843a006247b3693aa510a1f835013c862c0de17a06e566d54b80e6", "atUTC": "2026-11-04T19:22:25.497883+00:00"}

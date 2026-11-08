@@ -1,0 +1,11 @@
+{
+  "atUTC": "2026-11-05T20:51:50.118527+00:00",
+  "actualReleases": [
+    {
+      "appID": "cvk0000_3e4f2caf3e424f8fb3ee62969bde6a7c",
+      "release": "STD-COPYFIX-VALID-20261105-0609ed4e6d25",
+      "ip": "192.168.129.184"
+    }
+  ],
+  "autoEvictionObserved": false
+}

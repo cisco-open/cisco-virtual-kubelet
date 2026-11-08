@@ -1,0 +1,59 @@
+{
+  "status": "natural-crl-refresh-and-revocation-discovery-qualified",
+  "executionComplete": true,
+  "revocationDiscoveryQualified": true,
+  "rawActorRevocationDiscoveryQualified": false,
+  "rawActorClassification": "inconclusive-refresh",
+  "nativeSerialSpecificPKIRejections": [
+    "2026-11-04T19:48:30.271000+00:00",
+    "2026-11-04T19:51:31.258000+00:00"
+  ],
+  "firstNativePKIRejectionUTC": "2026-11-04T19:48:30.271000+00:00",
+  "firstOriginTLSAlertUTC": "2026-11-04T19:51:31.254300+00:00",
+  "publicationToFirstNativePKIRejectionSeconds": 510.793159,
+  "originMissedFirstClientValidationFailure": true,
+  "cacheWindowAcceptanceObserved": true,
+  "cacheWindowOutcome": "fresh-image-accepted-using-cached-unrevoked-CRL",
+  "publicationUTC": "2026-11-04T19:39:59.477841+00:00",
+  "originalCRLNextUpdateUTC": "2026-11-04T19:48:19+00:00",
+  "initialCRLNumber": 3,
+  "revokedCRLNumber": 4,
+  "firstRevokedCRLNativeFetchUTC": "2026-11-04T19:48:30.261617+00:00",
+  "publicationToNativeFetchSeconds": 510.783776,
+  "originalNextUpdateToNativeFetchSeconds": 11.261617,
+  "publicationToFirstOriginTLSAlertSeconds": 691.776459,
+  "freshImageAcceptedDuringCachedWindow": true,
+  "freshImageBlockedAfterDiscovery": true,
+  "releaseBeforeReplacement": [],
+  "releaseAfterReplacement": [
+    {
+      "appID": "cvk0000_dec2eb0a632b409990bf22918214a19b",
+      "release": "CRL-REFRESH-REFRESH-20261104-a674b004ffa2",
+      "ip": "192.168.129.222"
+    }
+  ],
+  "runningReleaseAfterPublication": [
+    {
+      "appID": "cvk0000_123d675aafac4470b58e95ada003373d",
+      "release": "CRL-REFRESH-VALID-20261104-a674b004ffa2",
+      "ip": "192.168.129.211"
+    }
+  ],
+  "samePodRecoveryPassed": true,
+  "freshDeploymentAndDeletionPassed": true,
+  "invalidObservations": 61,
+  "guardedObservations": 78,
+  "canonicalMutationLeaseUID": "7c4d8e53-5e56-4466-87d9-643d547e4aeb",
+  "manualLeaseOrJournalChanges": false,
+  "forcedCRLRefreshOrFlushDuringQualification": false,
+  "defaultCachePolicyUnchanged": true,
+  "baselineCleanupPassed": true,
+  "earlierEvidencePreserved": true,
+  "defaultMode": "Standard",
+  "governed": "deferred",
+  "startedAtUTC": "2026-11-04T19:38:18.025585+00:00",
+  "finishedAtUTC": "2026-11-04T20:28:29.779096+00:00",
+  "rawEmptyCRLVersionObserverCorrectionDocumented": true,
+  "initialPrepublicationStopsPreserved": true,
+  "scope": "C9300-24UX / IOS-XE 17.18.1 fc2; valid directly issued leaf, HTTP CDP, initial 10-minute CRL and reachable newly published CRL; excludes unavailable/stale CRLs, intermediate revocation discovery, OCSP and optional cache-policy overrides"
+}

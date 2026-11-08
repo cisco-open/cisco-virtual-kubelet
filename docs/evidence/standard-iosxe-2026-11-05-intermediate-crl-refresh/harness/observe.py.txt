@@ -1,0 +1,8 @@
+import pathlib,json,datetime
+R=pathlib.Path('/tmp/cvk-intrefresh-20261105');print('UTC',datetime.datetime.now(datetime.timezone.utc).isoformat());p=R/'qualification.pid';print('Actor running',p.exists() and pathlib.Path('/proc',p.read_text().strip()).exists());log=R/'qualification.log'
+if log.exists():print('\n'.join(log.read_text().splitlines()[-3:]))
+for n in ['cache-window-observations','invalid-observations','guarded-observations']:
+ p=R/(n+'.jsonl')
+ if p.exists():ls=p.read_text().splitlines();print(n,len(ls),json.loads(ls[-1]))
+p=R/'qualification-result.json'
+if p.exists():print(p.read_text())

@@ -1,0 +1,30 @@
+{
+  "passed": true,
+  "startedAtUTC": "2026-11-03T14:56:44.208424+00:00",
+  "finishedAtUTC": "2026-11-03T15:01:31.966536+00:00",
+  "defaultMode": "Standard",
+  "governed": "deferred",
+  "appArtifactsOmitted": true,
+  "workloadArtifactMetadataOmitted": true,
+  "journalConfigurationOmitted": true,
+  "artifactJournalAndGrantCount": 0,
+  "httpsPackageURL": "https://192.168.129.111:18448/standard-agent-a.tar",
+  "localImage": "flash:cvk-stdtls-20261103-a.tar",
+  "localImagePullPolicy": "Never",
+  "podUIDs": {
+    "https": "b5e263e7-0c37-47c6-8dc1-fe40355414c9",
+    "local": "9f697a19-127c-444f-95f5-92c1f8196b06"
+  },
+  "oldWorkerUID": "89d2729e-e872-4fb2-adeb-22f8190f292e",
+  "newWorkerUID": "f2b2e35e-de87-4f57-a64c-709c41862628",
+  "httpsDeployment": true,
+  "preloadedLocalDeployment": true,
+  "localOriginOffline": true,
+  "localWorkerReplacement": true,
+  "traceUnchangedDuringLocalFlow": true,
+  "normalDeletion": true,
+  "nativeSignaturePolicyChanged": false,
+  "artifactServiceUsed": false,
+  "preloadTransport": "existing RESTCONF copy RPC over authenticated management TLS",
+  "c9kInvalidCertificateControlsExecuted": false
+}

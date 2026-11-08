@@ -1,0 +1,28 @@
+import pathlib,subprocess,json,sys,time,datetime
+root=pathlib.Path('/tmp/cvk-pending-20261103');label=sys.argv[1];release=sys.argv[2].upper();deadline=time.monotonic()+300
+expected=next(r for r in json.loads((root/'releases.json').read_text()) if r['release']==release)
+iteration=0
+while time.monotonic()<deadline:
+ iteration+=1;case=label+'-poll-'+str(iteration)
+ r=subprocess.run(['python3',str(root/'snapshot.py'),case],capture_output=True,text=True,timeout=60)
+ if r.returncode:print(r.stderr,flush=True);time.sleep(5);continue
+ s=json.loads((root/('snapshot-'+case+'.json')).read_text());pods=[p for p in s['pods'] if not p['metadata'].get('deletionTimestamp')]
+ ids={'cvk0000_'+p['metadata']['uid'].replace('-','') for p in pods}
+ records=[json.loads(v) for j in s['journals'] for v in (j.get('data') or {}).values() if json.loads(v).get('podUID') in {p['metadata']['uid'] for p in pods}]
+ ready=len(pods)==1 and all(p.get('status',{}).get('phase')=='Running' and any(c['type']=='Ready' and c['status']=='True' for c in p.get('status',{}).get('conditions',[])) for p in pods)
+ correct_record=len(records)==1 and records[0]['phase']=='running' and records[0]['descriptorDigest']==expected['descriptorDigest'] and records[0]['packageDigest']==expected['package']['digest']
+ probes=[]
+ for p in s['probes']:
+  try:
+   if p['appID'] in ids and p.get('status')==200 and json.loads(p.get('body','{}')).get('release')==release:probes.append(p)
+  except (ValueError,TypeError):pass
+ native_ids={a['appID'] for a in s['nativeApps'] if a['appID'] and a['appID'].startswith('cvk')}
+ clean_old=native_ids==ids
+ summary={'collectedAtUTC':s['collectedAtUTC'],'label':label,'release':release,'ready':ready,'correctJournal':correct_record,'httpReleaseConfirmed':bool(probes),'oldNativeAppsAbsent':clean_old,'podUIDs':[p['metadata']['uid'] for p in pods],'nativeStates':{a['appID']:a['details'].get('state') for a in s['nativeApps']},'podStates':[p.get('status',{}).get('containerStatuses') for p in pods]}
+ with (root/('wait-'+label+'.jsonl')).open('a') as f:f.write(json.dumps(summary)+'\n')
+ if iteration==1 or iteration%4==0:print(json.dumps(summary),flush=True)
+ if ready and correct_record and probes and clean_old:
+  s['assertions']=summary;s['assertions']['passed']=True
+  (root/('snapshot-'+label+'.json')).write_text(json.dumps(s,indent=2)+'\n');print('PASS '+label+' HTTP release '+release,flush=True);sys.exit(0)
+ time.sleep(5)
+print('FAIL '+label+' timed out; retained all observations',flush=True);sys.exit(1)

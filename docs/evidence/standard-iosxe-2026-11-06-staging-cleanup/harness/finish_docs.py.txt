@@ -1,0 +1,95 @@
+from pathlib import Path
+import json
+R=Path('/private/tmp/cvk-stdgc-20261106');q=json.loads((R/'qualification-assessed.json').read_text());assert q['passed'] and q['normalDeletionAndBaselineCleanupPassed'] and q['automaticOwnedStagingCleanupQualified']
+ROOT=Path('/Users/johalley/Git/cisco-virtual-kubelet');link='evidence/standard-iosxe-2026-11-06-staging-cleanup/README.md'
+addition='''The later [ownership-safe Standard staging cleanup qualification]('''+link+''')
+uses a rebuilt candidate and adds automatic cleanup for freshly allocated,
+proven-owned temporary tars. Remote A/B upgrades and actual history rollback
+passed with each consumed tar confirmed absent while the app ran. A truncated
+HTTPS upgrade was blocked before configuration/install and its destination was
+confirmed absent; rollback respected the unchanged natural fence. A preloaded
+archive with a matching staging-style filename retained its exact size/SHA-512
+through all boundaries and passed local Never deployment before and after.
+Existing tar inventory and earlier evidence were preserved. The lab did not
+manually delete any worker-owned path under test. This firmware left no partial
+file after the failed transfer; actual partial-residue deletion is unit-tested.
+Preloaded/explicit destinations, legacy files, uncertain operations and files
+without a live ownership receipt remain retained. Worker-crash orphan collection
+is outside this bounded cleanup contract. Standard still needs no artifact
+metadata or journal; Verified is optional and Governed deferred.
+
+'''
+anchor='Standard remains default and Governed deferred.\n\n'
+for name in ['verified-iosxe-qualification.md','verified-artifact-preflight.md','app-image-lifecycle-plan.md']:
+ p=ROOT/'docs'/name;s=p.read_text();s=s.replace('removed by lab cleanup; automatic flash retention/garbage collection is not\nqualified.', 'removed by lab cleanup; automatic flash cleanup was not qualified for that\nearlier candidate.');assert s.count(anchor)==1 and link not in s;s=s.replace(anchor,anchor+addition)
+ if name=='verified-iosxe-qualification.md':
+  lines=s.splitlines(keepends=True);i=next(i for i,l in enumerate(lines) if l.startswith('| Standard copy-first upgrades and rollback |'));lines.insert(i+1,'| Standard owned staging cleanup | Use fresh temporary paths, keep a staging-style preloaded canary, upgrade/undo and truncate B delivery | Consumed worker tars automatically absent; failed destination absent before any app install; original fence retained; preloaded size/SHA-512 and local Never preserved before/after; no manual deletion of worker paths or mandatory artifact journal |\n');s=''.join(lines)
+ p.write_text(s)
+p=ROOT/'docs/CONFIGURATION.md';s=p.read_text();old='''Installed apps and flash staging tar files have separate lifecycles. The
+[copy-first upgrade/rollback qualification](evidence/standard-iosxe-2026-11-06-upgrade-rollback/README.md)
+found that native app deletion leaves its staging tar on flash; test-owned files
+were removed by lab cleanup. Automatic staging-file retention/garbage collection
+is outside the current qualified profile. Deployment-history rollback requests a
+new copy from the prior image URL, so retain versioned packages at stable URLs.
+''';new='''### Standard staging cleanup
+
+For a new remote installation without `cisco.io/apphost-package-dest`, CVK uses a
+fresh random `flash:/cvk-stage-<uuid>.tar` destination. Qualified filesystem
+observations must prove it absent before CVK records ownership. CVK automatically
+removes the owned temporary file after native RUNNING or confirmed app teardown;
+a definitive synchronous copy failure also permits partial-download cleanup.
+Deletion uses the existing RESTCONF `delete` RPC and confirms exact-file absence.
+The [C9K qualification]('''+link+''')
+covers upgrade, history rollback, failed truncated delivery and preloaded-file
+preservation, without artifact metadata or a journal.
+
+Local/preloaded paths and explicit package destinations remain caller-owned and
+are retained, including filenames that resemble CVK temporary files. CVK never
+sweeps a directory or adopts legacy files by prefix. Normal device mutation
+guards also cover cleanup. Copy/delete uncertainty and unconsumed installs retain
+the file; cleanup failures are logged and preserve normal safety fences.
+Ownership receipts exist only in the live worker: a replacement worker preserves
+unreceipted files for operator inspection. If ownership cannot be established
+because qualified filesystem observations are unavailable, ordinary copy-first
+delivery proceeds to a unique unowned destination, logs a warning and retains it.
+No additional Standard artifact or journal configuration is required.
+
+Installed apps and temporary tars have separate lifecycles: the tar can be
+removed while the app runs. Deployment-history rollback makes a new copy from
+the prior image URL, so keep immutable versioned packages available at stable
+URLs, or retain an explicit/preloaded local package. Automatic cleanup is not a
+persistent rollback cache, cryptographic identity check or crash-orphan sweeper.
+''';assert old in s;s=s.replace(old,new);p.write_text(s)
+p=ROOT/'docs/ARCHITECTURE.md';s=p.read_text();anchor='### Pod deletion flow\n';note='''### Standard staging ownership
+
+Remote copy-first delivery allocates a random flash tar and records a live-worker
+ownership receipt only after filtered filesystem metadata and an exact-key query
+establish that it did not exist. The full device mutation guard covers allocation,
+copy, lifecycle and exact-file cleanup. A consumed package (native RUNNING),
+confirmed teardown, or definitive synchronous copy failure permits cleanup;
+copy/delete uncertainty quarantines the receipt. Cleanup decodes the existing
+RESTCONF delete RPC and confirms absence. Preloaded/explicit destinations are
+never adopted, and no filename-prefix sweep occurs. A replacement worker has no
+receipt-based deletion authority. Unsupported ownership observations retain an
+unowned unique tar while preserving Standard copy-first deployment. See
+[staging cleanup configuration](CONFIGURATION.md#standard-staging-cleanup).
+
+''';assert anchor in s and '### Standard staging ownership' not in s;s=s.replace(anchor,note+anchor)
+anchor='| App-hosting lifecycle and verification RPCs |';lines=s.splitlines(keepends=True);i=next(i for i,l in enumerate(lines) if l.startswith(anchor));lines.insert(i+1,'| Standard package copy / owned staging delete | POST | `/restconf/operations/Cisco-IOS-XE-rpc:copy`, `/restconf/operations/Cisco-IOS-XE-rpc:delete` |\n');lines.insert(i+2,'| Standard staging metadata / exact file | GET | `/restconf/data/Cisco-IOS-XE-platform-software-oper:cisco-platform-software/q-filesystem` (filtered metadata and keyed child) |\n');p.write_text(''.join(lines))
+p=ROOT/'docs/troubleshooting.md';s=p.read_text();s+='''
+## Standard staging tar remains on flash
+
+Check worker logs for `Standard staging cleanup confirmed absent`, cleanup
+failure, or ownership-unavailable warnings. Automatic cleanup only covers fresh
+files with a live ownership receipt; preloaded/explicit destinations, legacy
+files and restart or uncertain-operation orphans are deliberately retained.
+Never delete files just because their names begin with `cvk-` or `cvk-stage-`.
+Inspect the exact file, active app/install state, worker diagnostics and normal
+mutation fence before operator-directed removal. A consumed temporary tar can be
+removed while its app runs, but an unconsumed installation may still need it.
+Verify RESTCONF filesystem-read and exact `delete` RPC permissions if cleanup
+fails. Do not clear a Lease or journal to accelerate cleanup or rollback. Keep
+prior versioned upstream packages or caller-owned local packages for rollback.
+See [Standard staging cleanup](CONFIGURATION.md#standard-staging-cleanup).
+''';p.write_text(s)
+print('PASS current guidance updated; historical evidence untouched')

@@ -1,0 +1,12 @@
+[
+  {
+    "kind": "tls-rejected",
+    "case": "intermediate",
+    "port": 18463,
+    "certMode": "intermediate-bad",
+    "client": "10.1.1.1",
+    "errorReason": "SSLV3_ALERT_BAD_CERTIFICATE",
+    "error": "[SSL: SSLV3_ALERT_BAD_CERTIFICATE] sslv3 alert bad certificate (_ssl.c:1000)",
+    "atUTC": "2026-11-04T11:05:29.467095+00:00"
+  }
+]

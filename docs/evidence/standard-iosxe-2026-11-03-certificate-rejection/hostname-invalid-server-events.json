@@ -1,0 +1,22 @@
+[
+  {
+    "kind": "tls-rejected",
+    "case": "hostname",
+    "port": 18451,
+    "certMode": "hostname",
+    "client": "10.1.1.1",
+    "errorReason": "SSLV3_ALERT_CERTIFICATE_UNKNOWN",
+    "error": "[SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] sslv3 alert certificate unknown (_ssl.c:1000)",
+    "atUTC": "2026-11-03T18:11:26.206857+00:00"
+  },
+  {
+    "kind": "tls-rejected",
+    "case": "hostname",
+    "port": 18451,
+    "certMode": "hostname",
+    "client": "10.1.1.1",
+    "errorReason": "SSLV3_ALERT_CERTIFICATE_UNKNOWN",
+    "error": "[SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] sslv3 alert certificate unknown (_ssl.c:1000)",
+    "atUTC": "2026-11-03T18:14:26.880881+00:00"
+  }
+]

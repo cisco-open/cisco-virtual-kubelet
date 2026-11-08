@@ -1,0 +1,12 @@
+{
+  "atUTC": "2026-11-04T19:40:57.768457+00:00",
+  "phase": "cached",
+  "packageSentToC9K": false,
+  "release": "CRL-REFRESH-CACHED-20261104-a674b004ffa2",
+  "repoTag": "cvk-crlrefresh-20261104/cached:a674b004ffa2",
+  "dockerConfigID": "sha256:97ef5fad6e24392f917b1edc4cc13db74bbabfc81c45dae05e2f1b75f64d6a66",
+  "layerDiffID": "sha256:3a3eb56ea37098cf24bb07f5ee48a75925b92e5ef56e4522d24f54b933ca3b03",
+  "binarySHA256": "b967debf0b04f5c478373ccfe1ba349bf52d87b5a1c0dbd64f57407d22d4eda6",
+  "packageSHA256": "4d5128dc9058b0ef82c9a903e9aee2cc3ed96e02e20c6eef998b945686125922",
+  "packageBytes": 5959680
+}

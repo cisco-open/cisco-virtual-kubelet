@@ -1,0 +1,12 @@
+{
+  "atUTC": "2026-11-06T10:44:59.533203+00:00",
+  "passed": true,
+  "files": {
+    "flash:/cvk-stage-afde99a205384e5b9da8a4f34930af75.tar": {
+      "status": 404,
+      "body": "{\n  \"ietf-restconf:errors\": {\n    \"error\": [\n      {\n        \"error-type\": \"application\",\n        \"error-tag\": \"invalid-value\",\n        \"error-message\": \"uri keypath not found\"\n      }\n    ]\n  }\n}\n"
+    }
+  },
+  "automaticCleanupOnly": true,
+  "manualDeletionUsed": false
+}

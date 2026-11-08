@@ -1,0 +1,14 @@
+{
+  "atUTC": "2026-11-04T19:18:07.384768+00:00",
+  "passed": true,
+  "policies": {
+    "leaf": {
+      "trustpoint": "CVK-CRLREFRESH-20261104",
+      "revocationCheck": "crl",
+      "noneFallback": false,
+      "runningConfig": "crypto pki trustpoint CVK-CRLREFRESH-20261104\n enrollment retry count 999\n enrollment retry period 1\n enrollment terminal pem\n revocation-check crl\n hash sha512\nEdge-9K"
+    }
+  },
+  "globalPolicyChanged": false,
+  "CRLCacheManuallyCleared": false
+}

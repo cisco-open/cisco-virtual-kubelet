@@ -1,0 +1,131 @@
+{
+  "generatedAtUTC": "2026-11-03T22:51:14.653089+00:00",
+  "nonce": "b26747ac1b54",
+  "rootExpiryMode": "Natural expiration of initially valid imported root; no device clock changes",
+  "rootExpiresAtUTC": "2026-11-03T23:06:14+00:00",
+  "certificates": {
+    "root-old": {
+      "sha256": "a05e88cca345fca817c8c20b71159df6684f6929fab384146bdbc296e88b7983",
+      "SPKISHA256": "6bcdb3c039eb358dd69a18566b3345cb11d61cfc456eddb2dad64258fd515503",
+      "subject": "CN=CVK chain short-root b26747ac1b54",
+      "issuer": "CN=CVK chain short-root b26747ac1b54",
+      "serialHex": "5d5629af5ae4bc8d44d26da4b74932d8264e2a01",
+      "validFromUTC": "2026-10-04T22:51:14+00:00",
+      "validUntilUTC": "2026-11-03T23:06:14+00:00",
+      "ca": true
+    },
+    "root-renewed": {
+      "sha256": "5c92665d734c56892f5a0d5bd9affe05e7f3823e2bd0d53fe42df03b3d3ddfa8",
+      "SPKISHA256": "6bcdb3c039eb358dd69a18566b3345cb11d61cfc456eddb2dad64258fd515503",
+      "subject": "CN=CVK chain short-root b26747ac1b54",
+      "issuer": "CN=CVK chain short-root b26747ac1b54",
+      "serialHex": "17f363ede4b5f6c4f5b13cdbe127b5f9d6f0cc92",
+      "validFromUTC": "2026-10-04T22:51:14+00:00",
+      "validUntilUTC": "2026-12-03T22:51:14+00:00",
+      "ca": true
+    },
+    "intermediate-root": {
+      "sha256": "d76acea64390122a27bc87011bedd75be403753b9c1b1d59459262316a024397",
+      "SPKISHA256": "ed0b3c9008ab0828d07a62fa9280b67899d27d3f4a3afcb8bcadc0d6b1db33d8",
+      "subject": "CN=CVK chain intermediate-root b26747ac1b54",
+      "issuer": "CN=CVK chain intermediate-root b26747ac1b54",
+      "serialHex": "4087dc90223fc51a39ce03d784db5b4f44e4cb3e",
+      "validFromUTC": "2026-10-04T22:51:14+00:00",
+      "validUntilUTC": "2026-12-03T22:51:14+00:00",
+      "ca": true
+    },
+    "intermediate-expired": {
+      "sha256": "fb3a7556aeb884e3495a8ac253d4abf4fd4b165bc6a60849b91a3fb203b64b29",
+      "SPKISHA256": "55665235f6f0a0a493c01c526dce6bb49db9848f4b98da4b5801087b53c772d2",
+      "subject": "CN=CVK chain intermediate b26747ac1b54",
+      "issuer": "CN=CVK chain intermediate-root b26747ac1b54",
+      "serialHex": "5f99b7525fb9b0041b88909bdd355ccbcad347e7",
+      "validFromUTC": "2026-10-19T22:51:14+00:00",
+      "validUntilUTC": "2026-11-01T22:51:14+00:00",
+      "ca": true
+    },
+    "intermediate-renewed": {
+      "sha256": "080725552141043a591978afe7990a320b724896e5364aaf085e65734478192c",
+      "SPKISHA256": "55665235f6f0a0a493c01c526dce6bb49db9848f4b98da4b5801087b53c772d2",
+      "subject": "CN=CVK chain intermediate b26747ac1b54",
+      "issuer": "CN=CVK chain intermediate-root b26747ac1b54",
+      "serialHex": "2e438d09c48b2452eaf9102ab2dc015790c9f07b",
+      "validFromUTC": "2026-10-19T22:51:14+00:00",
+      "validUntilUTC": "2026-11-17T22:51:14+00:00",
+      "ca": true
+    },
+    "control-intermediate": {
+      "sha256": "6d40c728cbb29eab61889bcce25cc6e9802696d6fd0955edee3ab2bfcebafa18",
+      "SPKISHA256": "487987c5438b95e5f4b926b29239f46cfef3505b97b4b6b763b1ba9ed7b77d2c",
+      "subject": "CN=CVK chain control-intermediate b26747ac1b54",
+      "issuer": "CN=CVK chain intermediate-root b26747ac1b54",
+      "serialHex": "1a22ebb84a2be4ded2d32ea4f3cf178060d1b283",
+      "validFromUTC": "2026-10-19T22:51:14+00:00",
+      "validUntilUTC": "2026-11-17T22:51:14+00:00",
+      "ca": true
+    },
+    "root-leaf": {
+      "sha256": "335bcd23c4ff85b2d6b87d127bc854a25af7e5606f76db4f77e0a38a3083c0fe",
+      "SPKISHA256": "f68d9202430d510d5e39ae8cd3ab7b0f6f3b42e3a5e3dce65e757c57cf5d432b",
+      "subject": "CN=192.168.129.111",
+      "issuer": "CN=CVK chain short-root b26747ac1b54",
+      "serialHex": "16a607a34b198a3c7975c9e3cc09e98ea07879df",
+      "validFromUTC": "2026-10-24T22:51:14+00:00",
+      "validUntilUTC": "2026-11-10T22:51:14+00:00",
+      "ca": false
+    },
+    "intermediate-leaf": {
+      "sha256": "2764a5cb0aade9acf4ad7f1f83ac094b09ba4ee243f5d2615c405fed2bf1be20",
+      "SPKISHA256": "209e06352dd4aa9f5d35b86336f217d4eb37c6b4f7bb434884ceb65c2a7df42a",
+      "subject": "CN=192.168.129.111",
+      "issuer": "CN=CVK chain intermediate b26747ac1b54",
+      "serialHex": "1442daaee56ddf13f79ce6d630ba9ebc23f3d5fd",
+      "validFromUTC": "2026-10-24T22:51:14+00:00",
+      "validUntilUTC": "2026-11-10T22:51:14+00:00",
+      "ca": false
+    },
+    "control-leaf": {
+      "sha256": "4b35518ccceedabea0b2e9403d87f77c78a97a248fe0aba952a2b819fd970b05",
+      "SPKISHA256": "06710f804ae5efb861a29f4b8dfa23e1ce41e286c58bf327f62927c1537ad2ef",
+      "subject": "CN=192.168.129.111",
+      "issuer": "CN=CVK chain control-intermediate b26747ac1b54",
+      "serialHex": "2ccb4f50b7bb1ac681d2ac02a368d1e783acef25",
+      "validFromUTC": "2026-10-24T22:51:14+00:00",
+      "validUntilUTC": "2026-11-10T22:51:14+00:00",
+      "ca": false
+    }
+  },
+  "chains": {
+    "control-intermediate": [
+      "control-leaf",
+      "control-intermediate"
+    ],
+    "root-old": [
+      "root-leaf",
+      "root-old"
+    ],
+    "root-renewed": [
+      "root-leaf",
+      "root-renewed"
+    ],
+    "intermediate-expired": [
+      "intermediate-leaf",
+      "intermediate-expired"
+    ],
+    "intermediate-renewed": [
+      "intermediate-leaf",
+      "intermediate-renewed"
+    ]
+  },
+  "ephemeralPrivateKeys": [
+    "root-ca.key",
+    "intermediate-root.key",
+    "intermediate-ca.key",
+    "control-intermediate.key",
+    "root-leaf.key",
+    "intermediate-leaf.key",
+    "control-leaf.key"
+  ],
+  "leavesUnchangedAcrossRepair": true,
+  "CAKeysAndSubjectsUnchangedAcrossRenewal": true
+}

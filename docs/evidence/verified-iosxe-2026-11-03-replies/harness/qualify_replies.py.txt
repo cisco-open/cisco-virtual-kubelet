@@ -1,0 +1,80 @@
+"""Two independent real-device lost replies; no manual lease/journal edits."""
+import pathlib,json,subprocess,time,datetime,sys,hashlib
+R=pathlib.Path('/tmp/cvk-replies-20261103');K=['kubectl','--kubeconfig',str(R/'kubeconfig')];NS='cvk-replies-20261103';APPS='cvk-replies-apps-20261103';DEV='c9k-pending-20261103'
+def now():return datetime.datetime.now(datetime.timezone.utc).isoformat()
+def get(a):return json.loads(subprocess.check_output(K+a,text=True,stderr=subprocess.DEVNULL,timeout=30))
+def run(a,**kw):return subprocess.run(a,check=True,**kw)
+def snap(label):
+ run(['python3',str(R/'snapshot.py'),label],stdout=subprocess.DEVNULL);return json.loads((R/('snapshot-'+label+'.json')).read_text())
+def records(s):return [json.loads(v) for j in s['journals'] for v in (j.get('data') or {}).values()]
+def events():return [json.loads(x) for x in (R/'relay-events.jsonl').read_text().splitlines()]
+def counts(aid):
+ e=events();bad=[x for x in e if x['kind'] in ['scope-or-replay-rejected','rejected','relay-error']];assert not bad,bad
+ return {op:sum(x['kind']=='forwarded' and x.get('appID')==aid and x.get('operation')==op for x in e) for op in ['copy','configuration','install','activate','start']}
+def pending(s,op,uid,juid,aid):
+ assert len(s['pods'])==1 and s['pods'][0]['metadata']['uid']==uid
+ assert not any(c['type']=='Ready' and c['status']=='True' for c in s['pods'][0].get('status',{}).get('conditions',[]))
+ rec=records(s);cur=[r for r in rec if r['podUID']==uid];assert len(cur)==1 and cur[0]['phase']==op+'Pending'
+ assert all(r['phase']=='deleted' for r in rec if r['podUID']!=uid)
+ assert [j['metadata']['uid'] for j in s['journals']]==[juid]
+ states={x['appID']:x['details'].get('state') for x in s['nativeApps']};assert set(states)=={'iris','c9ktest',aid} and states['iris']=='RUNNING' and states['c9ktest']=='DEPLOYED'
+ assert states[aid] in (['ACTIVATED','STOPPED'] if op=='activate' else ['RUNNING'])
+ assert counts(aid)=={'copy':1,'configuration':1,'install':1,'activate':1,'start':0 if op=='activate' else 1}
+ return cur[0]
+def lease():
+ return next(x for x in get(['-n',NS,'get','leases','-o','json'])['items'] if x.get('metadata',{}).get('labels',{}).get('cisco.vk/family')=='device-disruptive-mutation')
+def save(name,x): (R/(name+'.json')).write_text(json.dumps(x,indent=2)+'\n')
+def cli(name,cmds):
+ q=run(['python3',str(R/'device_cli.py')],input=json.dumps(cmds),capture_output=True,text=True);save(name,json.loads(q.stdout))
+def checksum(name,record):
+ expected=json.loads((R/'releases.json').read_text())[0];q=subprocess.run(['/tmp/cvk-verified-qual-20261102/checksum-probe','-path',record['stagedPath'],'-size',str(expected['package']['sizeBytes']),'-sha512',expected['sha512']],capture_output=True,text=True);assert q.returncode==0,q.stderr;save(name,{'atUTC':now(),'result':json.loads(q.stdout),'exitCode':0})
+results=[]
+for op,level in [('activate','warn'),('start','info')]:
+ started=now();(R/'cleanup-authorized').unlink(missing_ok=True);save('fault-plan',{'operation':op});run(['python3',str(R/'workload.py'),'A'])
+ faultfile=R/('lost-'+op+'-response.json');deadline=time.monotonic()+420
+ while not faultfile.exists() and time.monotonic()<deadline:time.sleep(2)
+ assert faultfile.exists(),'No conclusive '+op+' reply loss; retained state'
+ fault=json.loads(faultfile.read_text());uid=fault['pendingBeforeDispatch']['record']['podUID'];juid=fault['pendingBeforeDispatch']['journalUID'];aid=fault['appID'];s=snap(op+'-after-lost-reply');record=pending(s,op,uid,juid,aid);old=s['workers'];assert len(old)==1
+ original=lease();save(op+'-lease-after-lost-reply',original);holder=original['spec']['holderIdentity'];renew=original['spec']['renewTime'];expiry=datetime.datetime.fromisoformat(renew.replace('Z','+00:00'))+datetime.timedelta(seconds=original['spec']['leaseDurationSeconds']);assert holder
+ cli(op+'-native-pending',['show app-hosting list','show app-hosting detail appid '+aid,'dir '+record['stagedPath']]);checksum(op+'-pending-checksum',record)
+ # Managed replacement, no direct worker Pod deletion or binding changes.
+ run(K+['-n',NS,'patch','ciscodevice',DEV,'--type=merge','-p',json.dumps({'spec':{'logLevel':level}})],stdout=subprocess.DEVNULL)
+ for attempt in range(100):
+  s=snap(op+'-binding-poll-'+str(attempt));pending(s,op,uid,juid,aid)
+  if len(s['workers'])==1 and s['workers'][0]['uid']!=old[0]['uid'] and any(c['type']=='Ready' and c['status']=='True' for c in s['workers'][0]['status'].get('conditions',[])) and s['pods'][0]['metadata'].get('annotations',{}).get('topology.cisco.vk/app-worker-pod-uid')==s['workers'][0]['uid']:break
+  time.sleep(2)
+ else:raise RuntimeError('Exact manager replacement binding did not converge')
+ new=s['workers'][0];save(op+'-replacement-still-fenced',s);l=lease();assert l['metadata']['uid']==original['metadata']['uid'] and l['spec']['holderIdentity']==holder and l['spec']['renewTime']==renew;save(op+'-lease-replacement-still-fenced',l)
+ print(now(),op,'replacement bound; normal lease expiry',expiry.isoformat(),flush=True);iteration=0
+ while datetime.datetime.now(datetime.timezone.utc)<expiry:
+  s=snap(op+'-fenced-poll-'+str(iteration));pending(s,op,uid,juid,aid);l=lease();assert l['metadata']['uid']==original['metadata']['uid'] and l['spec']['holderIdentity']==holder and l['spec']['renewTime']==renew
+  summary={'atUTC':now(),'operation':op,'podUID':uid,'journalUID':juid,'phase':op+'Pending','ready':False,'nativeState':next(a['details']['state'] for a in s['nativeApps'] if a['appID']==aid),'httpHealthy':any(p.get('status')==200 for p in s['probes']),'workerUID':new['uid'],'leaseUID':l['metadata']['uid'],'leaseHolder':holder,'leaseRenewTime':renew,'leaseExpiresUTC':expiry.isoformat(),'forwarded':counts(aid)}
+  with (R/(op+'-fenced-observations.jsonl')).open('a') as f:f.write(json.dumps(summary)+'\n')
+  if iteration%4==0:print(now(),op,'fenced; no replay or premature Ready',flush=True)
+  iteration+=1;time.sleep(min(15,max(0,(expiry-datetime.datetime.now(datetime.timezone.utc)).total_seconds())))
+ print(now(),op,'original lease expired naturally',flush=True)
+ run(['python3',str(R/'wait_health.py'),op+'-recovered','A']);s=json.loads((R/('snapshot-'+op+'-recovered.json')).read_text());assert s['assertions']['passed'] and s['assertions']['podUIDs']==[uid];assert s['workers'][0]['uid']==new['uid'] and [j['metadata']['uid'] for j in s['journals']]==[juid];assert counts(aid)=={'copy':1,'configuration':1,'install':1,'activate':1,'start':1}
+ status=s['pods'][0]['status'];assert not status.get('reason') and not status.get('message'),status
+ record=next(r for r in records(s) if r['podUID']==uid);assert record['phase']=='running';checksum(op+'-recovered-checksum',record)
+ for i in range(30):
+  l=lease()
+  if not l.get('spec',{}).get('holderIdentity'):break
+  time.sleep(1)
+ else:raise RuntimeError('Recovery did not release own lease')
+ save(op+'-lease-after-recovery',l)
+ for i in range(60):
+  dep=get(['-n',APPS,'get','deployment','cvk-verified-fixture','-o','json']);st=dep.get('status',{})
+  if st.get('availableReplicas')==1 and st.get('readyReplicas')==1 and all(any(c['type']==t and c['status']=='True' for c in st.get('conditions',[])) for t in ['Available','Progressing']):break
+  time.sleep(1)
+ else:raise RuntimeError('Deployment did not converge')
+ save(op+'-deployment-available',dep);cli(op+'-native-recovered',['show app-hosting list','show app-hosting detail appid '+aid])
+ report={'passed':True,'startedAtUTC':started,'finishedAtUTC':now(),'operation':op,'podUID':uid,'appID':aid,'journalUID':juid,'oldWorkerUID':old[0]['uid'],'newWorkerUID':new['uid'],'expiryUTC':expiry.isoformat(),'fencedObservationCount':iteration,'forwardedLifecycleCounts':counts(aid),'samePodAppJournalRetained':True,'normalGuardedRecovery':True,'ready':True,'httpRelease':'A','topLevelStatusCleared':True,'leaseManuallyModified':False};save(op+'-result',report);results.append(report);print('PASS',op,'lost reply recovered without replay; clean Pod status',flush=True)
+ # Normal per-case deletion, preserve protected deleted records.
+ (R/'cleanup-authorized').write_text(uid);run(K+['-n',APPS,'scale','deployment/cvk-verified-fixture','--replicas=0'])
+ for i in range(80):
+  s=snap(op+'-normal-cleanup');rec=records(s)
+  if not s['pods'] and {a['appID']:a['details'].get('state') for a in s['nativeApps']}=={'iris':'RUNNING','c9ktest':'DEPLOYED'} and all(r['phase']=='deleted' for r in rec):break
+  time.sleep(3)
+ else:raise RuntimeError('Normal deletion/tombstone not confirmed; leave cluster running')
+ l=lease();assert not l.get('spec',{}).get('holderIdentity');save(op+'-lease-after-cleanup',l);counts(aid)
+save('qualification-result',{'passed':True,'defaultMode':'Standard','governed':'deferred','cases':results});print('PASS both independent hardware reply-loss recoveries',flush=True)

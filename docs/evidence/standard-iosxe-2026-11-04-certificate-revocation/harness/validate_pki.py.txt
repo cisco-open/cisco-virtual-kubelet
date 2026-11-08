@@ -1,0 +1,12 @@
+"""Verify signatures/dates/names, then explicit revocation at leaf or intermediate depth."""
+import pathlib,json,subprocess,datetime
+R=pathlib.Path('/tmp/cvk-stdrevoke-20261104');results=[]
+cases=[('disabled-without-revocation','disabled-root','disabled-bad',None,False,True,None),('disabled-revoked-with-check','disabled-root','disabled-bad',None,True,False,0),('disabled-replacement','disabled-root','disabled-good',None,True,True,None),('valid-leaf','leaf-root','leaf-control',None,True,True,None),('revoked-leaf-without-check','leaf-root','leaf-bad',None,False,True,None),('revoked-leaf','leaf-root','leaf-bad',None,True,False,0),('replaced-leaf','leaf-root','leaf-good',None,True,True,None),('valid-chain','chain-root','control-leaf','control-intermediate',True,True,None),('revoked-intermediate-without-check','chain-root','intermediate-leaf','intermediate-bad',False,True,None),('revoked-intermediate','chain-root','intermediate-leaf','intermediate-bad',True,False,1),('replaced-intermediate','chain-root','intermediate-leaf','intermediate-good',True,True,None)]
+for label,root,leaf,intermediate,check,expected,depth in cases:
+ cmd=['openssl','verify','-CAfile',str(R/(root+'.crt')),'-purpose','sslserver','-verify_ip','192.168.129.111']
+ if intermediate:cmd+=['-untrusted',str(R/(intermediate+'.crt'))]
+ if check:cmd+=['-crl_check_all','-CRLfile',str(R/'all-crls.pem')]
+ cmd+=[str(R/(leaf+'.crt'))];q=subprocess.run(cmd,capture_output=True,text=True,timeout=10);assert (q.returncode==0)==expected,(label,q.stdout,q.stderr)
+ if not expected:assert 'certificate revoked' in q.stderr and ('error 23 at '+str(depth)+' depth') in q.stderr,q.stderr
+ results.append({'case':label,'command':cmd,'expectedSuccess':expected,'exitCode':q.returncode,'stdout':q.stdout,'stderr':q.stderr})
+(R/'offline-certificate-controls.json').write_text(json.dumps({'atUTC':datetime.datetime.now(datetime.timezone.utc).isoformat(),'passed':True,'deviceClockOrTrustChanged':False,'cases':results},indent=2)+'\n');print('PASS eleven offline chain/name/revocation controls; revoked depths 0 and 1',flush=True)

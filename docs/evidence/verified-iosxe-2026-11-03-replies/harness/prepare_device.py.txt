@@ -1,0 +1,12 @@
+import pathlib,pexpect,os,json,datetime,ssl,urllib.request,base64
+R=pathlib.Path('/tmp/cvk-replies-20261103');p=pexpect.spawn('ssh',['-o','StrictHostKeyChecking=yes','-o','UserKnownHostsFile=/tmp/cvk-verified-qual-20261101/switch_known_hosts','-o','GlobalKnownHostsFile=/dev/null','-o','HostKeyAlgorithms=rsa-sha2-512,rsa-sha2-256','cisco@10.1.1.1'],encoding='utf-8',timeout=90);out=[]
+try:
+ p.expect('(?i)password:');p.sendline(os.environ['CVK_QUAL_DEVICE_PASSWORD']);p.expect(r'[>#] ?$')
+ def cmd(c):
+  p.sendline(c);p.expect(r'[>#] ?$');v=p.before.replace('\r','');out.append({'command':c,'output':v});assert '% Invalid' not in v;return v
+ cmd('terminal length 0');cmd('terminal width 511');v=cmd('show app-hosting list');assert 'iris' in v and 'c9ktest' in v and 'cvk0000_' not in v
+ cmd('configure terminal');cmd('ip http secure-trustpoint cvk-gnoi-20260904');cmd('crypto pki trustpoint CVK-REPLIES-20261103');cmd('enrollment terminal');cmd('revocation-check none');cmd('exit')
+ p.sendline('crypto pki authenticate CVK-REPLIES-20261103');p.expect('(?i)(quit|certificate)');p.sendline(pathlib.Path('/tmp/cvk-verified-qual-20261102/ca.crt').read_text().strip());p.sendline('quit');p.expect(r'(?i)\[yes/no\]\s*:?');p.sendline('yes');p.expect(r'[>#] ?$');out.append({'command':'authenticate run-owned trustpoint with public artifact-store CA','output':p.before.replace('\r','')});cmd('end');cmd('show ip http server status | include trustpoint');cmd('show running-config | include ^ip http client secure-trustpoint');p.sendline('exit')
+finally:p.close(force=True)
+R.joinpath('device-preparation.json').write_text(json.dumps({'atUTC':datetime.datetime.now(datetime.timezone.utc).isoformat(),'commands':out},indent=2)+'\n')
+print('PASS temporary public store CA and HTTPS selector prepared',flush=True)

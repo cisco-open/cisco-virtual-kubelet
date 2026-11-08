@@ -1,0 +1,23 @@
+{
+  "binarySHA256": "4fb52e83e8d5cf6c734dec824ec0ac91dac2c23e7e345bba293b4ed52dc1b7fa",
+  "source": "device-probe.go.txt",
+  "buildMetadata": "device-probe-build.txt",
+  "executionHost": "ux-agx",
+  "target": "10.1.1.1:9339",
+  "operationsExecuted": [
+    "File.Get",
+    "OS.Verify"
+  ],
+  "operationsNotExecuted": [
+    "File.Put",
+    "File.Remove"
+  ],
+  "fileGetPath": "flash:cvk-qual-probe-20261101-6b621.txt",
+  "fileGetExplanation": "Nonexistent run-scoped filename was used to test read-only service dispatch. No bytes were uploaded. Unimplemented differs from a supported service returning NotFound.",
+  "resultFilesObservedModificationTimeUTC": {
+    "file-get-capability.json": "2026-11-01T06:19:09.113288+00:00",
+    "os-verify-control.json": "2026-11-01T06:20:34.873232+00:00"
+  },
+  "timestampLimit": "These are remote file metadata times, not measured RPC start/end times.",
+  "sourceLimit": "The retained helper includes put/remove branches, which were not executed. The File.Get probe used the preceding build before the read-only OS.Verify branch was added; its original executable digest was not captured. The recorded binary digest identifies the later OS.Verify-capable build."
+}

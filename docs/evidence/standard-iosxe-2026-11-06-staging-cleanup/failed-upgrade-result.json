@@ -1,0 +1,12 @@
+{
+  "atUTC": "2026-11-06T10:45:00.711517+00:00",
+  "passed": true,
+  "podUID": "1ee05639-4038-46d1-8ef6-cc748677da83",
+  "noConfiguration": true,
+  "noRuntime": true,
+  "noReady": true,
+  "noSuccessfulPackageTransfer": true,
+  "sameDeploymentUID": "59a1e5ef-afab-4e89-9ec7-bb2a4d6e96d5",
+  "truncatedDownloadSeen": true,
+  "negativeWindowSeconds": 314.0057452414185
+}

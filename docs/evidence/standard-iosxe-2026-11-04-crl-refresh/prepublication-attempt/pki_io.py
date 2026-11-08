@@ -1,0 +1,23 @@
+"""Pinned native CLI; only run-owned CA trustpoints may be authenticated."""
+import pathlib,pexpect,os,re,ssl,hashlib,json,datetime
+R=pathlib.Path('/tmp/cvk-crlrefresh-20261104');TPS={'leaf':'CVK-CRLREFRESH-20261104'}
+class CLI:
+ def __init__(self):
+  self.records=[];self.p=pexpect.spawn('ssh',['-o','StrictHostKeyChecking=yes','-o','UserKnownHostsFile=/tmp/cvk-verified-qual-20261101/switch_known_hosts','-o','GlobalKnownHostsFile=/dev/null','-o','HostKeyAlgorithms=rsa-sha2-512,rsa-sha2-256','cisco@10.1.1.1'],encoding='utf-8',timeout=90);self.p.expect('(?i)password:');self.p.sendline(os.environ['CVK_QUAL_DEVICE_PASSWORD']);self.p.expect(r'[>#] ?$');self.cmd('terminal length 0');self.cmd('terminal width 511')
+ def cmd(self,c):
+  self.p.sendline(c);self.p.expect(r'[>#] ?$');v=self.p.before.replace('\r','');self.records.append({'command':c,'output':v});assert '% Invalid' not in v,v;return v
+ def authenticate(self,tp,cert):
+  assert (tp,cert) in [(TPS['leaf'],'root')]
+  self.p.sendline('crypto pki authenticate '+tp);parts=[];sent=False
+  for i in range(8):
+   index=self.p.expect([r'(?i)Enter the base',r'(?i)\[yes/no\]\s*:?',r'[>#] ?$']);parts.append(self.p.before.replace('\r','')+self.p.after)
+   if index==0:
+    assert not sent;self.p.sendline((R/(cert+'.crt')).read_text().strip());self.p.sendline('quit');sent=True
+   elif index==1:self.p.sendline('yes');parts.append('[accepted run-owned CA import/overwrite]')
+   else:break
+  else:raise RuntimeError('CA import prompt limit')
+  output='\n'.join(parts);self.records.append({'command':'authenticate '+tp+' using '+cert+'.crt','output':output});assert sent and 'successfully imported' in output,output
+ def proof(self,tp,cert):
+  v=self.cmd('show crypto pki certificates pem '+tp);pems=re.findall(r'-----BEGIN CERTIFICATE-----.*?-----END CERTIFICATE-----',v,re.S);want=json.loads((R/'pki-manifest.json').read_text())['certificates'][cert]['sha256'];fps=[hashlib.sha256(ssl.PEM_cert_to_DER_cert(p)).hexdigest() for p in pems];assert fps==[want],{'tp':tp,'want':want,'seen':fps,'output':v};return {'trustpoint':tp,'certificate':cert,'sha256':want,'nativeCertificateMatched':True}
+ def close(self):
+  self.p.sendline('exit');self.p.close(force=True)

@@ -1,0 +1,7 @@
+{
+  "atUTC": "2026-11-03T08:45:22.200441+00:00",
+  "tlsVerificationDisabled": false,
+  "authenticatedRelayHostnameProbe": true,
+  "wrongRelayHostnameRejected": true,
+  "relayCA_SHA256": "f95241f0c7aed513d56748f5af02e2dfd67ba1cf7e37ddc974431d693c7934dd"
+}

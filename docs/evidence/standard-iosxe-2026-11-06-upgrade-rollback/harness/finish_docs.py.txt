@@ -1,0 +1,35 @@
+from pathlib import Path
+import json
+R=Path('/private/tmp/cvk-stdupgrade-20261106');q=json.loads((R/'qualification-assessed.json').read_text());assert q['passed'] and q['normalDeletionAndBaselineCleanupPassed']
+ROOT=Path('/Users/johalley/Git/cisco-virtual-kubelet');anchor='reidentified or repaired by upgrading the worker. Governed remains deferred.\n\n';addition='''The [copy-first Standard upgrade and rollback qualification](evidence/standard-iosxe-2026-11-06-upgrade-rollback/README.md)
+retains the same candidate and verifies A → B → A using a single Deployment and
+actual Deployment-history undo. After both images had previously run, with no device image cache pruning, an
+HTTPS 404 for B blocked configuration, installation, runtime and Ready. Explicit
+history rollback to A respected the original unchanged mutation fence, then
+completed a fresh copy and served the exact A release. Restoring B's source
+allowed a further upgrade and history rollback. Every successful revision used
+a new Pod and a device-local install after confirmed copy completion. No artifact
+metadata or journal was needed, and the earlier evidence remains unchanged.
+The lab used Recreate with one fixture slot: the old app was removed first, so
+failed upgrade and fence recovery caused an availability gap. RollingUpdate,
+zero-downtime capacity and automatic vulnerability selection are outside this
+run. Retired staging tars remained on flash after native app deletion and were
+removed by lab cleanup; automatic flash retention/garbage collection is not
+qualified. Keep versioned upstream packages available for history rollback.
+Standard remains default and Governed deferred.
+
+'''
+for n in ['verified-iosxe-qualification.md','verified-artifact-preflight.md','app-image-lifecycle-plan.md']:
+ p=ROOT/'docs'/n;s=p.read_text();assert s.count(anchor)==1;s=s.replace(anchor,anchor+addition)
+ if n=='verified-iosxe-qualification.md':
+  lines=s.splitlines(keepends=True);i=next(i for i,l in enumerate(lines) if l.startswith('| Standard failed-download fix |'));lines.insert(i+1,'| Standard copy-first upgrades and rollback | Retain one Deployment, warm A/B images, use real history undo, inject HTTPS 404 for B and keep the original mutation fence | A → B → A exact releases pass; failed B has no configuration/runtime/Ready; rollback waits for natural fence, copies A anew and recovers; source repair, retry B and final A undo pass; Recreate availability gap measured without artifact metadata or journal |\n');s=''.join(lines)
+ p.write_text(s)
+print('PASS current guidance records copy-first upgrade/rollback and Recreate availability bounds')
+p=ROOT/'docs/CONFIGURATION.md';s=p.read_text();anchor='### `imagePullSecrets`\n';note='''Installed apps and flash staging tar files have separate lifecycles. The
+[copy-first upgrade/rollback qualification](evidence/standard-iosxe-2026-11-06-upgrade-rollback/README.md)
+found that native app deletion leaves its staging tar on flash; test-owned files
+were removed by lab cleanup. Automatic staging-file retention/garbage collection
+is outside the current qualified profile. Deployment-history rollback requests a
+new copy from the prior image URL, so retain versioned packages at stable URLs.
+
+''';assert s.count(anchor)==1;s=s.replace(anchor,note+anchor);p.write_text(s)

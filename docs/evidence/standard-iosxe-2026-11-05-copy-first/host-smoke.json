@@ -1,0 +1,26 @@
+{
+  "atUTC": "2026-11-05T20:17:13.203149+00:00",
+  "passed": true,
+  "loopbackOnly": true,
+  "C9KImagesPrimed": false,
+  "checks": [
+    {
+      "phase": "valid",
+      "expectedRelease": "STD-COPYFIX-VALID-20261105-0609ed4e6d25",
+      "actualRelease": "STD-COPYFIX-VALID-20261105-0609ed4e6d25",
+      "dockerConfigID": "sha256:18069cd595b11e3c6b93665d7c634e5350719ae6e1a9337cfbcfc36b85483154"
+    },
+    {
+      "phase": "cached",
+      "expectedRelease": "STD-COPYFIX-CACHED-20261105-0609ed4e6d25",
+      "actualRelease": "STD-COPYFIX-CACHED-20261105-0609ed4e6d25",
+      "dockerConfigID": "sha256:dbb11af58b5b19cf1f3ecfa5efbf02a3008af1d2aae77ea08d1d969940898d56"
+    },
+    {
+      "phase": "refresh",
+      "expectedRelease": "STD-COPYFIX-REFRESH-20261105-0609ed4e6d25",
+      "actualRelease": "STD-COPYFIX-REFRESH-20261105-0609ed4e6d25",
+      "dockerConfigID": "sha256:b1ef2b533ea8a6fdd74be7be628940fbf6e4de100de21abd979a5363866577e1"
+    }
+  ]
+}

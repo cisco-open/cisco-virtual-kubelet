@@ -397,7 +397,7 @@ spec:
     The container image reference can be either:
 
     - **A flash path** (`flash:/...`, `bootflash:/...`) — image tar must be pre-loaded on the device.
-    - **An HTTP(S) URL** — the VK attempts a device-native pull first; if the platform cannot pull, it downloads the image itself and installs from flash (see [Image delivery](#image-delivery) below).
+    - **An HTTP(S) URL** — the device downloads the package to flash through the existing RESTCONF copy RPC before CVK configures or installs the app (see [Image delivery](#image-delivery) below).
 
     A registry reference such as `nginx:latest` is not accepted. To serve registry images to devices, see [Image Distribution](image-distribution.md).
 
@@ -405,27 +405,66 @@ spec:
 
 ## Image delivery
 
-By default the VK passes the container image URL directly to the IOS-XE install RPC and waits for the app to reach `RUNNING`. On platforms that support device-native HTTP pulls, no extra steps are needed.
+Standard remains the default and requires no artifact metadata or installation
+journal. For remote package URLs, CVK first asks the device to download to an
+explicit flash path using the existing synchronous RESTCONF `copy` RPC. CVK
+requires its qualified completion response before configuring the app, installing
+from that local path, activating or starting it. A failed or ambiguous copy stops
+this flow; CVK does not retry installation from an unchecked cache filename.
 
-To deploy images from Docker Hub, GHCR, or a private registry, see [Image Distribution](image-distribution.md).
+This ordering addresses IOS-XE reporting `DEPLOYED` after a failed URL download
+while reusing older package data. App operational state alone cannot prove that
+the requested package was downloaded. Device-local package references retain
+their preloaded workflow. Remote delivery therefore requires device permission
+for the existing copy RPC and writable flash space. Existing apps are not automatically replaced when a worker is upgraded. Roll out
+a new Pod to replace an affected installation. Copy completion is not a digest or signature check;
+select optional Verified when package identity and durable installation evidence
+are required.
 
-On platforms that cannot pull from HTTP URLs, the VK automatically falls back to a **copy-then-install** path: it downloads the image to device flash via the `copy` RESTCONF RPC, then reinstalls from the local flash path. This fallback can take several minutes (the copy RPC is synchronous and blocks until the device finishes downloading).
+To prepare registry images from Docker Hub, GHCR, or a private registry for delivery, see [Image Distribution](image-distribution.md).
 
 ### `imagePullPolicy`
 
-Behaves analogously to the Kubernetes `imagePullPolicy` field, with one important platform constraint:
-
-**IOS-XE App Hosting does not cache images on flash when using the device-native pull path.** When the device installs an app directly from an HTTP URL (`app-hosting install appid ... package <url>`), the image is fetched and loaded into the container runtime without leaving a copy on flash. This means `IfNotPresent` and `Always` are **functionally identical on the device-native pull path** — the image is always re-downloaded from the URL on each deploy.
-
-The `IfNotPresent` flash-cache optimization only applies to the **copy fallback path**: if the VK previously copied a tar to flash (because the device-native pull timed out), that cached copy is reused on subsequent deploys.
-
-| Value | Behaviour |
+| Value | Behaviour for Standard app packages |
 |---|---|
-| `Always` | Always attempt device-native pull; if that times out, always re-download via copy RPC. The flash cache is never reused. |
-| `IfNotPresent` (default) | Always attempt device-native pull first. If that times out, try installing from a previously cached flash tar before re-downloading. **If the device-native pull succeeds, no flash cache is created and no difference from `Always` is observable.** |
-| `Never` | Image must already exist on flash. HTTP URLs are rejected immediately — no install RPC is issued. |
+| `Always` | A new remote installation must successfully copy the URL to flash before installation. |
+| `IfNotPresent` (default) | Existing apps can continue through lifecycle reconciliation. A new remote installation must successfully copy; a filename alone does not establish a reusable cache entry. |
+| `Never` | Reference a package already present on the device. Remote URLs are rejected before installation. |
 
-To reliably benefit from `IfNotPresent` caching, deliberately use the copy path: either configure a short `imagePullPolicy` timeout so the device-native pull always times out quickly (triggering copy fallback), or pre-stage the image using `imagePullPolicy: Never` with a flash path after a first manual copy.
+For a new remote app, `IfNotPresent` therefore performs the same transfer as
+`Always`. Offline deployment uses a preloaded device-local path with `Never`.
+These package policies are separate from the Kubernetes image pull policy used
+to launch the CVK worker itself. Normal device mutation guards remain in effect
+after errors and worker restarts; do not clear their Leases to accelerate retries.
+
+### Standard staging cleanup
+
+For a new remote installation without `cisco.io/apphost-package-dest`, CVK uses a
+fresh random `flash:/cvk-stage-<uuid>.tar` destination. Qualified filesystem
+observations must prove it absent before CVK records ownership. CVK automatically
+removes the owned temporary file after native RUNNING or confirmed app teardown;
+a definitive synchronous copy failure also permits partial-download cleanup.
+Deletion uses the existing RESTCONF `delete` RPC and confirms exact-file absence.
+The [C9K qualification](evidence/standard-iosxe-2026-11-06-staging-cleanup/README.md)
+covers upgrade, history rollback, failed truncated delivery and preloaded-file
+preservation, without artifact metadata or a journal.
+
+Local/preloaded paths and explicit package destinations remain caller-owned and
+are retained, including filenames that resemble CVK temporary files. CVK never
+sweeps a directory or adopts legacy files by prefix. Normal device mutation
+guards also cover cleanup. Copy/delete uncertainty and unconsumed installs retain
+the file; cleanup failures are logged and preserve normal safety fences.
+Ownership receipts exist only in the live worker: a replacement worker preserves
+unreceipted files for operator inspection. If ownership cannot be established
+because qualified filesystem observations are unavailable, ordinary copy-first
+delivery proceeds to a unique unowned destination, logs a warning and retains it.
+No additional Standard artifact or journal configuration is required.
+
+Installed apps and temporary tars have separate lifecycles: the tar can be
+removed while the app runs. Deployment-history rollback makes a new copy from
+the prior image URL, so keep immutable versioned packages available at stable
+URLs, or retain an explicit/preloaded local package. Automatic cleanup is not a
+persistent rollback cache, cryptographic identity check or crash-orphan sweeper.
 
 ### `imagePullSecrets`
 
@@ -440,15 +479,15 @@ spec:
 The referenced Secret should be of type `kubernetes.io/dockerconfigjson` or contain a `token` key. The VK tries the following fields in priority order: `token` key → `.dockerconfigjson` `identitytoken` → `.dockerconfigjson` `registrytoken` → `.dockerconfigjson` `username`/`password` → `.dockerconfigjson` `auth` (base64 `user:pass`).
 
 !!! note
-    Authentication is applied only to the copy RPC (device-initiated download). The device-native pull path does not support credential injection via this mechanism.
+    Authentication is applied to the copy RPC, where the device initiates the download. Credential resolution errors stop delivery before app installation.
 
 ### Pod annotations for the copy path
 
-Two optional annotations tune the copy fallback behaviour:
+Two optional annotations tune the delivery path; neither is required for Standard:
 
 | Annotation | Default | Description |
 |---|---|---|
-| `cisco.io/apphost-package-dest` | `flash:/virtual-kubelet/<app-id>.tar` | On-device flash path where the image is copied. Must use an IOS-XE filesystem prefix (`flash:`, `bootflash:`, `harddisk:`, `usb:`, `nvram:`); each path segment may contain only ASCII letters, digits, `-`, `.`, `_`, or `~`. |
+| `cisco.io/apphost-package-dest` | Automatic unique `flash:/cvk-stage-<uuid>.tar` | An explicit destination is caller-owned and retained. The automatic path requires no directory creation and is eligible for ownership-safe cleanup; custom parent directories must already exist. Must use an IOS-XE filesystem prefix (`flash:`, `bootflash:`, `harddisk:`, `usb:`, `nvram:`); each path segment may contain only ASCII letters, digits, `-`, `.`, `_`, or `~`. |
 | `cisco.io/apphost-package-timeout` | `180s` (3 min) | Per-status wait limit for each app-hosting lifecycle transition (for example, `DEPLOYED`, `ACTIVATED`, then `RUNNING`); a multi-stage install can therefore take more than this value overall. Accepts Go duration strings (`3m`, `300s`) or bare seconds (`180`). Clamped to [10s, 30m]. |
 
 ```yaml
@@ -464,11 +503,8 @@ During image delivery the VK emits pod events visible in `kubectl describe pod`:
 
 | Event | Reason | When |
 |---|---|---|
-| Normal | `Pulling` | Device-native HTTP pull started |
-| Warning | `ImagePullFallback` | Device-native pull timed out; copy fallback begins |
-| Normal | `Copying` | Copy RPC started (shows source URL and destination path) |
-| Normal | `Pulled` | Image successfully copied to device flash |
-| Normal | `Started` | App reached RUNNING via copy fallback |
+| Normal | `Pulling` | Device copy of the remote package started; URL credentials and query parameters are omitted |
+| Normal | `Pulled` | The copy RPC confirmed completion at the device-local destination |
 
 ## See also
 

@@ -1,0 +1,11 @@
+{
+  "atUTC": "2026-11-03T09:53:53.329436+00:00",
+  "result": {
+    "expectedBytes": 5963776,
+    "expectedSHA512": "e50300677be5f0827b4a7fedc9d317d684a96627f4ea2b3c9a86836e753c671179d85a2bce4360277b7157b684901858402451f85540862d415a8776f1762a2d",
+    "hostKeyPinned": true,
+    "path": "flash:cvk-af35ebcfff412bd0-ed8c257297a526229b154cbaabe1c466de239d4c011e4edfd25c7cb440fa071c.tar",
+    "success": true
+  },
+  "exitCode": 0
+}

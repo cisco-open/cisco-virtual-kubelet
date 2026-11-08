@@ -1,0 +1,15 @@
+{
+  "atUTC": "2026-11-04T10:32:30.068105+00:00",
+  "case": "leaf",
+  "onlyCertificateAndMatchingLeafKeyReplaced": true,
+  "onlyIntermediateCertificateReplaced": false,
+  "rootTrustChanged": false,
+  "revocationPolicyChanged": false,
+  "CRLChanged": false,
+  "revokedSerialRemoved": false,
+  "packageURLChanged": false,
+  "payloadChanged": false,
+  "newMode": "leaf-good",
+  "independentCRLCheckingTLSProbePassed": true,
+  "leaseManuallyModified": false
+}

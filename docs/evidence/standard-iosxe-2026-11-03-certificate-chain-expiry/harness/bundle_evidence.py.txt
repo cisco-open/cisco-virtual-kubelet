@@ -1,0 +1,22 @@
+"""Explicit safe allowlist; no Secrets, kubeconfig or private keys."""
+import pathlib,json,tarfile,sys
+R=pathlib.Path('/tmp/cvk-stdchain-20261103');assert json.loads((R/'qualification-result.json').read_text())['executionComplete'];assert json.loads((R/'final-cleanup.json').read_text())['passed'];pki=json.loads((R/'pki-manifest.json').read_text())
+names=['snapshot-root-pre-continuation.json','controls-root-pre-continuation.json','continuation-note.json','continuation.log','root-recovery-start-lease.json','root-expired-native-ca.json','root-native-certificate-replacement-first-attempt.json','device-baseline.json','device-preparation.json','transport-controls.json','pki-manifest.json','independent-tls-controls.json','offline-certificate-controls.json','natural-root-expiry.json','root-native-certificate-replacement.json','qualification-result.json','qualification.log','server-events.jsonl','device-input.yaml','values.yaml','final-cleanup.json']
+names += [name+'.crt' for name in pki['certificates']]+[name+'-chain.pem' for name in pki['chains']]
+names += ['clock-'+label+'.json' for label in ['baseline','valid-root-before','valid-root-after']+[c+'-'+p for c in ['root','intermediate'] for p in ['before','boundary','after-repair']]]
+for case in ['valid-root','valid-intermediate','root','intermediate']:names.append('deployment-'+case+'-input.yaml')
+for case in ['valid-root','valid-intermediate']:
+ names += [p+case+'-control.json' for p in ['snapshot-','controls-','deployment-','native-','leases-']]+['wait-'+case+'-control.jsonl']
+for case in ['root','intermediate']:
+ names += [case+'-'+x+'.json' for x in ['negative-tls-control','invalid-server-events','invalid-lease','worker-diagnostics','invalid-events','invalid-outcome','certificate-corrected','recovery-result','fresh-replacement-result']]+['snapshot-'+case+'-invalid-boundary.json',case+'-invalid-observations.jsonl']
+ for suffix in ['invalid-accepted','corrected-recovery','fresh-replacement']:
+  for prefix,ext in [('snapshot-','.json'),('controls-','.json'),('deployment-','.json'),('native-','.json'),('leases-','.json'),('wait-','.jsonl')]:
+   n=prefix+case+'-'+suffix+ext
+   if (R/n).exists():names.append(n)
+ if (R/(case+'-guarded-observations.jsonl')).exists():names.append(case+'-guarded-observations.jsonl')
+for label in ['baseline']+[c+'-normal-cleanup' for c in ['valid-root','valid-intermediate','root','root-fresh','intermediate','intermediate-fresh']]:
+ names.append('controls-'+label+'.json')
+ if label!='baseline':names+=['snapshot-'+label+'.json','leases-'+label+'.json']
+with tarfile.open(fileobj=sys.stdout.buffer,mode='w|') as t:
+ for n in names:
+  assert (R/n).is_file(),n;t.add(R/n,arcname=n)

@@ -1,0 +1,54 @@
+{
+  "atUTC": "2026-11-03T05:57:20.669514+00:00",
+  "events": [
+    {
+      "reason": "ProviderCreateFailed",
+      "message": "Verified app cvk0000_e0b0e50daabc4e7a861cc2ba72bad946: device observation unavailable",
+      "count": 1,
+      "firstTimestamp": "2026-11-03T05:19:49Z",
+      "lastTimestamp": "2026-11-03T05:19:49Z"
+    },
+    {
+      "reason": "ProviderCreateFailed",
+      "message": "device maintenance: mutation lease held by device-write/ea9a6891-d472-4d1e-8f02-5bbbd8761846",
+      "count": 17,
+      "firstTimestamp": "2026-11-03T05:19:49Z",
+      "lastTimestamp": "2026-11-03T05:41:42Z"
+    },
+    {
+      "reason": "ProviderUpdateFailed",
+      "message": "managed maintenance app-hosting mutation Lease annotation topology.cisco.vk/app-worker-pod-name does not match the runtime",
+      "count": 1,
+      "firstTimestamp": "2026-11-03T05:51:11Z",
+      "lastTimestamp": "2026-11-03T05:51:11Z"
+    },
+    {
+      "reason": "ProviderUpdateFailed",
+      "message": "device maintenance: mutation lease held by device-write/0d9b4269-e60b-4c46-9895-3d090a5f2ef9",
+      "count": 1,
+      "firstTimestamp": "2026-11-03T05:51:11Z",
+      "lastTimestamp": "2026-11-03T05:51:11Z"
+    },
+    {
+      "reason": "ProviderUpdateFailed",
+      "message": "device maintenance: mutation lease held by device-write/0d9b4269-e60b-4c46-9895-3d090a5f2ef9",
+      "count": 12,
+      "firstTimestamp": "2026-11-03T05:52:12Z",
+      "lastTimestamp": "2026-11-03T05:54:59Z"
+    },
+    {
+      "reason": "ProviderUpdateFailed",
+      "message": "managed device topology is not ready or its projection is not bound to the Node",
+      "count": 2,
+      "firstTimestamp": "2026-11-03T05:52:14Z",
+      "lastTimestamp": "2026-11-03T05:52:14Z"
+    },
+    {
+      "reason": "ProviderUpdateFailed",
+      "message": "managed mutation Lease binding topology.cisco.vk/network-worker-pod-name does not match the Node",
+      "count": 1,
+      "firstTimestamp": "2026-11-03T05:52:25Z",
+      "lastTimestamp": "2026-11-03T05:52:25Z"
+    }
+  ]
+}

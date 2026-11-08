@@ -1,0 +1,13 @@
+{
+  "collectedAtUTC": "2026-11-06T11:50:10.586248+00:00",
+  "commands": [
+    {
+      "command": "dir flash:/cvk-stage-cdab804e32744611b282036c11686f66.tar",
+      "output": "dir flash:/cvk-stage-cdab804e32744611b282036c11686f66.tar\nDirectory of flash:/cvk-stage-cdab804e32744611b282036c11686f66.tar\n\n254040  -rw-          5959680   Nov 6 2026 10:30:45 +00:00  cvk-stage-cdab804e32744611b282036c11686f66.tar\n\n11353194496 bytes total (5392539648 bytes free)\nEdge-9K"
+    },
+    {
+      "command": "verify /sha512 flash:/cvk-stage-cdab804e32744611b282036c11686f66.tar",
+      "output": "verify /sha512 flash:/cvk-stage-cdab804e32744611b282036c11686f66.tar\n...........................................................................................Done!\nverify /sha512 (flash:/cvk-stage-cdab804e32744611b282036c11686f66.tar) = aa8f88fcfdd7a18c271cb136561cfca76ee8ff8893a40eb2c9b999f908551de6919d9148afa2c8be54569372dadd56d9e9b8d1cc8d711b688341e6bfea897e26\n\n\nEdge-9K"
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "atUTC": "2026-11-04T19:22:17.038606+00:00",
+  "reason": "Initial actor omitted workload namespace; failed before any native handshake or deployment",
+  "originalActorSHA256": "3fe52d5ca10c105bc0cc8d30f0c7187f7cf3337dc14321e1a36173f2c41fc356",
+  "originalLogSHA256": "8b11a807491cb757da9fc134cec4fd6ef082a3a20e6575b5e54664f8848868db",
+  "originalLogPreserved": true,
+  "originalPID": 324885,
+  "initialCRLAndPKIUnchanged": true,
+  "nativeRevocationFaultRepeated": false,
+  "continuationSHA256": "7149b51660e1f75e5995113ee249b49a226643f28da195ad3c8d9719bef77cd7"
+}

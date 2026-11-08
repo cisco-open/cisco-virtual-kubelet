@@ -1,0 +1,35 @@
+from pathlib import Path
+import json,hashlib,datetime,subprocess,shutil,tarfile,re
+R=Path('/private/tmp/cvk-stdgc-20261106');ROOT=Path('/Users/johalley/Git/cisco-virtual-kubelet');OUT=ROOT/'docs/evidence/standard-iosxe-2026-11-06-staging-cleanup'
+def read(n):return json.loads((R/(n+'.json')).read_text())
+q=read('qualification-assessed');c=read('candidate');s=read('static-checks');tests=read('test-results');cleanup=read('final-cleanup')
+assert q['passed'] and q['normalDeletionAndBaselineCleanupPassed'] and q['failedTruncatedHTTPSUpgradeBlocked'] and q['automaticOwnedStagingCleanupQualified'];assert s['candidateSourceMatches'] and s['historicalEvidenceUnchanged'];assert c['dirtySourceSHA256']==q['candidateSourceSHA256']==tests['candidateSourceSHA256'];assert tests['passed'] and tests['packagesPassed']==62 and tests['binarySHA256']==c['binarySHA256'];assert hashlib.sha256((R/tests['logFile']).read_bytes()).hexdigest()==tests['logSHA256'];subprocess.run(['git','diff','--check'],cwd=ROOT,check=True)
+assert 'Documentation built' in (R/'docs-final.log').read_text() and 'verified built MkDocs assets' in (R/'docs-license-final.log').read_text()
+assert cleanup['preexistingTarInventoryPreserved'] and cleanup['preloadedPreservedThroughAllFlows'] and not cleanup['automaticCleanupPathsManuallyDeleted'];assert read('owned-file-observer-finished')['qualificationComplete']
+for name,digest in json.loads((R/'earlier-local-hashes.json').read_text()).items():assert hashlib.sha256((ROOT/name).read_bytes()).hexdigest()==digest,name
+for n in ['static-checks.json','docs-final.log','docs-license-final.log']:shutil.copyfile(R/n,OUT/n)
+result={'atUTC':datetime.datetime.now(datetime.timezone.utc).isoformat(),'passed':True,'harnessOnlyTraceCorrelationCorrected':True,'originalHarnessFailurePreserved':True,'authenticatedARPObserverFallbackQualified':True,'operOnlyObservationsPreserved':True,'physicalUpgradeRollbackAndOwnedCleanupQualified':True,'sameDeploymentUIDThroughout':True,'healthyRevisionCount':len(q['caseReleases']),'ownedStagingPaths':q['ownedStagingPaths'],'ownedStagingPathsAutomaticallyAbsent':True,'manualDeletionOfWorkerStagingPaths':False,'independentCompleteTarThenAbsentObservations':q['independentlyObservedCompleteTarThenAbsent'],'actualCompiledReleaseChecked':True,'copyBeforeDeviceLocalInstallTracePassed':True,'failedTruncatedUpgradeNoConfigurationRuntimeOrReady':True,'failedDownloadDestinationConfirmedAbsent':True,'actualPartialResidueDeletionProvenOnHardware':False,'partialResidueDeletionUnitTested':True,'preloadedNeverBeforeAndAfterQualified':True,'preloadedSHA512Unchanged':True,'preexistingTarInventoryPreserved':True,'testOwnedPreloadedCanaryRemovedAfterProof':True,'noFilenamePrefixSweep':True,'receiptLossOrUncertainOperationOrphansDeliberatelyRetained':True,'originalMutationFencePreserved':True,'manualLeaseOrJournalChanges':False,'goRaceTests':{'command':'go test -race ./...','packagesPassed':62,'results':'test-results.json'},'candidateSourceSHA256':c['dirtySourceSHA256'],'binarySHA256':c['binarySHA256'],'dockerImageID':c['dockerImageID'],'artifactMetadataAndJournalOmitted':True,'defaultMode':'Standard','verified':'optional','governed':'deferred','strategy':'Recreate, one fixture slot','zeroDowntimeQualified':False,'failedUpgradeRollbackRequestToHealthySeconds':q['rollbackRequestToHealthySeconds'],'earlierRawEvidenceFilesVerified':q['earlierRawFilesVerified'],'earlierLocalFilesVerified':len(json.loads((R/'earlier-local-hashes.json').read_text())),'historicalEvidenceManifestsUnchanged':True,'normalDeletionAndBaselineCleanupPassed':True,'privateOriginKeysRemaining':0,'strictDocumentationBuildPassed':True,'documentationLicenseAndBuiltAssetsCheckPassed':True,'whitespacePassed':True}
+(R/'automated-checks.json').write_text(json.dumps(result,indent=2)+'\n');shutil.copyfile(R/'automated-checks.json',OUT/'automated-checks.json');shutil.copyfile(R/'write_final_checks.py',OUT/'harness/write_final_checks.py.txt')
+# Check exported source matches the captured lab bytes, including supplemental read-only collectors.
+amend=read('snapshot-arp-amendment')
+for name,digest in read('executed-source-hashes').items():assert hashlib.sha256((OUT/'harness/lab'/((amend['originalScript'] if name=='snapshot.py' else name)+'.txt')).read_bytes()).hexdigest()==digest,name
+assert hashlib.sha256((OUT/'harness/lab'/(amend['amendedScript']+'.txt')).read_bytes()).hexdigest()==amend['amendedSHA256']
+for name,digest in read('supplemental-source-hashes').items():assert hashlib.sha256((OUT/'harness/lab'/(name+'.txt')).read_bytes()).hexdigest()==digest,name
+pattern=re.compile(rb'(?m)^-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----|^\s*client-key-data:\s*[A-Za-z0-9+/]{24,}|^Authorization:\s*(?:Basic|Bearer)\s+\S|\b(?:Basic|Bearer)[ \t]+[A-Za-z0-9+/_.=-]{16,}',re.I)
+for p in OUT.rglob('*'):
+ if p.is_file() and not p.name.endswith('.tar.gz'):assert not pattern.search(p.read_bytes()),p
+manifest=''.join(hashlib.sha256(p.read_bytes()).hexdigest()+'  '+str(p.relative_to(OUT))+'\n' for p in sorted(OUT.rglob('*')) if p.is_file() and p.name!='SHA256SUMS');(OUT/'SHA256SUMS').write_text(manifest)
+for row in manifest.splitlines():
+ digest,name=row.split('  ',1);assert hashlib.sha256((OUT/name).read_bytes()).hexdigest()==digest
+index=json.loads((OUT/'observation-snapshots-index.json').read_text())['files']
+with tarfile.open(OUT/'observation-snapshots.tar.gz','r:gz') as t:
+ assert set(t.getnames())=={v['name'] for v in index}
+ for item in index:assert hashlib.sha256(t.extractfile(item['name']).read()).hexdigest()==item['sha256']
+print('PASS final source, historical manifests,',len(manifest.splitlines()),'new evidence files and',len(index),'archived observations')
+
+stopIndex=json.loads((OUT/'harness-stop-evidence-index.json').read_text())['files']
+with tarfile.open(OUT/'harness-stop-evidence.tar.gz','r:gz') as archive:
+ assert set(archive.getnames())=={v['name'] for v in stopIndex}
+ for item in stopIndex:assert hashlib.sha256(archive.extractfile(item['name']).read()).hexdigest()==item['sha256']
+for name,digest in read('resume-source-hash').items():assert hashlib.sha256((OUT/'harness/lab'/(name+'.txt')).read_bytes()).hexdigest()==digest
+print('PASS preserved original harness attempt and resumed-source hashes')

@@ -1,0 +1,19 @@
+{
+  "collectedAtUTC": "2026-11-01T06:21:50.982691+00:00",
+  "commands": [
+    {
+      "command": "show app-hosting list",
+      "output": "show app-hosting list\nApp id                                   State\n---------------------------------------------------------\niris                                     RUNNING\nc9ktest                                  DEPLOYED\n\nEdge-9K"
+    },
+    {
+      "command": "show ip http server status",
+      "output": "show ip http server status\nHTTP server status: Enabled\nHTTP server port: 80\nHTTP server active supplementary listener ports: 21111  \nHTTP server authentication method: local\nHTTP server auth-retry 0 time-window 0\nHTTP server digest algorithm: md5\nHTTP server access class: 0\nHTTP server IPv4 access class: None\nHTTP server IPv6 access class: None\nHTTP server base path: \nHTTP File Upload status: Disabled\nHTTP server upload path: \nHTTP server help root: \nMaximum number of concurrent server connections allowed: 300\nMaximum number of secondary server connections allowed: 50\nServer idle time-out: 180 seconds\nServer life time-out: 180 seconds\nServer session idle time-out: 600 seconds\nMaximum number of requests allowed on a connection: 25\nServer linger time : 60 seconds\nHTTP server active session modules: ALL\nHTTP secure server capability: Present\nHTTP secure server status: Enabled\nHTTP secure server port: 443\nHTTP secure server ciphersuite:  rsa-aes-cbc-sha2 rsa-aes-gcm-sha2\n        dhe-aes-cbc-sha2 dhe-aes-gcm-sha2 ecdhe-rsa-aes-cbc-sha2\n        ecdhe-rsa-aes-gcm-sha2 ecdhe-ecdsa-aes-gcm-sha2 tls13-aes128-gcm-sha256\n        tls13-aes256-gcm-sha384 tls13-chacha20-poly1305-sha256\nHTTP secure server TLS version:  TLSv1.3 TLSv1.2\nHTTP secure server client authentication: Disabled\nHTTP secure server PIV authentication: Disabled\nHTTP secure server PIV authorization only: Disabled\nHTTP secure server trustpoint: TP-self-signed-806566997\nHTTP secure server peer validation trustpoint: \nHTTP secure server ECDHE curve: secp256r1\nHTTP secure server active session modules: ALL\nEdge-9K"
+    },
+    {
+      "command": "dir flash: | include cvk-qual",
+      "output": "dir flash: | include cvk-qual\nEdge-9K"
+    }
+  ],
+  "switchConfigurationChanges": false,
+  "applicationMutations": false
+}

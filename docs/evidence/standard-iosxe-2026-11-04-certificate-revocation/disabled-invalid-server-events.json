@@ -1,0 +1,27 @@
+[
+  {
+    "kind": "tls-established",
+    "case": "disabled",
+    "port": 18459,
+    "certMode": "disabled-bad",
+    "client": "10.1.1.1",
+    "tlsVersion": "TLSv1.3",
+    "cipher": "TLS_AES_256_GCM_SHA384",
+    "sessionReused": false,
+    "sni": "192.168.129.111",
+    "atUTC": "2026-11-04T10:22:25.481572+00:00"
+  },
+  {
+    "kind": "http-request",
+    "case": "disabled",
+    "certMode": "disabled-bad",
+    "port": 18459,
+    "client": "10.1.1.1",
+    "path": "/disabled-agent-a.tar",
+    "status": 200,
+    "package": true,
+    "tlsVersion": "TLSv1.3",
+    "cipher": "TLS_AES_256_GCM_SHA384",
+    "atUTC": "2026-11-04T10:22:25.522935+00:00"
+  }
+]

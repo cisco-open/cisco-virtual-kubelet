@@ -1,0 +1,17 @@
+{
+  "collectedAtUTC": "2026-11-03T08:49:39.808888+00:00",
+  "commands": [
+    {
+      "command": "show app-hosting list",
+      "output": "show app-hosting list\nApp id                                   State\n---------------------------------------------------------\niris                                     RUNNING\nc9ktest                                  DEPLOYED\ncvk0000_1d31f7883bae487195938903667a6db1 ACTIVATED\n\nEdge-9K"
+    },
+    {
+      "command": "show app-hosting detail appid cvk0000_1d31f7883bae487195938903667a6db1",
+      "output": "show app-hosting detail appid cvk0000_1d31f7883bae487195938903667a6db1\nApp id                 : cvk0000_1d31f7883bae487195938903667a6db1\nOwner                  : iox\nState                  : ACTIVATED\nApplication\n  Type                 : docker\n  Name                 : cvk-qual-20261102/agent\n  Version              : sha256-24193e6eae32de28d622fe59cf2c5896b4929f325991ebf405f91c70\n  Description          : \n  Author               : \n  Path                 : flash:cvk-ba5843daec00214a-ed8c257297a526229b154cbaabe1c466de239d4c011e4edfd25c7cb440fa071c.tar\n  URL Path             : \nActivated profile name : custom\n\nResource reservation\n  Memory               : 128 MB\n  Disk                 : 1024 MB\n  CPU                  : 1000 units\n  CPU-percent          : 14 %\n  VCPU                 : 1\n\nPlatform resource profiles\n  Profile Name                  CPU(unit) CPU(percent)  Memory(MB)  Disk(MB)\n  ---------------------------------------------------------------------------\n\nAttached devices\n  Type              Name               Alias\n  ---------------------------------------------\n  serial/shell     iox_console_shell   serial0\n  serial/aux       iox_console_aux     serial1\n  serial/syslog    iox_syslog          serial2\n  serial/trace     iox_trace           serial3\n\nNetwork interfaces\n   ---------------------------------------\neth0:\n   MAC address         : 52:54:dd:21:44:5b\n   IPv6 address        : ::\n   Network name        : mgmt-bridge-v129\n   Multicast           : No\n   Mirroring           : No\n   Rx Bytes            : 0\n   Rx Packets          : 0\n   Rx Errors           : 0\n   Tx Bytes            : 0\n   Tx Packets          : 0\n   Tx Errors           : 0\n\n\nDocker\n------\nRun-time information\n  Command              : \n  Entry-point          : /app \n  Run options in use   : \n  Package run options  : \nApplication health information\n  Status               : 0\n  Last probe error     : \n  Last probe output    : \n\n\nEdge-9K"
+    },
+    {
+      "command": "dir flash:cvk-ba5843daec00214a-ed8c257297a526229b154cbaabe1c466de239d4c011e4edfd25c7cb440fa071c.tar",
+      "output": "dir flash:cvk-ba5843daec00214a-ed8c257297a526229b154cbaabe1c466de239d4c011e4edfd25c7cb440fa071c.tar\nDirectory of flash:/cvk-ba5843daec00214a-ed8c257297a526229b154cbaabe1c466de239d4c011e4edfd25c7cb440fa071c.tar\n\n254040  -rw-          5963776   Nov 3 2026 08:49:25 +00:00  cvk-ba5843daec00214a-ed8c257297a526229b154cbaabe1c466de239d4c011e4edfd25c7cb440fa071c.tar\n\n11353194496 bytes total (5392535552 bytes free)\nEdge-9K"
+    }
+  ]
+}

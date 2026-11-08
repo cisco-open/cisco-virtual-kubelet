@@ -1,0 +1,48 @@
+{
+  "generatedAtUTC": "2026-11-03T17:28:53.063570+00:00",
+  "nonce": "c699857b0036",
+  "roots": {
+    "trusted": {
+      "subject": "CN=CVK Standard cert trusted c699857b0036",
+      "sha256": "e4dc1ad096b1c1bd874b24cecfaa8010a0948c0bcd7d5d74b0b2571d1ab455b8",
+      "importedToDevice": true
+    },
+    "untrusted": {
+      "subject": "CN=CVK Standard cert untrusted c699857b0036",
+      "sha256": "35e336688119f71b5dcdc1e56729d3b0beedb66794ad1db91384d18e05e13bb6",
+      "importedToDevice": false
+    }
+  },
+  "leaves": {
+    "valid": {
+      "issuer": "trusted",
+      "issuerCN": "CN=CVK Standard cert trusted c699857b0036",
+      "leafSHA256": "ca3eb949bc68b7d9c6ad5424c272d7720236bae57b27a0b67dbce1d37844ed1b",
+      "SAN": "<SubjectAlternativeName(<GeneralNames([<IPAddress(value=192.168.129.111)>])>)>",
+      "validFromUTC": "2026-11-03T17:23:53+00:00",
+      "validUntilUTC": "2026-11-04T17:28:53+00:00",
+      "URLHostnameMatches": true,
+      "rootImportedToDevice": true
+    },
+    "untrusted": {
+      "issuer": "untrusted",
+      "issuerCN": "CN=CVK Standard cert untrusted c699857b0036",
+      "leafSHA256": "6354ccbf7bfe3bea5596a48be284a74f41190e44c45c87eb6492a1944e86f5a7",
+      "SAN": "<SubjectAlternativeName(<GeneralNames([<IPAddress(value=192.168.129.111)>])>)>",
+      "validFromUTC": "2026-11-03T17:23:53+00:00",
+      "validUntilUTC": "2026-11-04T17:28:53+00:00",
+      "URLHostnameMatches": true,
+      "rootImportedToDevice": false
+    },
+    "hostname": {
+      "issuer": "trusted",
+      "issuerCN": "CN=CVK Standard cert trusted c699857b0036",
+      "leafSHA256": "13f1ca91480a7fe35662dadf6efbe8d0a7bb95dd392b9344b8f19a78d46251fc",
+      "SAN": "<SubjectAlternativeName(<GeneralNames([<DNSName(value='wrong.example.invalid')>])>)>",
+      "validFromUTC": "2026-11-03T17:23:53+00:00",
+      "validUntilUTC": "2026-11-04T17:28:53+00:00",
+      "URLHostnameMatches": false,
+      "rootImportedToDevice": true
+    }
+  }
+}

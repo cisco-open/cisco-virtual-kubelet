@@ -1,0 +1,12 @@
+{
+  "atUTC": "2026-11-05T06:42:11.576505+00:00",
+  "phase": "cached",
+  "packageSentToC9K": false,
+  "release": "INT-REFRESH-CACHED-20261105-4cd216c69bce",
+  "repoTag": "cvk-intrefresh-20261105/cached:4cd216c69bce",
+  "dockerConfigID": "sha256:70b3a0c2884c4d99c6d976618824d73eeb6e3259ab56c32a5e467aa790eaaeb6",
+  "layerDiffID": "sha256:2d05aae84e97cb86384893ed92a4854bc89fc6dbf5b1e10febd4b649b47832bd",
+  "binarySHA256": "cea2f12fdcfcbfc0d895f00faf675aa7c325786f91a50d4e6b81f9f41dc5fd85",
+  "packageSHA256": "b1062027df214c2ea4b95efc84000948a8b50aebd323f05733bb4ea2b1fd310a",
+  "packageBytes": 5959680
+}

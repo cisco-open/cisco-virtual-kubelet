@@ -31,6 +31,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	ciskov1 "github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
+	"github.com/cisco/virtual-kubelet-cisco/internal/appartifact"
 	"github.com/cisco/virtual-kubelet-cisco/internal/managedprotocol"
 )
 
@@ -291,6 +292,9 @@ func (r *CiscoDeviceReconciler) ensureManagedSharedWorkerAccess(ctx context.Cont
 			managedprotocol.WorkerModeAppHosting); err != nil {
 			return err
 		}
+	}
+	if err := r.reconcileArtifactAccess(ctx, device.Namespace, appSA, appAccess, device); err != nil {
+		return r.quarantineManagedSharedWorkersForRisk(ctx, device, err)
 	}
 	if sharedWorkerPlanePending(pendingPlanes, managedprotocol.WorkerModeNetworkManagement) || len(blockers) != 0 {
 		// Close the same direct-reader race as the full post-bind audit before
@@ -1443,6 +1447,7 @@ func (r *CiscoDeviceReconciler) auditManagedSharedAppWorkerBindings(ctx context.
 func (r *CiscoDeviceReconciler) auditSharedWorkerBindingSet(ctx context.Context, accountNamespace string,
 	bindingNamespaces []string, accounts map[string]string, allowedRB map[types.NamespacedName]string,
 	allowedCRB map[string]string) error {
+	var artifactDevices map[string]*ciskov1.CiscoDevice
 	roleBindings := make([]rbacv1.RoleBinding, 0, len(allowedRB))
 	for _, namespace := range bindingNamespaces {
 		var namespaced rbacv1.RoleBindingList
@@ -1458,6 +1463,29 @@ func (r *CiscoDeviceReconciler) auditSharedWorkerBindingSet(ctx context.Context,
 				continue
 			}
 			key := client.ObjectKeyFromObject(binding)
+			if account == managedprotocol.WorkerModeAppHosting && binding.Annotations[appartifact.JournalKindAnnotation] == "v1" {
+				if artifactDevices == nil {
+					_, access, _, _, _, err := r.managedWorkerProfiles()
+					if err != nil {
+						return err
+					}
+					if access != managedprotocol.WorkerAccessReadWrite {
+						return fmt.Errorf("journal write grant exists without app-hosting write profile")
+					}
+					artifactDevices, err = r.desiredArtifactDevices(ctx, accountNamespace, nil)
+					if err != nil {
+						return err
+					}
+				}
+				if err := r.validateArtifactGrant(ctx, binding, accountNamespace, sa); err != nil {
+					return err
+				}
+				device, ok := artifactDevices[binding.Name]
+				if !ok || binding.Annotations[appartifact.JournalDeviceName] != device.Name {
+					return fmt.Errorf("journal grant exists outside its Verified device incarnation")
+				}
+				continue
+			}
 			role, ok := allowedRB[key]
 			if !ok || binding.RoleRef != (rbacv1.RoleRef{APIGroup: rbacv1.GroupName, Kind: "ClusterRole", Name: role}) ||
 				!reflect.DeepEqual(binding.Subjects, sharedWorkerSubject(accountNamespace, sa)) ||
@@ -1495,6 +1523,10 @@ func (r *CiscoDeviceReconciler) auditSharedWorkerBindingSet(ctx context.Context,
 // is absent. CiscoDevices that never enrolled or completed reverse handoff do
 // not retain the functional identities.
 func (r *CiscoDeviceReconciler) cleanupManagedSharedWorkerAccess(ctx context.Context, device *ciskov1.CiscoDevice) error {
+	if err := r.revokeArtifactDeviceAccess(ctx, device); err != nil {
+		return err
+	}
+
 	var devices ciskov1.CiscoDeviceList
 	if err := r.reader().List(ctx, &devices, client.InNamespace(device.Namespace)); err != nil {
 		return fmt.Errorf("list CiscoDevices before shared worker access cleanup: %w", err)

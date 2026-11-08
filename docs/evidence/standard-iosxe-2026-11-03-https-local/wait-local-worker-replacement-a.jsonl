@@ -1,0 +1,1 @@
+{"atUTC": "2026-11-03T15:00:33.645425+00:00", "label": "local-worker-replacement-a", "release": "A", "podUIDs": ["9f697a19-127c-444f-95f5-92c1f8196b06"], "nativeStates": {"iris": "RUNNING", "c9ktest": "DEPLOYED", "cvk0000_9f697a19127c444f95f592c1f8196b06": "RUNNING"}, "ready": true, "httpReleaseConfirmed": true, "oldNativeAppsAbsent": true, "artifactJournalCount": 0}

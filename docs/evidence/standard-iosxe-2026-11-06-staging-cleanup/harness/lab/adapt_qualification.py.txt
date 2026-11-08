@@ -1,0 +1,44 @@
+from pathlib import Path
+r=Path('/private/tmp/cvk-stdgc-20261106');p=r/'qualify.py';s=p.read_text()
+s=s.replace('import pathlib,json,datetime,time,subprocess,os,ssl,urllib.request,yaml,hashlib','import pathlib,json,datetime,time,subprocess,os,ssl,urllib.request,yaml,hashlib,re')
+s=s.replace('DEVICEUID=None;DEPUID=None','DEVICEUID=None;DEPUID=None;STAGED=[]\nexec(compile((R/"gc_checks.py").read_text(),"gc_checks.py","exec"))')
+s=s.replace("def deploy(phase):", "def deploy(phase,preloaded=False):")
+s=s.replace("image='https://192.168.129.111:18482/'+phase+'.tar';template=", "image=PRELOADED if preloaded else 'https://192.168.129.111:18482/'+phase+'.tar';template=")
+s=s.replace("'imagePullPolicy':'Always'", "'imagePullPolicy':'Never' if preloaded else 'Always'")
+s=s.replace("def waitNewPod(label,phase,oldUIDs):", "def waitNewPod(label,phase,oldUIDs,preloaded=False):")
+s=s.replace("p['spec']['containers'][0]['image']=='https://192.168.129.111:18482/'+phase+'.tar'", "p['spec']['containers'][0]['image']==(PRELOADED if preloaded else 'https://192.168.129.111:18482/'+phase+'.tar')")
+s=s.replace('def health(label,phase,oldUIDs):','def health(label,phase,oldUIDs,preloaded=False):').replace('waitNewPod(label,phase,oldUIDs);s=healthy','waitNewPod(label,phase,oldUIDs,preloaded);s=healthy')
+start=s.index(" appid='cvk0000_'",s.index('def health('));end=s.index('\n if DEPUID is None:',start)
+s=s[:start]+''' appid='cvk0000_'+new['metadata']['uid'].replace('-','');lines=[];allLines=[]
+ for w in s['workers']:
+  text=subprocess.check_output(K+['-n',NS,'logs',w['name'],'--tail=10000'],text=True);allLines.extend(text.splitlines());lines.extend(v for v in text.splitlines() if appid in v or new['metadata']['uid'] in v)
+ installed=[i for i,v in enumerate(lines) if 'Installing app '+appid in v];assert installed
+ if preloaded:
+  assert all('from package: '+PRELOADED in lines[i] for i in installed);assert not any('Starting copy operation' in v for v in lines);preservePreloaded(label)
+ else:
+  copied=[i for i,v in enumerate(lines) if 'Copy operation completed successfully' in v];assert copied and min(copied)<min(installed)
+  paths={re.search(r'from package: (flash:/cvk-stage-[a-f0-9]{32}\\.tar)',lines[i]).group(1) for i in installed};assert len(paths)==1
+  for file in paths:assert any('Standard staging cleanup confirmed absent: '+file in v for v in allLines)
+  assert not set(STAGED)&paths;STAGED.extend(sorted(paths));confirmOwnedGone(label,sorted(paths))
+ save('worker-'+label,{'atUTC':now(),'appID':appid,'lines':lines,'copyBeforeLocalInstallConfirmed':not preloaded,'preloadedNever':preloaded,'automaticCleanupConfirmed':not preloaded})'''+s[end:]
+s=s.replace("'phase':phase,'release'", "'phase':phase,'preloaded':preloaded,'release'")
+s=s.replace("# Every successful transition", "PRELOADED=createPreloaded();deploy('a',True);pre,cp=health('preloaded-before','a',set(),True)\n# Every successful transition")
+s=s.replace("deploy('a');a,ca=health('initial-a','a',set())", "deploy('a');a,ca=health('initial-a','a',{cp['podUID']})")
+s=s.replace("mode={'bAvailable':False}","mode={'bAvailable':False,'truncateB':True}")
+s=s.replace("'method':'HTTPS HTTP 404 for b.tar only'", "'method':'Truncated HTTPS b.tar response: declared full length, sent 4096 bytes and closed'")
+s=s.replace("e.get('status')==404", "e.get('truncated')==True")
+s=s.replace("'HTTP404Seen':True", "'truncatedDownloadSeen':True")
+s=s.replace("assert any('Copy RPC failed' in v for v in lines) and not any('Installing app", "failedPaths=sorted({m.group(0) for v in lines if 'Copy RPC failed' in v for m in re.finditer(r'flash:/cvk-stage-[a-f0-9]{32}\\.tar',v)});confirmOwnedGone('failed-upgrade',failedPaths);STAGED.extend(failedPaths);assert all(any('Standard staging cleanup confirmed absent: '+file in v for v in lines) for file in failedPaths)\nassert any('Copy RPC failed' in v for v in lines) and not any('Installing app")
+s=s.replace("deleteFinal();save('qualification-result'", "deploy('a',True);post,postCase=health('preloaded-after','a',SEEN.copy(),True);deleteFinal();preservePreloaded('final-normal-cleanup');save('qualification-result'")
+s=s.replace("'executionComplete':True", "'ownedStagingPaths':STAGED,'preloadedPath':PRELOADED,'automaticCleanupQualified':True,'preloadedBeforeAndAfterQualified':True,'executionComplete':True")
+p.write_text(s)
+# Send a truncated valid B package. Preserve the exact image identity and the valid chain.
+p=r/'servers.py';s=p.read_text().replace("blocked=phase=='b' and not mode['bAvailable'];package=", "truncated=phase=='b' and mode.get('truncateB',False);blocked=phase=='b' and not mode['bAvailable'] and not truncated;package=")
+s=s.replace("'bAvailable':mode['bAvailable']", "'bAvailable':mode['bAvailable'],'truncated':truncated")
+s=s.replace('if package:\n   try:', "if truncated:\n   self.wfile.write(body[:4096]);self.wfile.flush();self.close_connection=True;event({'kind':'truncated-package-sent','phase':phase,'client':self.client_address[0],'bytesSent':4096,'declaredBytes':len(body)});return\n  if package:\n   try:")
+p.write_text(s)
+# Never manually remove the paths whose automatic cleanup is under test.
+p=r/'cleanup.py';s=p.read_text().replace("paths=['flash:/cvk-cvk0000_'+u.replace('-','')+'.tar' for u in q['podUIDs']]", "paths=q['ownedStagingPaths'];preload=q['preloadedPath'];preproof=json.loads((R/'preloaded-provenance.json').read_text())")
+s=s.replace("r'flash:/cvk-cvk0000_[a-f0-9]{32}\\.tar'", "r'flash:/cvk-stage-[a-f0-9]{32}\\.tar'")
+s=s.replace("if re.search(r'\\s-rw-\\s',cli('dir '+path)):cli('delete /force '+path)", "assert 'No such file or directory' in cli('dir '+path), 'Automatic cleanup failed; preserve evidence'\n assert preproof['packageSHA512'].lower() in cli('verify /sha512 '+preload).lower();report['preloadedPreservedThroughAllFlows']=True;report['preloadedPath']=preload\n # Only the qualification caller removes its own preloaded canary after proof.\n cli('delete /force '+preload);assert 'No such file or directory' in cli('dir '+preload);report['testOwnedPreloadedCanaryRemovedAfterProof']=True;report['automaticCleanupPathsManuallyDeleted']=False")
+p.write_text(s)

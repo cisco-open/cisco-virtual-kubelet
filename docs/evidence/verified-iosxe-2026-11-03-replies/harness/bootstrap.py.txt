@@ -1,0 +1,23 @@
+import pathlib,subprocess,json,datetime,time,os,ipaddress
+from cryptography import x509
+from cryptography.x509.oid import NameOID
+from cryptography.hazmat.primitives import hashes,serialization
+from cryptography.hazmat.primitives.asymmetric import rsa
+r=pathlib.Path('/tmp/cvk-replies-20261103');r.mkdir(mode=0o700,exist_ok=True);os.chmod(r,0o700);old=pathlib.Path('/tmp/cvk-verified-qual-20261102')
+assert not subprocess.check_output(['docker','ps','-a','--filter','name=^cvk-replies-k3s-20261103$','--format','{{.ID}}'],text=True).strip()
+now=datetime.datetime.now(datetime.timezone.utc);key=rsa.generate_private_key(65537,2048);name=x509.Name([x509.NameAttribute(NameOID.COMMON_NAME,'CVK pending-response qualification 20261103')]);ca=x509.CertificateBuilder().subject_name(name).issuer_name(name).public_key(key.public_key()).serial_number(x509.random_serial_number()).not_valid_before(now-datetime.timedelta(minutes=5)).not_valid_after(now+datetime.timedelta(days=2)).add_extension(x509.BasicConstraints(ca=True,path_length=0),True).add_extension(x509.KeyUsage(False,False,False,False,False,True,True,False,False),True).sign(key,hashes.SHA256())
+server=rsa.generate_private_key(65537,2048);cert=x509.CertificateBuilder().subject_name(x509.Name([x509.NameAttribute(NameOID.COMMON_NAME,'CVK lab RESTCONF relay')])).issuer_name(name).public_key(server.public_key()).serial_number(x509.random_serial_number()).not_valid_before(now-datetime.timedelta(minutes=5)).not_valid_after(now+datetime.timedelta(days=2)).add_extension(x509.SubjectAlternativeName([x509.IPAddress(ipaddress.ip_address('10.1.1.1'))]),False).add_extension(x509.BasicConstraints(ca=False,path_length=None),True).add_extension(x509.ExtendedKeyUsage([x509.oid.ExtendedKeyUsageOID.SERVER_AUTH]),False).sign(key,hashes.SHA256())
+for f,data in [('relay-ca.crt',ca.public_bytes(serialization.Encoding.PEM)),('relay.crt',cert.public_bytes(serialization.Encoding.PEM)),('relay.key',server.private_bytes(serialization.Encoding.PEM,serialization.PrivateFormat.PKCS8,serialization.NoEncryption()))]:r.joinpath(f).write_bytes(data);os.chmod(r/f,0o600)
+r.joinpath('worker-ca.pem').write_bytes(pathlib.Path('/tmp/cvk-verified-qual-20261101/device-ca.crt').read_bytes()+ca.public_bytes(serialization.Encoding.PEM))
+for x in ['k3s-data','k3s-output']:r.joinpath(x).mkdir(exist_ok=True)
+cmd=['docker','run','-d','--privileged','--name','cvk-replies-k3s-20261103','--label','apphosting.cisco.com/qualification=20261103-replies','-p','127.0.0.1:16449:6443','--tmpfs','/run','--tmpfs','/var/run','-v',str(r/'k3s-data')+':/var/lib/rancher/k3s','-v',str(r/'k3s-output')+':/output','--entrypoint','/bin/k3s','rancher/k3s@sha256:ec9868c6a38d4e8c1869832fb5fd1eb8473c39794a0b44d2b952e7ba911951bc','server','--disable','traefik','--disable','servicelb','--disable','metrics-server','--node-name','cvk-replies-k3s','--cluster-cidr','10.60.0.0/16','--service-cidr','10.61.0.0/16','--write-kubeconfig','/output/kubeconfig','--write-kubeconfig-mode','600','--tls-san','127.0.0.1']
+subprocess.run(cmd,check=True)
+for i in range(120):
+ q=subprocess.run(['docker','exec','cvk-replies-k3s-20261103','cat','/output/kubeconfig'],text=True,capture_output=True)
+ if q.returncode==0 and 'certificate-authority-data' in q.stdout:
+  (r/'kubeconfig').write_text(q.stdout.replace('127.0.0.1:6443','127.0.0.1:16449'));os.chmod(r/'kubeconfig',0o600)
+  z=subprocess.run(['kubectl','--kubeconfig',str(r/'kubeconfig'),'get','nodes','--no-headers'],text=True,capture_output=True)
+  if z.returncode==0 and ' Ready ' in z.stdout:break
+ time.sleep(2)
+else:raise RuntimeError('Isolated cluster did not become Ready')
+print('PASS fresh isolated cluster Ready',flush=True)

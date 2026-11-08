@@ -1,0 +1,34 @@
+apiVersion: cisco.vk/v1alpha1
+kind: CiscoDevice
+metadata:
+  labels:
+    qualification: 20261105-intrefresh
+    topology.cisco.vk/managed: 'true'
+    topology.cisco.vk/site: ux-agx
+    topology.kubernetes.io/region: lab
+    topology.kubernetes.io/zone: ux-agx
+  name: c9k-intrefresh-20261105
+  namespace: cvk-intrefresh-20261105
+spec:
+  address: 10.1.1.1
+  credentialSecretRef:
+    name: c9k-credentials
+  driver: XE
+  maxPods: 1
+  physicalIdentity: FCW2247C1AJ
+  port: 443
+  tls:
+    caSecretRef:
+      name: c9k-ca
+    enabled: true
+  username: cisco
+  xe:
+    networking:
+      interface:
+        appGigabitEthernet:
+          mode: trunk
+          vlanIf:
+            dhcp: true
+            guestInterface: 0
+            vlan: 129
+        type: AppGigabitEthernet

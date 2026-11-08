@@ -20,6 +20,8 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"net/url"
+	"path"
 	"strings"
 	"sync"
 	"testing"
@@ -44,6 +46,8 @@ type fakeNetworkClient struct {
 	postHook           func(path string, payload any) error
 	postWithResultHook func(path string, payload, result any) error
 	getHook            func(path string, result any) error
+	filesystemHook     func(path string, result any) error
+	stageFiles         map[string]bool
 	patchHook          func(path string, payload any) error
 	putHook            func(path string, payload any) error
 	deleteHook         func(path string) error
@@ -77,12 +81,52 @@ func (f *fakeNetworkClient) PostWithResult(_ context.Context, path string, paylo
 		}
 	}
 	if postHook != nil {
-		return postHook(path, payload)
+		if err := postHook(path, payload); err != nil {
+			return err
+		}
+	}
+	if path == "/restconf/operations/Cisco-IOS-XE-rpc:copy" || path == "/restconf/operations/Cisco-IOS-XE-rpc:delete" {
+		f.mu.Lock()
+		if f.stageFiles == nil {
+			f.stageFiles = map[string]bool{}
+		}
+		outer := payload.(map[string]any)
+		if path == "/restconf/operations/Cisco-IOS-XE-rpc:copy" {
+			f.stageFiles[pathBase(outer["Cisco-IOS-XE-rpc:copy"].(map[string]string)["destination-drop-node-name"])] = true
+		} else {
+			delete(f.stageFiles, pathBase(outer["Cisco-IOS-XE-rpc:delete"].(map[string]string)["filename-drop-node-name"]))
+		}
+		f.mu.Unlock()
+		output := result.(*appHostingRPCOutput)
+		output.Present = true
+		output.Result = "RPC request successful"
 	}
 	return nil
 }
 
+func pathBase(s string) string { return path.Base(s) }
 func (f *fakeNetworkClient) Get(_ context.Context, path string, result any, _ func([]byte, any) error) error {
+	if strings.HasPrefix(path, standardFilesystemPath) {
+		f.mu.Lock()
+		h := f.filesystemHook
+		if h != nil {
+			f.mu.Unlock()
+			return h(path, result)
+		}
+		if _, ok := result.(*standardFilesystemInventory); ok {
+			f.mu.Unlock()
+			return json.Unmarshal([]byte(`{"Cisco-IOS-XE-platform-software-oper:q-filesystem":[{"fru":"fru-rp","slot":0,"bay":0,"chassis":-1,"partitions":[{"name":"flash:","is-writable":true}]}]}`), result)
+		}
+		name := strings.Split(strings.Split(path, "/partition-content=")[1], "?")[0]
+		name, _ = url.PathUnescape(name)
+		exists := f.stageFiles[name]
+		f.mu.Unlock()
+		if !exists {
+			return &common.RESTCONFError{StatusCode: 404, ErrorTags: []string{"invalid-value"}}
+		}
+		b, _ := json.Marshal(map[string]any{"Cisco-IOS-XE-platform-software-oper:partition-content": []map[string]string{{"full-path": name, "type": "file"}}})
+		return json.Unmarshal(b, result)
+	}
 	f.mu.Lock()
 	h := f.getHook
 	f.mu.Unlock()
@@ -697,7 +741,7 @@ func TestRestconfUnmarshallerDecodesIOSXE2601AppHostingOperFields(t *testing.T) 
 
 // ── Install / recovery integration tests ─────────────────────────────────────
 
-func TestCreateAppHostingApp_PrimaryPullSucceeds(t *testing.T) {
+func TestCreateAppHostingApp_StagedSinglePhaseSucceeds(t *testing.T) {
 	fc := &fakeNetworkClient{
 		getHook: func(_ string, result any) error {
 			root, ok := result.(*Cisco_IOS_XEAppHostingOper_AppHostingOperData)
@@ -735,7 +779,7 @@ func TestCreateAppHostingApp_PolicyNeverNoFallback(t *testing.T) {
 	}
 }
 
-func TestCreateAppHostingApp_FallbackCopyFailure(t *testing.T) {
+func TestCreateAppHostingApp_CopyFailure(t *testing.T) {
 	copyErr := errors.New("network unreachable")
 	fc := &fakeNetworkClient{
 		getHook: func(_ string, result any) error { return nil }, // empty → timeout
@@ -747,7 +791,7 @@ func TestCreateAppHostingApp_FallbackCopyFailure(t *testing.T) {
 		},
 	}
 	d := newTestDriver(fc)
-	cfg := minimalAppConfig("http://registry.example.com/app.tar", v1.PullAlways, 50*time.Millisecond)
+	cfg := minimalDockerResourceConfig("http://registry.example.com/app.tar", v1.PullAlways, 50*time.Millisecond)
 
 	err := d.CreateAppHostingApp(context.Background(), cfg)
 	if err == nil {
@@ -758,9 +802,9 @@ func TestCreateAppHostingApp_FallbackCopyFailure(t *testing.T) {
 	}
 }
 
-func TestCreateAppHostingApp_FallbackCopyAfterPrimaryTimeout(t *testing.T) {
-	// stage 0 → empty oper data (primary RUNNING wait times out)
-	// stage 1 → DEPLOYED (after copy RPC + install; during DEPLOYED wait in copyFallbackToFlash)
+func TestCreateAppHostingApp_CopyThenLocalInstall(t *testing.T) {
+	// stage 0 → no staged package; copy must run before any install
+	// stage 1 → DEPLOYED after the successful copy and local install
 	// stage 2 → ACTIVATED (after ActivateApp)
 	// stage 3 → RUNNING (after StartApp)
 	var (
@@ -813,10 +857,10 @@ func TestCreateAppHostingApp_FallbackCopyAfterPrimaryTimeout(t *testing.T) {
 	}
 
 	d := newTestDriver(fc)
-	cfg := minimalAppConfig("http://registry.example.com/app.tar", v1.PullAlways, 50*time.Millisecond)
+	cfg := minimalDockerResourceConfig("http://registry.example.com/app.tar", v1.PullAlways, 50*time.Millisecond)
 
 	if err := d.CreateAppHostingApp(context.Background(), cfg); err != nil {
-		t.Errorf("expected success via copy fallback, got: %v", err)
+		t.Errorf("expected success via staged copy, got: %v", err)
 	}
 
 	mu.Lock()
@@ -827,84 +871,6 @@ func TestCreateAppHostingApp_FallbackCopyAfterPrimaryTimeout(t *testing.T) {
 	}
 	if d.isPodRecovering("test-uid") {
 		t.Error("recovering flag should be cleared after successful fallback")
-	}
-}
-
-func TestCopyFallbackDoesNotDisruptAcceptedCachedInstall(t *testing.T) {
-	const cfgPath = "/restconf/data/Cisco-IOS-XE-app-hosting-cfg:app-hosting-cfg-data/apps"
-	cacheSubmitted := false
-	installs, copies, deletes := 0, 0, 0
-	fc := &fakeNetworkClient{
-		getHook: func(_ string, result any) error {
-			root := result.(*Cisco_IOS_XEAppHostingOper_AppHostingOperData)
-			if cacheSubmitted {
-				*root = *operResponse("test-app", "INSTALLING")
-			}
-			return nil
-		},
-		postHook: func(path string, payload any) error {
-			switch path {
-			case appHostingRPCPath:
-				if payload.(map[string]interface{})["install"] != nil {
-					installs++
-					cacheSubmitted = true
-				}
-			case "/restconf/operations/Cisco-IOS-XE-rpc:copy":
-				copies++
-			}
-			return nil
-		},
-		deleteHook: func(string) error { deletes++; return nil },
-	}
-	d := newTestDriver(fc)
-	cfg := minimalDockerResourceConfig("https://registry.example/app.tar", v1.PullIfNotPresent, time.Minute)
-	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
-	defer cancel()
-	err := d.copyFallbackToFlash(ctx, cfg, cfgPath, v1.PullIfNotPresent, time.Minute)
-	if err == nil || !strings.Contains(err.Error(), "refusing destructive fallback") {
-		t.Fatalf("error=%v, want accepted-install convergence failure", err)
-	}
-	if installs != 1 || copies != 0 || deletes != 1 {
-		t.Fatalf("installs=%d copies=%d deletes=%d, want 1/0/1 (initial cleanup only)", installs, copies, deletes)
-	}
-}
-
-func TestCopyFallbackDoesNotDisruptAmbiguousCachedInstall(t *testing.T) {
-	const cfgPath = "/restconf/data/Cisco-IOS-XE-app-hosting-cfg:app-hosting-cfg-data/apps"
-	installs, copies, deletes := 0, 0, 0
-	fc := &fakeNetworkClient{
-		getHook: func(_ string, _ any) error { return nil },
-		postWithResultHook: func(path string, payload, result any) error {
-			if path != appHostingRPCPath {
-				return nil
-			}
-			input := payload.(map[string]any)["Cisco-IOS-XE-rpc:app-hosting"].(map[string]any)
-			if input["install"] != nil {
-				installs++
-				response := result.(*appHostingRPCOutput)
-				response.Result = "RPC request successful"
-				response.Present = true
-			}
-			return nil
-		},
-		postHook: func(path string, _ any) error {
-			if path == "/restconf/operations/Cisco-IOS-XE-rpc:copy" {
-				copies++
-			}
-			return nil
-		},
-		deleteHook: func(string) error { deletes++; return nil },
-	}
-	d := newTestDriver(fc)
-	cfg := minimalDockerResourceConfig("https://registry.example/app.tar", v1.PullIfNotPresent, time.Minute)
-	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
-	defer cancel()
-	err := d.copyFallbackToFlash(ctx, cfg, cfgPath, v1.PullIfNotPresent, time.Minute)
-	if err == nil || !strings.Contains(err.Error(), "refusing destructive fallback") {
-		t.Fatalf("error=%v, want ambiguous-install convergence failure", err)
-	}
-	if installs != 1 || copies != 0 || deletes != 1 {
-		t.Fatalf("installs=%d copies=%d deletes=%d, want 1/0/1 (initial cleanup only)", installs, copies, deletes)
 	}
 }
 
@@ -1078,8 +1044,8 @@ func TestCreateAppHostingApp_ConfigAlreadyExistsFailsClosedWithoutValidState(t *
 	}
 }
 
-func TestCreateAppHostingApp_DockerResource_HTTPPrimarySuccess(t *testing.T) {
-	// DockerResource + HTTP: device pull succeeds → DEPLOYED → ActivateApp → wait ACTIVATED → StartApp → RUNNING
+func TestCreateAppHostingApp_DockerResource_StagedSuccess(t *testing.T) {
+	// DockerResource + HTTP: copy → local install → DEPLOYED → activate → start → RUNNING
 	var (
 		mu        sync.Mutex
 		rpcOrder  []string
@@ -1140,8 +1106,8 @@ func TestCreateAppHostingApp_DockerResource_HTTPPrimarySuccess(t *testing.T) {
 	}
 }
 
-func TestCreateAppHostingApp_DockerResource_HTTPFallbackCopy(t *testing.T) {
-	// DockerResource + HTTP: device pull times out → copy fallback → ActivateApp → ACTIVATED → StartApp → RUNNING
+func TestCreateAppHostingApp_DockerResource_CopyThenLocalInstall(t *testing.T) {
+	// DockerResource + HTTP: stage successfully before local install and explicit activation/start
 	var (
 		mu    sync.Mutex
 		stage int // 0=empty, 1=DEPLOYED (after copy), 2=ACTIVATED, 3=RUNNING
@@ -1192,7 +1158,7 @@ func TestCreateAppHostingApp_DockerResource_HTTPFallbackCopy(t *testing.T) {
 	cfg := minimalDockerResourceConfig("http://registry.example.com/app.tar", v1.PullAlways, 50*time.Millisecond)
 
 	if err := d.CreateAppHostingApp(context.Background(), cfg); err != nil {
-		t.Errorf("expected success via DockerResource copy fallback, got: %v", err)
+		t.Errorf("expected success via staged DockerResource install, got: %v", err)
 	}
 
 	mu.Lock()

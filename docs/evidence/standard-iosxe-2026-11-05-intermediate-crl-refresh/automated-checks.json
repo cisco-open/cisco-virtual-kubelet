@@ -1,0 +1,41 @@
+{
+  "physicalCharacterizationComplete": true,
+  "transportRevocationDiscoveryObserved": true,
+  "freshExecutionBlockingQualified": false,
+  "unexpectedStaleReleasePreserved": true,
+  "naturalIntermediateCRLRefreshAndRevocationDiscoveryQualified": false,
+  "cachedWindowAcceptanceObserved": true,
+  "publicationToNativeFetchSeconds": 524.236713,
+  "originalNextUpdateToNativeFetchSeconds": 9.020857,
+  "freshPackageTransferBlockedAfterDiscovery": true,
+  "samePodRecoveryPassed": false,
+  "freshDeploymentAndDeletionPassed": true,
+  "signedCRLAndPackageIdentityChecks": "passed",
+  "actualRunningReleaseChecks": "valid and cached phases passed; stale prior-day release confirmed in new Pod; requested release passed only after normal deletion/fresh delivery under replacement chain",
+  "serialSpecificIntermediateRevocationErrorObserved": true,
+  "copyFallbackExercised": false,
+  "rawServerTraceRewritten": false,
+  "earlierRawEvidencePreserved": true,
+  "historicalEvidenceUnchanged": true,
+  "manualCRLRefreshOrFlushDuringQualification": false,
+  "deviceClockChanged": false,
+  "deviceCachePolicyChanged": false,
+  "manualLeaseOrJournalChanges": false,
+  "canonicalMutationLeaseRecreated": false,
+  "artifactMetadataAndJournalOmitted": true,
+  "ephemeralOriginTLSPrivateKeysRemaining": 0,
+  "labBaselineRestored": true,
+  "productionSourceChanged": false,
+  "goRaceTestsRerun": false,
+  "priorGoRaceResults": "../verified-iosxe-2026-11-03-replies/test-results.json",
+  "defaultMode": "Standard",
+  "governed": "deferred",
+  "strictDocumentationBuild": {
+    "command": ".venv/bin/mkdocs build --strict",
+    "passed": true
+  },
+  "whitespace": {
+    "command": "git diff --check",
+    "passed": true
+  }
+}
