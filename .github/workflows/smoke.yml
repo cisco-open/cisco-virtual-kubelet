@@ -41,8 +41,20 @@ name: smoke
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - 'README.md'
+      - 'docs/**'
+      - 'mkdocs.yml'
+      - 'requirements.txt'
+      - 'requirements.in'
   pull_request:
     branches: [main]
+    paths-ignore:
+      - 'README.md'
+      - 'docs/**'
+      - 'mkdocs.yml'
+      - 'requirements.txt'
+      - 'requirements.in'
   workflow_dispatch: {}
 
 jobs:
@@ -66,18 +78,11 @@ jobs:
           go-version: '1.26.10'
           cache: true
 
-      - name: Setup Python for documentation checks
+      - name: Setup Python
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: '3.13.15'
           cache: 'pip'
-
-      - name: Setup Node.js for website checks
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
-        with:
-          node-version: '24.20.0'
-          cache: 'npm'
-          cache-dependency-path: docs/website/package-lock.json
 
       - name: Build
         run: go build ./...
@@ -122,8 +127,6 @@ jobs:
             -config-file .github/actionlint.yaml \
             .github/workflows/*.{yml,yaml}
 
-      # Run the recursive Go package pattern before npm ci creates nested
-      # node_modules directories that can themselves contain Go packages.
       - name: Unit tests
         run: go test -race -count=1 ./...
 
@@ -134,45 +137,6 @@ jobs:
           # claim that its older evidence qualifies this workflow's HEAD.
           python3 scripts/validate-topology-acceptance.py \
             docs/evidence/topology-2026-10-05/acceptance.json
-
-      - name: Website lint, audit, build, and license gate
-        working-directory: docs/website
-        run: |
-          set -euo pipefail
-          npm ci --include=dev
-          npm audit --audit-level=high
-          npm run licenses:check
-          npm run lint
-          npm run build
-          test -s out/LICENSE
-          test -s out/NOTICE
-          test -s out/THIRD_PARTY_LICENSES.txt
-
-      - name: Audit locked documentation dependencies
-        run: |
-          set -euo pipefail
-          python -m venv "$RUNNER_TEMP/cvk-docs-audit"
-          "$RUNNER_TEMP/cvk-docs-audit/bin/python" -m pip install \
-            --disable-pip-version-check pip-audit==2.10.1
-          "$RUNNER_TEMP/cvk-docs-audit/bin/python" -m pip_audit \
-            --strict --disable-pip --require-hashes -r requirements.txt
-
-      # MkDocs vendors exact runtime assets from the npm ci tree above. Keep
-      # both documentation builds after the recursive Go package test.
-      - name: MkDocs strict build and license gate
-        run: |
-          set -euo pipefail
-          python -m pip install --disable-pip-version-check \
-            --require-hashes -r requirements.txt
-          python .github/scripts/generate_mkdocs_licenses.py --check
-          mkdocs build --strict
-          python .github/scripts/generate_mkdocs_licenses.py \
-            --check --site site
-          test -s site/MKDOCS_THIRD_PARTY_LICENSES.txt
-          cmp docs/MKDOCS_THIRD_PARTY_LICENSES.txt \
-            site/MKDOCS_THIRD_PARTY_LICENSES.txt
-          grep -F 'Package: mkdocs-material 9.7.7' \
-            site/MKDOCS_THIRD_PARTY_LICENSES.txt
 
       - name: kubectl-ciscovk release packaging gate
         run: |

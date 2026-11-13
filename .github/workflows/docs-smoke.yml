@@ -1,0 +1,99 @@
+# Copyright 2026 Cisco Systems Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Documentation related workflow. Runs when README.md, docs/, or the MkDocs configuration changes.
+
+name: docs-smoke-check-validation
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'README.md'
+      - 'docs/**'
+      - 'mkdocs.yml'
+      - 'requirements.txt'
+      - 'requirements.in'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'README.md'
+      - 'docs/**'
+      - 'mkdocs.yml'
+      - 'requirements.txt'
+      - 'requirements.in'
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  docs-build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      - name: Setup Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.13.15'
+          cache: 'pip'
+
+      - name: Setup Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '24.20.0'
+          cache: 'npm'
+          cache-dependency-path: docs/website/package-lock.json
+
+      - name: Website lint, audit, build, and license gate
+        working-directory: docs/website
+        run: |
+          set -euo pipefail
+          npm ci --include=dev
+          npm audit --audit-level=high
+          npm run licenses:check
+          npm run lint
+          npm run build
+          test -s out/LICENSE
+          test -s out/NOTICE
+          test -s out/THIRD_PARTY_LICENSES.txt
+
+      - name: Audit locked documentation dependencies
+        run: |
+          set -euo pipefail
+          python -m venv "$RUNNER_TEMP/cvk-docs-audit"
+          "$RUNNER_TEMP/cvk-docs-audit/bin/python" -m pip install \
+            --disable-pip-version-check pip-audit==2.10.1
+          "$RUNNER_TEMP/cvk-docs-audit/bin/python" -m pip_audit \
+            --strict --disable-pip --require-hashes -r requirements.txt
+
+      # MkDocs vendors exact runtime assets from the npm ci tree above.
+      - name: MkDocs strict build and license gate
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check \
+            --require-hashes -r requirements.txt
+          python .github/scripts/generate_mkdocs_licenses.py --check
+          mkdocs build --strict
+          python .github/scripts/generate_mkdocs_licenses.py \
+            --check --site site
+          test -s site/MKDOCS_THIRD_PARTY_LICENSES.txt
+          cmp docs/MKDOCS_THIRD_PARTY_LICENSES.txt \
+            site/MKDOCS_THIRD_PARTY_LICENSES.txt
+          grep -F 'Package: mkdocs-material 9.7.7' \
+            site/MKDOCS_THIRD_PARTY_LICENSES.txt
