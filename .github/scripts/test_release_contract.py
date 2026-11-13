@@ -425,6 +425,7 @@ class ReleaseContractTests(unittest.TestCase):
             python_pin_counts,
             {
                 "develop.yml": 1,
+                "docs-smoke.yml": 1,
                 "krew-index.yml": 1,
                 "recover-v2026.8.1-release-assets.yml": 1,
                 "release.yml": 4,
@@ -811,8 +812,9 @@ go_version_is_supported go1.27.9
             self.assertIn(required_notice, bundle)
 
         smoke = (ROOT / ".github/workflows/smoke.yml").read_text(encoding="utf-8")
+        docs_smoke = (ROOT / ".github/workflows/docs-smoke.yml").read_text(encoding="utf-8")
         deploy = (ROOT / ".github/workflows/develop.yml").read_text(encoding="utf-8")
-        for workflow in (smoke, deploy):
+        for workflow in (docs_smoke, deploy):
             self.assertIn("--require-hashes -r requirements.txt", workflow)
             self.assertIn("--strict --disable-pip --require-hashes -r requirements.txt", workflow)
             self.assertIn("pip-audit==2.10.1", workflow)
@@ -902,13 +904,12 @@ go_version_is_supported go1.27.9
         self.assertIn("pull_request:\n    branches: [main]", smoke)
         self.assertIn("version: v3.21.4", smoke)
         self.assertIn("version: v4.2.4", smoke)
+        self.assertIn("run: go test -race -count=1 ./...", smoke)
+        self.assertNotIn("Website lint, audit, build, and license gate", smoke)
+        self.assertNotIn("MkDocs strict build and license gate", smoke)
         self.assertLess(
-            smoke.index("run: go test -race -count=1 ./..."),
-            smoke.index("Website lint, audit, build, and license gate"),
-        )
-        self.assertLess(
-            smoke.index("Website lint, audit, build, and license gate"),
-            smoke.index("MkDocs strict build and license gate"),
+            docs_smoke.index("Website lint, audit, build, and license gate"),
+            docs_smoke.index("MkDocs strict build and license gate"),
         )
         self.assertLess(
             deploy.index("Build React website"),
