@@ -127,12 +127,14 @@ spec:
                   - XE
                   - XR
                   - NXOS
+                  - AP
                   - OPENCONFIG
                   - FAKE
                 - enum:
                   - XE
                   - XR
                   - NXOS
+                  - AP
                   - OPENCONFIG
                   - FAKE
                 type: string

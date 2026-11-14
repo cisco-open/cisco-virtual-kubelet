@@ -20,13 +20,14 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
-// +kubebuilder:validation:Enum=XE;XR;NXOS;OPENCONFIG;FAKE
+// +kubebuilder:validation:Enum=XE;XR;NXOS;AP;OPENCONFIG;FAKE
 type DeviceDriver string
 
 const (
 	DeviceDriverXE         DeviceDriver = "XE"
 	DeviceDriverXR         DeviceDriver = "XR"
 	DeviceDriverNXOS       DeviceDriver = "NXOS"
+	DeviceDriverAP         DeviceDriver = "AP"
 	DeviceDriverOPENCONFIG DeviceDriver = "OPENCONFIG"
 	DeviceDriverFAKE       DeviceDriver = "FAKE"
 )
@@ -112,7 +113,7 @@ type CiscoDeviceList struct {
 // +kubebuilder:validation:XValidation:rule="!has(oldSelf.physicalIdentity) || (has(self.physicalIdentity) && self.physicalIdentity == oldSelf.physicalIdentity)",message="physicalIdentity is write-once"
 type DeviceSpec struct {
 	// +kubebuilder:validation:Required
-	// +kubebuilder:validation:Enum=XE;XR;NXOS;OPENCONFIG;FAKE
+	// +kubebuilder:validation:Enum=XE;XR;NXOS;AP;OPENCONFIG;FAKE
 	Driver DeviceDriver `json:"driver" mapstructure:"driver"`
 
 	// Address is the management IP or hostname of the device.

@@ -32,6 +32,8 @@ import (
 	// device; production deployments simply never set that on a
 	// CiscoDevice.
 	_ "github.com/cisco/virtual-kubelet-cisco/internal/drivers/fake"
+	// AP: native IOx CAF API app hosting on Catalyst Access Points.
+	_ "github.com/cisco/virtual-kubelet-cisco/internal/drivers/ap"
 
 	// NX-OS: NX-API app-hosting and declarative config runtime.
 	_ "github.com/cisco/virtual-kubelet-cisco/internal/drivers/nxos"
