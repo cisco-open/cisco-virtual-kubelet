@@ -24,7 +24,6 @@ import (
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/common"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
-	corev1listers "k8s.io/client-go/listers/core/v1"
 )
 
 const defaultMaxPods int32 = 8
