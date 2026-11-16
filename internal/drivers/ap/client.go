@@ -35,7 +35,8 @@ import (
 const (
 	ioxAPIPrefix       = "/iox/api/v2/hosting"
 	maxAPIResponseSize = 8 << 20
-	maxPackageSize     = 512 << 20
+	// Catalyst AP hosting limits package.tar to 20,000,000 bytes (20 MB).
+	maxPackageSize = 20_000_000
 )
 
 type ioxClient struct {

@@ -12,9 +12,9 @@ the AP's IOx management endpoint. The API port defaults to `8443`; configure
 configuration. The AP must have IOx and app hosting enabled and be reachable
 from the CVK controller.
 
-`spec.maxPods` defaults to 8 and advertises the AP's pod capacity to the
-scheduler. Set it to a value appropriate for the AP model and available IOx
-resources.
+`spec.maxPods` defaults to 2, matching the two-app limit documented for
+Catalyst 9100 APs. Set it lower if the model's remaining IOx resources require
+it.
 
 ## Pod image contract
 
@@ -23,8 +23,10 @@ to an HTTP(S) URL ending in `.tar` or `.tar.gz` that serves a **prebuilt IOx
 package** (for example, the artifact produced from the `Catalyst-AP-APP`
 sample). The controller downloads the archive and uploads it to the AP. OCI
 image references and Docker registries are not supported. The artifact server
-must be reachable without authentication or redirects. Archives are limited
-to 512 MiB.
+must be reachable without authentication or redirects. The final `package.tar`
+must be no larger than 20 MB. Cisco also documents an approximately 80 MB
+combined limit for the package and extracted `rootfs.img`, so keep the runtime
+filesystem small enough to fit that budget.
 
 By default, activation maps package interface `eth0` to AP network `iox-nat0`
 with `1to1` port mapping. Override the complete CAF activation body with Pod

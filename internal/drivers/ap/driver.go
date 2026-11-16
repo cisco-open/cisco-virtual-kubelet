@@ -26,7 +26,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 )
 
-const defaultMaxPods int32 = 8
+const defaultMaxPods int32 = 2
 
 // Driver deploys prebuilt IOx app packages directly to a Catalyst Access Point.
 // The address, credentials, and optional TLS settings identify the AP itself.
