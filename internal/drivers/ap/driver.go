@@ -120,4 +120,20 @@ func validateAppID(id string) error {
 	return nil
 }
 
+func validateIOxAppID(id string) error {
+	if len(id) == 0 || len(id) > 128 || id == "." || id == ".." {
+		return fmt.Errorf("AP IOx API: invalid application ID")
+	}
+	for i, r := range id {
+		if (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9') || r == '_' || r == '-' || r == '.' {
+			if i == 0 && (r == '_' || r == '-' || r == '.') {
+				return fmt.Errorf("AP IOx API: invalid application ID")
+			}
+			continue
+		}
+		return fmt.Errorf("AP IOx API: invalid application ID")
+	}
+	return nil
+}
+
 func appState(state string) string { return strings.ToUpper(strings.TrimSpace(state)) }

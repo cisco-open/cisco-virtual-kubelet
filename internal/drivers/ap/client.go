@@ -21,12 +21,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"mime/multipart"
 	"net/http"
 	"net/url"
-	"path"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
@@ -44,13 +43,16 @@ type ioxClient struct {
 	username string
 	password string
 	http     *http.Client
+	tokenMu  sync.Mutex
+	token    string
 }
 
 type appInfo struct {
-	ID    string `json:"id"`
-	State string `json:"state"`
-	Name  string `json:"name"`
-	Error string `json:"error"`
+	ID          string          `json:"id"`
+	State       string          `json:"state"`
+	Name        string          `json:"name"`
+	Error       string          `json:"error"`
+	NetworkInfo json.RawMessage `json:"networkInfo"`
 }
 
 func newIOxClient(spec *v1alpha1.DeviceSpec) (*ioxClient, error) {
@@ -91,47 +93,126 @@ func newIOxClient(spec *v1alpha1.DeviceSpec) (*ioxClient, error) {
 	}, nil
 }
 
-func (c *ioxClient) do(ctx context.Context, method, endpoint, contentType string, body io.Reader, out any) error {
+func (c *ioxClient) tokenID(ctx context.Context) (string, error) {
+	c.tokenMu.Lock()
+	defer c.tokenMu.Unlock()
+	if c.token != "" {
+		return c.token, nil
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.baseURL+"/tokenservice", nil)
+	if err != nil {
+		return "", fmt.Errorf("AP IOx API: create authentication request: %w", err)
+	}
+	req.SetBasicAuth(c.username, c.password)
+	req.Header.Set("Accept", "application/json")
+	resp, err := c.http.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("AP IOx API: request authentication token: %w", err)
+	}
+	defer resp.Body.Close()
+	data, err := io.ReadAll(io.LimitReader(resp.Body, maxAPIResponseSize+1))
+	if err != nil {
+		return "", fmt.Errorf("AP IOx API: read authentication response: %w", err)
+	}
+	if len(data) > maxAPIResponseSize {
+		return "", fmt.Errorf("AP IOx API: authentication response exceeded size limit")
+	}
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return "", fmt.Errorf("AP IOx API: token request returned HTTP %d", resp.StatusCode)
+	}
+	var result struct {
+		Token struct {
+			ID string `json:"id"`
+		} `json:"token"`
+	}
+	if err := json.Unmarshal(data, &result); err != nil || strings.TrimSpace(result.Token.ID) == "" {
+		return "", fmt.Errorf("AP IOx API: token response did not contain token.id")
+	}
+	c.token = result.Token.ID
+	return c.token, nil
+}
+
+func (c *ioxClient) discardToken(token string) {
+	c.tokenMu.Lock()
+	defer c.tokenMu.Unlock()
+	if c.token == token {
+		c.token = ""
+	}
+}
+
+func (c *ioxClient) do(ctx context.Context, method, endpoint, contentType string, body []byte, out any) error {
+	return c.doWithHeaders(ctx, method, endpoint, contentType, body, nil, out)
+}
+
+func (c *ioxClient) doWithHeaders(ctx context.Context, method, endpoint, contentType string, body []byte, headers http.Header, out any) error {
 	if strings.HasPrefix(endpoint, "/") || strings.Contains(endpoint, "..") {
 		return fmt.Errorf("AP IOx API: invalid endpoint")
 	}
 	requestURL := c.baseURL + "/" + endpoint
-	req, err := http.NewRequestWithContext(ctx, method, requestURL, body)
-	if err != nil {
-		return fmt.Errorf("AP IOx API: create request: %w", err)
-	}
-	req.SetBasicAuth(c.username, c.password)
-	req.Header.Set("Accept", "application/json")
-	if contentType != "" {
-		req.Header.Set("Content-Type", contentType)
-	}
-	resp, err := c.http.Do(req)
-	if err != nil {
-		return fmt.Errorf("AP IOx API request failed: %w", err)
-	}
-	defer resp.Body.Close()
-	limited := io.LimitReader(resp.Body, maxAPIResponseSize+1)
-	data, err := io.ReadAll(limited)
-	if err != nil {
-		return fmt.Errorf("AP IOx API: read response: %w", err)
-	}
-	if len(data) > maxAPIResponseSize {
-		return fmt.Errorf("AP IOx API: response exceeded size limit")
-	}
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return &ioxHTTPError{status: resp.StatusCode}
-	}
-	if out != nil && len(bytes.TrimSpace(data)) != 0 {
-		if err := json.Unmarshal(data, out); err != nil {
-			return fmt.Errorf("AP IOx API: invalid JSON response")
+	for attempt := 0; attempt < 2; attempt++ {
+		token, err := c.tokenID(ctx)
+		if err != nil {
+			return err
 		}
+		req, err := http.NewRequestWithContext(ctx, method, requestURL, bytes.NewReader(body))
+		if err != nil {
+			return fmt.Errorf("AP IOx API: create request: %w", err)
+		}
+		req.Header.Set("X-Token-Id", token)
+		req.Header.Set("Accept", "application/json")
+		for name, values := range headers {
+			for _, value := range values {
+				req.Header.Add(name, value)
+			}
+		}
+		if contentType != "" {
+			req.Header.Set("Content-Type", contentType)
+		}
+		resp, err := c.http.Do(req)
+		if err != nil {
+			return fmt.Errorf("AP IOx API request failed: %w", err)
+		}
+		data, err := io.ReadAll(io.LimitReader(resp.Body, maxAPIResponseSize+1))
+		resp.Body.Close()
+		if err != nil {
+			return fmt.Errorf("AP IOx API: read response: %w", err)
+		}
+		if len(data) > maxAPIResponseSize {
+			return fmt.Errorf("AP IOx API: response exceeded size limit")
+		}
+		if resp.StatusCode == http.StatusUnauthorized && attempt == 0 && isExpiredTokenResponse(data) {
+			c.discardToken(token)
+			continue
+		}
+		if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+			return &ioxHTTPError{status: resp.StatusCode, detail: strings.TrimSpace(string(data))}
+		}
+		if out != nil && len(bytes.TrimSpace(data)) != 0 {
+			if err := json.Unmarshal(data, out); err != nil {
+				return fmt.Errorf("AP IOx API: invalid JSON response")
+			}
+		}
+		return nil
 	}
-	return nil
+	return fmt.Errorf("AP IOx API: authentication token remained invalid after renewal")
 }
 
-type ioxHTTPError struct{ status int }
+func isExpiredTokenResponse(data []byte) bool {
+	message := strings.ToLower(string(data))
+	return strings.Contains(message, "invalid / expired token") || strings.Contains(message, "invalid/expired token")
+}
 
-func (e *ioxHTTPError) Error() string { return fmt.Sprintf("AP IOx API returned HTTP %d", e.status) }
+type ioxHTTPError struct {
+	status int
+	detail string
+}
+
+func (e *ioxHTTPError) Error() string {
+	if e.detail != "" {
+		return fmt.Sprintf("AP IOx API returned HTTP %d: %s", e.status, e.detail)
+	}
+	return fmt.Sprintf("AP IOx API returned HTTP %d", e.status)
+}
 
 func (c *ioxClient) listApps(ctx context.Context) ([]appInfo, error) {
 	var raw json.RawMessage
@@ -156,7 +237,7 @@ func (c *ioxClient) listApps(ctx context.Context) ([]appInfo, error) {
 }
 
 func (c *ioxClient) app(ctx context.Context, id string) (appInfo, error) {
-	if err := validateAppID(id); err != nil {
+	if err := validateIOxAppID(id); err != nil {
 		return appInfo{}, err
 	}
 	var app appInfo
@@ -170,27 +251,17 @@ func (c *ioxClient) app(ctx context.Context, id string) (appInfo, error) {
 	return app, nil
 }
 
-func (c *ioxClient) install(ctx context.Context, id, filename string, packageData []byte) error {
+func (c *ioxClient) install(ctx context.Context, id string, packageData []byte) error {
 	if err := validateAppID(id); err != nil {
 		return err
 	}
-	var body bytes.Buffer
-	w := multipart.NewWriter(&body)
-	part, err := w.CreateFormFile("file", path.Base(filename))
-	if err != nil {
-		return fmt.Errorf("AP IOx API: create package upload: %w", err)
-	}
-	if _, err := part.Write(packageData); err != nil {
-		return fmt.Errorf("AP IOx API: write package upload: %w", err)
-	}
-	if err := w.Close(); err != nil {
-		return fmt.Errorf("AP IOx API: finish package upload: %w", err)
-	}
-	return c.do(ctx, http.MethodPost, "apps/"+url.PathEscape(id), w.FormDataContentType(), &body, nil)
+	headers := make(http.Header)
+	headers.Set("X-Connector-Id", id)
+	return c.doWithHeaders(ctx, http.MethodPost, "apps", "application/octet-stream", packageData, headers, nil)
 }
 
 func (c *ioxClient) action(ctx context.Context, id, action string, payload any) error {
-	if err := validateAppID(id); err != nil {
+	if err := validateIOxAppID(id); err != nil {
 		return err
 	}
 	switch action {
@@ -198,14 +269,14 @@ func (c *ioxClient) action(ctx context.Context, id, action string, payload any) 
 	default:
 		return fmt.Errorf("AP IOx API: unsupported application action")
 	}
-	var body io.Reader
+	var body []byte
 	contentType := ""
 	if payload != nil {
 		encoded, err := json.Marshal(payload)
 		if err != nil {
 			return fmt.Errorf("AP IOx API: encode activation payload: %w", err)
 		}
-		body = bytes.NewReader(encoded)
+		body = encoded
 		contentType = "application/json"
 	}
 	endpoint := "apps/" + url.PathEscape(id) + "/state?action=" + url.QueryEscape(action)
@@ -213,7 +284,7 @@ func (c *ioxClient) action(ctx context.Context, id, action string, payload any) 
 }
 
 func (c *ioxClient) uninstall(ctx context.Context, id string) error {
-	if err := validateAppID(id); err != nil {
+	if err := validateIOxAppID(id); err != nil {
 		return err
 	}
 	return c.do(ctx, http.MethodDelete, "apps/"+url.PathEscape(id), "", nil, nil)

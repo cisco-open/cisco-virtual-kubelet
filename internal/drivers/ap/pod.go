@@ -89,11 +89,11 @@ func (d *Driver) deployApp(ctx context.Context, pod *corev1.Pod, container corev
 	} else if !isHTTPStatus(err, http.StatusNotFound) {
 		return err
 	}
-	packageBytes, filename, err := fetchPackage(ctx, container.Image)
+	packageBytes, _, err := fetchPackage(ctx, container.Image)
 	if err != nil {
 		return err
 	}
-	if err := d.client.install(ctx, id, filename, packageBytes); err != nil {
+	if err := d.client.install(ctx, id, packageBytes); err != nil {
 		return fmt.Errorf("install IOx package: %w", err)
 	}
 	payload, err := activationPayloadFor(pod)

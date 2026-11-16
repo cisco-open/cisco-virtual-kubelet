@@ -45,12 +45,6 @@ func TestHelloAppLifecycleThroughNativeCAF(t *testing.T) {
 	states := map[string]string{}
 	var calls []string
 	apiServer := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		user, password, ok := r.BasicAuth()
-		if !ok || user != "ap-test" || password != "ap-test-password" {
-			t.Errorf("request did not use configured basic auth")
-			w.WriteHeader(http.StatusUnauthorized)
-			return
-		}
 		prefix := ioxAPIPrefix + "/"
 		if !strings.HasPrefix(r.URL.Path, prefix) {
 			t.Errorf("unexpected API path %q", r.URL.Path)
@@ -58,12 +52,44 @@ func TestHelloAppLifecycleThroughNativeCAF(t *testing.T) {
 			return
 		}
 		resource := strings.TrimPrefix(r.URL.Path, prefix)
+		if resource == "tokenservice" && r.Method == http.MethodPost {
+			user, password, ok := r.BasicAuth()
+			if !ok || user != "ap-test" || password != "ap-test-password" {
+				t.Errorf("token request did not use configured basic auth")
+				http.Error(w, "unauthorized", http.StatusUnauthorized)
+				return
+			}
+			writeJSON(t, w, map[string]any{"token": map[string]string{"id": "test-token"}})
+			return
+		}
+		if r.Header.Get("X-Token-Id") != "test-token" {
+			t.Errorf("API request did not use the issued IOx token")
+			http.Error(w, "invalid / expired token", http.StatusUnauthorized)
+			return
+		}
 		if resource == "apps" && r.Method == http.MethodGet {
 			apps := make([]appInfo, 0, len(states))
 			for id, state := range states {
 				apps = append(apps, appInfo{ID: id, State: state})
 			}
 			writeJSON(t, w, apps)
+			return
+		}
+		if resource == "apps" && r.Method == http.MethodPost {
+			if r.Header.Get("Content-Type") != "application/octet-stream" || r.Header.Get("X-Connector-Id") == "" {
+				t.Errorf("install request has unexpected content type or application ID")
+				http.Error(w, "bad request", http.StatusBadRequest)
+				return
+			}
+			upload, err := io.ReadAll(r.Body)
+			if err != nil || !bytes.Equal(upload, packageData) {
+				t.Errorf("install upload did not contain the downloaded IOx package")
+				http.Error(w, "bad request", http.StatusBadRequest)
+				return
+			}
+			states[r.Header.Get("X-Connector-Id")] = "DEPLOYED"
+			calls = append(calls, "install")
+			w.WriteHeader(http.StatusCreated)
 			return
 		}
 		parts := strings.Split(resource, "/")
@@ -86,28 +112,6 @@ func TestHelloAppLifecycleThroughNativeCAF(t *testing.T) {
 					return
 				}
 				writeJSON(t, w, appInfo{ID: id, State: state})
-			case http.MethodPost:
-				reader, err := r.MultipartReader()
-				if err != nil {
-					t.Errorf("install request was not multipart: %v", err)
-					http.Error(w, "bad request", http.StatusBadRequest)
-					return
-				}
-				part, err := reader.NextPart()
-				if err != nil || part.FormName() != "file" || part.FileName() != "hello.tar" {
-					t.Errorf("install upload has unexpected multipart fields")
-					http.Error(w, "bad request", http.StatusBadRequest)
-					return
-				}
-				upload, err := io.ReadAll(part)
-				if err != nil || !bytes.Equal(upload, packageData) {
-					t.Errorf("install upload did not contain the downloaded IOx package")
-					http.Error(w, "bad request", http.StatusBadRequest)
-					return
-				}
-				states[id] = "DEPLOYED"
-				calls = append(calls, "install")
-				w.WriteHeader(http.StatusCreated)
 			case http.MethodDelete:
 				delete(states, id)
 				calls = append(calls, "uninstall")
