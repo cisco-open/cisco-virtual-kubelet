@@ -35,6 +35,7 @@ evidence must name the reviewed candidate commit.
 | Metrics | Failed/empty CLI parses no longer report success or retain stale device samples. Band labels follow reported frequency, output escaping/precision is corrected, SSH output is bounded, and server/configuration behavior has regression coverage. |
 | Live harness | Cleanup targets only the exact IDs created by that test. Replacing a metrics app requires an explicit exact app ID, avoiding name/port-based deletion of unrelated apps. |
 | Toolchain | The baseline scan found reachable [GO-2026-6859](https://pkg.go.dev/vuln/GO-2026-6859) in Go 1.26.10. Current module, CI and Docker pins now use verified Go 1.26.11; installer security floors are 1.26.11 / 1.27.4. Historical November notes are preserved. |
+| Image security | The first hosted CI run flagged CVE-2026-78661 in both controller images. The root and independent Terraform modules now select `golang.org/x/net v0.62.0` and its required companion dependency updates. Image-scan severity and failure thresholds remain unchanged. |
 | Build and documentation | CI now tests, vets, cross-builds and vulnerability-scans the exporter's nested module. Its build helper includes redistribution notices. A platform guide and candidate manifests describe supported behavior and limitations. |
 
 ## Local validation
@@ -88,18 +89,25 @@ build is not the full pinned CI environment.
 
 ## Inherited dependency findings
 
-The baseline verbose Go scan also reported the following **uncalled** findings.
-No affected symbol was reachable in that scan; they are not dismissed or treated
-as proof that the final image gate will pass. Dependency upgrades are left out
-of this AP feature change to avoid unrelated compatibility changes. The release
-owner must assess the exact built artifacts and current advisory mappings.
+The first [PR #218 smoke run](https://github.com/cisco-open/cisco-virtual-kubelet/actions/runs/44940895369)
+passed its source vulnerability checks but failed both the Linux AMD64 and ARM64
+image gates on **CVE-2026-78661** in `golang.org/x/net v0.60.0`. The root and
+Terraform modules now use `v0.62.0`, which fixes
+[GO-2026-6860](https://pkg.go.dev/vuln/GO-2026-6860) and
+[GO-2026-6866](https://pkg.go.dev/vuln/GO-2026-6866). The exporter does not depend
+on `x/net`. This illustrates why the exact-image gate remains required even
+when the source scan finds no reachable vulnerable symbols.
+
+The following **uncalled** findings remain recorded separately from that fix.
+No affected symbol was reachable in the source scan; this does not waive the
+image gate. The release owner must assess the exact built artifacts and current
+advisory mappings. Unrelated dependency upgrades remain outside this change.
 
 | Advisory | Inherited version | Go database remediation |
 | --- | --- | --- |
 | [GO-2026-6107](https://pkg.go.dev/vuln/GO-2026-6107) | `go.etcd.io/etcd/client/pkg/v3 v3.7.0` | `v3.7.1`; vulnerable TLS-listener entry points are not called |
 | [GO-2026-6094](https://pkg.go.dev/vuln/GO-2026-6094) | `github.com/google/cel-go v0.29.2` | `v0.30.0`; affected NativeTypes/ParseStructTag behavior is not called |
-| [GO-2026-6860](https://pkg.go.dev/vuln/GO-2026-6860), [GO-2026-6866](https://pkg.go.dev/vuln/GO-2026-6866) | `golang.org/x/net v0.60.0` | `v0.62.0`; `html` is not imported by the controller |
-| [GO-2026-5932](https://pkg.go.dev/vuln/GO-2026-5932) | `golang.org/x/crypto v0.57.0` | `v0.59.0` is the first stable release after removal of the affected OpenPGP package; AP uses SSH, not OpenPGP |
+| [GO-2026-5932](https://pkg.go.dev/vuln/GO-2026-5932) | `golang.org/x/crypto v0.58.0` in the controller, `v0.57.0` in the exporter | `v0.59.0` is the first stable release after removal of the affected OpenPGP package; AP uses SSH, not OpenPGP |
 
 ## Remaining boundaries
 
