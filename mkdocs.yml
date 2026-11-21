@@ -49,6 +49,7 @@ nav:
   - Device setup:
     - Catalyst 8000V: 'configuration-cat8000v.md'
     - Catalyst 9000: 'configuration-cat9000.md'
+    - Catalyst AP (December candidate): 'configuration-ap.md'
     - IR1100 Series: 'configuration-ir1101.md'
     - IE3500 Series: 'configuration-ie3500.md'
   - Network as Code: 'netascode-config.md'
@@ -105,6 +106,7 @@ nav:
   - Topology execution plan: 'topology-roadmap-execution.md'
 - Releases and archive:
   - Releases overview: 'releases/index.md'
+  - December AP assessment: 'releases/2026-12-ap-readiness.md'
   - Corrected November candidate notes: 'releases/v2026.11.1.md'
   - Corrected November preparation record: 'releases/v2026.11.1-readiness.md'
   - Rejected November candidate:

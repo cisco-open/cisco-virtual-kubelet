@@ -35,6 +35,7 @@ func TestCompiledDriverRegistryHasSupportedAppHostingPlatforms(t *testing.T) {
 	for _, kind := range []ciskov1.DeviceDriver{
 		ciskov1.DeviceDriverXE,
 		ciskov1.DeviceDriverNXOS,
+		ciskov1.DeviceDriverAP,
 		ciskov1.DeviceDriverFAKE,
 	} {
 		if !drivers.Registered(kind) {

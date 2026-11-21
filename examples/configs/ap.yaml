@@ -1,0 +1,43 @@
+# Candidate AP driver: requires matching candidate image and CiscoDevice CRD.
+# Create ap-01-credentials with a password key; replace host and package URL.
+apiVersion: cisco.vk/v1alpha1
+kind: CiscoDevice
+metadata:
+  name: ap-01
+  namespace: default
+spec:
+  driver: AP
+  address: ap-01.example.net
+  username: cvk-operator
+  credentialSecretRef:
+    name: ap-01-credentials
+  tls:
+    enabled: true
+  maxPods: 2
+  taints:
+    - key: cisco.io/ap
+      value: "true"
+      effect: NoSchedule
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: ap-hello
+  namespace: default
+spec:
+  nodeSelector:
+    kubernetes.io/hostname: ap-01
+    platform: cisco-ap
+  tolerations:
+    - key: cisco.io/ap
+      operator: Equal
+      value: "true"
+      effect: NoSchedule
+  automountServiceAccountToken: false
+  enableServiceLinks: false
+  dnsPolicy: Default
+  restartPolicy: Always
+  containers:
+    - name: hello
+      image: https://artifacts.example.net/ap/hello-v1.tar
+      imagePullPolicy: IfNotPresent

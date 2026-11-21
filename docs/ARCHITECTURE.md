@@ -200,6 +200,8 @@ Selects a driver based on `spec.Driver`:
 - `NXOS` → NX-OS driver (NX-API CLI app-hosting and the initial NX-API
   REST/DME Network as Code config slice: `system`, `vlan`,
   `interface_ethernet`)
+- `AP` → Catalyst Access Point app-hosting through the AP's native IOx CAF API;
+  `container.image` must reference a prebuilt IOx package archive
 - `FAKE` → mock driver for testing
 - `XR`, `OPENCONFIG` → placeholders, currently unsupported
 

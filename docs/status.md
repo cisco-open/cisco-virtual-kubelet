@@ -17,6 +17,14 @@ Managed topology separates app-hosting and network-management ServiceAccounts.
 Native admission and exact worker binding complement RBAC; see the
 [security boundary](security.md) before enabling operational changes.
 
+## December candidate
+
+This branch additionally contains **Alpha Catalyst AP app hosting**, targeted
+for the 1 December 2026 integration. It is not part of the November baseline.
+Read the [AP guide](configuration-ap.md) and
+[assessment and qualification record](releases/2026-12-ap-readiness.md) for its
+restricted Pod contract and outstanding hardware evidence.
+
 ## Feature maturity
 
 | Feature area | Maturity | Scope and limits |

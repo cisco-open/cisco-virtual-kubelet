@@ -103,6 +103,18 @@ func validateDeviceSpec(spec *v1alpha1.DeviceSpec) error {
 }
 
 func SetDeviceDefaults(spec *v1alpha1.DeviceSpec) error {
+	// AP CAF always uses HTTPS, independently of the shared IOS-XE defaults.
+	// Preserve CA and verification settings even when enabled was omitted.
+	if spec.Driver == v1alpha1.DeviceDriverAP {
+		if spec.Port == 0 {
+			spec.Port = 8443
+		}
+		if spec.TLS == nil {
+			spec.TLS = &v1alpha1.TLSConfig{}
+		}
+		spec.TLS.Enabled = true
+		return nil
+	}
 	// Apply default if Port is not explicitly set (is 0)
 	if spec.Port == 0 {
 		if spec.TLS == nil || !spec.TLS.Enabled {

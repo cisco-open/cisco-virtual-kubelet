@@ -63,7 +63,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
         with:
-          go-version: '1.26.10'
+          go-version: '1.26.11'
           cache: true
 
       - name: Setup Python for documentation checks
@@ -126,6 +126,16 @@ jobs:
       # node_modules directories that can themselves contain Go packages.
       - name: Unit tests
         run: go test -race -count=1 ./...
+
+      # A nested module is not included by the root ./... pattern.
+      - name: AP metrics exporter tests and ARM64 build
+        working-directory: examples/ap-metrics
+        run: |
+          set -euo pipefail
+          go vet ./...
+          go test -race -count=1 ./...
+          # Verify redistribution inputs without relying on root-module cache contents.
+          GOMODCACHE="$(mktemp -d)" sh build.sh
 
       - name: gNOI lab runner and acceptance evidence safety tests (offline)
         run: |
@@ -717,7 +727,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
         with:
-          go-version: '1.26.10'
+          go-version: '1.26.11'
           cache: true
           cache-dependency-path: tools/terraform-provider-iosxeconfig/go.sum
 
@@ -780,17 +790,22 @@ jobs:
       - name: Set up pinned Go
         uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
         with:
-          go-version: '1.26.10'
+          go-version: '1.26.11'
           cache: true
           cache-dependency-path: |
             go.sum
             tools/terraform-provider-iosxeconfig/go.sum
+            examples/ap-metrics/go.sum
 
       - name: Run controller govulncheck
         run: go run golang.org/x/vuln/cmd/govulncheck@v1.7.0 ./...
 
       - name: Run Terraform provider govulncheck
         working-directory: tools/terraform-provider-iosxeconfig
+        run: go run golang.org/x/vuln/cmd/govulncheck@v1.7.0 ./...
+
+      - name: Run AP metrics exporter govulncheck
+        working-directory: examples/ap-metrics
         run: go run golang.org/x/vuln/cmd/govulncheck@v1.7.0 ./...
 
   ygot-validate:
@@ -804,7 +819,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
         with:
-          go-version: '1.26.10'
+          go-version: '1.26.11'
           cache: true
 
       - name: Download YANG modules

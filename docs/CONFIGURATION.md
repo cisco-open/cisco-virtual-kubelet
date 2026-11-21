@@ -77,9 +77,9 @@ below. See the [CLI reference](cisco-vk-cli.md#cisco-vk-run) for the full list.
 
 | Field | Type | Required | Default | Notes |
 |---|---|---|---|---|
-| `driver` | enum | yes | — | `XE`, `NXOS`, `XR`, `OPENCONFIG`, `FAKE`. `XE` is the broadest production driver. `NXOS` supports NX-API CLI app-hosting plus the initial NX-API REST/DME `NXOSConfig` Network as Code slice (`system`, `feature`, `feature_set`, `vlan`, `interface_ethernet`). `XR` and `OPENCONFIG` remain reserved placeholders. |
+| `driver` | enum | yes | — | `XE`, `NXOS`, `AP`, `XR`, `OPENCONFIG`, `FAKE`. `AP` is the [December Alpha candidate](configuration-ap.md) for native IOx packages. `XE` is the broadest production driver. `NXOS` supports NX-API CLI app-hosting plus the initial NX-API REST/DME `NXOSConfig` Network as Code slice (`system`, `feature`, `feature_set`, `vlan`, `interface_ethernet`). `XR` and `OPENCONFIG` remain reserved placeholders. |
 | `address` | string | yes | — | Management IP or hostname |
-| `port` | int (1–65535) | no | 443 (TLS) / 80 | Device API port. IOS-XE uses RESTCONF/NETCONF/gNMI depending on transport; NX-OS uses NX-API CLI and NX-API REST/DME over HTTP(S). |
+| `port` | int (1–65535) | no | 443 (TLS) / 80 | Device API port; AP defaults to 8443 and always uses HTTPS. IOS-XE uses RESTCONF/NETCONF/gNMI depending on transport; NX-OS uses NX-API CLI and NX-API REST/DME over HTTP(S). |
 | `username` | string | yes | — | Device username |
 | `password` | string | no | — | Device password. **Do not set in controller mode** — use `credentialSecretRef` instead. |
 | `credentialSecretRef` | LocalObjectReference | no | — | Reference to a `Secret` in the same namespace containing key `password`. See [Security](security-credentials.md#credential-injection). |

@@ -22,6 +22,7 @@ import (
 	"strings"
 
 	ciskov1 "github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
+	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/common"
 	"github.com/cisco/virtual-kubelet-cisco/internal/topology"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
 	v1 "k8s.io/api/core/v1"
@@ -93,6 +94,9 @@ func GetInitialNodeSpecWithTopologyMode(
 	conditions := InitNodeConditions()
 	maxPods := effectiveMaxPods(deviceSpec)
 	capacity := initNodeCapacity(maxPods)
+	if driver == ciskov1.DeviceDriverAP {
+		capacity = initManagedNodeCapacity(maxPods, true)
+	}
 	var capacityErr error
 	if mode == topology.ProjectionModeManaged {
 		maxPods = rawMaxPods(deviceSpec)
@@ -236,6 +240,8 @@ type nodePlatformInfo struct {
 
 func nodePlatformMetadata(driver ciskov1.DeviceDriver) nodePlatformInfo {
 	switch driver {
+	case ciskov1.DeviceDriverAP:
+		return nodePlatformInfo{Label: "cisco-ap", LegacyTopology: "cisco-ap", OSImage: "Catalyst AP (IOx)"}
 	case ciskov1.DeviceDriverNXOS:
 		return nodePlatformInfo{Label: "cisco-nxos", LegacyTopology: "cisco-nxos", OSImage: "NX-OS"}
 	case ciskov1.DeviceDriverXR:
@@ -284,6 +290,9 @@ func initManagedNodeCapacity(maxPods int64, valid bool) v1.ResourceList {
 }
 
 func effectiveMaxPods(deviceSpec *ciskov1.DeviceSpec) int64 {
+	if deviceSpec != nil && deviceSpec.Driver == ciskov1.DeviceDriverAP {
+		return common.APMaxPods(deviceSpec.MaxPods)
+	}
 	if deviceSpec != nil && deviceSpec.MaxPods > 0 {
 		return int64(deviceSpec.MaxPods)
 	}

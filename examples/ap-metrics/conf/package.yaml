@@ -1,0 +1,21 @@
+descriptor-schema-version: "2.10"
+
+info:
+  name: cisco-ap-metrics
+  description: Lightweight AP telemetry exporter for Catalyst 9100 IOx
+  version: "0.2.0"
+  author-name: Cisco Virtual Kubelet
+
+app:
+  cpuarch: aarch64
+  type: docker
+  resources:
+    profile: c1.tiny
+    network:
+      - interface-name: eth0
+        ports:
+          tcp:
+            - 9100
+  startup:
+    rootfs: rootfs.img
+    target: /usr/local/bin/ap-metrics
