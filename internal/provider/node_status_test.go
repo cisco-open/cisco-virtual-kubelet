@@ -375,6 +375,9 @@ func TestEffectiveMaxPodsUsesCompatibilityDefault(t *testing.T) {
 		{name: "zero before API defaulting", spec: &v1alpha1.DeviceSpec{}, want: 16},
 		{name: "invalid negative", spec: &v1alpha1.DeviceSpec{MaxPods: -1}, want: 16},
 		{name: "configured", spec: &v1alpha1.DeviceSpec{MaxPods: 37}, want: 37},
+		{name: "AP before API defaulting", spec: &v1alpha1.DeviceSpec{Driver: v1alpha1.DeviceDriverAP}, want: 2},
+		{name: "AP after API defaulting", spec: &v1alpha1.DeviceSpec{Driver: v1alpha1.DeviceDriverAP, MaxPods: 16}, want: 2},
+		{name: "AP reserved slot", spec: &v1alpha1.DeviceSpec{Driver: v1alpha1.DeviceDriverAP, MaxPods: 1}, want: 1},
 	}
 
 	for _, tt := range tests {
@@ -383,6 +386,23 @@ func TestEffectiveMaxPodsUsesCompatibilityDefault(t *testing.T) {
 				t.Fatalf("effectiveMaxPods() = %d, want %d", got, tt.want)
 			}
 		})
+	}
+}
+
+func TestAPNodeCapacityAndPlatform(t *testing.T) {
+	spec := &v1alpha1.DeviceSpec{Driver: v1alpha1.DeviceDriverAP, MaxPods: 16}
+	initial := GetInitialNodeSpec("ap-01", spec)
+	if len(initial.Status.Capacity) != 1 || initial.Status.Capacity.Pods().Value() != 2 {
+		t.Fatalf("AP initial capacity includes fictitious quota: %v", initial.Status.Capacity)
+	}
+	if initial.Labels[topology.LabelPlatform] != "cisco-ap" {
+		t.Fatalf("AP platform label = %v", initial.Labels)
+	}
+	node := NewAppHostingNode(context.Background(), "ap-01", spec, nodeStatusTestDriver{})
+	var observed *v1.Node
+	node.syncNodeStatus(context.Background(), func(update *v1.Node) { observed = update })
+	if observed == nil || len(observed.Status.Capacity) != 1 || observed.Status.Capacity.Pods().Value() != 2 || observed.Status.Allocatable.Pods().Value() != 2 {
+		t.Fatalf("AP runtime node capacity: %#v", observed)
 	}
 }
 

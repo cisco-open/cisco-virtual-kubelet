@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -40,12 +41,13 @@ const (
 )
 
 type ioxClient struct {
-	baseURL  string
-	username string
-	password string
-	http     *http.Client
-	tokenMu  sync.Mutex
-	token    string
+	baseURL   string
+	username  string
+	password  string
+	http      *http.Client
+	tokenMu   sync.Mutex
+	token     string
+	tokenWait chan struct{}
 }
 
 type appInfo struct {
@@ -70,9 +72,15 @@ func newIOxClient(spec *v1alpha1.DeviceSpec) (*ioxClient, error) {
 	if port < 1 || port > 65535 {
 		return nil, fmt.Errorf("AP IOx client: invalid port")
 	}
-	host := spec.Address
-	if strings.Contains(host, ":") && !strings.HasPrefix(host, "[") {
-		host = "[" + host + "]"
+	host := strings.TrimSpace(spec.Address)
+	if strings.HasPrefix(host, "[") && strings.HasSuffix(host, "]") {
+		host = host[1 : len(host)-1]
+		if !strings.Contains(host, ":") || net.ParseIP(host) == nil {
+			return nil, fmt.Errorf("AP IOx client: bracketed address must be IPv6")
+		}
+	}
+	if host == "" || strings.ContainsAny(host, "/\\?#@[]% \t\r\n") || (strings.Contains(host, ":") && net.ParseIP(host) == nil) {
+		return nil, fmt.Errorf("AP IOx client: address must be a hostname or IP address without a URL or port")
 	}
 	tlsConfig := &tls.Config{MinVersion: tls.VersionTLS12}
 	if spec.TLS != nil {
@@ -87,7 +95,7 @@ func newIOxClient(spec *v1alpha1.DeviceSpec) (*ioxClient, error) {
 	client := &http.Client{Timeout: 10 * time.Minute, Transport: transport}
 	client.CheckRedirect = func(_ *http.Request, _ []*http.Request) error { return http.ErrUseLastResponse }
 	return &ioxClient{
-		baseURL:  "https://" + host + ":" + strconv.Itoa(port) + ioxAPIPrefix,
+		baseURL:  "https://" + net.JoinHostPort(host, strconv.Itoa(port)) + ioxAPIPrefix,
 		username: spec.Username,
 		password: spec.Password,
 		http:     client,
@@ -95,11 +103,42 @@ func newIOxClient(spec *v1alpha1.DeviceSpec) (*ioxClient, error) {
 }
 
 func (c *ioxClient) tokenID(ctx context.Context) (string, error) {
-	c.tokenMu.Lock()
-	defer c.tokenMu.Unlock()
-	if c.token != "" {
-		return c.token, nil
+	for {
+		if err := ctx.Err(); err != nil {
+			return "", err
+		}
+		c.tokenMu.Lock()
+		if c.token != "" {
+			token := c.token
+			c.tokenMu.Unlock()
+			return token, nil
+		}
+		if wait := c.tokenWait; wait != nil {
+			c.tokenMu.Unlock()
+			select {
+			case <-ctx.Done():
+				return "", ctx.Err()
+			case <-wait:
+				continue
+			}
+		}
+		// Keep only one authentication request in flight without holding the
+		// mutex across network I/O: other callers can still cancel their wait.
+		c.tokenWait = make(chan struct{})
+		c.tokenMu.Unlock()
+		token, err := c.authenticate(ctx)
+		c.tokenMu.Lock()
+		if err == nil {
+			c.token = token
+		}
+		close(c.tokenWait)
+		c.tokenWait = nil
+		c.tokenMu.Unlock()
+		return token, err
 	}
+}
+
+func (c *ioxClient) authenticate(ctx context.Context) (string, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.baseURL+"/tokenservice", nil)
 	if err != nil {
 		return "", fmt.Errorf("AP IOx API: create authentication request: %w", err)
@@ -129,8 +168,7 @@ func (c *ioxClient) tokenID(ctx context.Context) (string, error) {
 	if err := json.Unmarshal(data, &result); err != nil || strings.TrimSpace(result.Token.ID) == "" {
 		return "", fmt.Errorf("AP IOx API: token response did not contain token.id")
 	}
-	c.token = result.Token.ID
-	return c.token, nil
+	return result.Token.ID, nil
 }
 
 func (c *ioxClient) discardToken(token string) {
@@ -146,8 +184,14 @@ func (c *ioxClient) do(ctx context.Context, method, endpoint, contentType string
 }
 
 func (c *ioxClient) doWithHeaders(ctx context.Context, method, endpoint, contentType string, body []byte, headers http.Header, out any) error {
-	if strings.HasPrefix(endpoint, "/") || strings.Contains(endpoint, "..") {
+	endpointURL, err := url.Parse(endpoint)
+	if err != nil || endpointURL.IsAbs() || endpointURL.Host != "" || strings.HasPrefix(endpointURL.Path, "/") || endpointURL.Fragment != "" {
 		return fmt.Errorf("AP IOx API: invalid endpoint")
+	}
+	for _, segment := range strings.Split(endpointURL.Path, "/") {
+		if segment == "." || segment == ".." {
+			return fmt.Errorf("AP IOx API: invalid endpoint")
+		}
 	}
 	requestURL := c.baseURL + "/" + endpoint
 	for attempt := 0; attempt < 2; attempt++ {
@@ -186,9 +230,12 @@ func (c *ioxClient) doWithHeaders(ctx context.Context, method, endpoint, content
 			continue
 		}
 		if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-			return &ioxHTTPError{status: resp.StatusCode, detail: strings.TrimSpace(string(data))}
+			return &ioxHTTPError{status: resp.StatusCode}
 		}
-		if out != nil && len(bytes.TrimSpace(data)) != 0 {
+		if out != nil {
+			if len(bytes.TrimSpace(data)) == 0 {
+				return fmt.Errorf("AP IOx API: empty JSON response")
+			}
 			if err := json.Unmarshal(data, out); err != nil {
 				return fmt.Errorf("AP IOx API: invalid JSON response")
 			}
@@ -205,13 +252,11 @@ func isExpiredTokenResponse(data []byte) bool {
 
 type ioxHTTPError struct {
 	status int
-	detail string
 }
 
 func (e *ioxHTTPError) Error() string {
-	if e.detail != "" {
-		return fmt.Sprintf("AP IOx API returned HTTP %d: %s", e.status, e.detail)
-	}
+	// CAF may echo activation configuration or authentication material in
+	// errors. Never include untrusted response bodies in controller logs.
 	return fmt.Sprintf("AP IOx API returned HTTP %d", e.status)
 }
 
@@ -221,8 +266,8 @@ func (c *ioxClient) listApps(ctx context.Context) ([]appInfo, error) {
 		return nil, err
 	}
 	var direct []appInfo
-	if err := json.Unmarshal(raw, &direct); err == nil {
-		return direct, nil
+	if err := json.Unmarshal(raw, &direct); err == nil && direct != nil {
+		return checkedAppInventory(direct)
 	}
 	var wrapped struct {
 		Apps  []appInfo `json:"apps"`
@@ -232,9 +277,26 @@ func (c *ioxClient) listApps(ctx context.Context) ([]appInfo, error) {
 		return nil, fmt.Errorf("AP IOx API: unrecognized application list response")
 	}
 	if wrapped.Apps != nil {
-		return wrapped.Apps, nil
+		return checkedAppInventory(wrapped.Apps)
 	}
-	return wrapped.Items, nil
+	if wrapped.Items != nil {
+		return checkedAppInventory(wrapped.Items)
+	}
+	return nil, fmt.Errorf("AP IOx API: unrecognized application list response")
+}
+
+func checkedAppInventory(apps []appInfo) ([]appInfo, error) {
+	seen := make(map[string]struct{}, len(apps))
+	for _, app := range apps {
+		if strings.TrimSpace(app.ID) == "" {
+			return nil, fmt.Errorf("AP IOx API: application list entry has no ID")
+		}
+		if _, duplicate := seen[app.ID]; duplicate {
+			return nil, fmt.Errorf("AP IOx API: application list contains duplicate IDs")
+		}
+		seen[app.ID] = struct{}{}
+	}
+	return apps, nil
 }
 
 func (c *ioxClient) app(ctx context.Context, id string) (appInfo, error) {
@@ -248,6 +310,9 @@ func (c *ioxClient) app(ctx context.Context, id string) (appInfo, error) {
 	if app.ID != "" && app.ID != id {
 		return appInfo{}, fmt.Errorf("AP IOx API returned a mismatched application ID")
 	}
+	if strings.TrimSpace(app.State) == "" {
+		return appInfo{}, fmt.Errorf("AP IOx API returned an application without a state")
+	}
 	app.ID = id
 	return app, nil
 }
@@ -255,6 +320,9 @@ func (c *ioxClient) app(ctx context.Context, id string) (appInfo, error) {
 func (c *ioxClient) install(ctx context.Context, id string, packageData []byte) error {
 	if err := validateAppID(id); err != nil {
 		return err
+	}
+	if len(packageData) == 0 || len(packageData) > maxPackageSize {
+		return fmt.Errorf("AP IOx API: IOx package is empty or exceeds size limit")
 	}
 	headers := make(http.Header)
 	headers.Set("X-Connector-Id", id)

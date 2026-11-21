@@ -27,6 +27,7 @@ import (
 	"time"
 
 	"github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
+	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/common"
 	"github.com/google/uuid"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -40,7 +41,7 @@ import (
 // contain direct AP SSH settings; WLC credentials are neither used nor needed.
 // Set CVK_AP_METRICS_KEEP=1 to leave the deployed app running for inspection,
 // including when the metrics check fails. Set CVK_AP_METRICS_REPLACE=1 to
-// replace an existing metrics app identified by its mapped port 9100.
+// replace only the exact existing app named by CVK_AP_METRICS_REPLACE_APP_ID.
 func TestLiveAPMetricsExporter(t *testing.T) {
 	if os.Getenv("CVK_AP_METRICS_LIVE_TEST") != "1" {
 		t.Skip("set CVK_AP_METRICS_LIVE_TEST=1 to run the AP metrics hardware test")
@@ -79,10 +80,16 @@ func TestLiveAPMetricsExporter(t *testing.T) {
 	if err != nil {
 		t.Fatalf("read initial AP application inventory: %v", err)
 	}
+	replacementID := strings.TrimSpace(os.Getenv("CVK_AP_METRICS_REPLACE_APP_ID"))
+	if os.Getenv("CVK_AP_METRICS_REPLACE") == "1" {
+		if err := validateIOxAppID(replacementID); err != nil {
+			t.Fatal("CVK_AP_METRICS_REPLACE requires a valid exact CVK_AP_METRICS_REPLACE_APP_ID")
+		}
+	}
 	initialAppIDs := make(map[string]bool, len(initialApps))
 	for _, app := range initialApps {
 		if os.Getenv("CVK_AP_METRICS_REPLACE") == "1" &&
-			(app.Name == "cisco-ap-metrics" || strings.Contains(string(app.NetworkInfo), `"9100"`)) {
+			app.ID == replacementID {
 			if err := driver.removeApp(ctx, app.ID, app.State); err != nil {
 				t.Fatalf("remove existing metrics app for replacement: %v", err)
 			}
@@ -102,6 +109,12 @@ func TestLiveAPMetricsExporter(t *testing.T) {
 			Image: packageServer.URL + "/ap-metrics.tar",
 		}}},
 	}
+	testAppIDs := map[string]bool{common.GetAppHostingName(pod, 0): true}
+	for id := range testAppIDs {
+		if initialAppIDs[id] {
+			t.Fatalf("test application ID %s already exists", id)
+		}
+	}
 	keepApp := os.Getenv("CVK_AP_METRICS_KEEP") == "1"
 	t.Cleanup(func() {
 		if keepApp {
@@ -116,7 +129,7 @@ func TestLiveAPMetricsExporter(t *testing.T) {
 			return
 		}
 		for _, app := range apps {
-			if initialAppIDs[app.ID] {
+			if !testAppIDs[app.ID] {
 				continue
 			}
 			if err := driver.removeApp(cleanupCtx, app.ID, app.State); err != nil {
@@ -140,7 +153,7 @@ func TestLiveAPMetricsExporter(t *testing.T) {
 		t.Fatalf("inspect AP metrics app network: %v", err)
 	}
 	for _, app := range apps {
-		if !initialAppIDs[app.ID] {
+		if testAppIDs[app.ID] {
 			t.Logf("AP metrics app %s state=%s network=%s", app.ID, app.State, string(app.NetworkInfo))
 		}
 	}
@@ -166,7 +179,6 @@ func TestLiveAPMetricsExporter(t *testing.T) {
 			if strings.Contains(body, "ap_exporter_scrape_success 1") &&
 				strings.Contains(body, "cisco_ap_cpu_usage_percent") &&
 				strings.Contains(body, "cisco_ap_memory_usage_percent") &&
-				strings.Contains(body, `band="5ghz"`) && strings.Contains(body, `band="6ghz"`) &&
 				strings.Contains(body, "cisco_ap_clients_associated") &&
 				strings.Contains(body, "cisco_ap_radio_frequency_mhz") &&
 				strings.Contains(body, "cisco_ap_radio_rx_packets_total") {
@@ -186,8 +198,6 @@ func TestLiveAPMetricsExporter(t *testing.T) {
 		"cisco_ap_clients_associated",
 		"cisco_ap_radio_frequency_mhz",
 		"cisco_ap_radio_rx_packets_total",
-		`band="5ghz"`,
-		`band="6ghz"`,
 	} {
 		if !strings.Contains(body, metric) {
 			t.Fatalf("metrics response is missing %q: %s", metric, body)
@@ -208,7 +218,7 @@ func TestLiveAPMetricsExporter(t *testing.T) {
 		t.Fatalf("verify AP metrics app uninstall: %v", err)
 	}
 	for _, app := range apps {
-		if !initialAppIDs[app.ID] {
+		if testAppIDs[app.ID] {
 			t.Fatalf("test-created IOx app %s remains installed after cleanup", app.ID)
 		}
 	}

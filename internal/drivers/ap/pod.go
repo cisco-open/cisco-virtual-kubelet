@@ -52,8 +52,9 @@ func activationPayloadFor(pod *corev1.Pod) (json.RawMessage, error) {
 			if err := json.Unmarshal([]byte(raw), &payload); err != nil {
 				return nil, err
 			}
-			if len(payload) == 0 || payload["resources"] == nil {
-				return nil, fmt.Errorf("payload must be a JSON object with a resources field")
+			var resources map[string]json.RawMessage
+			if len(payload) == 0 || json.Unmarshal(payload["resources"], &resources) != nil || len(resources) == 0 {
+				return nil, fmt.Errorf("payload must be a JSON object with a resources object")
 			}
 			return json.RawMessage(raw), nil
 		}
@@ -62,7 +63,21 @@ func activationPayloadFor(pod *corev1.Pod) (json.RawMessage, error) {
 }
 
 func (d *Driver) DeployPod(ctx context.Context, pod *corev1.Pod, _ corev1listers.SecretNamespaceLister, _ corev1listers.ConfigMapNamespaceLister) error {
+	d.lifecycleMu.Lock()
+	defer d.lifecycleMu.Unlock()
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	if pod != nil && pod.DeletionTimestamp != nil {
+		return fmt.Errorf("AP app-hosting: cannot deploy a terminating pod")
+	}
 	if err := d.validatePod(pod); err != nil {
+		return err
+	}
+	if _, err := activationPayloadFor(pod); err != nil {
+		return fmt.Errorf("invalid %s annotation: %w", activationAnnotation, err)
+	}
+	if err := validateObservedImages(pod); err != nil {
 		return err
 	}
 	ids := common.GenerateContainerAppIDs(pod)
@@ -78,38 +93,72 @@ func (d *Driver) DeployPod(ctx context.Context, pod *corev1.Pod, _ corev1listers
 	return nil
 }
 
+// validateObservedImages fails closed on an in-place image update. IOx does not
+// expose the source package URL; the last published status is the available
+// evidence of what was installed. Replacing the Pod gives the app a new UID.
+func validateObservedImages(pod *corev1.Pod) error {
+	for _, container := range pod.Spec.Containers {
+		for _, observed := range pod.Status.ContainerStatuses {
+			if observed.Name == container.Name && observed.Image != "" && observed.Image != container.Image {
+				return fmt.Errorf("AP app-hosting: changing container %s image in place is not supported; replace the Pod", container.Name)
+			}
+		}
+	}
+	return nil
+}
+
 func (d *Driver) deployApp(ctx context.Context, pod *corev1.Pod, container corev1.Container, id string) error {
-	if existing, err := d.client.app(ctx, id); err == nil {
-		if appState(existing.State) == "RUNNING" {
-			return nil
-		}
-		if err := d.removeApp(ctx, id, existing.State); err != nil {
-			return fmt.Errorf("remove previous attempt: %w", err)
-		}
-	} else if !isHTTPStatus(err, http.StatusNotFound) {
-		return err
-	}
-	packageBytes, _, err := fetchPackage(ctx, container.Image)
-	if err != nil {
-		return err
-	}
-	if err := d.client.install(ctx, id, packageBytes); err != nil {
-		return fmt.Errorf("install IOx package: %w", err)
-	}
 	payload, err := activationPayloadFor(pod)
 	if err != nil {
 		return fmt.Errorf("invalid %s annotation: %w", activationAnnotation, err)
 	}
-	if err := d.client.action(ctx, id, "activate", payload); err != nil {
-		return fmt.Errorf("activate IOx application: %w", err)
-	}
-	if err := d.client.action(ctx, id, "start", nil); err != nil {
-		return fmt.Errorf("start IOx application: %w", err)
-	}
-	if err := d.waitForState(ctx, id, "RUNNING", packageTimeout); err != nil {
+	app, err := d.client.app(ctx, id)
+	if err != nil && !isHTTPStatus(err, http.StatusNotFound) {
 		return err
 	}
-	return nil
+	if err == nil {
+		switch appState(app.State) {
+		case "ERROR", "FAILED", "INVALID":
+			if err := d.removeApp(ctx, id, app.State); err != nil {
+				return fmt.Errorf("remove failed attempt: %w", err)
+			}
+			err = &ioxHTTPError{status: http.StatusNotFound}
+		}
+	}
+	if isHTTPStatus(err, http.StatusNotFound) {
+		packageBytes, _, err := fetchPackage(ctx, container.Image)
+		if err != nil {
+			return err
+		}
+		if err := d.client.install(ctx, id, packageBytes); err != nil {
+			return fmt.Errorf("install IOx package: %w", err)
+		}
+		if err := d.waitForStateObservation(ctx, id, "DEPLOYED", packageTimeout, true); err != nil {
+			return err
+		}
+		app.State = "DEPLOYED"
+	}
+	// A retry resumes the observed lifecycle stage. Removing a deployed or
+	// stopped app here would discard a successful install and its local data.
+	switch state := appState(app.State); state {
+	case "RUNNING":
+		return nil
+	case "DEPLOYED":
+		if err := d.client.action(ctx, id, "activate", payload); err != nil {
+			return fmt.Errorf("activate IOx application: %w", err)
+		}
+		if err := d.waitForState(ctx, id, "ACTIVATED", packageTimeout); err != nil {
+			return err
+		}
+		fallthrough
+	case "ACTIVATED", "STOPPED":
+		if err := d.client.action(ctx, id, "start", nil); err != nil {
+			return fmt.Errorf("start IOx application: %w", err)
+		}
+		return d.waitForState(ctx, id, "RUNNING", packageTimeout)
+	default:
+		return fmt.Errorf("AP app-hosting: application %s is in unsupported state %q", id, state)
+	}
 }
 
 func (d *Driver) UpdatePod(ctx context.Context, pod *corev1.Pod) error {
@@ -119,54 +168,47 @@ func (d *Driver) UpdatePod(ctx context.Context, pod *corev1.Pod) error {
 	if pod.DeletionTimestamp != nil {
 		return d.DeletePod(ctx, pod)
 	}
-	if err := d.validatePod(pod); err != nil {
-		return err
-	}
-	ids := common.GenerateContainerAppIDs(pod)
-	for _, container := range pod.Spec.Containers {
-		id := ids[container.Name]
-		app, err := d.client.app(ctx, id)
-		if isHTTPStatus(err, http.StatusNotFound) {
-			if err := d.deployApp(ctx, pod, container, id); err != nil {
-				return err
-			}
-			continue
-		}
-		if err != nil {
-			return err
-		}
-		switch state := appState(app.State); state {
-		case "RUNNING":
-			continue
-		case "DEPLOYED":
-			payload, err := activationPayloadFor(pod)
-			if err != nil {
-				return fmt.Errorf("invalid %s annotation: %w", activationAnnotation, err)
-			}
-			if err := d.client.action(ctx, id, "activate", payload); err != nil {
-				return err
-			}
-			fallthrough
-		case "ACTIVATED", "STOPPED":
-			if err := d.client.action(ctx, id, "start", nil); err != nil {
-				return err
-			}
-			if err := d.waitForState(ctx, id, "RUNNING", packageTimeout); err != nil {
-				return err
-			}
-		default:
-			return fmt.Errorf("AP app-hosting: application %s is in unsupported state %q", id, state)
-		}
-	}
-	return nil
+	return d.DeployPod(ctx, pod, nil, nil)
 }
 
+// PodNeedsReconciliation opts into the provider's guarded status reconciliation.
+// Status reads themselves remain read-only, including during maintenance.
+func (d *Driver) PodNeedsReconciliation(pod *corev1.Pod) bool {
+	if pod == nil || pod.DeletionTimestamp != nil {
+		return false
+	}
+	if validateObservedImages(pod) != nil {
+		return true
+	}
+	for _, status := range pod.Status.ContainerStatuses {
+		if !status.Ready {
+			return true
+		}
+	}
+	return false
+}
+
+// PodInventoryUsesUID signals that CAF preserves only the CVK application ID,
+// so the provider must recover names from its informer using the exact UID.
+func (d *Driver) PodInventoryUsesUID() bool { return true }
+
 func (d *Driver) DeletePod(ctx context.Context, pod *corev1.Pod) error {
+	d.lifecycleMu.Lock()
+	defer d.lifecycleMu.Unlock()
+	if err := ctx.Err(); err != nil {
+		return err
+	}
 	if pod == nil {
 		return nil
 	}
+	ids := common.GenerateContainerAppIDs(pod)
+	for _, id := range ids {
+		if err := validateAppID(id); err != nil {
+			return err
+		}
+	}
 	var errs []error
-	for _, id := range common.GenerateContainerAppIDs(pod) {
+	for _, id := range ids {
 		app, err := d.client.app(ctx, id)
 		if isHTTPStatus(err, http.StatusNotFound) {
 			continue
@@ -186,39 +228,74 @@ func (d *Driver) removeApp(ctx context.Context, id, state string) error {
 	switch appState(state) {
 	case "RUNNING":
 		if err := d.client.action(ctx, id, "stop", nil); err != nil {
+			if isHTTPStatus(err, http.StatusNotFound) {
+				return nil
+			}
+			return err
+		}
+		if err := d.waitForState(ctx, id, "STOPPED", packageTimeout); err != nil {
+			if isHTTPStatus(err, http.StatusNotFound) {
+				return nil
+			}
 			return err
 		}
 		fallthrough
 	case "STOPPED", "ACTIVATED":
 		if err := d.client.action(ctx, id, "deactivate", nil); err != nil {
+			if isHTTPStatus(err, http.StatusNotFound) {
+				return nil
+			}
 			return err
 		}
+		if err := d.waitForState(ctx, id, "DEPLOYED", packageTimeout); err != nil {
+			if isHTTPStatus(err, http.StatusNotFound) {
+				return nil
+			}
+			return err
+		}
+	case "DEPLOYED", "ERROR", "FAILED", "INVALID":
+	default:
+		return fmt.Errorf("AP app-hosting: refusing to uninstall application %s in unknown state %q", id, state)
 	}
-	return d.client.uninstall(ctx, id)
+	if err := d.client.uninstall(ctx, id); err != nil && !isHTTPStatus(err, http.StatusNotFound) {
+		return err
+	}
+	return d.waitForState(ctx, id, "", packageTimeout)
 }
 
+// An empty target waits for disappearance after uninstall. The timeout bounds
+// each HTTP read as well as the delay between observations.
 func (d *Driver) waitForState(ctx context.Context, id, target string, timeout time.Duration) error {
-	deadline := time.NewTimer(timeout)
-	defer deadline.Stop()
+	return d.waitForStateObservation(ctx, id, target, timeout, false)
+}
+
+func (d *Driver) waitForStateObservation(ctx context.Context, id, target string, timeout time.Duration, installing bool) error {
+	ctx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
 	ticker := time.NewTicker(packagePoll)
 	defer ticker.Stop()
 	for {
 		app, err := d.client.app(ctx, id)
-		if err != nil {
-			return fmt.Errorf("read IOx application state: %w", err)
-		}
-		state := appState(app.State)
-		if state == target {
+		if target == "" && isHTTPStatus(err, http.StatusNotFound) {
 			return nil
 		}
-		if state == "ERROR" || state == "FAILED" || state == "INVALID" {
+		if err != nil && !(installing && isHTTPStatus(err, http.StatusNotFound)) {
+			return fmt.Errorf("read IOx application state: %w", err)
+		}
+		// CAF can acknowledge installation before the app is visible. Keep
+		// waiting instead of returning absence and allowing another install.
+		state := appState(app.State)
+		// CAF versions can expose a stopped app as ACTIVATED; either is
+		// a valid stable precondition for the following deactivate action.
+		if target != "" && (state == target || target == "STOPPED" && state == "ACTIVATED") {
+			return nil
+		}
+		if target != "" && (state == "ERROR" || state == "FAILED" || state == "INVALID") {
 			return fmt.Errorf("IOx application %s entered state %s", id, state)
 		}
 		select {
 		case <-ctx.Done():
-			return ctx.Err()
-		case <-deadline.C:
-			return fmt.Errorf("IOx application %s did not reach %s before timeout", id, target)
+			return fmt.Errorf("IOx application %s did not reach %q: %w", id, target, ctx.Err())
 		case <-ticker.C:
 		}
 	}
@@ -230,9 +307,19 @@ func (d *Driver) GetPodStatus(ctx context.Context, pod *corev1.Pod) (*corev1.Pod
 	}
 	out := pod.DeepCopy()
 	ids := common.GenerateContainerAppIDs(pod)
+	for _, id := range ids {
+		if err := validateAppID(id); err != nil {
+			return nil, err
+		}
+	}
 	statuses := make([]corev1.ContainerStatus, 0, len(pod.Spec.Containers))
 	allRunning := true
 	anyFound := false
+	now := metav1.Now()
+	previous := make(map[string]corev1.ContainerStatus, len(pod.Status.ContainerStatuses))
+	for _, status := range pod.Status.ContainerStatuses {
+		previous[status.Name] = status
+	}
 	for _, container := range pod.Spec.Containers {
 		id := ids[container.Name]
 		app, err := d.client.app(ctx, id)
@@ -247,11 +334,20 @@ func (d *Driver) GetPodStatus(ctx context.Context, pod *corev1.Pod) (*corev1.Pod
 		anyFound = true
 		running := appState(app.State) == "RUNNING"
 		allRunning = allRunning && running
-		status := corev1.ContainerStatus{Name: container.Name, Image: container.Image, Ready: running, RestartCount: 0}
+		prior := previous[container.Name]
+		status := corev1.ContainerStatus{Name: container.Name, Image: container.Image, Ready: running, RestartCount: prior.RestartCount,
+			ContainerID: "iox://" + id, LastTerminationState: prior.LastTerminationState}
+		// Do not turn desired image edits into false evidence of an update.
+		if prior.Image != "" {
+			status.Image = prior.Image
+		}
 		if running {
-			status.State.Running = &corev1.ContainerStateRunning{StartedAt: metav1.Now()}
-		} else if appState(app.State) == "ERROR" || appState(app.State) == "FAILED" {
-			status.State.Terminated = &corev1.ContainerStateTerminated{Reason: "IOxAppFailed", Message: "IOx application entered a failure state"}
+			status.State.Running = &corev1.ContainerStateRunning{StartedAt: now}
+			if prior.State.Running != nil && !prior.State.Running.StartedAt.IsZero() {
+				status.State.Running.StartedAt = prior.State.Running.StartedAt
+			}
+		} else if appState(app.State) == "ERROR" || appState(app.State) == "FAILED" || appState(app.State) == "INVALID" {
+			status.State.Waiting = &corev1.ContainerStateWaiting{Reason: "IOxAppFailed", Message: "IOx application requires recovery"}
 		} else {
 			status.State.Waiting = &corev1.ContainerStateWaiting{Reason: "IOx" + appState(app.State)}
 		}
@@ -262,8 +358,9 @@ func (d *Driver) GetPodStatus(ctx context.Context, pod *corev1.Pod) (*corev1.Pod
 	}
 	out.Status.ContainerStatuses = statuses
 	out.Status.HostIP = d.config.Address
-	now := metav1.Now()
-	out.Status.StartTime = &now
+	if out.Status.StartTime == nil {
+		out.Status.StartTime = &now
+	}
 	out.Status.Conditions = []corev1.PodCondition{
 		{Type: corev1.PodScheduled, Status: corev1.ConditionTrue, LastTransitionTime: now},
 		{Type: corev1.PodInitialized, Status: corev1.ConditionTrue, LastTransitionTime: now},
@@ -279,6 +376,24 @@ func (d *Driver) GetPodStatus(ctx context.Context, pod *corev1.Pod) (*corev1.Pod
 		}
 	} else {
 		out.Status.Phase = corev1.PodPending
+	}
+	if pod.DeletionTimestamp != nil {
+		for i := range out.Status.Conditions {
+			if out.Status.Conditions[i].Type == corev1.PodReady || out.Status.Conditions[i].Type == corev1.ContainersReady {
+				out.Status.Conditions[i].Status = corev1.ConditionFalse
+			}
+		}
+		for i := range out.Status.ContainerStatuses {
+			out.Status.ContainerStatuses[i].Ready = false
+		}
+	}
+	// Unchanged observations must not move lifecycle timestamps on every poll.
+	for i := range out.Status.Conditions {
+		for _, prior := range pod.Status.Conditions {
+			if prior.Type == out.Status.Conditions[i].Type && prior.Status == out.Status.Conditions[i].Status && !prior.LastTransitionTime.IsZero() {
+				out.Status.Conditions[i].LastTransitionTime = prior.LastTransitionTime
+			}
+		}
 	}
 	return out, nil
 }
@@ -394,9 +509,56 @@ func validatePackageArchive(data []byte, filename string) error {
 		defer gz.Close()
 		reader = gz
 	}
-	tarReader := tar.NewReader(reader)
-	if _, err := tarReader.Next(); err != nil {
-		return fmt.Errorf("AP app-hosting: package is not a valid tar archive")
+	// Limit expanded data as well as downloaded bytes: a small gzip stream
+	// must not consume unbounded memory or CPU during package validation.
+	limited := &io.LimitedReader{R: reader, N: maxPackageSize + 1}
+	tarReader := tar.NewReader(limited)
+	seen := make(map[string]bool)
+	entries := 0
+	hasDescriptor := false
+	for {
+		header, err := tarReader.Next()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return fmt.Errorf("AP app-hosting: package is not a complete valid tar archive")
+		}
+		name := path.Clean(header.Name)
+		if path.IsAbs(header.Name) || name == ".." || strings.HasPrefix(name, "../") || strings.Contains(header.Name, "\\") {
+			return fmt.Errorf("AP app-hosting: package contains an unsafe archive path")
+		}
+		if header.Typeflag != tar.TypeReg && header.Typeflag != tar.TypeDir {
+			return fmt.Errorf("AP app-hosting: package contains an unsupported archive entry")
+		}
+		if seen[name] {
+			return fmt.Errorf("AP app-hosting: package contains duplicate archive paths")
+		}
+		seen[name] = true
+		if name == "package.yaml" && header.Typeflag == tar.TypeReg && header.Size > 0 {
+			hasDescriptor = true
+		}
+		entries++
+		if header.Size < 0 || header.Size > maxPackageSize {
+			return fmt.Errorf("AP app-hosting: expanded package exceeds size limit")
+		}
+		if _, err := io.Copy(io.Discard, tarReader); err != nil {
+			return fmt.Errorf("AP app-hosting: package contains truncated archive data")
+		}
+	}
+	// Consume gzip trailers too, validating their checksum and bounding any
+	// trailing padding that archive/tar did not need to read.
+	if _, err := io.Copy(io.Discard, limited); err != nil {
+		return fmt.Errorf("AP app-hosting: package archive integrity check failed")
+	}
+	if limited.N == 0 {
+		return fmt.Errorf("AP app-hosting: expanded package exceeds size limit")
+	}
+	if entries == 0 {
+		return fmt.Errorf("AP app-hosting: package archive is empty")
+	}
+	if !hasDescriptor {
+		return fmt.Errorf("AP app-hosting: package archive requires a nonempty root package.yaml descriptor")
 	}
 	return nil
 }

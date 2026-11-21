@@ -17,7 +17,7 @@
 set -euo pipefail
 
 # Configuration
-PINNED_GO_VERSION="1.26.10"
+PINNED_GO_VERSION="1.26.11"
 if [[ -n "${GO_VERSION+x}" ]]; then
     GO_VERSION_EXPLICIT=true
 else
@@ -94,7 +94,8 @@ echo "Detected OS: $OS"
 echo ""
 
 # Return success only for an audited Go minor at or above its current security
-# floor. Do not accept end-of-life lines or unaudited future minor versions.
+# floor. GO-2026-6859 requires Go 1.26.11 or 1.27.4. Do not accept
+# end-of-life lines or unaudited future minor versions.
 # For example, go1.26.2 predates security fixes required by this release.
 go_version_is_supported() {
     local actual=${1#go}
@@ -106,8 +107,8 @@ go_version_is_supported() {
     actual_major=${BASH_REMATCH[1]}
     actual_minor=${BASH_REMATCH[2]}
     actual_patch=${BASH_REMATCH[3]}
-    (( actual_major == 1 && actual_minor == 26 && actual_patch >= 10 )) ||
-        (( actual_major == 1 && actual_minor == 27 && actual_patch >= 3 ))
+    (( actual_major == 1 && actual_minor == 26 && actual_patch >= 11 )) ||
+        (( actual_major == 1 && actual_minor == 27 && actual_patch >= 4 ))
 }
 
 # An explicit override is an exact toolchain selection, not merely a request
@@ -122,7 +123,7 @@ go_version_satisfies_request() {
 
 if [[ "$GO_VERSION_EXPLICIT" = true ]] &&
    ! go_version_is_supported "go${GO_VERSION}"; then
-    echo "Requested Go ${GO_VERSION} is outside the patched supported lines (go1.26.10+ or go1.27.3+)" >&2
+    echo "Requested Go ${GO_VERSION} is outside the patched supported lines (go1.26.11+ or go1.27.4+)" >&2
     exit 2
 fi
 
@@ -141,10 +142,10 @@ pinned_go_checksum() {
     local version=$1
     local arch=$2
     case "${version}/${arch}" in
-        1.26.10/amd64) echo ccfe7ae822d2c2f41f4fe7c956199967a4dac22d0ee0d2b2bfdb440aab3b20c5 ;;
-        1.26.10/arm64) echo 3f4227ce7b206a513e794f1393adb473a07b46e94d18bd15d1c684bbb7319797 ;;
-        1.27.3/amd64) echo 65efbc80fdc1fa2cd2631cad5b481777a68e8725f34e89f50fc6ac714e379b40 ;;
-        1.27.3/arm64) echo a06e99309dbcbdca1a8ccd2282c3ee146e55930886e26b4f1193269587165f49 ;;
+        1.26.11/amd64) echo 9849f4e04ee35303714e34fbc3ac8ab44ea3e448a95aa182f91e3b9b79c710ec ;;
+        1.26.11/arm64) echo 6c2f29b458b5add0835f18b776f69c8881a6d88428f1484a6da55755e620757e ;;
+        1.27.4/amd64) echo 7226736c2339719cda28fbf3a54d71aa63bcefe376e98cef00034268dab24840 ;;
+        1.27.4/arm64) echo 3392582988a273a87ab5043ee1b2c9c17a2c3c00580bf9326c47a2e0aaaeac92 ;;
         *)
             if [[ "$GO_SHA256" =~ ^[0-9a-f]{64}$ ]]; then
                 echo "$GO_SHA256"
@@ -322,7 +323,7 @@ if command -v go &> /dev/null; then
            [[ "${CURRENT_GO_VERSION#go}" != "$GO_VERSION" ]]; then
             echo -e "${RED}✗${NC} Go $CURRENT_GO_VERSION is installed, but exact Go ${GO_VERSION} was requested"
         else
-            echo -e "${RED}✗${NC} Go $CURRENT_GO_VERSION is outside the patched supported lines (go1.26.10+ or go1.27.3+)"
+            echo -e "${RED}✗${NC} Go $CURRENT_GO_VERSION is outside the patched supported lines (go1.26.11+ or go1.27.4+)"
         fi
         NEED_GO=true
         MISSING_DEPS=true
@@ -355,7 +356,7 @@ if [ "$MISSING_DEPS" = true ]; then
         echo ""
         echo "Options:"
         echo "  1. Run with --install-deps flag to auto-install"
-        echo "  2. Install the dependencies manually, including patched Go 1.26.10+ or 1.27.3+"
+        echo "  2. Install the dependencies manually, including patched Go 1.26.11+ or 1.27.4+"
         echo ""
         echo "For Ubuntu/Debian:"
         echo "  sudo apt install -y build-essential ca-certificates curl git"
@@ -373,7 +374,7 @@ fi
 # Verify the selected Go remains compatible after dependency installation.
 if ! command -v go &> /dev/null || \
    ! go_version_satisfies_request "$(go env GOVERSION)"; then
-    echo -e "${RED}Patched Go 1.26.10+ or 1.27.3+ is required.${NC}"
+    echo -e "${RED}Patched Go 1.26.11+ or 1.27.4+ is required.${NC}"
     if [[ "$GO_VERSION_EXPLICIT" = true ]]; then
         echo -e "${RED}The explicitly requested go${GO_VERSION} toolchain must be first on PATH.${NC}"
     fi

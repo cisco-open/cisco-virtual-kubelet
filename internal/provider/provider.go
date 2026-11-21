@@ -59,6 +59,7 @@ import (
 )
 
 const defaultPodNotifierCapacity = 1024
+const maxUIDInventoryPods = 1024
 const podStatusNotificationSuppressedReasonUnchanged = "unchanged"
 const detachedPodOperationTimeout = 30 * time.Minute
 const envKubeletInternalIP = "CISCO_VK_KUBELET_INTERNAL_IP"
@@ -66,6 +67,11 @@ const envKubeletInternalIP = "CISCO_VK_KUBELET_INTERNAL_IP"
 type queuedAppEvent struct {
 	event       state.AppEvent
 	correlation correlation.AsyncCorrelation
+}
+
+type rememberedUIDPod struct {
+	pod      *v1.Pod
+	sequence uint64
 }
 
 type AppHostingProvider struct {
@@ -93,6 +99,12 @@ type AppHostingProvider struct {
 
 	deleteRecoveryMu       sync.Mutex
 	deleteRecoveryInFlight map[types.UID]struct{}
+
+	uidInventoryMu       sync.Mutex
+	uidInventoryPods     map[types.NamespacedName]rememberedUIDPod
+	uidInventorySequence uint64
+	uidMutationOnce      sync.Once
+	uidMutationGate      chan struct{}
 }
 
 // SetMaintenance connects app mutations and node scheduling to the same
@@ -342,6 +354,7 @@ func (p *AppHostingProvider) recoverDeletingPod(ctx context.Context, pod *v1.Pod
 			}).Warn("PodNotifier poll: delete recovery failed")
 			return
 		}
+		p.forgetUIDPod(podCopy)
 		span.SetAttributes(attribute.String("cisco.vk.delete.outcome", "succeeded"))
 		span.SetStatus(codes.Ok, "")
 		log.G(traceCtx).WithFields(log.Fields{
@@ -393,11 +406,31 @@ func (p *AppHostingProvider) gcDeleteTracking(currentUIDs map[types.UID]struct{}
 }
 
 func (p *AppHostingProvider) statusOrReconcilePod(ctx context.Context, pod *v1.Pod) (*v1.Pod, error) {
+	p.rememberUIDPod(pod)
 	ctx, span := p.startPodSpan(ctx, pod, "status-reconcile")
 	defer span.End()
 	statusPod, err := p.driver.GetPodStatus(ctx, pod)
 	if err == nil {
-		return statusPod, nil
+		// Drivers whose status path is read-only can request recovery through
+		// the same maintenance barrier as explicit Kubernetes updates.
+		reconciler, ok := p.driver.(interface{ PodNeedsReconciliation(*v1.Pod) bool })
+		if !ok || pod == nil || pod.DeletionTimestamp != nil || !reconciler.PodNeedsReconciliation(statusPod) {
+			return statusPod, nil
+		}
+		reconciledPod := pod
+		if updateErr := p.withMutation(ctx, func(writeCtx context.Context) error {
+			current, err := p.currentPodForForwardMutation(pod)
+			if err != nil {
+				return err
+			}
+			reconciledPod = current
+			return p.driver.UpdatePod(writeCtx, current)
+		}); updateErr != nil {
+			span.RecordError(updateErr)
+			span.SetStatus(codes.Error, "reconcile pod state")
+			return nil, updateErr
+		}
+		return p.driver.GetPodStatus(ctx, reconciledPod)
 	}
 	if pod == nil || pod.DeletionTimestamp != nil ||
 		(!errdefs.IsNotFound(err) && !apierrors.IsNotFound(err)) {
@@ -409,14 +442,20 @@ func (p *AppHostingProvider) statusOrReconcilePod(ctx context.Context, pod *v1.P
 		"pod":       pod.Name,
 		"namespace": pod.Namespace,
 	}).Info("PodNotifier poll: pod missing from provider; reconciling desired state")
+	reconciledPod := pod
 	if deployErr := p.withMutation(ctx, func(writeCtx context.Context) error {
-		return p.driver.DeployPod(writeCtx, pod, p.secretNamespaceLister(pod.Namespace), p.configMapNamespaceLister(pod.Namespace))
+		current, err := p.currentPodForForwardMutation(pod)
+		if err != nil {
+			return err
+		}
+		reconciledPod = current
+		return p.driver.DeployPod(writeCtx, current, p.secretNamespaceLister(current.Namespace), p.configMapNamespaceLister(current.Namespace))
 	}); deployErr != nil {
 		span.RecordError(deployErr)
 		span.SetStatus(codes.Error, "deploy missing pod")
 		return nil, deployErr
 	}
-	statusPod, err = p.driver.GetPodStatus(ctx, pod)
+	statusPod, err = p.driver.GetPodStatus(ctx, reconciledPod)
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "get reconciled pod status")
@@ -664,6 +703,7 @@ func (p *AppHostingProvider) findPodByAppID(ctx context.Context, appID string) *
 }
 
 func (p *AppHostingProvider) CreatePod(ctx context.Context, pod *v1.Pod) (outcome error) {
+	p.rememberUIDPod(pod)
 	ctx, span := p.startPodSpan(ctx, pod, "create")
 	defer span.End()
 	p.rememberPodTrace(ctx, pod)
@@ -675,7 +715,13 @@ func (p *AppHostingProvider) CreatePod(ctx context.Context, pod *v1.Pod) (outcom
 	}
 	outcome = devicecoordination.ErrMutationIncomplete
 	defer func() { finish(outcome) }()
-	if err := p.driver.DeployPod(writeCtx, pod, p.secretNamespaceLister(pod.Namespace), p.configMapNamespaceLister(pod.Namespace)); err != nil {
+	if err := p.withUIDMutation(writeCtx, func(mutationCtx context.Context) error {
+		current, err := p.currentPodForForwardMutation(pod)
+		if err != nil {
+			return err
+		}
+		return p.driver.DeployPod(mutationCtx, current, p.secretNamespaceLister(current.Namespace), p.configMapNamespaceLister(current.Namespace))
+	}); err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "deploy pod")
 		return errdefs.AsInvalidInput(err)
@@ -712,11 +758,22 @@ func (p *AppHostingProvider) rememberPodTrace(ctx context.Context, pod *v1.Pod) 
 }
 
 func (p *AppHostingProvider) UpdatePod(ctx context.Context, pod *v1.Pod) error {
+	p.rememberUIDPod(pod)
 	ctx, span := p.startPodSpan(ctx, pod, "update")
 	defer span.End()
 	p.rememberPodTrace(ctx, pod)
 	// IOS-XE/XR may have limited "Update" support (e.g., changing resources requires a restart)
-	mutate := func(writeCtx context.Context) error { return p.driver.UpdatePod(writeCtx, pod) }
+	mutate := func(writeCtx context.Context) error {
+		current := pod
+		if pod == nil || pod.DeletionTimestamp == nil {
+			var err error
+			current, err = p.currentPodForForwardMutation(pod)
+			if err != nil {
+				return err
+			}
+		}
+		return p.driver.UpdatePod(writeCtx, current)
+	}
 	var err error
 	if pod != nil && pod.DeletionTimestamp != nil {
 		// IOS-XE UpdatePod performs deletion cleanup for terminating Pods. Route
@@ -731,6 +788,9 @@ func (p *AppHostingProvider) UpdatePod(ctx context.Context, pod *v1.Pod) error {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "update pod")
 		return err
+	}
+	if pod != nil && pod.DeletionTimestamp != nil {
+		p.forgetUIDPod(pod)
 	}
 	p.notifyPodStatusSoon(ctx, pod)
 	return nil
@@ -747,6 +807,9 @@ func (p *AppHostingProvider) DeletePod(ctx context.Context, pod *v1.Pod) error {
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "delete pod")
+	}
+	if err == nil {
+		p.forgetUIDPod(pod)
 	}
 	if deleteOwner && err != nil {
 		p.finishDelete(pod)
@@ -770,7 +833,46 @@ func (p *AppHostingProvider) withMutation(ctx context.Context, mutate func(conte
 	}
 	outcome = devicecoordination.ErrMutationIncomplete
 	defer func() { finish(outcome) }()
-	return mutate(writeCtx)
+	return p.withUIDMutation(writeCtx, mutate)
+}
+
+// Lock order is maintenance barrier, UID-driver mutation gate, then the driver's
+// lifecycle lock. Hold the gate across the freshness check and device operation
+// so a queued recovery cannot reinstall a workload after concurrent deletion.
+// Other drivers retain their existing mutation behavior.
+func (p *AppHostingProvider) withUIDMutation(ctx context.Context, mutate func(context.Context) error) error {
+	if !p.podInventoryUsesUID() {
+		return mutate(ctx)
+	}
+	p.uidMutationOnce.Do(func() { p.uidMutationGate = make(chan struct{}, 1) })
+	select {
+	case p.uidMutationGate <- struct{}{}:
+		defer func() { <-p.uidMutationGate }()
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+		return mutate(ctx)
+	case <-ctx.Done():
+		return ctx.Err()
+	}
+}
+
+func (p *AppHostingProvider) currentPodForForwardMutation(pod *v1.Pod) (*v1.Pod, error) {
+	if !p.podInventoryUsesUID() {
+		return pod, nil
+	}
+	if pod == nil || p.podsLister == nil {
+		return nil, fmt.Errorf("UID inventory forward mutation requires a current Pod informer")
+	}
+	current, err := p.podsLister.Pods(pod.Namespace).Get(pod.Name)
+	if err != nil {
+		return nil, err
+	}
+	if current.UID == "" || current.UID != pod.UID || current.DeletionTimestamp != nil {
+		return nil, errdefs.NotFound("Pod is no longer eligible for forward reconciliation")
+	}
+	p.rememberUIDPod(current)
+	return current.DeepCopy(), nil
 }
 
 // withDeleteMutation preserves the ordinary mutation barrier unless the
@@ -833,7 +935,7 @@ func (p *AppHostingProvider) withResolvedDeleteMutation(
 			outcome = errors.Join(outcome, finishErr)
 		}
 	}()
-	if err := mutate(writeCtx); err != nil {
+	if err := p.withUIDMutation(writeCtx, mutate); err != nil {
 		return err
 	}
 	return p.maintenance.VerifyAndPublishDrainInventory(writeCtx, authorizationPod, strictInventory.ListPodsForDrain)
@@ -849,6 +951,7 @@ func (p *AppHostingProvider) GetPod(ctx context.Context, namespace, name string)
 	// Fast path: fetch pod spec from informer cache (desired state)
 	pod, err := p.podsLister.Pods(namespace).Get(name)
 	if err == nil {
+		p.rememberUIDPod(pod)
 		ctx, span := p.startPodSpan(ctx, pod, "get")
 		defer span.End()
 		devicePods, listErr := p.driver.ListPods(ctx)
@@ -859,9 +962,19 @@ func (p *AppHostingProvider) GetPod(ctx context.Context, namespace, name string)
 				"name":      name,
 				"namespace": namespace,
 			}).Debug("GetPod: failed to list device pods while checking provider existence")
+			if p.podInventoryUsesUID() {
+				return nil, listErr
+			}
 			return nil, errdefs.NotFound(fmt.Sprintf("pod %s/%s not found on device", namespace, name))
 		}
 		for _, devicePod := range devicePods {
+			if p.podInventoryUsesUID() && devicePod != nil && pod.UID != "" && devicePod.UID == pod.UID {
+				statusPod, statusErr := p.driver.GetPodStatus(ctx, pod)
+				if apierrors.IsNotFound(statusErr) {
+					return nil, errdefs.AsNotFound(statusErr)
+				}
+				return statusPod, statusErr
+			}
 			if devicePod == nil || devicePod.Namespace != namespace || devicePod.Name != name {
 				continue
 			}
@@ -873,13 +986,17 @@ func (p *AppHostingProvider) GetPod(ctx context.Context, namespace, name string)
 		return nil, errdefs.NotFound(fmt.Sprintf("pod %s/%s not found on device", namespace, name))
 	}
 
+	if p.podInventoryUsesUID() && !apierrors.IsNotFound(err) {
+		return nil, err
+	}
+
 	// Pod not in K8s — check if it still exists on the device.
 	// This is the delete path: the upstream VK pod controller calls GetPod
 	// after a pod is removed from the API server to determine whether the
 	// provider still needs to clean up the app on the device (see
 	// syncPodFromKubernetesHandler in podcontroller.go). Only CVK-managed
-	// apps (those with RunOpts labels) are discovered by ListPods, so
-	// ad-hoc admin-deployed apps are never affected.
+	// apps (identified by driver metadata or generated CVK IDs) are
+	// discovered by ListPods; unrelated administrator apps are excluded.
 	log.G(p.ctx).WithFields(log.Fields{
 		"name":      name,
 		"namespace": namespace,
@@ -896,10 +1013,26 @@ func (p *AppHostingProvider) GetPod(ctx context.Context, namespace, name string)
 		span.RecordError(listErr)
 		span.SetStatus(codes.Error, "list device pods for delete discovery")
 		log.G(ctx).WithError(listErr).Warn("GetPod: failed to list pods from device")
+		if p.podInventoryUsesUID() {
+			return nil, listErr
+		}
+		return nil, errdefs.NotFound(fmt.Sprintf("pod %s/%s not found", namespace, name))
+	}
+	if p.podInventoryUsesUID() {
+		if remembered := p.rememberedUIDPod(namespace, name); remembered != nil {
+			for _, observed := range devicePods {
+				if observed != nil && observed.UID == remembered.UID {
+					return remembered, nil
+				}
+			}
+			p.forgetUIDPod(remembered)
+		}
+		// CAF's synthetic UID names are not Kubernetes names. Without a
+		// remembered identity, name equality must never authorize deletion.
 		return nil, errdefs.NotFound(fmt.Sprintf("pod %s/%s not found", namespace, name))
 	}
 	for _, dp := range devicePods {
-		if dp.Namespace == namespace && dp.Name == name {
+		if dp != nil && dp.Namespace == namespace && dp.Name == name {
 			return dp, nil
 		}
 	}
@@ -917,8 +1050,12 @@ func (p *AppHostingProvider) GetPodStatus(ctx context.Context, namespace, name s
 	// Fetch pod spec from informer cache (desired state)
 	pod, err := p.podsLister.Pods(namespace).Get(name)
 	if err != nil {
+		if p.podInventoryUsesUID() && !apierrors.IsNotFound(err) {
+			return nil, err
+		}
 		return nil, errdefs.NotFound(fmt.Sprintf("pod %s/%s not found: %v", namespace, name, err))
 	}
+	p.rememberUIDPod(pod)
 	ctx, span := p.startPodSpan(ctx, pod, "status")
 	defer span.End()
 
@@ -927,6 +1064,9 @@ func (p *AppHostingProvider) GetPodStatus(ctx context.Context, namespace, name s
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "get pod status")
+		if p.podInventoryUsesUID() && !apierrors.IsNotFound(err) && !errdefs.IsNotFound(err) {
+			return nil, err
+		}
 		return nil, errdefs.AsNotFound(err)
 	}
 
@@ -968,10 +1108,116 @@ func (p *AppHostingProvider) GetPods(ctx context.Context) ([]*v1.Pod, error) {
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "list device pods")
+		if p.podInventoryUsesUID() {
+			return nil, err
+		}
 		return nil, errdefs.AsNotFound(err)
 	}
 
+	if p.podInventoryUsesUID() && p.podsLister != nil {
+		desired, err := p.podsLister.List(labels.Everything())
+		if err != nil {
+			return nil, err
+		}
+		byUID := make(map[types.UID]*v1.Pod, len(desired))
+		for _, pod := range desired {
+			if pod != nil && pod.UID != "" {
+				byUID[pod.UID] = pod
+			}
+		}
+		resolved := make([]*v1.Pod, 0, len(pods))
+		for _, observed := range pods {
+			if observed == nil {
+				continue
+			}
+			if pod := byUID[observed.UID]; pod != nil {
+				p.rememberUIDPod(pod)
+				statusPod, err := p.driver.GetPodStatus(ctx, pod)
+				if apierrors.IsNotFound(err) || errdefs.IsNotFound(err) {
+					continue // disappeared between inventory and detail reads
+				}
+				if err != nil {
+					return nil, err
+				}
+				resolved = append(resolved, statusPod)
+			} else {
+				// Preserve unknown UIDs for VK's dangling-workload cleanup.
+				resolved = append(resolved, observed.DeepCopy())
+			}
+		}
+		return resolved, nil
+	}
 	return pods, nil
+}
+
+func (p *AppHostingProvider) podInventoryUsesUID() bool {
+	inventory, ok := p.driver.(interface{ PodInventoryUsesUID() bool })
+	return ok && inventory.PodInventoryUsesUID()
+}
+
+// Remember the Kubernetes identity while it is available. CAF inventory only
+// contains UIDs; after a force deletion, VK asks GetPod by the original name
+// before calling DeletePod. This bounded cache bridges that informer removal.
+// Device inventory must still confirm the exact UID before deletion discovery.
+func (p *AppHostingProvider) rememberUIDPod(pod *v1.Pod) {
+	if !p.podInventoryUsesUID() || pod == nil || pod.UID == "" {
+		return
+	}
+	key := types.NamespacedName{Namespace: pod.Namespace, Name: pod.Name}
+	p.uidInventoryMu.Lock()
+	defer p.uidInventoryMu.Unlock()
+	currentMatches := false
+	if p.podsLister != nil {
+		current, err := p.podsLister.Pods(pod.Namespace).Get(pod.Name)
+		if err == nil {
+			if current.UID != pod.UID {
+				return // a stale callback must not replace a newer Pod's identity
+			}
+			currentMatches = true
+		}
+		if err != nil && !apierrors.IsNotFound(err) {
+			return
+		}
+	}
+	if p.uidInventoryPods == nil {
+		p.uidInventoryPods = make(map[types.NamespacedName]rememberedUIDPod)
+	}
+	if remembered, exists := p.uidInventoryPods[key]; exists && remembered.pod.UID != pod.UID && !currentMatches {
+		return // an absent informer cannot authorize replacing a remembered UID
+	}
+	if _, exists := p.uidInventoryPods[key]; !exists && len(p.uidInventoryPods) >= maxUIDInventoryPods {
+		var oldestKey types.NamespacedName
+		oldestSequence := ^uint64(0)
+		for candidate, remembered := range p.uidInventoryPods {
+			if remembered.sequence < oldestSequence {
+				oldestKey, oldestSequence = candidate, remembered.sequence
+			}
+		}
+		delete(p.uidInventoryPods, oldestKey)
+	}
+	p.uidInventorySequence++
+	p.uidInventoryPods[key] = rememberedUIDPod{pod: pod.DeepCopy(), sequence: p.uidInventorySequence}
+}
+
+func (p *AppHostingProvider) rememberedUIDPod(namespace, name string) *v1.Pod {
+	p.uidInventoryMu.Lock()
+	defer p.uidInventoryMu.Unlock()
+	if remembered, ok := p.uidInventoryPods[types.NamespacedName{Namespace: namespace, Name: name}]; ok {
+		return remembered.pod.DeepCopy()
+	}
+	return nil
+}
+
+func (p *AppHostingProvider) forgetUIDPod(pod *v1.Pod) {
+	if pod == nil {
+		return
+	}
+	key := types.NamespacedName{Namespace: pod.Namespace, Name: pod.Name}
+	p.uidInventoryMu.Lock()
+	defer p.uidInventoryMu.Unlock()
+	if remembered, ok := p.uidInventoryPods[key]; ok && remembered.pod.UID == pod.UID {
+		delete(p.uidInventoryPods, key)
+	}
 }
 
 func (p *AppHostingProvider) AttachToContainer(ctx context.Context, namespace, podName, containerName string, attach api.AttachIO) error {

@@ -7,6 +7,7 @@ import (
 	"bufio"
 	"context"
 	"crypto/subtle"
+	"encoding/base64"
 	"fmt"
 	"io"
 	"log"
@@ -27,6 +28,7 @@ const (
 	defaultConfigPath = "/data/package_config.ini"
 	defaultListenAddr = ":9100"
 	defaultPollPeriod = 60 * time.Second
+	maxCLIOutput      = 256 * 1024
 )
 
 var (
@@ -37,6 +39,7 @@ var (
 	servingRadio = regexp.MustCompile(`(?im)^Serving Frequency:\s*([0-9]+)\s*Mhz\s+Channel:\s*([0-9]+)\s+([0-9]+)\s*MHz`)
 	rxPackets    = regexp.MustCompile(`(?i)RX packets:\s*([0-9]+)`)
 	txPackets    = regexp.MustCompile(`(?i)TX packets:\s*([0-9]+)`)
+	radioCommand = regexp.MustCompile(`show controllers dot11Radio ([0-9]+) frequency`)
 )
 
 var metricMetadataMap = map[string][2]string{
@@ -70,21 +73,37 @@ type sample struct {
 }
 
 type snapshot struct {
-	mu         sync.RWMutex
-	metrics    []sample
-	success    bool
-	lastScrape time.Time
-	lastError  string
+	mu          sync.RWMutex
+	metrics     []sample
+	success     bool
+	lastScrape  time.Time
+	lastSuccess time.Time
 }
 
 func main() {
 	cfg, err := loadConfig()
 	if err != nil {
-		log.Printf("configuration: %v", err)
+		log.Fatalf("configuration: %v", err)
 	}
 	state := &snapshot{}
 	go pollForever(cfg, state)
 
+	server := &http.Server{
+		Addr:              cfg.ListenAddress,
+		Handler:           metricsHandler(state),
+		ReadHeaderTimeout: 5 * time.Second,
+		ReadTimeout:       10 * time.Second,
+		WriteTimeout:      10 * time.Second,
+		IdleTimeout:       30 * time.Second,
+		MaxHeaderBytes:    8 * 1024,
+	}
+	log.Printf("listening on %s", server.Addr)
+	if err := server.ListenAndServe(); err != nil {
+		log.Fatalf("HTTP server: %v", err)
+	}
+}
+
+func metricsHandler(state *snapshot) http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/metrics", func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "text/plain; version=0.0.4; charset=utf-8")
@@ -94,14 +113,17 @@ func main() {
 		w.WriteHeader(http.StatusOK)
 		_, _ = io.WriteString(w, "ok\n")
 	})
-	addr := cfg.ListenAddress
-	if addr == "" {
-		addr = defaultListenAddr
-	}
-	log.Printf("listening on %s", addr)
-	if err := http.ListenAndServe(addr, mux); err != nil {
-		log.Fatalf("HTTP server: %v", err)
-	}
+	mux.HandleFunc("/readyz", func(w http.ResponseWriter, _ *http.Request) {
+		state.mu.RLock()
+		success := state.success
+		state.mu.RUnlock()
+		if !success {
+			http.Error(w, "AP collection unavailable", http.StatusServiceUnavailable)
+			return
+		}
+		_, _ = io.WriteString(w, "ok\n")
+	})
+	return mux
 }
 
 func loadConfig() (config, error) {
@@ -150,9 +172,10 @@ func loadConfig() (config, error) {
 			cfg.ListenAddress = value
 		case "poll_period":
 			duration, parseErr := time.ParseDuration(value)
-			if parseErr == nil && duration >= 30*time.Second {
-				cfg.PollPeriod = duration
+			if parseErr != nil || duration < 30*time.Second {
+				return config{}, fmt.Errorf("ap.poll_period must be a duration of at least 30s")
 			}
+			cfg.PollPeriod = duration
 		}
 	}
 	if err := scanner.Err(); err != nil {
@@ -161,7 +184,21 @@ func loadConfig() (config, error) {
 	if cfg.PollPeriod == 0 {
 		cfg.PollPeriod = defaultPollPeriod
 	}
-	return cfg, nil
+	if cfg.ListenAddress == "" {
+		cfg.ListenAddress = defaultListenAddr
+	}
+	return cfg, cfg.validate()
+}
+
+func (cfg config) validate() error {
+	if cfg.APAddress == "" || cfg.APUsername == "" || cfg.APPassword == "" || cfg.APEnableSecret == "" || cfg.APName == "" {
+		return fmt.Errorf("ap.address, ap.username, ap.password, ap.enable_secret, and ap.ap_name are required")
+	}
+	fingerprint, err := base64.RawStdEncoding.DecodeString(strings.TrimPrefix(cfg.APHostKeySHA256, "SHA256:"))
+	if !strings.HasPrefix(cfg.APHostKeySHA256, "SHA256:") || err != nil || len(fingerprint) != 32 {
+		return fmt.Errorf("ap.host_key_sha256 must be an OpenSSH SHA256 fingerprint; pin the AP SSH host key")
+	}
+	return nil
 }
 
 func pollForever(cfg config, state *snapshot) {
@@ -173,27 +210,31 @@ func pollForever(cfg config, state *snapshot) {
 		ctx, cancel := context.WithTimeout(context.Background(), 50*time.Second)
 		metrics, err := collect(ctx, cfg)
 		cancel()
-		state.mu.Lock()
-		state.success = err == nil
-		state.lastScrape = time.Now()
-		if err == nil {
-			state.metrics = metrics
-			state.lastError = ""
-		} else {
-			state.lastError = err.Error()
+		state.update(metrics, err, time.Now())
+		if err != nil {
 			log.Printf("AP collection failed: %v", err)
 		}
-		state.mu.Unlock()
 		time.Sleep(period)
 	}
 }
 
-func collect(ctx context.Context, cfg config) ([]sample, error) {
-	if cfg.APAddress == "" || cfg.APUsername == "" || cfg.APPassword == "" || cfg.APEnableSecret == "" || cfg.APName == "" {
-		return nil, fmt.Errorf("ap.address, ap.username, ap.password, ap.enable_secret, and ap.ap_name are required")
+func (state *snapshot) update(metrics []sample, err error, now time.Time) {
+	state.mu.Lock()
+	defer state.mu.Unlock()
+	state.success = err == nil
+	state.lastScrape = now
+	if err == nil {
+		state.metrics = metrics
+		state.lastSuccess = now
+	} else {
+		// Do not repeatedly publish stale AP values with fresh Prometheus timestamps.
+		state.metrics = nil
 	}
-	if cfg.APHostKeySHA256 == "" {
-		return nil, fmt.Errorf("ap.host_key_sha256 is required; pin the AP SSH host key")
+}
+
+func collect(ctx context.Context, cfg config) ([]sample, error) {
+	if err := cfg.validate(); err != nil {
+		return nil, err
 	}
 	address := cfg.APAddress
 	if _, _, err := net.SplitHostPort(address); err != nil {
@@ -211,6 +252,8 @@ func collect(ctx context.Context, cfg config) ([]sample, error) {
 		return nil, fmt.Errorf("connect to AP: %w", err)
 	}
 	defer connection.Close()
+	stopCancel := context.AfterFunc(ctx, func() { _ = connection.Close() })
+	defer stopCancel()
 	if deadline, ok := ctx.Deadline(); ok {
 		_ = connection.SetDeadline(deadline)
 	}
@@ -231,7 +274,7 @@ func collect(ctx context.Context, cfg config) ([]sample, error) {
 	if err != nil {
 		return nil, err
 	}
-	return parseOutput(cfg.APName, output), nil
+	return parseOutput(cfg.APName, output)
 }
 
 func pinHostKey(expected string) ssh.HostKeyCallback {
@@ -265,24 +308,31 @@ func runAPCLI(ctx context.Context, client *ssh.Client, enableSecret string, comm
 		return "", fmt.Errorf("start AP CLI: %w", err)
 	}
 	reader := bufio.NewReader(stdout)
-	if _, err := readUntilPrompt(ctx, reader); err != nil {
+	prompt, err := readUntilPrompt(ctx, reader)
+	if err != nil {
 		return "", fmt.Errorf("read AP login prompt: %w", err)
 	}
-	if _, err := io.WriteString(stdin, "enable\n"); err != nil {
-		return "", fmt.Errorf("request AP enable mode: %w", err)
-	}
-	passwordPrompt, err := readUntilPasswordOrPrompt(ctx, reader)
-	if err != nil {
-		return "", fmt.Errorf("read AP enable prompt: %w", err)
-	}
-	if !passwordPrompt {
-		return "", fmt.Errorf("AP CLI did not request the enable secret")
-	}
-	if _, err := io.WriteString(stdin, enableSecret+"\n"); err != nil {
-		return "", fmt.Errorf("send AP enable secret: %w", err)
-	}
-	if _, err := readUntilPrompt(ctx, reader); err != nil {
-		return "", fmt.Errorf("enter AP enable mode: %w", err)
+	if !strings.HasSuffix(lastLine(prompt), "#") {
+		if _, err := io.WriteString(stdin, "enable\n"); err != nil {
+			return "", fmt.Errorf("request AP enable mode: %w", err)
+		}
+		passwordPrompt, err := readUntilPasswordOrPrompt(ctx, reader)
+		if err != nil {
+			return "", fmt.Errorf("read AP enable prompt: %w", err)
+		}
+		if !passwordPrompt {
+			return "", fmt.Errorf("AP CLI did not request the enable secret")
+		}
+		if _, err := io.WriteString(stdin, enableSecret+"\n"); err != nil {
+			return "", fmt.Errorf("send AP enable secret: %w", err)
+		}
+		prompt, err = readUntilPrompt(ctx, reader)
+		if err != nil {
+			return "", fmt.Errorf("enter AP enable mode: %w", err)
+		}
+		if !strings.HasSuffix(lastLine(prompt), "#") {
+			return "", fmt.Errorf("AP CLI rejected enable mode")
+		}
 	}
 	if _, err := io.WriteString(stdin, "terminal length 0\n"); err != nil {
 		return "", fmt.Errorf("disable AP CLI paging: %w", err)
@@ -299,6 +349,9 @@ func runAPCLI(ctx context.Context, client *ssh.Client, enableSecret string, comm
 		if err != nil {
 			return "", fmt.Errorf("read AP command %q: %w", command, err)
 		}
+		// Delimit responses even when the AP terminal does not echo commands.
+		output.WriteString(command)
+		output.WriteByte('\n')
 		output.WriteString(result)
 		output.WriteByte('\n')
 	}
@@ -306,58 +359,64 @@ func runAPCLI(ctx context.Context, client *ssh.Client, enableSecret string, comm
 }
 
 func readUntilPasswordOrPrompt(ctx context.Context, reader *bufio.Reader) (bool, error) {
-	var output strings.Builder
-	for {
-		if strings.HasSuffix(output.String(), "Password:") {
-			return true, nil
-		}
-		if isPromptLine(lastLine(output.String())) {
-			return false, nil
-		}
-		if err := ctx.Err(); err != nil {
-			return false, err
-		}
-		value, err := reader.ReadByte()
-		if err != nil {
-			return false, err
-		}
-		output.WriteByte(value)
-	}
+	_, password, err := readCLI(ctx, reader, true)
+	return password, err
 }
 
 func readUntilPrompt(ctx context.Context, reader *bufio.Reader) (string, error) {
+	output, _, err := readCLI(ctx, reader, false)
+	return output, err
+}
+
+func readCLI(ctx context.Context, reader *bufio.Reader, allowPassword bool) (string, bool, error) {
 	var output strings.Builder
-	for {
-		if output.Len() > 0 && isPromptLine(lastLine(output.String())) {
-			return output.String(), nil
-		}
+	var line strings.Builder
+	for output.Len() < maxCLIOutput {
 		if err := ctx.Err(); err != nil {
-			return output.String(), err
+			return output.String(), false, err
 		}
 		value, err := reader.ReadByte()
 		if err != nil {
-			return output.String(), err
+			return output.String(), false, err
 		}
 		output.WriteByte(value)
+		switch value {
+		case '\n':
+			line.Reset()
+		case '\r':
+			// CLI terminals use CRLF. Match prompts without the carriage return.
+		default:
+			line.WriteByte(value)
+		}
+		if value == ':' && allowPassword && line.Len() <= 256 && strings.HasSuffix(strings.ToLower(line.String()), "password:") {
+			return output.String(), true, nil
+		}
+		if (value == '#' || value == '>') && line.Len() <= 256 && isPromptLine(strings.TrimSpace(line.String())) {
+			return output.String(), false, nil
+		}
 	}
+	return "", false, fmt.Errorf("AP CLI response exceeds %d bytes", maxCLIOutput)
 }
 
 func lastLine(output string) string {
-	lines := strings.Split(strings.ReplaceAll(output, "\r", ""), "\n")
-	return strings.TrimSpace(lines[len(lines)-1])
+	return strings.TrimSpace(output[strings.LastIndexByte(output, '\n')+1:])
 }
 
 func isPromptLine(line string) bool { return promptLine.MatchString(line) }
 
-func parseOutput(apName, output string) []sample {
+func parseOutput(apName, output string) ([]sample, error) {
+	output = strings.ReplaceAll(output, "\r", "")
 	labels := map[string]string{"ap": apName}
 	var metrics []sample
+	validCPU := false
 	if match := cpuIdle.FindStringSubmatch(output); len(match) == 2 {
-		if idle, err := strconv.ParseFloat(match[1], 64); err == nil {
+		if idle, err := strconv.ParseFloat(match[1], 64); err == nil && idle >= 0 && idle <= 100 {
 			metrics = append(metrics, sample{name: "cisco_ap_cpu_usage_percent", labels: labels, value: 100 - idle})
+			validCPU = true
 		}
 	}
 	var total, available float64
+	var hasAvailable bool
 	for _, match := range memoryField.FindAllStringSubmatch(output, -1) {
 		value, err := strconv.ParseFloat(match[2], 64)
 		if err != nil {
@@ -368,30 +427,40 @@ func parseOutput(apName, output string) []sample {
 			total = value
 		case "MemAvailable":
 			available = value
+			hasAvailable = true
 		}
 	}
-	if total > 0 {
+	validMemory := total > 0 && hasAvailable && available <= total
+	if validMemory {
 		metrics = append(metrics, sample{name: "cisco_ap_memory_total_bytes", labels: labels, value: total * 1024})
 		metrics = append(metrics, sample{name: "cisco_ap_memory_usage_percent", labels: labels, value: (total - available) / total * 100})
 		metrics = append(metrics, sample{name: "cisco_ap_memory_available_bytes", labels: labels, value: available * 1024})
 	}
+	validClients := false
 	if match := clientTotal.FindStringSubmatch(output); len(match) == 2 {
 		if count, err := strconv.ParseFloat(match[1], 64); err == nil {
 			metrics = append(metrics, sample{name: "cisco_ap_clients_associated", labels: labels, value: count})
+			validClients = true
 		}
 	}
-	for slot, band := range []string{"2.4ghz", "5ghz", "6ghz"} {
+	if !validCPU || !validMemory || !validClients {
+		return nil, fmt.Errorf("AP CLI output missing or invalid core metrics (cpu=%t memory=%t clients=%t)", validCPU, validMemory, validClients)
+	}
+	for slot := 0; slot < 3; slot++ {
 		section := radioSection(output, slot)
-		radioLabels := map[string]string{"ap": apName, "band": band, "slot": strconv.Itoa(slot)}
+		radioLabels := map[string]string{"ap": apName, "band": "unknown", "slot": strconv.Itoa(slot)}
 		if match := servingRadio.FindStringSubmatch(section); len(match) == 4 {
-			frequency, _ := strconv.ParseFloat(match[1], 64)
-			channel, _ := strconv.ParseFloat(match[2], 64)
-			width, _ := strconv.ParseFloat(match[3], 64)
-			metrics = append(metrics,
-				sample{name: "cisco_ap_radio_frequency_mhz", labels: radioLabels, value: frequency},
-				sample{name: "cisco_ap_radio_channel", labels: radioLabels, value: channel},
-				sample{name: "cisco_ap_radio_channel_width_mhz", labels: radioLabels, value: width},
-			)
+			frequency, frequencyErr := strconv.ParseFloat(match[1], 64)
+			channel, channelErr := strconv.ParseFloat(match[2], 64)
+			width, widthErr := strconv.ParseFloat(match[3], 64)
+			if frequencyErr == nil && channelErr == nil && widthErr == nil && frequency > 0 && channel > 0 && width > 0 {
+				radioLabels["band"] = radioBand(frequency)
+				metrics = append(metrics,
+					sample{name: "cisco_ap_radio_frequency_mhz", labels: radioLabels, value: frequency},
+					sample{name: "cisco_ap_radio_channel", labels: radioLabels, value: channel},
+					sample{name: "cisco_ap_radio_channel_width_mhz", labels: radioLabels, value: width},
+				)
+			}
 		}
 		if match := rxPackets.FindStringSubmatch(section); len(match) == 2 {
 			if value, err := strconv.ParseFloat(match[1], 64); err == nil {
@@ -404,46 +473,64 @@ func parseOutput(apName, output string) []sample {
 			}
 		}
 	}
-	return metrics
+	return metrics, nil
 }
 
 func radioSection(output string, slot int) string {
-	start := strings.Index(output, fmt.Sprintf("show controllers dot11Radio %d frequency", slot))
-	if start < 0 {
-		return ""
-	}
-	end := len(output)
-	for next := slot + 1; next < 3; next++ {
-		if index := strings.Index(output[start+1:], fmt.Sprintf("show controllers dot11Radio %d frequency", next)); index >= 0 {
-			end = start + 1 + index
-			break
+	start := -1
+	for _, match := range radioCommand.FindAllStringSubmatchIndex(output, -1) {
+		if output[match[2]:match[3]] == strconv.Itoa(slot) {
+			if start < 0 {
+				start = match[0]
+			}
+		} else if start >= 0 {
+			return output[start:match[0]]
 		}
 	}
-	return output[start:end]
+	if start >= 0 {
+		return output[start:]
+	}
+	return ""
+}
+
+func radioBand(frequency float64) string {
+	switch {
+	case frequency >= 2400 && frequency < 2500:
+		return "2.4ghz"
+	case frequency >= 4900 && frequency < 5925:
+		return "5ghz"
+	case frequency >= 5925 && frequency <= 7125:
+		return "6ghz"
+	default:
+		return "unknown"
+	}
 }
 
 func writeMetrics(w io.Writer, state *snapshot) {
 	state.mu.RLock()
-	defer state.mu.RUnlock()
+	// Release the lock before writing to a potentially slow HTTP client.
+	metrics := state.metrics
+	success, lastScrape, lastSuccess := state.success, state.lastScrape, state.lastSuccess
+	state.mu.RUnlock()
 	fmt.Fprintln(w, "# HELP ap_exporter_scrape_success Whether the most recent AP local CLI scrape succeeded.")
 	fmt.Fprintln(w, "# TYPE ap_exporter_scrape_success gauge")
-	if state.success {
+	if success {
 		fmt.Fprintln(w, "ap_exporter_scrape_success 1")
 	} else {
 		fmt.Fprintln(w, "ap_exporter_scrape_success 0")
 	}
 	fmt.Fprintln(w, "# HELP ap_exporter_last_scrape_timestamp_seconds Unix time of the most recent AP local CLI scrape.")
 	fmt.Fprintln(w, "# TYPE ap_exporter_last_scrape_timestamp_seconds gauge")
-	if !state.lastScrape.IsZero() {
-		fmt.Fprintf(w, "ap_exporter_last_scrape_timestamp_seconds %.0f\n", float64(state.lastScrape.Unix()))
+	if !lastScrape.IsZero() {
+		fmt.Fprintf(w, "ap_exporter_last_scrape_timestamp_seconds %d\n", lastScrape.Unix())
 	}
-	if state.lastError != "" {
-		fmt.Fprintln(w, "# HELP ap_exporter_collection_error_info Current collection error, if any.")
-		fmt.Fprintln(w, "# TYPE ap_exporter_collection_error_info gauge")
-		fmt.Fprintf(w, "ap_exporter_collection_error_info{reason=%q} 1\n", state.lastError)
+	fmt.Fprintln(w, "# HELP ap_exporter_last_success_timestamp_seconds Unix time of the most recent successful AP local CLI scrape.")
+	fmt.Fprintln(w, "# TYPE ap_exporter_last_success_timestamp_seconds gauge")
+	if !lastSuccess.IsZero() {
+		fmt.Fprintf(w, "ap_exporter_last_success_timestamp_seconds %d\n", lastSuccess.Unix())
 	}
 	grouped := make(map[string][]sample)
-	for _, metric := range state.metrics {
+	for _, metric := range metrics {
 		grouped[metric.name] = append(grouped[metric.name], metric)
 	}
 	names := make([]string, 0, len(grouped))
@@ -455,7 +542,7 @@ func writeMetrics(w io.Writer, state *snapshot) {
 		help, kind := metricMetadataMap[name][0], metricMetadataMap[name][1]
 		fmt.Fprintf(w, "# HELP %s %s\n# TYPE %s %s\n", name, help, name, kind)
 		for _, metric := range grouped[name] {
-			fmt.Fprintf(w, "%s%s %.6g\n", metric.name, formatLabels(metric.labels), metric.value)
+			fmt.Fprintf(w, "%s%s %s\n", metric.name, formatLabels(metric.labels), strconv.FormatFloat(metric.value, 'g', -1, 64))
 		}
 	}
 }
@@ -476,7 +563,7 @@ func formatLabels(labels map[string]string) string {
 			builder.WriteByte(',')
 		}
 		first = false
-		fmt.Fprintf(&builder, `%s=%q`, key, value)
+		fmt.Fprintf(&builder, `%s="%s"`, key, strings.NewReplacer(`\`, `\\`, "\n", `\n`, `"`, `\"`).Replace(value))
 	}
 	builder.WriteByte('}')
 	return builder.String()

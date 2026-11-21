@@ -12,13 +12,13 @@ the AP's IOx management endpoint. The API port defaults to `8443`; configure
 configuration. The AP must have IOx and app hosting enabled and be reachable
 from the CVK controller.
 
-`spec.maxPods` defaults to 2, matching the two-app limit documented for
+`spec.maxPods` is capped at 2, including when the shared CRD defaults it to 16, matching the two-app limit documented for
 Catalyst 9100 APs. Set it lower if the model's remaining IOx resources require
 it.
 
 ## Pod image contract
 
-Each regular container represents one IOx application. Set `container.image`
+Each Pod must contain exactly one regular container, representing one IOx application. Set `container.image`
 to an HTTP(S) URL ending in `.tar` or `.tar.gz` that serves a **prebuilt IOx
 package** (for example, the artifact produced from the `Catalyst-AP-APP`
 sample). The controller downloads the archive and uploads it to the AP. OCI
@@ -51,3 +51,9 @@ The driver supports app install, activate, start, status, stop, deactivate,
 and uninstall lifecycle operations. AP CAF does not retain Kubernetes
 namespace/name metadata for these apps, so inventory discovered after a CVK
 restart is reconstructed from CVK's generated application IDs.
+
+For API-admitted Pods, set `automountServiceAccountToken: false`,
+`enableServiceLinks: false`, `dnsPolicy: Default`, and
+`imagePullPolicy: IfNotPresent`. Create a new Pod UID to change a package or
+activation configuration. See the [platform guide](../../../docs/configuration-ap.md)
+and [December assessment](../../../docs/releases/2026-12-ap-readiness.md).

@@ -1,11 +1,13 @@
 # Cisco Virtual Kubelet Provider
 
-[![Go Version](https://img.shields.io/badge/Go-1.26.10%2B-blue.svg)](https://go.dev/)
+[![Go Version](https://img.shields.io/badge/Go-1.26.11%2B-blue.svg)](https://go.dev/)
 [![Project code license](https://img.shields.io/badge/Project%20code-Apache%202.0-blue.svg)](LICENSE)
 
 A [Virtual Kubelet](https://github.com/virtual-kubelet/virtual-kubelet) provider that enables [Kubernetes](https://kubernetes.io/docs/home/) to schedule container workloads on **Cisco Catalyst** series switches and other **IOS-XE devices** — with Beta support for Cisco Nexus (NX-OS) switches — that offer [App-Hosting](https://developer.cisco.com/docs/app-hosting/) capabilities.
 
 ## Overview
+
+**December candidate:** this branch adds Alpha [Catalyst AP app hosting](docs/configuration-ap.md) through the native IOx CAF API. Review the [AP assessment and remaining qualification](docs/releases/2026-12-ap-readiness.md) before including it in the 1 December commit. It is not included in November artifacts.
 
 **Documentation for v2026.11.1 · November 2026.** Check the
 [Releases page](https://github.com/cisco-open/cisco-virtual-kubelet/releases)
@@ -323,7 +325,7 @@ For local development and testing, the VK provider can be run directly against a
 
 ### Prerequisites
 
-- [Go](https://go.dev/doc/devel/release) 1.26.10+ on the 1.26 line, or 1.27.3+
+- [Go](https://go.dev/doc/devel/release) 1.26.11+ on the 1.26 line, or 1.27.4+
   on the 1.27 line
 
 ### Build and run locally

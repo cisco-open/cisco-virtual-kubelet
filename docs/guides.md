@@ -14,6 +14,7 @@ running application.
 | Catalyst 9000 | [AppGigabitEthernet and App-Hosting setup](configuration-cat9000.md) |
 | IR1100 Series | [Device and networking prerequisites](configuration-ir1101.md) |
 | IE3500 Series | [Device and networking prerequisites](configuration-ie3500.md) |
+| Catalyst AP · December Alpha candidate | [Native IOx app hosting](configuration-ap.md) |
 | Supported NX-OS devices · Beta | [NX-OS getting-started example](getting-started.md#deploying-to-nx-os-beta) |
 
 Check the [feature status](status.md) and the platform guide for support limits.

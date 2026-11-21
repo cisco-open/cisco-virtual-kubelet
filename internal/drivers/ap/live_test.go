@@ -27,6 +27,7 @@ import (
 	"time"
 
 	"github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
+	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/common"
 	"github.com/google/uuid"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -90,6 +91,12 @@ func TestLiveAPHelloApp(t *testing.T) {
 			Image: packageServer.URL + "/package.tar",
 		}}},
 	}
+	testAppIDs := map[string]bool{common.GetAppHostingName(pod, 0): true}
+	for id := range testAppIDs {
+		if initialAppIDs[id] {
+			t.Fatalf("test application ID %s already exists", id)
+		}
+	}
 	t.Cleanup(func() {
 		cleanupCtx, cleanupCancel := context.WithTimeout(context.Background(), 45*time.Second)
 		defer cleanupCancel()
@@ -102,7 +109,7 @@ func TestLiveAPHelloApp(t *testing.T) {
 			return
 		}
 		for _, app := range apps {
-			if initialAppIDs[app.ID] {
+			if !testAppIDs[app.ID] {
 				continue
 			}
 			if err := driver.removeApp(cleanupCtx, app.ID, app.State); err != nil {
@@ -131,7 +138,7 @@ func TestLiveAPHelloApp(t *testing.T) {
 		t.Fatalf("inspect running hello app: %v", err)
 	}
 	for _, app := range apps {
-		if !initialAppIDs[app.ID] {
+		if testAppIDs[app.ID] {
 			t.Logf("running AP app %s state=%s network=%s", app.ID, app.State, string(app.NetworkInfo))
 		}
 	}
@@ -174,7 +181,7 @@ func TestLiveAPHelloApp(t *testing.T) {
 		t.Fatalf("verify hello app uninstall: %v", err)
 	}
 	for _, app := range apps {
-		if !initialAppIDs[app.ID] {
+		if testAppIDs[app.ID] {
 			t.Fatalf("test-created IOx app %s remains installed after cleanup", app.ID)
 		}
 	}

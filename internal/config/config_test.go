@@ -72,6 +72,32 @@ func TestLoad_ConditionalDefaults(t *testing.T) {
 	}
 }
 
+func TestAPDeviceDefaultsPreserveTrustAndUseCAFPort(t *testing.T) {
+	for _, port := range []int{0, 9443} {
+		spec := &v1alpha1.DeviceSpec{Driver: v1alpha1.DeviceDriverAP, Port: port, TLS: &v1alpha1.TLSConfig{CAFile: "/mounted/ap-ca.pem"}}
+		if err := SetDeviceDefaults(spec); err != nil {
+			t.Fatal(err)
+		}
+		want := port
+		if want == 0 {
+			want = 8443
+		}
+		if spec.Port != want || !spec.TLS.Enabled || spec.TLS.CAFile != "/mounted/ap-ca.pem" || spec.TLS.InsecureSkipVerify {
+			t.Fatalf("AP defaults lost port or TLS trust: %#v", spec)
+		}
+	}
+	viper.Reset()
+	t.Cleanup(viper.Reset)
+	viper.Set("device", map[string]interface{}{"driver": "AP", "address": "192.0.2.20", "username": "admin"})
+	cfg, err := Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.Device.Port != 8443 || cfg.Device.TLS == nil || !cfg.Device.TLS.Enabled || cfg.Device.TLS.InsecureSkipVerify {
+		t.Fatalf("AP config load defaults: %#v", cfg.Device)
+	}
+}
+
 func TestLoad_StrictLoading(t *testing.T) {
 	viper.Reset()
 	fixturePath := filepath.Join("testdata", "strict_fail.yaml")

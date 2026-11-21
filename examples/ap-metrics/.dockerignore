@@ -1,0 +1,8 @@
+*
+!Dockerfile
+!ap-metrics
+!rootfs-data/
+!rootfs-data/.keep
+!licenses/
+!licenses/**
+
