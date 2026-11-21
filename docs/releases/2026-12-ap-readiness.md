@@ -36,7 +36,7 @@ evidence must name the reviewed candidate commit.
 | Live harness | Cleanup targets only the exact IDs created by that test. Replacing a metrics app requires an explicit exact app ID, avoiding name/port-based deletion of unrelated apps. |
 | Toolchain | The baseline scan found reachable [GO-2026-6859](https://pkg.go.dev/vuln/GO-2026-6859) in Go 1.26.10. Current module, CI and Docker pins now use verified Go 1.26.11; installer security floors are 1.26.11 / 1.27.4. Historical November notes are preserved. |
 | Image security | The first hosted CI run flagged CVE-2026-78661 in both controller images. The root and independent Terraform modules now select `golang.org/x/net v0.62.0` and its required companion dependency updates. Image-scan severity and failure thresholds remain unchanged. |
-| Build and documentation | CI now tests, vets, cross-builds and vulnerability-scans the exporter's nested module. Its build helper includes redistribution notices. A platform guide and candidate manifests describe supported behavior and limitations. |
+| Build and documentation | CI now tests, vets, cross-builds and vulnerability-scans the exporter's nested module. Its build helper explicitly downloads license sources for selected dependencies, including unused indirect modules; CI builds from an empty module cache to verify this. A platform guide and candidate manifests describe supported behavior and limitations. |
 
 ## Local validation
 
@@ -50,6 +50,7 @@ WLC was modified.
 | Full root `go vet ./...` | Passed |
 | Exporter `go test -race -p 2 ./...` and `go vet -p 2 ./...` | Passed |
 | Exporter `sh build.sh` | Passed; static Linux ARM64 ELF built with Go 1.26.11; seven redistribution notices matched upstream/project sources |
+| Exporter build with an empty `GOMODCACHE` | Reproduced the missing-license failure before the fix; passed afterward with all seven notices verified against exact source files |
 | Pinned `govulncheck@v1.7.0 ./...`, root + exporter + Terraform module | Passed; zero reachable findings with Go 1.26.11; inherited uncalled findings recorded below |
 | CRD regeneration with pinned controller-gen | AP schema matched both committed CRD copies |
 | Release-contract tests | 20 passed, including patched toolchain floors and CI pins |
@@ -97,6 +98,13 @@ Terraform modules now use `v0.62.0`, which fixes
 [GO-2026-6866](https://pkg.go.dev/vuln/GO-2026-6866). The exporter does not depend
 on `x/net`. This illustrates why the exact-image gate remains required even
 when the source scan finds no reachable vulnerable symbols.
+
+The [replacement run](https://github.com/cisco-open/cisco-virtual-kubelet/actions/runs/44944713839)
+passed the exporter tests but exposed a packaging assumption: a selected,
+unimported module can have no downloaded source directory. The build helper
+now downloads each module whose notices it distributes before resolving its
+directory. CI uses a fresh module cache for this build so success does not
+depend on the root module having downloaded the same versions earlier.
 
 The following **uncalled** findings remain recorded separately from that fix.
 No affected symbol was reachable in the source scan; this does not waive the

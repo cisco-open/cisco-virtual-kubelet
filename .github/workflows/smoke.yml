@@ -134,7 +134,8 @@ jobs:
           set -euo pipefail
           go vet ./...
           go test -race -count=1 ./...
-          sh build.sh
+          # Verify redistribution inputs without relying on root-module cache contents.
+          GOMODCACHE="$(mktemp -d)" sh build.sh
 
       - name: gNOI lab runner and acceptance evidence safety tests (offline)
         run: |
