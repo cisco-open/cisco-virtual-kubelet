@@ -1,0 +1,9 @@
+[ap]
+address = 192.168.11.1
+username = <AP-SSH-user>
+password = <AP-SSH-password>
+enable_secret = <AP-enable-secret>
+host_key_sha256 = <SHA256-pinned-AP-host-key>
+ap_name = <AP-name>
+listen_address = :9100
+poll_period = 60s
